@@ -76,16 +76,9 @@ protected:
     message_filters::TimeSynchronizer<sensor_msgs::CompressedImage, sensor_msgs::Image> * comp_depth_sync;
 
 
-    bool enable_pub_remote_frame;
-    bool enable_pub_local_frame;
-    bool enable_sub_remote_frame;
-    bool send_img;
-    bool send_whole_img_desc;
     std::thread th;
-
+    bool received_image = false;
     ros::Timer timer;
-
-    geometry_msgs::Pose left_extrinsic, right_extrinsic;
 public:
     D2Frontend ();
     

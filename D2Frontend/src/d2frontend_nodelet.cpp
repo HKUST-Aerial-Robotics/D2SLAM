@@ -12,12 +12,12 @@ namespace backward
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
 
-namespace d2slam
+namespace D2Frontend
 {
-    class D2SLAMNode : public nodelet::Nodelet, public D2Frontend
+    class D2FrontendNode : public nodelet::Nodelet, public D2Frontend
     {
         public:
-            SwarmLoopNode() {}
+            D2FrontendNode() {}
         private:
             virtual void onInit() override
             {
@@ -26,5 +26,6 @@ namespace d2slam
                 cv::setNumThreads(1);
             }
     };
-    PLUGINLIB_EXPORT_CLASS(swarm_localization_pkg::SwarmLoopNode, nodelet::Nodelet);
 }
+
+PLUGINLIB_EXPORT_CLASS(D2Frontend::D2FrontendNode, nodelet::Nodelet);

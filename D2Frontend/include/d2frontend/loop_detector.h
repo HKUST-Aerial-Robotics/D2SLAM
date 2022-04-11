@@ -5,8 +5,8 @@
 #include <swarm_msgs/ImageDescriptor.h>
 #include <swarm_msgs/LoopEdge.h>
 #include <swarm_msgs/ImageDescriptor_t.hpp>
-#include "d2frontend/loop_defines.h"
-#include <swarm_loop/loop_cam.h>
+#include "d2frontend/d2frontend_params.h"
+#include <d2frontend/loop_cam.h>
 #include <functional>
 #include <swarm_msgs/Pose.h>
 #include <swarm_msgs/FisheyeFrameDescriptor_t.hpp>
@@ -21,7 +21,30 @@ using namespace swarm_msgs;
 
 #define REMOTE_MAGIN_NUMBER 1000000
 
+namespace D2Frontend {
+
+struct LoopDetectorConfig {
+    int MATCH_INDEX_DIST;
+    int MAX_DIRS;
+    int MIN_DIRECTION_LOOP;
+    int MIN_MATCH_PRE_DIR;
+    double loop_cov_pos;
+    double loop_cov_ang;
+    double INNER_PRODUCT_THRES;
+    double INIT_MODE_PRODUCT_THRES;//INIT mode we can accept this inner product as similar
+    double DETECTOR_MATCH_THRES;
+    int inter_drone_init_frames;
+    bool DEBUG_NO_REJECT;
+    double odometry_consistency_threshold;
+    int INIT_MODE_MIN_LOOP_NUM; //Init mode we accepte this inlier number
+    int MIN_LOOP_NUM;
+    bool is_4dof;
+    double pos_covariance_per_meter;
+    double yaw_covariance_per_meter;
+};
+
 class LoopDetector {
+    LoopDetectorConfig _config;
 
 protected:
     faiss::IndexFlatIP local_index;
@@ -99,7 +122,7 @@ protected:
 public:
     std::function<void(LoopEdge &)> on_loop_cb;
     int self_id = -1;
-    LoopDetector(int self_id);
+    LoopDetector(int self_id, const LoopDetectorConfig & config);
     void on_image_recv(const FisheyeFrameDescriptor_t & img_des, std::vector<cv::Mat> img = std::vector<cv::Mat>(0));
     void on_loop_connection(LoopEdge & loop_conn);
     LoopCam * loop_cam = nullptr;
@@ -109,3 +132,4 @@ public:
     int database_size() const;
 
 };
+}

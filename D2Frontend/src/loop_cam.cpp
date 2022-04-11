@@ -1,4 +1,4 @@
-#include <swarm_loop/loop_cam.h>
+#include <d2frontend/loop_cam.h>
 #include <camodocal/camera_models/CameraFactory.h>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
@@ -11,8 +11,7 @@ using namespace std::chrono;
 
 double TRIANGLE_THRES;
 
-#define USE_TENSORRT
-
+namespace D2Frontend {
 LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) : 
     camera_configuration(config.camera_configuration),
     self_id(config.self_id),
@@ -23,12 +22,11 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
         config.superpoint_max_num), 
     netvlad_net(config.netvlad_model, config.width, config.height), 
 #endif
-    send_img(config._send_img)
     _config(config)
 {
     camodocal::CameraFactory cam_factory;
-    ROS_INFO("Read camera from %s", camera_config_path.c_str());
-    cam = cam_factory.generateCameraFromYamlFile(camera_config_path);
+    ROS_INFO("Read camera from %s", config.camera_config_path.c_str());
+    cam = cam_factory.generateCameraFromYamlFile(config.camera_config_path);
 
 #ifndef USE_TENSORRT
     hfnet_client = nh.serviceClient<HFNetSrv>("/swarm_loop/hfnet");
@@ -46,8 +44,8 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     superpoint_client.waitForExistence();
     printf("Deepnet ready\n");
 
-    if (OUTPUT_RAW_SUPERPOINT_DESC) {
-        fsp.open(OUTPUT_PATH+"superpoint.csv", std::fstream::app);
+    if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
+        fsp.open(params->OUTPUT_PATH+"superpoint.csv", std::fstream::app);
     }
 }
 
@@ -55,11 +53,11 @@ void LoopCam::encode_image(const cv::Mat &_img, ImageDescriptor_t &_img_desc)
 {
     auto start = high_resolution_clock::now();
 
-    std::vector<int> params;
-    params.push_back(cv::IMWRITE_JPEG_QUALITY);
-    params.push_back(JPG_QUALITY);
+    std::vector<int> jpg_params;
+    jpg_params.push_back(cv::IMWRITE_JPEG_QUALITY);
+    jpg_params.push_back(params->JPG_QUALITY);
 
-    cv::imencode(".jpg", _img, _img_desc.image, params);
+    cv::imencode(".jpg", _img, _img_desc.image, jpg_params);
     // std::cout << "IMENCODE Cost " << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 << "ms" << std::endl;
     // std::cout << "JPG SIZE" << _img_desc.image.size() << std::endl;
 
@@ -219,7 +217,7 @@ FisheyeFrameDescriptor_t LoopCam::on_flattened_images(const StereoFrame & msg, s
         sprintf(text, "FEATURES@Drone%d", self_id);
         sprintf(PATH, "loop/features%d.png", kf_count);
         cv::imshow(text, _show);
-        cv::imwrite(OUTPUT_PATH+PATH, _show);
+        cv::imwrite(params->OUTPUT_PATH+PATH, _show);
         cv::waitKey(10);
     }
     kf_count ++;
@@ -236,7 +234,7 @@ ImageDescriptor_t LoopCam::generate_gray_depth_image_descriptor(const StereoFram
         return ides;
     }
     
-    ImageDescriptor_t ides = extractor_img_desc_deepnet(msg.stamp, msg.left_images[vcam_id], LOWER_CAM_AS_MAIN);
+    ImageDescriptor_t ides = extractor_img_desc_deepnet(msg.stamp, msg.left_images[vcam_id], _config.LOWER_CAM_AS_MAIN);
 
     if (ides.image_desc_size == 0)
     {
@@ -262,7 +260,7 @@ ImageDescriptor_t LoopCam::generate_gray_depth_image_descriptor(const StereoFram
 
     std::vector<int> ids_up, ids_down;
 
-    if (ides.landmarks_2d.size() > ACCEPT_MIN_3D_PTS) {
+    if (ides.landmarks_2d.size() > _config.ACCEPT_MIN_3D_PTS) {
         pts_up = toCV(ides.landmarks_2d);
     } else {
         return ides;
@@ -282,7 +280,7 @@ ImageDescriptor_t LoopCam::generate_gray_depth_image_descriptor(const StereoFram
         }
         
         auto dep = msg.depth_images[vcam_id].at<unsigned short>(pt_up)/1000.0;
-        if (dep > DEPTH_NEAR_THRES && dep < DEPTH_FAR_THRES) {
+        if (dep > _config.DEPTH_NEAR_THRES && dep < _config.DEPTH_FAR_THRES) {
             Eigen::Vector3d pt_up3d, pt_down3d;
             cam->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
 
@@ -345,8 +343,8 @@ ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & 
         return ides;
     }
     
-    ImageDescriptor_t ides = extractor_img_desc_deepnet(msg.stamp, msg.left_images[vcam_id], LOWER_CAM_AS_MAIN);
-    ImageDescriptor_t ides_down = extractor_img_desc_deepnet(msg.stamp, msg.right_images[vcam_id], !LOWER_CAM_AS_MAIN);
+    ImageDescriptor_t ides = extractor_img_desc_deepnet(msg.stamp, msg.left_images[vcam_id], _config.LOWER_CAM_AS_MAIN);
+    ImageDescriptor_t ides_down = extractor_img_desc_deepnet(msg.stamp, msg.right_images[vcam_id], !_config.LOWER_CAM_AS_MAIN);
 
     if (ides.image_desc_size == 0 && ides_down.image_desc_size == 0)
     {
@@ -380,7 +378,7 @@ ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & 
 
     std::vector<int> ids_up, ids_down;
 
-    if (ides.landmarks_2d.size() > ACCEPT_MIN_3D_PTS) {
+    if (ides.landmarks_2d.size() > _config.ACCEPT_MIN_3D_PTS) {
         pts_up = toCV(ides.landmarks_2d);
         pts_down = toCV(ides_down.landmarks_2d);
         match_HFNet_local_features(pts_up, pts_down, ides.feature_descriptor, ides_down.feature_descriptor, ids_up, ids_down);
@@ -459,7 +457,7 @@ ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & 
     // ides.landmark_num = ides.landmarks_2d.size();
 
     if (send_img) {
-        if (LOWER_CAM_AS_MAIN) {
+        if (_config.LOWER_CAM_AS_MAIN) {
             encode_image(image_right, ides_down);
         } else {
             encode_image(image_left, ides);
@@ -512,7 +510,7 @@ ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & 
         cv::putText(_show, text, cv::Point2f(20, 30), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
     }
 
-    if (LOWER_CAM_AS_MAIN) {
+    if (_config.LOWER_CAM_AS_MAIN) {
         return ides_down;
     } else {
         return ides;
@@ -572,7 +570,7 @@ ImageDescriptor_t LoopCam::extractor_img_desc_deepnet(ros::Time stamp, cv::Mat i
         img_des.landmarks_3d.push_back(pt3d);
         img_des.landmarks_flag.push_back(0);
 
-        if (OUTPUT_RAW_SUPERPOINT_DESC) {
+        if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
             for (int j = 0; j < FEATURE_DESC_SIZE; j ++) {
                 fsp << img_des.feature_descriptor[i*FEATURE_DESC_SIZE + j] << " ";
             }
@@ -629,4 +627,5 @@ ImageDescriptor_t LoopCam::extractor_img_desc_deepnet(ros::Time stamp, cv::Mat i
 #endif
     ROS_INFO("FAILED on deepnet!!! Service error");
     return img_des;
+}
 }

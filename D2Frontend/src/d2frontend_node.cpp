@@ -1,13 +1,13 @@
 #include "d2frontend/d2frontend.h"
 
 
-class D2FrontendNode :  public swarm_localization_pkg::D2Frontend
+class D2FrontendNode :  public D2Frontend::D2Frontend
 {
-    public:
-        SwarmLoopNode(ros::NodeHandle & nh)
-        {
-            Init(nh);
-        }
+public:
+    D2FrontendNode(ros::NodeHandle & nh)
+    {
+        Init(nh);
+    }
 };
 
 int main(int argc, char **argv)

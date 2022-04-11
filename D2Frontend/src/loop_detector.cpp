@@ -1,4 +1,4 @@
-#include <swarm_loop/loop_detector.h>
+#include <d2frontend/loop_detector.h>
 #include <swarm_msgs/swarm_lcm_converter.hpp>
 #include <opencv2/opencv.hpp>
 #include <chrono> 
@@ -8,6 +8,7 @@ using namespace std::chrono;
 #define USE_FUNDMENTAL
 #define MAX_LOOP_ID 100000000
 
+namespace D2Frontend {
 void LoopDetector::on_image_recv(const FisheyeFrameDescriptor_t & flatten_desc, std::vector<cv::Mat> imgs) {
     TicToc tt;
     static double t_sum = 0;
@@ -57,16 +58,17 @@ void LoopDetector::on_image_recv(const FisheyeFrameDescriptor_t & flatten_desc, 
         }
     }
 
-    if (dir_count < MIN_DIRECTION_LOOP) {
-        ROS_INFO("[SWARM_LOOP] Give up frame_desc with less than %d(%d) available images", MIN_DIRECTION_LOOP, dir_count);
+    if (dir_count < _config.MIN_DIRECTION_LOOP) {
+        ROS_INFO("[SWARM_LOOP] Give up frame_desc with less than %d(%d) available images",
+            _config.MIN_DIRECTION_LOOP, dir_count);
         return;
     }
 
-    if (flatten_desc.landmark_num >= MIN_LOOP_NUM) {
+    if (flatten_desc.landmark_num >= _config.MIN_LOOP_NUM) {
         bool init_mode = false;
         if (drone_id != self_id) {
             init_mode = true;
-            if (inter_drone_loop_count[drone_id][self_id] >= inter_drone_init_frames) {
+            if (inter_drone_loop_count[drone_id][self_id] >= _config.inter_drone_init_frames) {
                 init_mode = false;
             }
         }
@@ -80,7 +82,7 @@ void LoopDetector::on_image_recv(const FisheyeFrameDescriptor_t & flatten_desc, 
                         imgs[i] = decode_image(img_des);
                     } else {
                         // imgs[i] = cv::Mat(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
-                        imgs[i] = cv::Mat(height, width, CV_8U, cv::Scalar(255));
+                        imgs[i] = cv::Mat(params->height, params->width, CV_8U, cv::Scalar(255));
                     }
                 }
             }
@@ -95,7 +97,7 @@ void LoopDetector::on_image_recv(const FisheyeFrameDescriptor_t & flatten_desc, 
 
         bool success = false;
 
-        if (database_size() > MATCH_INDEX_DIST || init_mode || drone_id != self_id) {
+        if (database_size() > _config.MATCH_INDEX_DIST || init_mode || drone_id != self_id) {
 
             ROS_INFO("[SWARM_LOOP] Querying image from database size %d init_mode %d nonkeyframe %d", database_size(), init_mode, flatten_desc.prevent_adding_db);
             
@@ -174,16 +176,16 @@ int LoopDetector::add_to_database(const ImageDescriptor_t & new_img_desc) {
 
 
 int LoopDetector::query_from_database(const ImageDescriptor_t & img_desc, bool init_mode, bool nonkeyframe, double & distance) {
-    double thres = INNER_PRODUCT_THRES;
+    double thres = _config.INNER_PRODUCT_THRES;
     if (init_mode) {
-        thres = INIT_MODE_PRODUCT_THRES;
+        thres = _config.INIT_MODE_PRODUCT_THRES;
     }
 
     if (img_desc.drone_id == self_id) {
         //Then this is self drone
         int _id = query_from_database(img_desc, remote_index, true, thres, 1, distance);
         if(!nonkeyframe){
-            int _id = query_from_database(img_desc, local_index, false, thres, MATCH_INDEX_DIST, distance);
+            int _id = query_from_database(img_desc, local_index, false, thres, _config.MATCH_INDEX_DIST, distance);
             return _id;
         } else if (_id != -1) {
             return _id;
@@ -293,7 +295,7 @@ int LoopDetector::database_size() const {
 
 
 bool LoopDetector::check_loop_odometry_consistency(LoopEdge & loop_conn) const {
-    if (loop_conn.drone_id_a != loop_conn.drone_id_b || DEBUG_NO_REJECT) {
+    if (loop_conn.drone_id_a != loop_conn.drone_id_b || _config.DEBUG_NO_REJECT) {
         //Is inter_loop, odometry consistency check is disabled.
         return true;
     }
@@ -303,7 +305,7 @@ bool LoopDetector::check_loop_odometry_consistency(LoopEdge & loop_conn) const {
     Eigen::Matrix6d cov_vec = odom.second + edge.get_covariance();
     auto dp = Swarm::Pose::DeltaPose(edge.relative_pose, odom.first);
     auto md = Swarm::computeSquaredMahalanobisDistance(dp.log_map(), cov_vec);
-    if (md > odometry_consistency_threshold) {
+    if (md >  _config.odometry_consistency_threshold) {
         ROS_INFO("[SWARM_LOOP] LoopEdge-Odometry consistency check failed %.1f, odom %s loop %s dp %s.", 
             md, odom.first.tostr().c_str(), edge.relative_pose.tostr().c_str(), dp.tostr().c_str());
         return false;
@@ -323,12 +325,14 @@ bool pnp_result_verify(bool pnp_success, bool init_mode, int inliers, double rpe
     if (rperr > RPERR_THRES) {
         ROS_INFO("[SWARM_LOOP] Check failed on RP error %f", rperr*57.3);
         return false;
-    }
+    }   
+
+    auto &_config = (*params->loopdetectorconfig);
 
     if (init_mode) {
-        success = (inliers >= INIT_MODE_MIN_LOOP_NUM) && fabs(DP_old_to_new.yaw()) < ACCEPT_LOOP_YAW_RAD && DP_old_to_new.pos().norm() < MAX_LOOP_DIS;            
+        success = (inliers >= _config.INIT_MODE_MIN_LOOP_NUM) && fabs(DP_old_to_new.yaw()) < ACCEPT_LOOP_YAW_RAD && DP_old_to_new.pos().norm() < MAX_LOOP_DIS;            
     } else {
-        success = (inliers >= MIN_LOOP_NUM) && fabs(DP_old_to_new.yaw()) < ACCEPT_LOOP_YAW_RAD && DP_old_to_new.pos().norm() < MAX_LOOP_DIS;
+        success = (inliers >= _config.MIN_LOOP_NUM) && fabs(DP_old_to_new.yaw()) < ACCEPT_LOOP_YAW_RAD && DP_old_to_new.pos().norm() < MAX_LOOP_DIS;
     }        
 
     return success;
@@ -397,7 +401,7 @@ int LoopDetector::compute_relative_pose(
         return 0;
     }
 
-    DP_old_to_new =  Swarm::Pose::DeltaPose(p_drone_old_in_new, drone_pose_now, is_4dof);
+    DP_old_to_new =  Swarm::Pose::DeltaPose(p_drone_old_in_new, drone_pose_now, _config.is_4dof);
     
     auto RPerr = RPerror(p_drone_old_in_new, drone_pose_old, drone_pose_now);
 
@@ -452,9 +456,9 @@ bool LoopDetector::compute_correspond_features(const FisheyeFrameDescriptor_t & 
         main_dir_new, new_frame_desc.drone_id
     );
 
-    for (int _dir_new = main_dir_new; _dir_new < main_dir_new + MAX_DIRS; _dir_new ++) {
-        int dir_new = _dir_new % MAX_DIRS;
-        int dir_old = ((main_dir_old - main_dir_new + MAX_DIRS) % MAX_DIRS + _dir_new)% MAX_DIRS;
+    for (int _dir_new = main_dir_new; _dir_new < main_dir_new + _config.MAX_DIRS; _dir_new ++) {
+        int dir_new = _dir_new % _config.MAX_DIRS;
+        int dir_old = ((main_dir_old - main_dir_new + _config.MAX_DIRS) % _config.MAX_DIRS + _dir_new)% _config.MAX_DIRS;
         if (dir_new < new_frame_desc.images.size() && dir_old < old_frame_desc.images.size()) {
             printf(" [%d: %d](%d:%d) OK", dir_old, dir_new, old_frame_desc.images[dir_old].landmark_num, new_frame_desc.images[dir_new].landmark_num );
             if (old_frame_desc.images[dir_old].landmark_num > 0 && new_frame_desc.images[dir_new].landmark_num > 0) {
@@ -500,7 +504,7 @@ bool LoopDetector::compute_correspond_features(const FisheyeFrameDescriptor_t & 
             ROS_INFO("[SWARM_LOOP]  compute_correspond_features on direction %d:%d failed: no such image");
         }
 
-        if ( _new_3d.size() >= MIN_MATCH_PRE_DIR ) {
+        if ( _new_3d.size() >= _config.MIN_MATCH_PRE_DIR ) {
             matched_dir_count ++;            
         }
 
@@ -529,7 +533,7 @@ bool LoopDetector::compute_correspond_features(const FisheyeFrameDescriptor_t & 
         }
     }
 
-    if(new_norm_2d.size() > 0 && matched_dir_count >= MIN_DIRECTION_LOOP) {
+    if(new_norm_2d.size() > 0 && matched_dir_count >= _config.MIN_DIRECTION_LOOP) {
         return true;
     } else {
         return false;
@@ -629,7 +633,7 @@ bool LoopDetector::compute_loop(const FisheyeFrameDescriptor_t & new_frame_desc,
     std::vector<cv::Mat> imgs_new, std::vector<cv::Mat> imgs_old,
     LoopEdge & ret, bool init_mode) {
 
-    if (new_frame_desc.landmark_num < MIN_LOOP_NUM) {
+    if (new_frame_desc.landmark_num < _config.MIN_LOOP_NUM) {
         return false;
     }
     //Recover imformation
@@ -668,7 +672,7 @@ bool LoopDetector::compute_loop(const FisheyeFrameDescriptor_t & new_frame_desc,
         index2dirindex_new, index2dirindex_old);
     
     if(success) {
-        if (new_norm_2d.size() > MIN_LOOP_NUM || (init_mode && new_norm_2d.size() > INIT_MODE_MIN_LOOP_NUM)) {
+        if (new_norm_2d.size() > _config.MIN_LOOP_NUM || (init_mode && new_norm_2d.size() > _config.INIT_MODE_MIN_LOOP_NUM)) {
             success = compute_relative_pose(
                     new_norm_2d, new_3d, 
                     old_norm_2d, old_3d,
@@ -698,7 +702,7 @@ bool LoopDetector::compute_loop(const FisheyeFrameDescriptor_t & new_frame_desc,
         std::vector<cv::Mat> _matched_imgs;
         _matched_imgs.resize(imgs_old.size());
         for (size_t i = 0; i < imgs_old.size(); i ++) {
-            int dir_new = ((-main_dir_old + main_dir_new + MAX_DIRS) % MAX_DIRS + i)% MAX_DIRS;
+            int dir_new = ((-main_dir_old + main_dir_new + _config.MAX_DIRS) % _config.MAX_DIRS + i)% _config.MAX_DIRS;
             if (!imgs_old[i].empty() && !imgs_new[dir_new].empty()) {
                 cv::vconcat(imgs_old[i], imgs_new[dir_new], _matched_imgs[i]);
             }
@@ -777,7 +781,7 @@ bool LoopDetector::compute_loop(const FisheyeFrameDescriptor_t & new_frame_desc,
 
         if (!show.empty() && success) {
             sprintf(PATH, "loop/match%d.png", loop_match_count);
-            cv::imwrite(OUTPUT_PATH+PATH, show);
+            cv::imwrite(params->OUTPUT_PATH+PATH, show);
             
             cv::imshow("Matches", show);
             cv::waitKey(10);
@@ -799,13 +803,13 @@ bool LoopDetector::compute_loop(const FisheyeFrameDescriptor_t & new_frame_desc,
         ret.keyframe_id_a = old_frame_desc.msg_id;
         ret.keyframe_id_b = new_frame_desc.msg_id;
 
-        ret.pos_cov.x = loop_cov_pos;
-        ret.pos_cov.y = loop_cov_pos;
-        ret.pos_cov.z = loop_cov_pos;
+        ret.pos_cov.x = _config.loop_cov_pos;
+        ret.pos_cov.y = _config.loop_cov_pos;
+        ret.pos_cov.z = _config.loop_cov_pos;
 
-        ret.ang_cov.x = loop_cov_ang;
-        ret.ang_cov.y = loop_cov_ang;
-        ret.ang_cov.z = loop_cov_ang;
+        ret.ang_cov.x = _config.loop_cov_ang;
+        ret.ang_cov.y = _config.loop_cov_ang;
+        ret.ang_cov.z = _config.loop_cov_ang;
 
         ret.pnp_inlier_num = inlier_num;
         ret.id = self_id*MAX_LOOP_ID + loop_count;
@@ -839,6 +843,11 @@ void LoopDetector::on_loop_connection(LoopEdge & loop_conn) {
     on_loop_cb(loop_conn);
 }
 
-LoopDetector::LoopDetector(int _self_id): self_id(_self_id), local_index(DEEP_DESC_SIZE), remote_index(DEEP_DESC_SIZE), 
-    ego_motion_traj(_self_id, true, pos_covariance_per_meter, yaw_covariance_per_meter) {
+LoopDetector::LoopDetector(int _self_id, const LoopDetectorConfig & config):
+        self_id(_self_id),
+        _config(config),
+        local_index(DEEP_DESC_SIZE), 
+        remote_index(DEEP_DESC_SIZE), 
+    ego_motion_traj(_self_id, true, _config.pos_covariance_per_meter, _config.yaw_covariance_per_meter) {
+}
 }

@@ -80,7 +80,7 @@ add_executable(${PROJECT_NAME}_spy
 )
 
 add_executable(${PROJECT_NAME}_net_tester
-  src/loop_network_tester.cpp
+  tests/loop_network_tester.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME}_nodelet PROPERTY CXX_STANDARD 14)
@@ -96,8 +96,9 @@ if (USE_TENSORRT)
   target_link_libraries(loop_cnn nvinfer nvinfer_plugin  detector opencv_dnn)
 
   add_executable(loop_tensorrt_test
-    src/loop_tensorrt_test.cpp
+    tests/loop_tensorrt_test.cpp
   )
+
   target_link_libraries(loop_tensorrt_test
     loop_cnn
     dw

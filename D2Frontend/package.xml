@@ -21,7 +21,6 @@
   <build_depend>message_filters</build_depend>
   <build_depend>loop_fusion</build_depend>
   <build_depend>cv_bridge</build_depend>
-  <build_depend>vins</build_depend>
   <build_export_depend>std_msgs</build_export_depend>
   <build_export_depend>swarm_msgs</build_export_depend>
   <build_export_depend>message_filters</build_export_depend>

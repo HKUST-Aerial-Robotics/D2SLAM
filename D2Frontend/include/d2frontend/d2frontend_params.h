@@ -6,15 +6,10 @@
 #include <vector>
 #include <string>
 #include <ros/ros.h>
-
-#define LOOP_BOW_THRES 0.015
-// #define MATCH_INDEX_DIST 1
-#define FAST_THRES (20.0f)
-
+#include <geometry_msgs/Pose.h>
 
 #define ACCEPT_LOOP_YAW (30) //ACCEPT MAX Yaw 
 #define MAX_LOOP_DIS 5.0 //ACCEPT MAX DISTANCE, 2.0 for indoor flying
-
 
 #define MAX_LOOP_DIS_LEVEL2 3.0 //ACCEPT MAX DISTANCE, 2.0 for indoor flying
 
@@ -55,55 +50,47 @@ enum CameraConfig{
     FOURCORNER_FISHEYE = 3
 };
 
-
+struct LoopCamConfig;
+struct LoopDetectorConfig;
 struct D2FrontendParams {
     int JPG_QUALITY;
-    int INIT_MODE_MIN_LOOP_NUM; //Init mode we accepte this inlier number
-    int MIN_LOOP_NUM;
     double ACCEPT_NONKEYFRAME_WAITSEC;
-    double INNER_PRODUCT_THRES;
-    double INIT_MODE_PRODUCT_THRES;//INIT mode we can accept this inner product as similar
-    int MATCH_INDEX_DIST;
-    int ACCEPT_MIN_3D_PTS;
-    double DEPTH_NEAR_THRES;
-    double DEPTH_FAR_THRES;
-    int MAX_DIRS;
-    int MIN_DIRECTION_LOOP;
-    int MIN_MATCH_PRE_DIR;
-    double TRIANGLE_THRES;
-    double loop_cov_pos;
-    double loop_cov_ang;
-    double DETECTOR_MATCH_THRES;
-    double odometry_consistency_threshold;
     bool USE_DEPTH;
     bool IS_PC_REPLAY;
     bool SEND_ALL_FEATURES;
-    bool LOWER_CAM_AS_MAIN;
-    bool OUTPUT_RAW_SUPERPOINT_DESC;
-    double pos_covariance_per_meter;
-    double yaw_covariance_per_meter;
     std::string OUTPUT_PATH;
-    bool DEBUG_NO_REJECT;
     int width;
     int height;
-    int inter_drone_init_frames;
-    bool is_4dof;
     double max_freq = 1.0;
     double recv_msg_duration = 0.5;
 
     bool debug_image = false;
     double min_movement_keyframe = 0.3;
     int self_id = 0;
-    bool received_image = false;
-    std::string camera_config_path = "";
-    std::string superpoint_model_path = "";
-    std::string netvlad_model_path = "";
     std::string vins_config_path;
     std::string _lcm_uri = "0.0.0.0";
+    CameraConfig camera_configuration;
 
     D2FrontendParams(ros::NodeHandle &);
 
-    LoopCamConfig loopcamconfig;
+    //Debug params
+    bool send_img;
+    bool enable_pub_remote_frame;
+    bool enable_pub_local_frame;
+    bool enable_sub_remote_frame;
+
+    bool send_whole_img_desc;
+
+    //Topics
+    std::string IMAGE0_TOPIC, IMAGE1_TOPIC, COMP_IMAGE0_TOPIC, COMP_IMAGE1_TOPIC, DEPTH_TOPIC;
+
+    bool is_comp_images;
+
+    geometry_msgs::Pose left_extrinsic, right_extrinsic;
+
+    LoopCamConfig * loopcamconfig;
+    LoopDetectorConfig * loopdetectorconfig;
+
 };
 
 extern D2FrontendParams * params;

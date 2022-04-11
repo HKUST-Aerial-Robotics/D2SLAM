@@ -10,14 +10,13 @@
 #include <vins/VIOKeyframe.h>
 #include <swarm_msgs/ImageDescriptor_t.hpp>
 #include <swarm_msgs/FisheyeFrameDescriptor_t.hpp>
-
-#include "loop_defines.h"
+#include "d2frontend_params.h"
 #include <vins/FlattenImages.h>
 #include "superpoint_tensorrt.h"
 #include "mobilenetvlad_tensorrt.h"
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
-#include <swarm_loop/utils.h>
+#include <d2frontend/utils.h>
 
 //#include <swarm_loop/HFNetSrv.h>
 
@@ -25,7 +24,7 @@ using namespace swarm_msgs;
 using namespace camodocal;
 // using namespace swarm_loop;
 
-
+namespace D2Frontend {
 struct StereoFrame{
     ros::Time stamp;
     int keyframe_id;
@@ -86,13 +85,17 @@ struct LoopCamConfig
     std::string pca_mean;
     double superpoint_thres;
     int superpoint_max_num;
-    const std::string netvlad_model;
+    std::string netvlad_model;
     int width;
     int height; 
     int self_id = 0;
-    bool _send_img = false; 
+    bool OUTPUT_RAW_SUPERPOINT_DESC;
+    bool LOWER_CAM_AS_MAIN;
+    double DEPTH_NEAR_THRES;
+    double TRIANGLE_THRES;
+    int ACCEPT_MIN_3D_PTS;
+    double DEPTH_FAR_THRES;
 };
-
 
 class LoopCam {
     LoopCamConfig _config;
@@ -135,5 +138,5 @@ public:
     CameraConfig get_camera_configuration() const {
         return camera_configuration;
     }
-
 };
+}

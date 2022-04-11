@@ -8,7 +8,7 @@
     <arg name="camera_config_path" default="/home/dji/SwarmConfig/fisheye_ptgrey_n3/front.yaml" />
     <arg name="vins_config_path" default="/home/dji/SwarmConfig/fisheye_ptgrey_n3/fisheye_cuda.yaml" />
     <node pkg="nodelet" type="nodelet" name="swarm_loop" 
-        args="load swarm_localization_pkg/SwarmLoopNode /$(arg manager) --no-bond" output="screen" >
+        args="load D2Frontend/D2FrontendNode /$(arg manager) --no-bond" output="screen" >
         <rosparam>
             lcm_uri: udpm://224.0.0.251:7667?ttl=1
             init_loop_min_feature_num: 30

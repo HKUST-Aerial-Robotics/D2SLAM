@@ -1,6 +1,8 @@
 #include "d2frontend/loop_net.h"
 #include <time.h> 
+#include "d2frontend/loop_detector.h"
 
+namespace D2Frontend {
 void LoopNet::setup_network(std::string _lcm_uri) {
     if (!lcm.good()) {
         ROS_ERROR("LCM %s failed", _lcm_uri.c_str());
@@ -34,7 +36,7 @@ void LoopNet::broadcast_img_desc(ImageDescriptor_t & img_des) {
     static int count_byte_sent = 0;
 
     int byte_sent = 0;
-    if (IS_PC_REPLAY) {
+    if (params->IS_PC_REPLAY) {
         ROS_INFO("Sending IMG DES Size %d with %d landmarks in PC replay mode.local feature size %d", img_des.getEncodedSize(), img_des.landmark_num, img_des.feature_descriptor_size);
         lcm.publish("SWARM_LOOP_IMG_DES", &img_des);
         return;
@@ -66,7 +68,7 @@ void LoopNet::broadcast_img_desc(ImageDescriptor_t & img_des) {
     lcm.publish("VIOKF_HEADER", &img_desc_header);
     // printf("header %d", img_desc_header.getEncodedSize());
     for (size_t i = 0; i < img_des.landmark_num; i++ ) {
-        if (img_des.landmarks_flag[i] > 0 || SEND_ALL_FEATURES) {
+        if (img_des.landmarks_flag[i] > 0 || params->SEND_ALL_FEATURES) {
             LandmarkDescriptor_t lm;
             lm.landmark_id = i;
             lm.landmark_2d_norm = img_des.landmarks_2d_norm[i];
@@ -273,7 +275,7 @@ void LoopNet::scan_recv_packets() {
             }
         }
 
-        if(tnow - frame_header_recv_time[frame_hash] > 2.0*recv_period  || count_images >= MIN_DIRECTION_LOOP) {
+        if(tnow - frame_header_recv_time[frame_hash] > 2.0*recv_period  || count_images >= params->loopdetectorconfig->MIN_DIRECTION_LOOP) {
             finish_recv_frames.push_back(frame_hash);
         }
     }
@@ -329,4 +331,5 @@ void LoopNet::update_recv_img_desc_ts(int64_t id, bool is_header) {
         msg_header_recv_time[id] = ros::Time::now().toSec();
     }
     msg_recv_last_time[id] = ros::Time::now().toSec();
+}
 }

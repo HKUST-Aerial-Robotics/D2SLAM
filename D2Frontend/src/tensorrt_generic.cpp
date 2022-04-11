@@ -1,7 +1,7 @@
 #include "d2frontend/tensorrt_generic.h"
-#include "d2frontend/loop_defines.h"
 #include "d2frontend/utils.h"
 #include "swarm_msgs/swarm_types.hpp"
+
 using namespace Swarm;
 using namespace nvinfer1;
 uint64_t get3DTensorVolume4(nvinfer1::Dims inputDims);
