@@ -4,6 +4,7 @@
 #include "d2frontend/loop_net.h"
 #include "d2frontend/loop_cam.h"
 #include "d2frontend/loop_detector.h"
+#include "d2frontend/d2featuretracker.h"
 #include <chrono> 
 #include <Eigen/Eigen>
 #include <thread>
@@ -21,6 +22,7 @@ protected:
     LoopDetector * loop_detector = nullptr;
     LoopCam * loop_cam = nullptr;
     LoopNet * loop_net = nullptr;
+    D2FeatureTracker * feature_tracker = nullptr;
     ros::Subscriber cam_sub;
     ros::Time last_kftime;
     Eigen::Vector3d last_keyframe_position = Eigen::Vector3d(10000, 10000, 10000);

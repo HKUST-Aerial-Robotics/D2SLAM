@@ -21,22 +21,22 @@
 
 using namespace swarm_msgs;
 using namespace camodocal;
-// using namespace swarm_loop;
+using namespace Eigen;
 
 namespace D2Frontend {
 struct StereoFrame{
     ros::Time stamp;
     int keyframe_id;
     std::vector<cv::Mat> left_images, right_images, depth_images;
-    geometry_msgs::Pose pose_drone;
-    std::vector<geometry_msgs::Pose> left_extrisincs, right_extrisincs;
+    Swarm::Pose pose_drone;
+    std::vector<Swarm::Pose> left_extrisincs, right_extrisincs;
 
     StereoFrame():stamp(0) {
 
     }
 
     StereoFrame(ros::Time _stamp, cv::Mat _left_image, cv::Mat _right_image, 
-        geometry_msgs::Pose _left_extrinsic, geometry_msgs::Pose _right_extrinsic, int self_id):
+        Swarm::Pose _left_extrinsic, Swarm::Pose _right_extrinsic, int self_id):
         stamp(_stamp)
     {
         left_images.push_back(_left_image);
@@ -48,7 +48,7 @@ struct StereoFrame{
     }
 
     StereoFrame(ros::Time _stamp, cv::Mat _left_image, cv::Mat _dep_image, 
-        geometry_msgs::Pose _left_extrinsic, int self_id):
+        Swarm::Pose _left_extrinsic, int self_id):
         stamp(_stamp)
     {
         left_images.push_back(_left_image);
@@ -96,6 +96,41 @@ struct LoopCamConfig
     double DEPTH_FAR_THRES;
 };
 
+struct VisualImageDesc {
+    //This stands for single image
+    ros::Time timestamp;
+    StereoFrame * stereo_frame = nullptr;
+    int drone_id = 0;
+    uint64_t frame_id = 0; 
+    int camera_id = 0; //camera id in stereo_frame
+    Swarm::Pose extrinsic;
+    Swarm::Pose pose_drone; //IMU propagated pose
+    std::vector<Vector3d> landmarks_3d;
+    std::vector<Vector2d> landmarks_2d_norm; //normalized 2d 
+    std::vector<cv::Point2f> landmarks_2d; //normalized 2d 
+    std::vector<uint8_t> landmarks_flag; //0 no 3d, 1 has 3d
+
+    std::vector<float> image_desc;
+    std::vector<float> feature_descriptor;
+    bool prevent_adding_db = false;
+
+    std::vector<uint8_t> image; //Buffer to store compressed image.
+
+    int landmark_num() const {
+        return landmarks_2d.size();
+    }
+};
+
+struct VisualImageDescArray {
+    int drone_id = 0;
+    ros::Time stamp;
+    std::vector<VisualImageDesc> images;
+    uint64_t frame_id;
+    Swarm::Pose pose_drone;
+    int landmark_num;
+    bool prevent_adding_db;
+};
+
 class LoopCam {
     LoopCamConfig _config;
     int cam_count = 0;
@@ -119,14 +154,12 @@ public:
     // LoopDetector * loop_detector = nullptr;
     LoopCam(LoopCamConfig config, ros::NodeHandle & nh);
     
-    ImageDescriptor_t extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img, bool superpoint_mode=false);
-    
-    ImageDescriptor_t generate_stereo_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
-    ImageDescriptor_t generate_gray_depth_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
-    
-    FisheyeFrameDescriptor_t on_flattened_images(const StereoFrame & msg, std::vector<cv::Mat> & imgs);
+    VisualImageDesc extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img, bool superpoint_mode=false);
+    VisualImageDesc generate_stereo_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
+    VisualImageDesc generate_gray_depth_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
+    VisualImageDescArray * process_stereoframe(const StereoFrame & msg, std::vector<cv::Mat> & imgs);
 
-    void encode_image(const cv::Mat & _img, ImageDescriptor_t & _img_desc);
+    void encode_image(const cv::Mat & _img, VisualImageDesc & _img_desc);
     
     void match_HFNet_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, std::vector<float> _desc_up, std::vector<float> _desc_down, 
         std::vector<int> & ids_up, std::vector<int> & ids_down);

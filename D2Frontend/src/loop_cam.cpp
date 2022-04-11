@@ -49,7 +49,7 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     }
 }
 
-void LoopCam::encode_image(const cv::Mat &_img, ImageDescriptor_t &_img_desc)
+void LoopCam::encode_image(const cv::Mat &_img, VisualImageDesc &_img_desc)
 {
     auto start = high_resolution_clock::now();
 
@@ -60,10 +60,6 @@ void LoopCam::encode_image(const cv::Mat &_img, ImageDescriptor_t &_img_desc)
     cv::imencode(".jpg", _img, _img_desc.image, jpg_params);
     // std::cout << "IMENCODE Cost " << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 << "ms" << std::endl;
     // std::cout << "JPG SIZE" << _img_desc.image.size() << std::endl;
-
-    _img_desc.image_height = _img.size().height;
-    _img_desc.image_width = _img.size().width;
-    _img_desc.image_size = _img_desc.image.size();
 }
 
 double triangulatePoint(Eigen::Quaterniond q0, Eigen::Vector3d t0, Eigen::Quaterniond q1, Eigen::Vector3d t1,
@@ -171,9 +167,9 @@ void LoopCam::match_HFNet_local_features(std::vector<cv::Point2f> & pts_up, std:
 
 
 
-FisheyeFrameDescriptor_t LoopCam::on_flattened_images(const StereoFrame & msg, std::vector<cv::Mat> &imgs) {
-    FisheyeFrameDescriptor_t frame_desc;
-    frame_desc.timestamp = toLCMTime(msg.stamp);
+VisualImageDescArray * LoopCam::process_stereoframe(const StereoFrame & msg, std::vector<cv::Mat> &imgs) {
+    VisualImageDescArray * visual_array = new VisualImageDescArray;
+    visual_array->stamp = msg.stamp;
     
     imgs.resize(msg.left_images.size());
 
@@ -184,11 +180,11 @@ FisheyeFrameDescriptor_t LoopCam::on_flattened_images(const StereoFrame & msg, s
 
     for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
         if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
-            frame_desc.images.push_back(generate_gray_depth_image_descriptor(msg, imgs[i], i, tmp));
-            frame_desc.images[i].direction = i;
+            visual_array->images.push_back(generate_gray_depth_image_descriptor(msg, imgs[i], i, tmp));
+            visual_array->images[i].camera_id = i;
         } else {
-            frame_desc.images.push_back(generate_stereo_image_descriptor(msg, imgs[i], i, tmp));
-            frame_desc.images[i].direction = i;
+            visual_array->images.push_back(generate_stereo_image_descriptor(msg, imgs[i], i, tmp));
+            visual_array->images[i].camera_id = i;
         }
 
         if (_show.cols == 0) {
@@ -202,14 +198,13 @@ FisheyeFrameDescriptor_t LoopCam::on_flattened_images(const StereoFrame & msg, s
     t_count+= 1;
     ROS_INFO("[SWARM_LOOP] KF Count %d loop_cam cost avg %.1fms cur %.1fms", kf_count, tt_sum/t_count, tt.toc());
 
-    frame_desc.image_num = msg.left_images.size();
-    frame_desc.msg_id = msg.keyframe_id;
-    frame_desc.pose_drone = fromROSPose(msg.pose_drone);
-    frame_desc.landmark_num = 0;
-    for (auto & frame : frame_desc.images) {
-        frame_desc.landmark_num += frame.landmark_num;
+    visual_array->frame_id = msg.keyframe_id;
+    visual_array->pose_drone = msg.pose_drone;
+    visual_array->landmark_num = 0;
+    for (auto & frame : visual_array->images) {
+        visual_array->landmark_num += frame.landmark_num();
     }
-    frame_desc.drone_id = self_id;
+    visual_array->drone_id = self_id;
 
     if (show && !_show.empty()) {
         char text[100] = {0};
@@ -221,22 +216,21 @@ FisheyeFrameDescriptor_t LoopCam::on_flattened_images(const StereoFrame & msg, s
         cv::waitKey(10);
     }
     kf_count ++;
-    return frame_desc;
+    return visual_array;
 }
 
-ImageDescriptor_t LoopCam::generate_gray_depth_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat & _show)
+VisualImageDesc LoopCam::generate_gray_depth_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat & _show)
 {
     if (vcam_id > msg.left_images.size()) {
         ROS_WARN("Flatten images too few");
-        ImageDescriptor_t ides;
-        ides.landmark_num = 0;
-        ides.timestamp = toLCMTime(msg.stamp);
+        VisualImageDesc ides;
+        ides.timestamp = msg.stamp;
         return ides;
     }
     
-    ImageDescriptor_t ides = extractor_img_desc_deepnet(msg.stamp, msg.left_images[vcam_id], _config.LOWER_CAM_AS_MAIN);
+    VisualImageDesc vframe = extractor_img_desc_deepnet(msg.stamp, msg.left_images[vcam_id], _config.LOWER_CAM_AS_MAIN);
 
-    if (ides.image_desc_size == 0)
+    if (vframe.image_desc.size() == 0)
     {
         ROS_WARN("Failed on deepnet.");
         cv::Mat _img;
@@ -246,24 +240,20 @@ ImageDescriptor_t LoopCam::generate_gray_depth_image_descriptor(const StereoFram
     auto start = high_resolution_clock::now();
     // std::cout << "Downsample and encode Cost " << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 << "ms" << std::endl;
 
-    ides.timestamp = toLCMTime(msg.stamp);
-    ides.drone_id = self_id; // -1 is self drone;
-    ides.camera_extrinsic = fromROSPose(msg.left_extrisincs[vcam_id]);
-    ides.pose_drone = fromROSPose(msg.pose_drone);
-    ides.image_size = 0;
-    ides.frame_id = msg.keyframe_id;
+    vframe.timestamp = msg.stamp;
+    vframe.drone_id = self_id; // -1 is self drone;
+    vframe.extrinsic = msg.left_extrisincs[vcam_id];
+    vframe.pose_drone = msg.pose_drone;
+    vframe.frame_id = msg.keyframe_id;
 
     auto image_left = msg.left_images[vcam_id];
 
-    std::vector<cv::Point2f> pts_up;
-    pts_up = toCV(ides.landmarks_2d);
+    auto & pts_up = vframe.landmarks_2d;
 
     std::vector<int> ids_up, ids_down;
 
-    if (ides.landmarks_2d.size() > _config.ACCEPT_MIN_3D_PTS) {
-        pts_up = toCV(ides.landmarks_2d);
-    } else {
-        return ides;
+    if (vframe.landmarks_2d.size() < _config.ACCEPT_MIN_3D_PTS) {
+        return vframe;
     }
     
     Swarm::Pose pose_drone(msg.pose_drone);
@@ -274,7 +264,7 @@ ImageDescriptor_t LoopCam::generate_gray_depth_image_descriptor(const StereoFram
     int count_3d = 0;
     for (unsigned int i = 0; i < pts_up.size(); i++)
     {
-        auto pt_up = pts_up[i];
+        cv::Point2f pt_up = pts_up[i];
         if (pt_up.x < 0 || pt_up.x > 640 || pt_up.y < 0 || pt_up.y > 480) {
             continue;
         }
@@ -282,17 +272,13 @@ ImageDescriptor_t LoopCam::generate_gray_depth_image_descriptor(const StereoFram
         auto dep = msg.depth_images[vcam_id].at<unsigned short>(pt_up)/1000.0;
         if (dep > _config.DEPTH_NEAR_THRES && dep < _config.DEPTH_FAR_THRES) {
             Eigen::Vector3d pt_up3d, pt_down3d;
-            cam->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
+            cam->liftProjective(Vector2d(pt_up.x, pt_up.y), pt_up3d);
 
             Eigen::Vector3d _pt3d(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z(), 1);
             _pt3d = pose_cam * (_pt3d*dep);
-            Point3d_t pt3d;
-            pt3d.x = _pt3d.x();
-            pt3d.y = _pt3d.y();
-            pt3d.z = _pt3d.z();
 
-            ides.landmarks_3d[i] = pt3d;
-            ides.landmarks_flag[i] = 1;
+            vframe.landmarks_3d[i] = _pt3d;
+            vframe.landmarks_flag[i] = 1;
             count_3d ++;
         }
     }
@@ -300,7 +286,7 @@ ImageDescriptor_t LoopCam::generate_gray_depth_image_descriptor(const StereoFram
     // ROS_INFO("Image 2d kpts: %ld 3d : %d desc size %ld", ides.landmarks_2d.size(), count_3d, ides.feature_descriptor.size());
 
     if (send_img) {
-        encode_image(image_left, ides);
+        encode_image(image_left, vframe);
     }
 
     if (show) {
@@ -308,16 +294,15 @@ ImageDescriptor_t LoopCam::generate_gray_depth_image_descriptor(const StereoFram
 
         img_up.copyTo(img);
         if (!send_img) {
-            encode_image(img_up, ides);
+            encode_image(img_up, vframe);
         }
 
         cv::cvtColor(img_up, img_up, cv::COLOR_GRAY2BGR);
 
-        for (unsigned int i = 0; i < ides.landmarks_2d.size(); i++ ) {
-            if (ides.landmarks_flag[i]) { 
-                auto _pt = ides.landmarks_2d[i];
-                auto dep = ides.landmarks_3d[i].z;
-                cv::Point2f pt(_pt.x, _pt.y);
+        for (unsigned int i = 0; i < vframe.landmarks_2d.size(); i++ ) {
+            if (vframe.landmarks_flag[i]) { 
+                auto pt = vframe.landmarks_2d[i];
+                auto dep = vframe.landmarks_3d[i].z();
                 cv::circle(img_up, pt, 3, cv::Scalar(0, 255, 0), 1);
                 char idtext[100] = {};
                 sprintf(idtext, "%3.2f", dep);
@@ -331,22 +316,21 @@ ImageDescriptor_t LoopCam::generate_gray_depth_image_descriptor(const StereoFram
         cv::putText(_show, text, cv::Point2f(20, 30), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
     }
     
-    return ides;
+    return vframe;
 }
 
-ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat & _show)
+VisualImageDesc LoopCam::generate_stereo_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat & _show)
 {
     if (vcam_id > msg.left_images.size()) {
         ROS_WARN("Flatten images too few");
-        ImageDescriptor_t ides;
-        ides.landmark_num = 0;
+        VisualImageDesc ides;
         return ides;
     }
     
-    ImageDescriptor_t ides = extractor_img_desc_deepnet(msg.stamp, msg.left_images[vcam_id], _config.LOWER_CAM_AS_MAIN);
-    ImageDescriptor_t ides_down = extractor_img_desc_deepnet(msg.stamp, msg.right_images[vcam_id], !_config.LOWER_CAM_AS_MAIN);
+    auto vframe0 = extractor_img_desc_deepnet(msg.stamp, msg.left_images[vcam_id], _config.LOWER_CAM_AS_MAIN);
+    auto vframe1 = extractor_img_desc_deepnet(msg.stamp, msg.right_images[vcam_id], !_config.LOWER_CAM_AS_MAIN);
 
-    if (ides.image_desc_size == 0 && ides_down.image_desc_size == 0)
+    if (vframe0.image_desc.size() == 0 && vframe1.image_desc.size() == 0)
     {
         ROS_WARN("Failed on deepnet;");
         // cv::Mat _img;
@@ -356,34 +340,29 @@ ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & 
     auto start = high_resolution_clock::now();
     // std::cout << "Downsample and encode Cost " << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 << "ms" << std::endl;
 
-    ides.timestamp = toLCMTime(msg.stamp);
-    ides.drone_id = self_id; // -1 is self drone;
-    ides.camera_extrinsic = fromROSPose(msg.left_extrisincs[vcam_id]);
-    ides.pose_drone = fromROSPose(msg.pose_drone);
-    ides.image_size = 0;
-    ides.frame_id = msg.keyframe_id;
+    vframe0.timestamp = msg.stamp;
+    vframe0.drone_id = self_id; // -1 is self drone;
+    vframe0.extrinsic = msg.left_extrisincs[vcam_id];
+    vframe0.pose_drone = msg.pose_drone;
+    vframe0.frame_id = msg.keyframe_id;
 
-    ides_down.timestamp = toLCMTime(msg.stamp);
-    ides_down.drone_id = self_id; // -1 is self drone;
-    ides_down.camera_extrinsic = fromROSPose(msg.right_extrisincs[vcam_id]);
-    ides_down.pose_drone = fromROSPose(msg.pose_drone);
-    ides_down.image_size = 0;
-    ides_down.frame_id = msg.keyframe_id;
+    vframe1.timestamp = msg.stamp;
+    vframe1.drone_id = self_id; // -1 is self drone;
+    vframe1.extrinsic = msg.right_extrisincs[vcam_id];
+    vframe1.pose_drone = msg.pose_drone;
+    vframe1.frame_id = msg.keyframe_id;
 
     auto image_left = msg.left_images[vcam_id];
-    auto image_right = msg.left_images[vcam_id];
+    auto image_right = msg.right_images[vcam_id];
 
-    std::vector<cv::Point2f> pts_up, pts_down;
-    pts_up = toCV(ides.landmarks_2d);
-
+    auto & pts_up = vframe0.landmarks_2d;
+    auto & pts_down = vframe1.landmarks_2d;
     std::vector<int> ids_up, ids_down;
 
-    if (ides.landmarks_2d.size() > _config.ACCEPT_MIN_3D_PTS) {
-        pts_up = toCV(ides.landmarks_2d);
-        pts_down = toCV(ides_down.landmarks_2d);
-        match_HFNet_local_features(pts_up, pts_down, ides.feature_descriptor, ides_down.feature_descriptor, ids_up, ids_down);
+    if (vframe0.landmarks_2d.size() > _config.ACCEPT_MIN_3D_PTS) {
+        match_HFNet_local_features(pts_up, pts_down, vframe0.feature_descriptor, vframe1.feature_descriptor, ids_up, ids_down);
     } else {
-        return ides;
+        return vframe0;
     }
     
     // ides.landmarks_2d.clear();
@@ -420,24 +399,15 @@ ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & 
             continue;
         }
 
-        Point2d_t pt2d;
-        pt2d.x = pt_up.x;
-        pt2d.y = pt_up.y;
-
-        Point3d_t pt3d;
-        pt3d.x = point_3d.x();
-        pt3d.y = point_3d.y();
-        pt3d.z = point_3d.z();
-
         int idx = ids_up[i];
         int idx_down = ids_down[i];
         // ides.landmarks_2d.push_back(pt2d);
         // ides.landmarks_2d_norm.push_back(pt2d_norm);
-        ides.landmarks_3d[idx] = pt3d;
-        ides.landmarks_flag[idx] = 1;
+        vframe0.landmarks_3d[idx] = point_3d;
+        vframe0.landmarks_flag[idx] = 1;
 
-        ides_down.landmarks_3d[idx_down] = pt3d;
-        ides_down.landmarks_flag[idx_down] = 1;
+        vframe1.landmarks_3d[idx_down] = point_3d;
+        vframe1.landmarks_flag[idx_down] = 1;
         count_3d ++;
         // std::cout << "Insert" << FEATURE_DESC_SIZE * ids[i] << "to" << FEATURE_DESC_SIZE * (ids[i] + 1)  << std::endl;
 
@@ -458,9 +428,9 @@ ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & 
 
     if (send_img) {
         if (_config.LOWER_CAM_AS_MAIN) {
-            encode_image(image_right, ides_down);
+            encode_image(image_right, vframe1);
         } else {
-            encode_image(image_left, ides);
+            encode_image(image_left, vframe0);
         }
     }
 
@@ -470,8 +440,8 @@ ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & 
 
         img_up.copyTo(img);
         if (!send_img) {
-            encode_image(img_up, ides);
-            encode_image(img_down, ides_down);
+            encode_image(img_up, vframe0);
+            encode_image(img_down, vframe1);
         }
 
         cv::cvtColor(img_up, img_up, cv::COLOR_GRAY2BGR);
@@ -482,7 +452,7 @@ ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & 
             cv::circle(img_down, pt, 1, cv::Scalar(255, 0, 0), -1);
         }
 
-        for (auto _pt : ides.landmarks_2d) {
+        for (auto _pt : vframe0.landmarks_2d) {
             cv::Point2f pt(_pt.x, _pt.y);
             cv::circle(img_up, pt, 3, cv::Scalar(0, 0, 255), 1);
         }
@@ -491,11 +461,10 @@ ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & 
         for (unsigned int i = 0; i < pts_up.size(); i++)
         {
             int idx = ids_up[i];
-            if (ides.landmarks_flag[idx]) {
+            if (vframe0.landmarks_flag[idx]) {
                 char title[100] = {0};
                 auto pt = pts_up[i];
-                auto pt3d = ides.landmarks_3d[idx];
-                Eigen::Vector3d point3d(pt3d.x, pt3d.y, pt3d.z);
+                auto point3d = vframe0.landmarks_3d[idx];
                 auto pt_cam = pose_up.att().inverse() * (point3d - pose_up.pos());
                 cv::circle(_show, pt, 3, cv::Scalar(0, 255, 0), 1);
                 cv::arrowedLine(_show, pts_up[i], pts_down[i], cv::Scalar(255, 255, 0), 1);
@@ -511,74 +480,50 @@ ImageDescriptor_t LoopCam::generate_stereo_image_descriptor(const StereoFrame & 
     }
 
     if (_config.LOWER_CAM_AS_MAIN) {
-        return ides_down;
+        return vframe1;
     } else {
-        return ides;
+        return vframe0;
     }
 
 }
-
-ImageDescriptor_t LoopCam::extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img, bool superpoint_mode)
+VisualImageDesc LoopCam::extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img, bool superpoint_mode)
 {
     auto start = high_resolution_clock::now();
 
-    ImageDescriptor_t img_des;
-    img_des.timestamp = toLCMTime(stamp);
-    img_des.image_desc_size = 0;
-    img_des.feature_descriptor_size = 0;
-    img_des.image_size = 0;
-    img_des.landmark_num = 0;
+    VisualImageDesc vframe;
+    vframe.timestamp = stamp;
 
     if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
-    cv::Mat roi = img(cv::Rect(0, img.rows*3/4, img.cols, img.rows/4));
-    roi.setTo(cv::Scalar(0, 0, 0));
+        cv::Mat roi = img(cv::Rect(0, img.rows*3/4, img.cols, img.rows/4));
+        roi.setTo(cv::Scalar(0, 0, 0));
     }
 #ifdef USE_TENSORRT
-    std::vector<cv::Point2f> features;
-    superpoint_net.inference(img, features, img_des.feature_descriptor);
-    img_des.image_desc_size = 0;
-    img_des.image_desc.clear();
-    CVPoints2LCM(features, img_des.landmarks_2d);
-    img_des.landmark_num = features.size();
-    img_des.feature_descriptor_size =  img_des.feature_descriptor.size();
-    img_des.landmarks_flag.clear();
-    img_des.landmarks_3d.clear();
-    img_des.landmarks_2d_norm.clear();
-    img_des.image_size = 0;
+    superpoint_net.inference(img, vframe.landmarks_2d, vframe.feature_descriptor);
 
     if (!superpoint_mode) {
-        img_des.image_desc = netvlad_net.inference(img);
-        img_des.image_desc_size = img_des.image_desc.size();
+        vframe.image_desc = netvlad_net.inference(img);
     }
 
-    for (unsigned int i = 0; i < img_des.landmarks_2d.size(); i++)
+    for (unsigned int i = 0; i < vframe.landmarks_2d.size(); i++)
     {
-        auto pt_up = img_des.landmarks_2d[i];
+        auto pt_up = vframe.landmarks_2d[i];
         Eigen::Vector3d pt_up3d;
-        Point2d_t pt2d_norm;
         cam->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
         Eigen::Vector2d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z());
 
-        pt2d_norm.x = pt_up_norm.x();
-        pt2d_norm.y = pt_up_norm.y();
-
-        img_des.landmarks_2d_norm.push_back(pt2d_norm);
-        Point3d_t pt3d;
-        pt3d.x = 0;
-        pt3d.y = 0;
-        pt3d.z = 0;
-        img_des.landmarks_3d.push_back(pt3d);
-        img_des.landmarks_flag.push_back(0);
+        vframe.landmarks_2d_norm.push_back(pt_up_norm);
+        vframe.landmarks_3d.push_back(Vector3d(0., 0., 0.));
+        vframe.landmarks_flag.push_back(0);
 
         if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
             for (int j = 0; j < FEATURE_DESC_SIZE; j ++) {
-                fsp << img_des.feature_descriptor[i*FEATURE_DESC_SIZE + j] << " ";
+                fsp << vframe.feature_descriptor[i*FEATURE_DESC_SIZE + j] << " ";
             }
             fsp << std::endl;
         }
     } 
 
-    return img_des;
+    return vframe;
 #else
     HFNetSrv hfnet_srv;
     hfnet_srv.request.image = msg;
@@ -590,16 +535,11 @@ ImageDescriptor_t LoopCam::extractor_img_desc_deepnet(ros::Time stamp, cv::Mat i
             if (local_kpts.size() > 0)
             {
                 // ROS_INFO("Received response from server desc.size %ld", desc.size());
-                img_des.image_desc_size = 0;
-                img_des.image_desc.clear();
-                ROSPoints2LCM(local_kpts, img_des.landmarks_2d);
-                img_des.landmark_num = local_kpts.size();
-                img_des.feature_descriptor = local_descriptors;
-                img_des.feature_descriptor_size = local_descriptors.size();
-                img_des.landmarks_flag.resize(img_des.landmark_num);
-                std::fill(img_des.landmarks_flag.begin(),img_des.landmarks_flag.begin()+img_des.landmark_num,0);  
-                img_des.image_size = 0;
-                return img_des;
+                // ROSPoints2LCM(local_kpts, img_des.landmarks_2d);
+                vframe.feature_descriptor = local_descriptors;
+                vframe.landmarks_flag.resize(img_des.landmark_num());
+                std::fill(vframe.landmarks_flag.begin(),vframe.landmarks_flag.begin()+vframe.landmark_num(),0);  
+                return vframe;
             }
         }
     } else {
@@ -611,21 +551,16 @@ ImageDescriptor_t LoopCam::extractor_img_desc_deepnet(ros::Time stamp, cv::Mat i
             if (desc.size() > 0)
             {
                 // ROS_INFO("Received response from server desc.size %ld", desc.size());
-                img_des.image_desc_size = desc.size();
-                img_des.image_desc = desc;
-                img_des.image_size = 0;
+                vframe.image_desc = desc;
                 ROSPoints2LCM(local_kpts, img_des.landmarks_2d);
                 img_des.landmark_num = local_kpts.size();
-                img_des.feature_descriptor = local_descriptors;
-                img_des.feature_descriptor_size = local_descriptors.size();
-                img_des.landmarks_flag.resize(img_des.landmark_num);
-                std::fill(img_des.landmarks_flag.begin(),img_des.landmarks_flag.begin()+img_des.landmark_num,0);  
-                return img_des;
+                vframe.feature_descriptor = local_descriptors;
+                vframe.landmarks_flag.resize(vframe.landmark_num());
+                std::fill(vframe.landmarks_flag.begin(),vframe.landmarks_flag.begin()+vframe.landmark_num,0);  
+                return vframe;
             }
         }
     }
 #endif
-    ROS_INFO("FAILED on deepnet!!! Service error");
-    return img_des;
 }
 }

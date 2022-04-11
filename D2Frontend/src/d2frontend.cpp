@@ -138,8 +138,7 @@ void D2Frontend::VIOnonKF_callback(const StereoFrame & stereoframe) {
 }
 
 void D2Frontend::VIOKF_callback(const StereoFrame & stereoframe, bool nonkeyframe) {
-    Eigen::Vector3d drone_pos(stereoframe.pose_drone.position.x, stereoframe.pose_drone.position.y, stereoframe.pose_drone.position.z);
-    double dpos = (last_keyframe_position - drone_pos).norm();
+    Eigen::Vector3d drone_pos = stereoframe.pose_drone.pos();
 
     if (stereoframe.stamp.toSec() - last_invoke < 1/params->max_freq) {
         return;
@@ -151,22 +150,24 @@ void D2Frontend::VIOKF_callback(const StereoFrame & stereoframe, bool nonkeyfram
 
     auto start = high_resolution_clock::now();
     std::vector<cv::Mat> imgs;
+    auto ret = loop_cam->process_stereoframe(stereoframe, imgs);
     
-    auto ret = loop_cam->on_flattened_images(stereoframe, imgs);
-    
-    ret.prevent_adding_db = nonkeyframe && dpos < params->min_movement_keyframe;
 
-    if (ret.landmark_num == 0) {
+    if (ret->landmark_num == 0) {
         ROS_WARN("[SWARM_LOOP] Null img desc, CNN no ready");
         return;
     }
 
+    bool is_keyframe = feature_tracker->track(ret);
+
+    ret->prevent_adding_db = !is_keyframe;
+
     received_image = true;
     last_keyframe_position = drone_pos;
 
-    loop_net->broadcast_fisheye_desc(ret);
-    loop_detector->on_image_recv(ret, imgs);
-    pub_node_frame(ret);
+    // loop_net->broadcast_fisheye_desc(ret);
+    // loop_detector->on_image_recv(ret, imgs);
+    // pub_node_frame(ret);
 }
 
 void D2Frontend::pub_node_frame(const FisheyeFrameDescriptor_t & viokf) {

@@ -1,6 +1,7 @@
 #include "d2frontend/d2frontend_params.h"
 #include "d2frontend/loop_cam.h"
 #include "d2frontend/loop_detector.h"
+#include "d2frontend/d2featuretracker.h"
 #include "swarm_msgs/swarm_lcm_converter.hpp"
 #include <opencv2/core/eigen.hpp>
 
@@ -10,6 +11,7 @@ namespace D2Frontend {
     {
         loopcamconfig = new LoopCamConfig;
         loopdetectorconfig = new LoopDetectorConfig;
+        ftconfig = new D2FTConfig;
 
         //Basic confi
         nh.param<int>("self_id", self_id, -1);

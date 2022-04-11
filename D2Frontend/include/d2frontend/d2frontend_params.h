@@ -50,6 +50,8 @@ enum CameraConfig{
 
 struct LoopCamConfig;
 struct LoopDetectorConfig;
+struct D2FTConfig;
+
 struct D2FrontendParams {
     int JPG_QUALITY;
     double ACCEPT_NONKEYFRAME_WAITSEC;
@@ -88,6 +90,7 @@ struct D2FrontendParams {
 
     LoopCamConfig * loopcamconfig;
     LoopDetectorConfig * loopdetectorconfig;
+    D2FTConfig * ftconfig;
 
 };
 

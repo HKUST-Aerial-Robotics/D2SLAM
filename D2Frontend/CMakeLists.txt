@@ -65,6 +65,7 @@ add_library(libd2frontend
   src/loop_net.cpp
   src/d2frontend_params.cpp
   src/d2frontend.cpp
+  src/d2featuretracker.cpp
   src/loop_utils.cpp
 )
 
