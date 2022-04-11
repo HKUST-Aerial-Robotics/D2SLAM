@@ -1,0 +1,82 @@
+<launch>
+    <arg name="show" default="false" />
+    <arg name="output" default="screen" />
+    <arg name="manager"     default="swarm_manager"/>
+    <arg name="send_img"     default="false"/>
+    <arg name="send_whole_img_desc"     default="false"/>
+    <arg name="is_4dof"     default="true"/>
+    <arg name="self_id"     default="1"/>
+    <arg name="vins"     default="false"/>
+    <arg name="superpoint_model_path"     default="$(find swarm_loop)/models/superpoint_v1_480x640_rtx3080_fp16.trt"/>
+    <arg name="netvlad_model_path"     default="$(find swarm_loop)/models/mobilenetvlad_480x640_rtx3080_fp16.trt" />
+    <!-- <arg name="superpoint_model_path"     default="$(find swarm_loop)/models/superpoint_v1_480x640_titan_fp32.trt"/> -->
+    <!-- <arg name="netvlad_model_path"     default="$(find swarm_loop)/models/mobilenetvlad_480x640_titan_fp32.trt" /> -->
+    <arg name="camera_config_path" default="/home/xuhao/Dropbox/data/SwarmExp2021/drone1-data/realsense/left.yaml" />
+    <arg name="vins_config_path" default="/home/xuhao/Dropbox/data/SwarmExp2021/drone1-data/realsense/realsense.yaml" />
+    <arg name="max_freq" default="1.0" />
+    <arg name="superpoint_max_num" default="200" />
+    <arg name="match_index_dist" default="5" />
+    <arg name="output_path" default="/home/dji/output/" />
+    <arg name="min_loop_feature_num" default="20" />
+    <arg name="init_loop_min_feature_num" default="20" />
+    <arg name="nonkeyframe_waitsec" default="5.0" />
+    <arg name="inter_drone_init_frames" default="3" />
+    
+    <node pkg="vins" type="vins_node_fisheye" name="vins_estimator" output="log" if="$(arg vins)">
+        <param name="config_file" type="string" value="$(arg vins_config_path)"/>
+    </node>
+    
+    <node pkg="swarm_loop" type="swarm_loop_node" name="swarm_loop" output="screen" >
+        <rosparam>
+            lcm_uri: udpm://224.0.0.251:7667?ttl=1
+            jpg_quality: 75
+            
+            query_thres: 0.2
+            init_query_thres: 0.2
+
+            min_movement_keyframe: 0.1
+            enable_pub_remote_img: false
+            enable_sub_remote_img: false
+            accept_min_3d_pts: 30
+            recv_msg_duration: 0.5
+            superpoint_thres: 0.2
+            triangle_thres: 0.012
+            #triangle_thres: 0.008
+            min_direction_loop: 1
+            is_pc_replay: false
+            detector_match_thres: 0.7
+            send_all_features: false
+            lower_cam_as_main: false
+            min_match_per_dir: 20
+            # camera_configuration: 0
+            camera_configuration: 2
+            width: 640
+            height: 480
+            output_raw_superpoint_desc: false
+            depth_far_thres: 100
+            loop_cov_pos: 0.1
+            odometry_consistency_threshold: 3.0
+            pos_covariance_per_meter: 0.01
+            yaw_covariance_per_meter: 0.003
+        </rosparam>
+        <param name="pca_comp_path" value="$(find swarm_loop)/models/components_.csv" type="string" />
+        <param name="output_path" value="$(arg output_path)" type="string" />
+        <param name="pca_mean_path" value="$(find swarm_loop)/models/mean_.csv" type="string" />
+        <param name="superpoint_model_path" value="$(arg superpoint_model_path)" type="string" />
+        <param name="netvlad_model_path" value="$(arg netvlad_model_path)" type="string" />
+        <param name="debug_image" value="$(arg show)" type="bool" />
+        <param name="send_img" value="$(arg send_img)" type="bool" />
+        <param name="send_whole_img_desc" value="$(arg send_whole_img_desc)" type="bool" />
+        <param name="self_id" value="$(arg self_id)" type="int" />
+        <param name="match_index_dist" value="$(arg match_index_dist)" type="int" />
+        <param name="nonkeyframe_waitsec" value="$(arg nonkeyframe_waitsec)" type="double" />
+        <param name="min_loop_feature_num" value="$(arg min_loop_feature_num)" type="int" />
+        <param name="init_loop_min_feature_num" value="$(arg init_loop_min_feature_num)" type="int" />
+        <param name="max_freq" value="$(arg max_freq)" type="double" />
+        <param name="inter_drone_init_frames" value="$(arg inter_drone_init_frames)" type="int" />
+        <param name="superpoint_max_num" value="$(arg superpoint_max_num)" type="int" />
+        <param name="camera_config_path" value="$(arg camera_config_path)" type="string" />
+        <param name="vins_config_path" value="$(arg vins_config_path)" type="string" />
+        <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
+    </node>
+</launch>

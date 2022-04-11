@@ -1,0 +1,7 @@
+<library path="lib/libswarm_loop_nodelet">
+    <class name="swarm_localization_pkg/SwarmLoopNode" type="swarm_localization_pkg::SwarmLoopNode" base_class_type="nodelet::Nodelet">
+        <description>
+            Nodelet version of swarm loop for high IO throughput
+        </description>
+    </class>
+</library>

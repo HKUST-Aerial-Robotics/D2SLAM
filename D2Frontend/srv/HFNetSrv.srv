@@ -1,0 +1,7 @@
+sensor_msgs/Image image
+---
+float32[] global_desc
+geometry_msgs/Point32[] keypoints
+
+#Every local_descriptor is 256 dimenision
+float32[] local_descriptors
