@@ -18,12 +18,11 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   camera_models
   message_filters
-  vins
 )
 
 
 SET("OpenCV_DIR"  "/usr/local/share/OpenCV/")
-find_package(OpenCV 3.4 REQUIRED)
+find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(lcm REQUIRED)
 # find_package(Backward)
@@ -59,25 +58,25 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
 )
 
-add_library(libswarm_loop
+add_library(libd2frontend
   src/loop_cam.cpp
   src/loop_detector.cpp
   src/loop_net.cpp
-  src/loop_params.cpp
-  src/swarm_loop.cpp
+  src/d2frontend_params.cpp
+  src/d2frontend.cpp
   src/loop_utils.cpp
 )
 
 add_library(${PROJECT_NAME}_nodelet
-  src/swarm_loop_nodelet.cpp
+  src/d2frontend_nodelet.cpp
 )
 
 add_executable(${PROJECT_NAME}_node
-  src/swarm_loop_node.cpp
+  src/d2frontend_node.cpp
 )
 
 add_executable(${PROJECT_NAME}_spy
-  src/swarm_loop_spy.cpp
+  src/d2frontend_spy.cpp
 )
 
 add_executable(${PROJECT_NAME}_net_tester
@@ -86,7 +85,7 @@ add_executable(${PROJECT_NAME}_net_tester
 
 set_property(TARGET ${PROJECT_NAME}_nodelet PROPERTY CXX_STANDARD 14)
 set_property(TARGET ${PROJECT_NAME}_node PROPERTY CXX_STANDARD 14)
-set_property(TARGET libswarm_loop PROPERTY CXX_STANDARD 14)
+set_property(TARGET libd2frontend PROPERTY CXX_STANDARD 14)
 
 if (USE_TENSORRT)
   cuda_add_library(loop_cnn
@@ -116,7 +115,7 @@ add_dependencies(${PROJECT_NAME}_spy
     ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 if (USE_TENSORRT)
-  target_link_libraries(libswarm_loop
+  target_link_libraries(libd2frontend
     ${catkin_LIBRARIES}
     ${OpenCV_LIBRARIES}
     ${TORCH_LIBRARIES}
@@ -126,7 +125,7 @@ if (USE_TENSORRT)
     loop_cnn
   )
 else()
-  target_link_libraries(libswarm_loop
+  target_link_libraries(libd2frontend
     ${catkin_LIBRARIES}
     ${OpenCV_LIBRARIES}
     ${TORCH_LIBRARIES}
@@ -145,7 +144,7 @@ target_link_libraries(${PROJECT_NAME}_nodelet
   lcm
   faiss
   dw
-  libswarm_loop
+  libd2frontend
 )
 
 target_link_libraries(${PROJECT_NAME}_node
@@ -154,7 +153,7 @@ target_link_libraries(${PROJECT_NAME}_node
   ${TORCH_LIBRARIES}
   lcm
   dw
-  libswarm_loop
+  libd2frontend
 )
 
 target_link_libraries(${PROJECT_NAME}_net_tester
@@ -163,7 +162,7 @@ target_link_libraries(${PROJECT_NAME}_net_tester
   ${TORCH_LIBRARIES}
   lcm
   dw
-  libswarm_loop
+  libd2frontend
 )
 
 target_link_libraries(${PROJECT_NAME}_spy
@@ -171,5 +170,5 @@ target_link_libraries(${PROJECT_NAME}_spy
   ${OpenCV_LIBRARIES}
   lcm
   dw
-  libswarm_loop
+  libd2frontend
 )

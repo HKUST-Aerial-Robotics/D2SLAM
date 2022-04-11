@@ -5,7 +5,7 @@
 #include <swarm_msgs/ImageDescriptor.h>
 #include <swarm_msgs/LoopEdge.h>
 #include <swarm_msgs/ImageDescriptor_t.hpp>
-#include "swarm_loop/loop_defines.h"
+#include "d2frontend/loop_defines.h"
 #include <swarm_loop/loop_cam.h>
 #include <functional>
 #include <swarm_msgs/Pose.h>

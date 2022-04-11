@@ -1,4 +1,4 @@
-#include "swarm_loop/mobilenetvlad_tensorrt.h"
+#include "d2frontend/mobilenetvlad_tensorrt.h"
 using namespace Swarm;
 
 std::vector<float> MobileNetVLADTensorRT::inference(const cv::Mat & input) {

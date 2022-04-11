@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef USE_TENSORRT
-#include "swarm_loop/tensorrt_generic.h"
+#include "d2frontend/tensorrt_generic.h"
 namespace Swarm {
 class MobileNetVLADTensorRT: public TensorRTInferenceGeneric {
 public:

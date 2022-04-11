@@ -1,4 +1,4 @@
-#include "swarm_loop/swarm_loop.h"
+#include "d2frontend/d2frontend.h"
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
 
@@ -12,9 +12,9 @@ namespace backward
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
 
-namespace swarm_localization_pkg
+namespace d2slam
 {
-    class SwarmLoopNode : public nodelet::Nodelet, public SwarmLoop
+    class D2SLAMNode : public nodelet::Nodelet, public D2Frontend
     {
         public:
             SwarmLoopNode() {}

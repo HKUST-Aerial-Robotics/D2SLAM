@@ -13,20 +13,18 @@ double TRIANGLE_THRES;
 
 #define USE_TENSORRT
 
-LoopCam::LoopCam(CameraConfig _camera_configuration, 
-    const std::string &camera_config_path, 
-    const std::string &superpoint_model, 
-    std::string _pca_comp,
-    std::string _pca_mean,
-    double thres, int max_kp_num,
-    const std::string & netvlad_model, int width, int height, int _self_id, bool _send_img, ros::NodeHandle &nh) : 
-    camera_configuration(_camera_configuration),
-    self_id(_self_id),
+LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) : 
+    camera_configuration(config.camera_configuration),
+    self_id(config.self_id),
 #ifdef USE_TENSORRT
-    superpoint_net(superpoint_model, _pca_comp, _pca_mean, width, height, thres, max_kp_num), 
-    netvlad_net(netvlad_model, width, height), 
+    superpoint_net(config.superpoint_model, config.pca_comp, 
+        config.pca_mean, config.width, config.height, 
+        config.superpoint_thres, 
+        config.superpoint_max_num), 
+    netvlad_net(config.netvlad_model, config.width, config.height), 
 #endif
-    send_img(_send_img)
+    send_img(config._send_img)
+    _config(config)
 {
     camodocal::CameraFactory cam_factory;
     ROS_INFO("Read camera from %s", camera_config_path.c_str());

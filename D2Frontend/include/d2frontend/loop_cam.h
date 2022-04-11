@@ -76,7 +76,26 @@ struct StereoFrame{
     }
 };
 
+struct LoopCamConfig
+{
+    /* data */
+    CameraConfig camera_configuration;
+    std::string camera_config_path;
+    std::string superpoint_model;
+    std::string pca_comp;
+    std::string pca_mean;
+    double superpoint_thres;
+    int superpoint_max_num;
+    const std::string netvlad_model;
+    int width;
+    int height; 
+    int self_id = 0;
+    bool _send_img = false; 
+};
+
+
 class LoopCam {
+    LoopCamConfig _config;
     int cam_count = 0;
     int loop_duration = 10;
     int self_id = 0;
@@ -96,12 +115,7 @@ public:
     bool show = false;
 
     // LoopDetector * loop_detector = nullptr;
-    LoopCam(CameraConfig _camera_configuration, const std::string & _camera_config_path, 
-        const std::string & superpoint_model, 
-        std::string _pca_comp,
-        std::string _pca_mean,
-        double thres, int max_kp_num, const std::string & netvlad_model, int width, int height, 
-        int self_id, bool _send_img, ros::NodeHandle & nh);
+    LoopCam(LoopCamConfig config, ros::NodeHandle & nh);
     
     ImageDescriptor_t extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img, bool superpoint_mode=false);
     

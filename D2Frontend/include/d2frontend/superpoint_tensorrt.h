@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef USE_TENSORRT
-#include "swarm_loop/tensorrt_generic.h"
+#include "d2frontend/tensorrt_generic.h"
 #include <torch/csrc/autograd/variable.h>
 #include <ATen/ATen.h>
 #include <torch/csrc/api/include/torch/types.h>

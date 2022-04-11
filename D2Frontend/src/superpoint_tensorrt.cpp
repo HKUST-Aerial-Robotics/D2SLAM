@@ -1,7 +1,7 @@
-#include "swarm_loop/superpoint_tensorrt.h"
-#include "swarm_loop/loop_defines.h"
+#include "d2frontend/superpoint_tensorrt.h"
+#include "d2frontend/d2frontend_params.h"
 #include "ATen/Parallel.h"
-#include "swarm_loop/utils.h"
+#include "d2frontend/utils.h"
 #include "swarm_msgs/swarm_types.hpp"
 
 #define USE_PCA

@@ -1,7 +1,7 @@
 #include <swarm_loop/loop_cam.h>
 #include <opencv2/opencv.hpp>
 #include <swarm_msgs/swarm_lcm_converter.hpp>
-#include <swarm_loop/loop_detector.h>
+#include <d2slam/loop_detector.h>
 #include <chrono> 
 
 using namespace std::chrono; 

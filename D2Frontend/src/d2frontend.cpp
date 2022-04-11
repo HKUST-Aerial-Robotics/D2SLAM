@@ -1,11 +1,11 @@
-#include <swarm_loop/swarm_loop.h>
-#include <swarm_loop/utils.h>
+#include <d2frontend/d2frontend.h>
+#include <d2frontend/utils.h>
 
 #include "ros/ros.h"
 #include <iostream>
-#include "swarm_loop/loop_net.h"
-#include "swarm_loop/loop_cam.h"
-#include "swarm_loop/loop_detector.h"
+#include "d2frontend/loop_net.h"
+#include "d2frontend/loop_cam.h"
+#include "d2frontend/loop_detector.h"
 #include <Eigen/Eigen>
 #include <thread>
 #include <nav_msgs/Odometry.h>
@@ -18,9 +18,9 @@ namespace backward
 {
     backward::SignalHandling sh;
 }
-namespace swarm_localization_pkg {
 
-void SwarmLoop::on_loop_connection (LoopEdge & loop_con, bool is_local) {
+namespace D2Frontend {
+void D2Frontend::on_loop_connection (LoopEdge & loop_con, bool is_local) {
     if(is_local) {
         loop_net->broadcast_loop_connection(loop_con);
     }
@@ -29,7 +29,7 @@ void SwarmLoop::on_loop_connection (LoopEdge & loop_con, bool is_local) {
     loopconn_pub.publish(loop_con);
 }
 
-StereoFrame SwarmLoop::find_images_raw(const nav_msgs::Odometry & odometry) {
+StereoFrame D2Frontend::find_images_raw(const nav_msgs::Odometry & odometry) {
     // ROS_INFO("find_images_raw %f", odometry.header.stamp.toSec());
     auto stamp = odometry.header.stamp;
     StereoFrame ret;
@@ -52,14 +52,14 @@ StereoFrame SwarmLoop::find_images_raw(const nav_msgs::Odometry & odometry) {
     return ret;
 }
 
-void SwarmLoop::flatten_raw_callback(const vins::FlattenImages & stereoframe) {
+void D2Frontend::flatten_raw_callback(const vins::FlattenImages & stereoframe) {
     raw_stereo_image_lock.lock();
-    // ROS_INFO("(SwarmLoop::flatten_raw_callback) Received flatten_raw %f", stereoframe.header.stamp.toSec());
+    // ROS_INFO("(D2Frontend::flatten_raw_callback) Received flatten_raw %f", stereoframe.header.stamp.toSec());
     raw_stereo_images.push(StereoFrame(stereoframe, self_id));
     raw_stereo_image_lock.unlock();
 }
 
-void SwarmLoop::stereo_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right) {
+void D2Frontend::stereo_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right) {
     auto _l = getImageFromMsg(left);
     auto _r = getImageFromMsg(right);
     raw_stereo_image_lock.lock();
@@ -69,7 +69,7 @@ void SwarmLoop::stereo_images_callback(const sensor_msgs::ImageConstPtr left, co
 }
 
 
-void SwarmLoop::comp_stereo_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::CompressedImageConstPtr right) {
+void D2Frontend::comp_stereo_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::CompressedImageConstPtr right) {
     auto _l = getImageFromMsg(left, cv::IMREAD_GRAYSCALE);
     auto _r = getImageFromMsg(right, cv::IMREAD_GRAYSCALE);
     raw_stereo_image_lock.lock();
@@ -79,7 +79,7 @@ void SwarmLoop::comp_stereo_images_callback(const sensor_msgs::CompressedImageCo
 }
 
 
-void SwarmLoop::comp_depth_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::ImageConstPtr depth) {
+void D2Frontend::comp_depth_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::ImageConstPtr depth) {
     auto _l = getImageFromMsg(left, cv::IMREAD_GRAYSCALE);
     auto _d = getImageFromMsg(depth);
     raw_stereo_image_lock.lock();
@@ -88,7 +88,7 @@ void SwarmLoop::comp_depth_images_callback(const sensor_msgs::CompressedImageCon
     raw_stereo_image_lock.unlock();
 }
 
-void SwarmLoop::depth_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr depth) {
+void D2Frontend::depth_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr depth) {
     auto _l = getImageFromMsg(left);
     auto _d = getImageFromMsg(depth);
     raw_stereo_image_lock.lock();
@@ -97,7 +97,7 @@ void SwarmLoop::depth_images_callback(const sensor_msgs::ImageConstPtr left, con
     raw_stereo_image_lock.unlock();
 }
 
-void SwarmLoop::odometry_callback(const nav_msgs::Odometry & odometry) {
+void D2Frontend::odometry_callback(const nav_msgs::Odometry & odometry) {
     if (odometry.header.stamp.toSec() - last_invoke < ACCEPT_NONKEYFRAME_WAITSEC) {
         return;
     }
@@ -107,11 +107,11 @@ void SwarmLoop::odometry_callback(const nav_msgs::Odometry & odometry) {
         // ROS_INFO("VIO Non Keyframe callback!!");
         VIOnonKF_callback(_stereoframe);
     } else {
-        // ROS_WARN("[SwarmLoop] (odometry_callback) Flattened images correspond to this Odometry not found: %f", odometry.header.stamp.toSec());
+        // ROS_WARN("[D2Frontend] (odometry_callback) Flattened images correspond to this Odometry not found: %f", odometry.header.stamp.toSec());
     }
 }
 
-void SwarmLoop::odometry_keyframe_callback(const nav_msgs::Odometry & odometry) {
+void D2Frontend::odometry_keyframe_callback(const nav_msgs::Odometry & odometry) {
     // ROS_INFO("VIO Keyframe received");
     auto _imagesraw = find_images_raw(odometry);
     if (_imagesraw.stamp.toSec() > 1000) {
@@ -121,7 +121,7 @@ void SwarmLoop::odometry_keyframe_callback(const nav_msgs::Odometry & odometry) 
     }
 }
 
-void SwarmLoop::VIOnonKF_callback(const StereoFrame & stereoframe) {
+void D2Frontend::VIOnonKF_callback(const StereoFrame & stereoframe) {
     if (!received_image && (stereoframe.stamp - last_kftime).toSec() > INIT_ACCEPT_NONKEYFRAME_WAITSEC) {
         //
         ROS_INFO("[SWARM_LOOP] (VIOnonKF_callback) USE non vio kf as KF at first keyframe!");
@@ -137,7 +137,7 @@ void SwarmLoop::VIOnonKF_callback(const StereoFrame & stereoframe) {
     }
 }
 
-void SwarmLoop::VIOKF_callback(const StereoFrame & stereoframe, bool nonkeyframe) {
+void D2Frontend::VIOKF_callback(const StereoFrame & stereoframe, bool nonkeyframe) {
     Eigen::Vector3d drone_pos(stereoframe.pose_drone.position.x, stereoframe.pose_drone.position.y, stereoframe.pose_drone.position.z);
     double dpos = (last_keyframe_position - drone_pos).norm();
 
@@ -169,7 +169,7 @@ void SwarmLoop::VIOKF_callback(const StereoFrame & stereoframe, bool nonkeyframe
     pub_node_frame(ret);
 }
 
-void SwarmLoop::pub_node_frame(const FisheyeFrameDescriptor_t & viokf) {
+void D2Frontend::pub_node_frame(const FisheyeFrameDescriptor_t & viokf) {
     ROS_INFO("[SWARM_LOOP](pub_node_frame) drone %d pub nodeframe", viokf.drone_id);
     swarm_msgs::node_frame nf;
     nf.header.stamp = toROSTime(viokf.timestamp);
@@ -187,128 +187,28 @@ void SwarmLoop::pub_node_frame(const FisheyeFrameDescriptor_t & viokf) {
 }
 
 
-void SwarmLoop::on_remote_frame_ros(const swarm_msgs::FisheyeFrameDescriptor & remote_img_desc) {
+void D2Frontend::on_remote_frame_ros(const swarm_msgs::FisheyeFrameDescriptor & remote_img_desc) {
     // ROS_INFO("Remote");
     if (received_image) {
         this->on_remote_image(toLCMFisheyeDescriptor(remote_img_desc));
     }
 }
 
-void SwarmLoop::on_remote_image(const FisheyeFrameDescriptor_t & frame_desc) {
+void D2Frontend::on_remote_image(const FisheyeFrameDescriptor_t & frame_desc) {
     loop_detector->on_image_recv(frame_desc);
 }
 
 
-SwarmLoop::SwarmLoop () {}
+D2Frontend::D2Frontend () {}
 
-void SwarmLoop::Init(ros::NodeHandle & nh) {
+void D2Frontend::Init(ros::NodeHandle & nh) {
     //Init Loop Net
-    std::string _lcm_uri = "0.0.0.0";
-    std::string camera_config_path = "";
-    std::string superpoint_model_path = "";
-    std::string netvlad_model_path = "";
-    std::string vins_config_path;
-    std::string _pca_comp_path, _pca_mean_path;
+    params = new D2FrontendParams(nh);
     std::string IMAGE0_TOPIC, IMAGE1_TOPIC, COMP_IMAGE0_TOPIC, COMP_IMAGE1_TOPIC, DEPTH_TOPIC;
     cv::setNumThreads(1);
-    nh.param<int>("self_id", self_id, -1);
-    nh.param<bool>("is_4dof", is_4dof, true);
-    nh.param<double>("min_movement_keyframe", min_movement_keyframe, 0.3);
-    nh.param<double>("nonkeyframe_waitsec", ACCEPT_NONKEYFRAME_WAITSEC, 5.0);
 
-    nh.param<std::string>("lcm_uri", _lcm_uri, "udpm://224.0.0.251:7667?ttl=1");
-    
-    nh.param<int>("init_loop_min_feature_num", INIT_MODE_MIN_LOOP_NUM, 10);
-    nh.param<int>("match_index_dist", MATCH_INDEX_DIST, 10);
-    nh.param<int>("min_loop_feature_num", MIN_LOOP_NUM, 15);
-    nh.param<int>("min_match_per_dir", MIN_MATCH_PRE_DIR, 15);
-    nh.param<int>("jpg_quality", JPG_QUALITY, 50);
-    nh.param<int>("accept_min_3d_pts", ACCEPT_MIN_3D_PTS, 50);
-    nh.param<int>("inter_drone_init_frames", inter_drone_init_frames, 50);
-    nh.param<bool>("enable_lk", ENABLE_LK_LOOP_DETECTION, true);
-    nh.param<bool>("enable_pub_remote_frame", enable_pub_remote_frame, false);
-    nh.param<bool>("enable_pub_local_frame", enable_pub_local_frame, false);
-    nh.param<bool>("enable_sub_remote_frame", enable_sub_remote_frame, false);
-    nh.param<bool>("send_img", send_img, false);
-    nh.param<bool>("is_pc_replay", IS_PC_REPLAY, false);
-    nh.param<bool>("send_whole_img_desc", send_whole_img_desc, false);
-    nh.param<bool>("send_all_features", SEND_ALL_FEATURES, false);
-    nh.param<double>("query_thres", INNER_PRODUCT_THRES, 0.6);
-    nh.param<double>("init_query_thres", INIT_MODE_PRODUCT_THRES, 0.3);
-    nh.param<double>("max_freq", max_freq, 1.0);
-    nh.param<double>("recv_msg_duration", recv_msg_duration, 0.5);
-    nh.param<double>("superpoint_thres", superpoint_thres, 0.012);
-    nh.param<int>("superpoint_max_num", superpoint_max_num, 200);
-    nh.param<double>("detector_match_thres", DETECTOR_MATCH_THRES, 0.9);
-    nh.param<bool>("lower_cam_as_main", LOWER_CAM_AS_MAIN, false);
-    nh.param<bool>("output_raw_superpoint_desc", OUTPUT_RAW_SUPERPOINT_DESC, false);
-
-    nh.param<double>("odometry_consistency_threshold", odometry_consistency_threshold, 2.0);
-    nh.param<double>("pos_covariance_per_meter", pos_covariance_per_meter, 0.01);
-    nh.param<double>("yaw_covariance_per_meter", yaw_covariance_per_meter, 0.003);
-
-    nh.param<double>("triangle_thres", TRIANGLE_THRES, 0.006);
-    nh.param<bool>("debug_no_rejection", DEBUG_NO_REJECT, false);
-    nh.param<double>("depth_far_thres", DEPTH_FAR_THRES, 10.0);
-    nh.param<double>("depth_near_thres", DEPTH_NEAR_THRES, 0.3);
-    nh.param<double>("loop_cov_pos", loop_cov_pos, 0.013);
-    nh.param<double>("loop_cov_ang", loop_cov_ang, 2.5e-04);
-    nh.param<int>("min_direction_loop", MIN_DIRECTION_LOOP, 3);
-    nh.param<int>("width", width, 400);
-    nh.param<int>("height", height, 208);
-    int _camconfig;
-    nh.param<int>("camera_configuration", _camconfig, 1);
-    camera_configuration = (CameraConfig) _camconfig;
-    nh.param<std::string>("vins_config_path",vins_config_path, "");
-    nh.param<std::string>("pca_comp_path",_pca_comp_path, "");
-    nh.param<std::string>("pca_mean_path",_pca_mean_path, "");
-    nh.param<std::string>("camera_config_path",camera_config_path, 
-        "/home/xuhao/swarm_ws/src/VINS-Fusion-gpu/config/vi_car/cam0_mei.yaml");
-    nh.param<std::string>("superpoint_model_path", superpoint_model_path, "");
-    nh.param<std::string>("netvlad_model_path", netvlad_model_path, "");
-    nh.param<bool>("debug_image", debug_image, false);
-    nh.param<std::string>("output_path", OUTPUT_PATH, "");
-    
-    cv::FileStorage fsSettings;
-    fsSettings.open(vins_config_path.c_str(), cv::FileStorage::READ);
-
-    if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
-        MAX_DIRS = 1;
-    } else if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
-        MAX_DIRS = 4;
-    } else if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
-        MAX_DIRS = 1;
-        fsSettings["depth_topic"] >> DEPTH_TOPIC;
-    } else {
-        MAX_DIRS = 0;
-        ROS_ERROR("[SWARM_LOOP] Camera configuration %d not implement yet.", camera_configuration);
-        exit(-1);
-    }
-
-    fsSettings["image0_topic"] >> IMAGE0_TOPIC;
-    fsSettings["image1_topic"] >> IMAGE1_TOPIC;
-
-    fsSettings["compressed_image0_topic"] >> COMP_IMAGE0_TOPIC;
-    fsSettings["compressed_image1_topic"] >> COMP_IMAGE1_TOPIC;
-
-    cv::Mat cv_T;
-    fsSettings["body_T_cam0"] >> cv_T;
-    Eigen::Matrix4d T;
-    cv::cv2eigen(cv_T, T);
-    left_extrinsic = toROSPose(Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3)));
-
-    fsSettings["body_T_cam1"] >> cv_T;
-    cv::cv2eigen(cv_T, T);
-
-    int is_comp_images = 0;
-    fsSettings["is_compressed_images"] >> is_comp_images;
-
-    right_extrinsic = toROSPose(Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3)));
-
-    
     loop_net = new LoopNet(_lcm_uri, send_img, send_whole_img_desc, recv_msg_duration);
-    loop_cam = new LoopCam(camera_configuration, camera_config_path, superpoint_model_path, _pca_comp_path, _pca_mean_path, 
-        superpoint_thres, superpoint_max_num, netvlad_model_path, width, height, self_id, send_img, nh);
+    loop_cam = new LoopCam(params.loopcamconfig, nh);
         
     loop_cam->show = debug_image; 
     loop_detector = new LoopDetector(self_id);
@@ -335,7 +235,7 @@ void SwarmLoop::Init(ros::NodeHandle & nh) {
     };
 
     if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
-        flatten_raw_sub = nh.subscribe("/vins_estimator/flattened_gray", 1, &SwarmLoop::flatten_raw_callback, this, ros::TransportHints().tcpNoDelay());
+        flatten_raw_sub = nh.subscribe("/vins_estimator/flattened_gray", 1, &D2Frontend::flatten_raw_callback, this, ros::TransportHints().tcpNoDelay());
     } else if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
         //Subscribe stereo pinhole, probrably is 
         if (is_comp_images) {
@@ -343,13 +243,13 @@ void SwarmLoop::Init(ros::NodeHandle & nh) {
             comp_image_sub_l = new message_filters::Subscriber<sensor_msgs::CompressedImage> (nh, COMP_IMAGE0_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
             comp_image_sub_r = new message_filters::Subscriber<sensor_msgs::CompressedImage> (nh, COMP_IMAGE1_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
             comp_sync = new message_filters::TimeSynchronizer<sensor_msgs::CompressedImage, sensor_msgs::CompressedImage> (*comp_image_sub_l, *comp_image_sub_r, 1000);
-            comp_sync->registerCallback(boost::bind(&SwarmLoop::comp_stereo_images_callback, this, _1, _2));
+            comp_sync->registerCallback(boost::bind(&D2Frontend::comp_stereo_images_callback, this, _1, _2));
         } else {
             ROS_INFO("[SWARM_LOOP] Input: raw images %s and %s", IMAGE0_TOPIC.c_str(), IMAGE1_TOPIC.c_str());
             image_sub_l = new message_filters::Subscriber<sensor_msgs::Image> (nh, IMAGE0_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
             image_sub_r = new message_filters::Subscriber<sensor_msgs::Image> (nh, IMAGE1_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
             sync = new message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> (*image_sub_l, *image_sub_r, 1000);
-            sync->registerCallback(boost::bind(&SwarmLoop::stereo_images_callback, this, _1, _2));
+            sync->registerCallback(boost::bind(&D2Frontend::stereo_images_callback, this, _1, _2));
         }
     } else if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         if (is_comp_images) {
@@ -357,25 +257,25 @@ void SwarmLoop::Init(ros::NodeHandle & nh) {
             comp_image_sub_l = new message_filters::Subscriber<sensor_msgs::CompressedImage> (nh, COMP_IMAGE0_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
             image_sub_r = new message_filters::Subscriber<sensor_msgs::Image> (nh, DEPTH_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
             comp_depth_sync = new message_filters::TimeSynchronizer<sensor_msgs::CompressedImage, sensor_msgs::Image> (*comp_image_sub_l, *image_sub_r, 1000);
-            comp_depth_sync->registerCallback(boost::bind(&SwarmLoop::comp_depth_images_callback, this, _1, _2));
+            comp_depth_sync->registerCallback(boost::bind(&D2Frontend::comp_depth_images_callback, this, _1, _2));
         } else {
             ROS_INFO("[SWARM_LOOP] Input: raw images %s and depth %s", IMAGE0_TOPIC.c_str(), DEPTH_TOPIC.c_str());
             image_sub_l = new message_filters::Subscriber<sensor_msgs::Image> (nh, IMAGE0_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
             image_sub_r = new message_filters::Subscriber<sensor_msgs::Image> (nh, DEPTH_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
             sync = new message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> (*image_sub_l, *image_sub_r, 1000);
-            sync->registerCallback(boost::bind(&SwarmLoop::depth_images_callback, this, _1, _2));
+            sync->registerCallback(boost::bind(&D2Frontend::depth_images_callback, this, _1, _2));
         }
     }
     
     keyframe_pub = nh.advertise<swarm_msgs::node_frame>("keyframe", 10);
-    odometry_sub  = nh.subscribe("/vins_estimator/odometry", 1, &SwarmLoop::odometry_callback, this, ros::TransportHints().tcpNoDelay());
-    keyframe_odometry_sub  = nh.subscribe("/vins_estimator/keyframe_pose", 1, &SwarmLoop::odometry_keyframe_callback, this, ros::TransportHints().tcpNoDelay());
+    odometry_sub  = nh.subscribe("/vins_estimator/odometry", 1, &D2Frontend::odometry_callback, this, ros::TransportHints().tcpNoDelay());
+    keyframe_odometry_sub  = nh.subscribe("/vins_estimator/keyframe_pose", 1, &D2Frontend::odometry_keyframe_callback, this, ros::TransportHints().tcpNoDelay());
 
     loopconn_pub = nh.advertise<swarm_msgs::LoopEdge>("loop_connection", 10);
     
     if (enable_sub_remote_frame) {
         ROS_INFO("[SWARM_LOOP] Subscribing remote image from bag");
-        remote_img_sub = nh.subscribe("/swarm_loop/remote_frame_desc", 1, &SwarmLoop::on_remote_frame_ros, this, ros::TransportHints().tcpNoDelay());
+        remote_img_sub = nh.subscribe("/swarm_loop/remote_frame_desc", 1, &D2Frontend::on_remote_frame_ros, this, ros::TransportHints().tcpNoDelay());
     }
 
     if (enable_pub_remote_frame) {

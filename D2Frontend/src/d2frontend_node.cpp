@@ -1,7 +1,7 @@
-#include "swarm_loop/swarm_loop.h"
+#include "d2frontend/d2frontend.h"
 
 
-class SwarmLoopNode :  public swarm_localization_pkg::SwarmLoop
+class D2FrontendNode :  public swarm_localization_pkg::D2Frontend
 {
     public:
         SwarmLoopNode(ros::NodeHandle & nh)
@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
 
-    SwarmLoopNode fisheye(n);
+    D2FrontendNode frontend(n);
     ros::MultiThreadedSpinner spinner(3);
     spinner.spin();
     return 0;

@@ -1,9 +1,9 @@
 #pragma once
 #include "ros/ros.h"
 #include <iostream>
-#include "swarm_loop/loop_net.h"
-#include "swarm_loop/loop_cam.h"
-#include "swarm_loop/loop_detector.h"
+#include "d2frontend/loop_net.h"
+#include "d2frontend/loop_cam.h"
+#include "d2frontend/loop_detector.h"
 #include <chrono> 
 #include <Eigen/Eigen>
 #include <thread>
@@ -15,17 +15,13 @@
 
 using namespace std::chrono; 
 
-namespace swarm_localization_pkg {
-class SwarmLoop {
+namespace D2Frontend {
+class D2Frontend {
 protected:
     LoopDetector * loop_detector = nullptr;
     LoopCam * loop_cam = nullptr;
     LoopNet * loop_net = nullptr;
     ros::Subscriber cam_sub;
-    bool debug_image = false;
-    double min_movement_keyframe = 0.3;
-    int self_id = 0;
-    bool received_image = false;
     ros::Time last_kftime;
     Eigen::Vector3d last_keyframe_position = Eigen::Vector3d(10000, 10000, 10000);
 
@@ -87,16 +83,11 @@ protected:
     bool send_whole_img_desc;
     std::thread th;
 
-    double max_freq = 1.0;
-    double recv_msg_duration = 0.5;
-    double superpoint_thres = 0.012;
-    int superpoint_max_num = 200;
-
     ros::Timer timer;
 
     geometry_msgs::Pose left_extrinsic, right_extrinsic;
 public:
-    SwarmLoop ();
+    D2Frontend ();
     
 protected:
     virtual void Init(ros::NodeHandle & nh);
