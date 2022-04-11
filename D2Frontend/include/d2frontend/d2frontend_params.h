@@ -38,8 +38,6 @@
 
 
 #define FEATURE_DESC_SIZE 64
-
-
 #define ACCEPT_SP_MATCH_DISTANCE 0.7
 
 namespace D2Frontend {

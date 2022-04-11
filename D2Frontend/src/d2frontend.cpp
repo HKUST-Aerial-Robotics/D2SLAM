@@ -52,12 +52,12 @@ StereoFrame D2Frontend::find_images_raw(const nav_msgs::Odometry & odometry) {
     return ret;
 }
 
-void D2Frontend::flatten_raw_callback(const vins::FlattenImages & stereoframe) {
-    raw_stereo_image_lock.lock();
-    // ROS_INFO("(D2Frontend::flatten_raw_callback) Received flatten_raw %f", stereoframe.header.stamp.toSec());
-    raw_stereo_images.push(StereoFrame(stereoframe, params->self_id));
-    raw_stereo_image_lock.unlock();
-}
+// void D2Frontend::flatten_raw_callback(const vins::FlattenImages & stereoframe) {
+//     raw_stereo_image_lock.lock();
+//     // ROS_INFO("(D2Frontend::flatten_raw_callback) Received flatten_raw %f", stereoframe.header.stamp.toSec());
+//     raw_stereo_images.push(StereoFrame(stereoframe, params->self_id));
+//     raw_stereo_image_lock.unlock();
+// }
 
 void D2Frontend::stereo_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right) {
     auto _l = getImageFromMsg(left);
@@ -234,7 +234,7 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     };
 
     if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
-        flatten_raw_sub = nh.subscribe("/vins_estimator/flattened_gray", 1, &D2Frontend::flatten_raw_callback, this, ros::TransportHints().tcpNoDelay());
+        // flatten_raw_sub = nh.subscribe("/vins_estimator/flattened_gray", 1, &D2Frontend::flatten_raw_callback, this, ros::TransportHints().tcpNoDelay());
     } else if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
         //Subscribe stereo pinhole, probrably is 
         if (params->is_comp_images) {

@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   cv_bridge
   swarm_msgs
+  swarmcomm_msgs
   message_generation
   camera_models
   message_filters
@@ -45,7 +46,7 @@ endif()
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES loop_cnn
-  CATKIN_DEPENDS std_msgs cv_bridge roscpp rosmsg rospy swarm_msgs
+  CATKIN_DEPENDS std_msgs cv_bridge roscpp rosmsg rospy swarm_msgs swarmcomm_msgs
   #DEPENDS system_lib
 )
 

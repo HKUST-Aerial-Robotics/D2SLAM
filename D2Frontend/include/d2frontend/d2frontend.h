@@ -36,8 +36,7 @@ protected:
 
     StereoFrame find_images_raw(const nav_msgs::Odometry & odometry);
 
-    void flatten_raw_callback(const vins::FlattenImages & viokf);
-
+    // void flatten_raw_callback(const ::FlattenImages & viokf);
     void stereo_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right);
     void comp_stereo_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::CompressedImageConstPtr right);
     void comp_depth_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::ImageConstPtr right);

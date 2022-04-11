@@ -7,11 +7,10 @@
 #include <camodocal/camera_models/Camera.h>
 #include <camodocal/camera_models/PinholeCamera.h>
 #include <functional>
-#include <vins/VIOKeyframe.h>
+// #include <vins/VIOKeyframe.h>
 #include <swarm_msgs/ImageDescriptor_t.hpp>
 #include <swarm_msgs/FisheyeFrameDescriptor_t.hpp>
 #include "d2frontend_params.h"
-#include <vins/FlattenImages.h>
 #include "superpoint_tensorrt.h"
 #include "mobilenetvlad_tensorrt.h"
 #include <message_filters/subscriber.h>
@@ -58,21 +57,21 @@ struct StereoFrame{
         keyframe_id = generate_keyframe_id(_stamp, self_id);
     }
 
-    StereoFrame(vins::FlattenImages vins_flatten, int self_id):
-        stamp(vins_flatten.header.stamp) {
-        for (int i = 1; i < vins_flatten.up_cams.size(); i++) {
-            left_extrisincs.push_back(vins_flatten.extrinsic_up_cams[i]);
-            right_extrisincs.push_back(vins_flatten.extrinsic_down_cams[i]);
+    // StereoFrame(vins::FlattenImages vins_flatten, int self_id):
+    //     stamp(vins_flatten.header.stamp) {
+    //     for (int i = 1; i < vins_flatten.up_cams.size(); i++) {
+    //         left_extrisincs.push_back(vins_flatten.extrinsic_up_cams[i]);
+    //         right_extrisincs.push_back(vins_flatten.extrinsic_down_cams[i]);
             
-            auto _l = getImageFromMsg(vins_flatten.up_cams[i]);
-            auto _r = getImageFromMsg(vins_flatten.down_cams[i]);
+    //         auto _l = getImageFromMsg(vins_flatten.up_cams[i]);
+    //         auto _r = getImageFromMsg(vins_flatten.down_cams[i]);
 
-            left_images.push_back(_l->image);
-            right_images.push_back(_r->image);
-        }
+    //         left_images.push_back(_l->image);
+    //         right_images.push_back(_r->image);
+    //     }
 
-        keyframe_id = generate_keyframe_id(stamp, self_id);
-    }
+    //     keyframe_id = generate_keyframe_id(stamp, self_id);
+    // }
 };
 
 struct LoopCamConfig

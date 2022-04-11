@@ -1,5 +1,5 @@
 #include <d2frontend/utils.h>
-#include <opencv/cv.hpp>
+#include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
 
 using namespace std::chrono; 

@@ -1,9 +1,18 @@
 #pragma once
+#include <opencv2/opencv.hpp>
 
 #include <cv_bridge/cv_bridge.h>
 #include <ros/ros.h>
 #include <swarm_msgs/Pose.h>
 #include <chrono> 
+
+#ifndef CV_FONT_HERSHEY_SIMPLEX
+#define CV_FONT_HERSHEY_SIMPLEX cv::FONT_HERSHEY_SIMPLEX
+#endif
+
+#ifndef CV_RANSAC
+#define CV_RANSAC cv::RANSAC
+#endif
 
 cv_bridge::CvImageConstPtr getImageFromMsg(const sensor_msgs::Image &img_msg);
 cv_bridge::CvImageConstPtr getImageFromMsg(const sensor_msgs::ImageConstPtr &img_msg);

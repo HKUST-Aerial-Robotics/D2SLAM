@@ -23,10 +23,12 @@
   <build_depend>cv_bridge</build_depend>
   <build_export_depend>std_msgs</build_export_depend>
   <build_export_depend>swarm_msgs</build_export_depend>
+  <build_export_depend>swarmcomm_msgs</build_export_depend>
   <build_export_depend>message_filters</build_export_depend>
 
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>swarm_msgs</exec_depend>
+  <exec_depend>swarmcomm_msgs</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>message_filters</exec_depend>
 
@@ -40,6 +42,7 @@
   <exec_depend>rosmsg</exec_depend>
   <build_depend>rosmsg</build_depend>
   <build_depend>swarm_msgs</build_depend>
+  <build_depend>swarmcomm_msgs</build_depend>
   <build_depend>camera_models</build_depend>
   <build_depend>nodelet</build_depend>
   <build_export_depend>camera_models</build_export_depend>
