@@ -13,7 +13,7 @@ public:
 int main(int argc, char **argv)
 {
     cv::setNumThreads(1);
-    ros::init(argc, argv, "swarm_loop");
+    ros::init(argc, argv, "D2Frontend");
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 

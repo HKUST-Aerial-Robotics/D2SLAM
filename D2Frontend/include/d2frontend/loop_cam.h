@@ -24,6 +24,13 @@ using namespace camodocal;
 using namespace Eigen;
 
 namespace D2Frontend {
+
+
+void match_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, 
+    std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
+    std::vector<int> & ids_up, std::vector<int> & ids_down);
+
+    
 struct StereoFrame{
     ros::Time stamp;
     int keyframe_id;
@@ -123,9 +130,9 @@ struct VisualImageDesc {
 
 struct VisualImageDescArray {
     int drone_id = 0;
+    uint64_t frame_id;
     ros::Time stamp;
     std::vector<VisualImageDesc> images;
-    uint64_t frame_id;
     Swarm::Pose pose_drone;
     int landmark_num;
     bool prevent_adding_db;
@@ -161,9 +168,6 @@ public:
 
     void encode_image(const cv::Mat & _img, VisualImageDesc & _img_desc);
     
-    void match_HFNet_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, std::vector<float> _desc_up, std::vector<float> _desc_down, 
-        std::vector<int> & ids_up, std::vector<int> & ids_down);
-
     CameraPtr cam;
     cv::Mat cameraMatrix;
 

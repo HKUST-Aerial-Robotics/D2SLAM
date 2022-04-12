@@ -58,6 +58,8 @@ protected:
 
     void on_remote_image(const FisheyeFrameDescriptor_t & frame_desc);
 
+    void process_stereoframe(StereoFrame * stereoframe);
+
     ros::Subscriber camera_sub;
     ros::Subscriber viokeyframe_sub;
     ros::Subscriber odometry_sub;

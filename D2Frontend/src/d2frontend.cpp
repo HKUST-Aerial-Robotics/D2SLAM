@@ -62,39 +62,31 @@ StereoFrame D2Frontend::find_images_raw(const nav_msgs::Odometry & odometry) {
 void D2Frontend::stereo_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right) {
     auto _l = getImageFromMsg(left);
     auto _r = getImageFromMsg(right);
-    raw_stereo_image_lock.lock();
-    raw_stereo_images.push(StereoFrame(_l->header.stamp, 
-        _l->image, _r->image, params->left_extrinsic, params->right_extrinsic, params->self_id));
-    raw_stereo_image_lock.unlock();
+    auto sframe = new StereoFrame(_l->header.stamp, _l->image, _r->image, params->left_extrinsic, params->right_extrinsic, params->self_id);
+    process_stereoframe(sframe);
 }
 
 
 void D2Frontend::comp_stereo_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::CompressedImageConstPtr right) {
     auto _l = getImageFromMsg(left, cv::IMREAD_GRAYSCALE);
     auto _r = getImageFromMsg(right, cv::IMREAD_GRAYSCALE);
-    raw_stereo_image_lock.lock();
-    raw_stereo_images.push(StereoFrame(left->header.stamp, 
-        _l, _r, params->left_extrinsic, params->right_extrinsic, params->self_id));
-    raw_stereo_image_lock.unlock();
+    auto sframe = new StereoFrame(left->header.stamp, _l, _r, params->left_extrinsic, params->right_extrinsic, params->self_id);
+    process_stereoframe(sframe);
 }
 
 
 void D2Frontend::comp_depth_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::ImageConstPtr depth) {
     auto _l = getImageFromMsg(left, cv::IMREAD_GRAYSCALE);
     auto _d = getImageFromMsg(depth);
-    raw_stereo_image_lock.lock();
-    raw_stereo_images.push(StereoFrame(left->header.stamp, 
-        _l, _d->image, params->left_extrinsic, params->self_id));
-    raw_stereo_image_lock.unlock();
+    auto sframe = new StereoFrame(left->header.stamp, _l, _d->image, params->left_extrinsic, params->self_id);
+    process_stereoframe(sframe);
 }
 
 void D2Frontend::depth_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr depth) {
     auto _l = getImageFromMsg(left);
     auto _d = getImageFromMsg(depth);
-    raw_stereo_image_lock.lock();
-    raw_stereo_images.push(StereoFrame(left->header.stamp, 
-        _l->image, _d->image, params->left_extrinsic, params->self_id));
-    raw_stereo_image_lock.unlock();
+    auto sframe = new StereoFrame(left->header.stamp, _l->image, _d->image, params->left_extrinsic, params->self_id);
+    process_stereoframe(sframe);
 }
 
 void D2Frontend::odometry_callback(const nav_msgs::Odometry & odometry) {
@@ -131,44 +123,32 @@ void D2Frontend::VIOnonKF_callback(const StereoFrame & stereoframe) {
     
     //If never received image or 15 sec not receiving kf, use this as KF, this is ensure we don't missing data
     //Note that for the second case, we will not add it to database, matching only
-    
     if ((stereoframe.stamp - last_kftime).toSec() > params->ACCEPT_NONKEYFRAME_WAITSEC) {
         VIOKF_callback(stereoframe, true);
     }
 }
 
+
 void D2Frontend::VIOKF_callback(const StereoFrame & stereoframe, bool nonkeyframe) {
-    Eigen::Vector3d drone_pos = stereoframe.pose_drone.pos();
+}
 
-    if (stereoframe.stamp.toSec() - last_invoke < 1/params->max_freq) {
-        return;
-    }
 
-    last_invoke = stereoframe.stamp.toSec();
-    
-    last_kftime = stereoframe.stamp;
-
-    auto start = high_resolution_clock::now();
-    std::vector<cv::Mat> imgs;
-    auto ret = loop_cam->process_stereoframe(stereoframe, imgs);
-    
-
-    if (ret->landmark_num == 0) {
+void D2Frontend::process_stereoframe(StereoFrame * stereoframe) {
+    std::vector<cv::Mat> debug_imgs;
+    auto vframearry = loop_cam->process_stereoframe(*stereoframe, debug_imgs);
+    if (vframearry->landmark_num == 0) {
         ROS_WARN("[SWARM_LOOP] Null img desc, CNN no ready");
         return;
     }
-
-    bool is_keyframe = feature_tracker->track(ret);
-
-    ret->prevent_adding_db = !is_keyframe;
-
+    bool is_keyframe = feature_tracker->track(vframearry);
+    vframearry->prevent_adding_db = !is_keyframe;
     received_image = true;
-    last_keyframe_position = drone_pos;
-
-    // loop_net->broadcast_fisheye_desc(ret);
-    // loop_detector->on_image_recv(ret, imgs);
-    // pub_node_frame(ret);
+    if (!is_keyframe) {
+        delete vframearry;
+        delete stereoframe;
+    }
 }
+
 
 void D2Frontend::pub_node_frame(const FisheyeFrameDescriptor_t & viokf) {
     ROS_INFO("[SWARM_LOOP](pub_node_frame) drone %d pub nodeframe", viokf.drone_id);

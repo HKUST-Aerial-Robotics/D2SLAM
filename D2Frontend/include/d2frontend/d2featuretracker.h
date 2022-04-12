@@ -8,6 +8,10 @@ namespace D2Frontend {
         int foo;
     };
 
+    struct FeatureManager {
+        
+    };
+
     class D2FeatureTracker {
         D2FTConfig _config;
         VisualImageDescArray * current_keyframe = nullptr;
@@ -18,5 +22,6 @@ namespace D2Frontend {
         }
 
         bool track(VisualImageDescArray * frames);
+        bool track(VisualImageDesc & frame);
     };
 } 

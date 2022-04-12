@@ -31,19 +31,16 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
 #ifndef USE_TENSORRT
     hfnet_client = nh.serviceClient<HFNetSrv>("/swarm_loop/hfnet");
     superpoint_client = nh.serviceClient<HFNetSrv>("/swarm_loop/superpoint");
+    printf("Waiting for deepnet......\n");
+    hfnet_client.waitForExistence();
+    superpoint_client.waitForExistence();
 #endif
     camodocal::PinholeCamera* _cam = (camodocal::PinholeCamera*)cam.get();
-
     Eigen::Matrix3d _cameraMatrix;
     _cameraMatrix << _cam->getParameters().fx(), 0, _cam->getParameters().cx(),
                     0, _cam->getParameters().fy(), _cam->getParameters().cy(), 0, 0, 1;
     cv::eigen2cv(_cameraMatrix, cameraMatrix);
-
-    printf("Waiting for deepnet......\n");
-    hfnet_client.waitForExistence();
-    superpoint_client.waitForExistence();
     printf("Deepnet ready\n");
-
     if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
         fsp.open(params->OUTPUT_PATH+"superpoint.csv", std::fstream::app);
     }
@@ -130,11 +127,12 @@ cv::Mat drawMatches(std::vector<cv::Point2f> pts1, std::vector<cv::Point2f> pts2
     return _show;
 }
 
-void LoopCam::match_HFNet_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, std::vector<float> _desc_up, std::vector<float> _desc_down, 
+void match_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, 
+        std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
         std::vector<int> & ids_up, std::vector<int> & ids_down) {
-    printf("match_HFNet_local_features %ld %ld: ", pts_up.size(), pts_down.size());
-    cv::Mat desc_up( _desc_up.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_up.data());
-    cv::Mat desc_down( _desc_down.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_down.data());
+    printf("match_local_features %ld %ld: ", pts_up.size(), pts_down.size());
+    const cv::Mat desc_up( _desc_up.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_up.data());
+    const cv::Mat desc_down( _desc_down.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_down.data());
 
     cv::BFMatcher bfmatcher(cv::NORM_L2, true);
 
@@ -157,7 +155,7 @@ void LoopCam::match_HFNet_local_features(std::vector<cv::Point2f> & pts_up, std:
         }
     }
 
-    printf("%ld matches...", _matches.size());
+    printf("%ld matches...\n", _matches.size());
 
     std::vector<uint8_t> status;
 
@@ -360,7 +358,7 @@ VisualImageDesc LoopCam::generate_stereo_image_descriptor(const StereoFrame & ms
     std::vector<int> ids_up, ids_down;
 
     if (vframe0.landmarks_2d.size() > _config.ACCEPT_MIN_3D_PTS) {
-        match_HFNet_local_features(pts_up, pts_down, vframe0.feature_descriptor, vframe1.feature_descriptor, ids_up, ids_down);
+        match_local_features(pts_up, pts_down, vframe0.feature_descriptor, vframe1.feature_descriptor, ids_up, ids_down);
     } else {
         return vframe0;
     }

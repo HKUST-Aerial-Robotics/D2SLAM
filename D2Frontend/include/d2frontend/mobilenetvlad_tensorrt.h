@@ -13,7 +13,7 @@ public:
         outputTensorDesc.volume = descriptor_size;
         m_InputSize = height*width;
         m_OutputTensors.push_back(outputTensorDesc);
-        std::cout << "Trying to init TRT engine of MobileNetVLADTensorRT" << std::endl;
+        std::cout << "Trying to init TRT engine of MobileNetVLADTensorRT@" << engine_path << std::endl;
 
         init(engine_path);
     }

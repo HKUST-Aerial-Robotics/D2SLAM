@@ -7,12 +7,12 @@
     <arg name="is_4dof"     default="true"/>
     <arg name="self_id"     default="1"/>
     <arg name="vins"     default="false"/>
-    <arg name="superpoint_model_path"     default="$(find swarm_loop)/models/superpoint_v1_480x640_rtx3080_fp16.trt"/>
-    <arg name="netvlad_model_path"     default="$(find swarm_loop)/models/mobilenetvlad_480x640_rtx3080_fp16.trt" />
+    <arg name="superpoint_model_path"     default="$(find D2Frontend)/models/superpoint_480x640_wsl_rtx3080_TRT84_fp16.trt"/>
+    <arg name="netvlad_model_path"     default="$(find D2Frontend)/models/mobilenetvlad_480x640_wsl_rtx3080_TRT84_fp16.trt" />
     <!-- <arg name="superpoint_model_path"     default="$(find swarm_loop)/models/superpoint_v1_480x640_titan_fp32.trt"/> -->
     <!-- <arg name="netvlad_model_path"     default="$(find swarm_loop)/models/mobilenetvlad_480x640_titan_fp32.trt" /> -->
-    <arg name="camera_config_path" default="/home/xuhao/Dropbox/data/SwarmExp2021/drone1-data/realsense/left.yaml" />
-    <arg name="vins_config_path" default="/home/xuhao/Dropbox/data/SwarmExp2021/drone1-data/realsense/realsense.yaml" />
+    <arg name="camera_config_path" default="/home/xuhao/data/realsense/left.yaml" />
+    <arg name="vins_config_path" default="/home/xuhao/data/realsense/realsense.yaml" />
     <arg name="max_freq" default="1.0" />
     <arg name="superpoint_max_num" default="200" />
     <arg name="match_index_dist" default="5" />
@@ -26,7 +26,7 @@
         <param name="config_file" type="string" value="$(arg vins_config_path)"/>
     </node>
     
-    <node pkg="swarm_loop" type="swarm_loop_node" name="swarm_loop" output="screen" >
+    <node pkg="D2Frontend" type="D2Frontend_node" name="D2Frontend" output="screen" >
         <rosparam>
             lcm_uri: udpm://224.0.0.251:7667?ttl=1
             jpg_quality: 75
@@ -59,9 +59,9 @@
             pos_covariance_per_meter: 0.01
             yaw_covariance_per_meter: 0.003
         </rosparam>
-        <param name="pca_comp_path" value="$(find swarm_loop)/models/components_.csv" type="string" />
+        <param name="pca_comp_path" value="$(find D2Frontend)/models/components_.csv" type="string" />
         <param name="output_path" value="$(arg output_path)" type="string" />
-        <param name="pca_mean_path" value="$(find swarm_loop)/models/mean_.csv" type="string" />
+        <param name="pca_mean_path" value="$(find D2Frontend)/models/mean_.csv" type="string" />
         <param name="superpoint_model_path" value="$(arg superpoint_model_path)" type="string" />
         <param name="netvlad_model_path" value="$(arg netvlad_model_path)" type="string" />
         <param name="debug_image" value="$(arg show)" type="bool" />
