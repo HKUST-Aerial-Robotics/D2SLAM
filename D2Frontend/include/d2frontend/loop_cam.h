@@ -107,6 +107,7 @@ struct VisualImageDesc {
     //This stands for single image
     ros::Time timestamp;
     StereoFrame * stereo_frame = nullptr;
+    cv::Mat raw_image;
     int drone_id = 0;
     uint64_t frame_id = 0; 
     int camera_id = 0; //camera id in stereo_frame
@@ -116,6 +117,7 @@ struct VisualImageDesc {
     std::vector<Vector2d> landmarks_2d_norm; //normalized 2d 
     std::vector<cv::Point2f> landmarks_2d; //normalized 2d 
     std::vector<uint8_t> landmarks_flag; //0 no 3d, 1 has 3d
+    std::vector<int> landmarks_id; //0 no 3d, 1 has 3d
 
     std::vector<float> image_desc;
     std::vector<float> feature_descriptor;

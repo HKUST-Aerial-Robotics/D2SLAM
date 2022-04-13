@@ -7,12 +7,10 @@
     <arg name="is_4dof"     default="true"/>
     <arg name="self_id"     default="1"/>
     <arg name="vins"     default="false"/>
-    <arg name="superpoint_model_path"     default="$(find D2Frontend)/models/superpoint_480x640_wsl_rtx3080_TRT84_fp16.trt"/>
-    <arg name="netvlad_model_path"     default="$(find D2Frontend)/models/mobilenetvlad_480x640_wsl_rtx3080_TRT84_fp16.trt" />
-    <!-- <arg name="superpoint_model_path"     default="$(find swarm_loop)/models/superpoint_v1_480x640_titan_fp32.trt"/> -->
-    <!-- <arg name="netvlad_model_path"     default="$(find swarm_loop)/models/mobilenetvlad_480x640_titan_fp32.trt" /> -->
-    <arg name="camera_config_path" default="/home/xuhao/data/realsense/left.yaml" />
-    <arg name="vins_config_path" default="/home/xuhao/data/realsense/realsense.yaml" />
+    <arg name="superpoint_model_path"     default="$(find D2Frontend)/models/superpoint_v1_rtx3080_480x640_fp16.trt"/>
+    <arg name="netvlad_model_path"     default="$(find D2Frontend)/models/mobilenetvlad_480x640_rtx3080_fp16.trt" />
+    <arg name="camera_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/left.yaml" />
+    <arg name="vins_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/realsense.yaml" />
     <arg name="max_freq" default="1.0" />
     <arg name="superpoint_max_num" default="200" />
     <arg name="match_index_dist" default="5" />

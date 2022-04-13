@@ -591,7 +591,7 @@ bool LoopDetector::compute_correspond_features(const ImageDescriptor_t & new_img
     }
 
     if (old_2d.size() >= 4) {
-        cv::findHomography(old_2d, new_2d, CV_RANSAC, 3, mask);
+        cv::findHomography(old_2d, new_2d, cv::RANSAC, 3, mask);
         reduceVector(new_idx, mask);
         reduceVector(old_idx, mask);
 
@@ -758,20 +758,20 @@ bool LoopDetector::compute_loop(const FisheyeFrameDescriptor_t & new_frame_desc,
             auto ypr = DP_old_to_new.rpy()*180/M_PI;
             sprintf(title, "MAP-BASED EDGE %d->%d dt %3.3fs inliers %d", 
                 old_frame_desc.drone_id, new_frame_desc.drone_id, dt, inlier_num);
-            cv::putText(show, title, cv::Point2f(20, 30), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+            cv::putText(show, title, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
 
             sprintf(title, "T %.2f %.2f %.2f YPR %.1f %.1f %.1f", 
                 DP_old_to_new.pos().x(), DP_old_to_new.pos().y(), DP_old_to_new.pos().z(),
                 ypr.z(), ypr.y(), ypr.x());
-            cv::putText(show, title, cv::Point2f(20, 50), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+            cv::putText(show, title, cv::Point2f(20, 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
             sprintf(title, "%d<->%d", 
                 old_frame_desc.msg_id,
                 new_frame_desc.msg_id);
-            cv::putText(show, title, cv::Point2f(20, 70), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+            cv::putText(show, title, cv::Point2f(20, 70), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
             
            } else {
             sprintf(title, "FAILED LOOP %d->%d dt %3.3fs inliers %d", old_frame_desc.drone_id, new_frame_desc.drone_id, dt, inlier_num);
-            cv::putText(show, title, cv::Point2f(20, 30), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
+            cv::putText(show, title, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
         }
 
         // cv::resize(show, show, cv::Size(), 2, 2);

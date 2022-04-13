@@ -4,6 +4,7 @@
 
 using namespace std::chrono; 
 
+namespace D2Frontend {
 cv::Mat getImageFromMsg(const sensor_msgs::CompressedImageConstPtr &img_msg, int flag) {
     return cv::imdecode(img_msg->data, flag);
 }
@@ -77,4 +78,5 @@ Swarm::Pose PnPRestoCamPose(cv::Mat rvec, cv::Mat tvec) {
     T_w_c_old = R_w_c_old * (-T_pnp);
 
     return Swarm::Pose(R_w_c_old, T_w_c_old);
+}
 }

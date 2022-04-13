@@ -55,6 +55,15 @@ namespace D2Frontend {
         loopcamconfig->camera_configuration = camera_configuration;
         loopcamconfig->self_id = self_id;
 
+        //Feature tracker.
+        nh.param<bool>("show_feature_id", ftconfig->show_feature_id, false);
+        nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
+        nh.param<int>("long_track_frames", ftconfig->long_track_frames, 4);
+        nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
+        nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);
+        nh.param<double>("parallex_thres", ftconfig->parallex_thres, 10.0/460.0);
+        nh.param<int>("min_keyframe_num", ftconfig->min_keyframe_num, 2);
+
         //Loop detector
         nh.param<bool>("is_4dof", loopdetectorconfig->is_4dof, true);
         nh.param<int>("init_loop_min_feature_num", loopdetectorconfig->INIT_MODE_MIN_LOOP_NUM, 10);

@@ -243,6 +243,9 @@ VisualImageDesc LoopCam::generate_gray_depth_image_descriptor(const StereoFrame 
     vframe.extrinsic = msg.left_extrisincs[vcam_id];
     vframe.pose_drone = msg.pose_drone;
     vframe.frame_id = msg.keyframe_id;
+    if (params->debug_image) {
+        vframe.raw_image = msg.left_images[vcam_id];
+    }
 
     auto image_left = msg.left_images[vcam_id];
 
@@ -311,7 +314,7 @@ VisualImageDesc LoopCam::generate_gray_depth_image_descriptor(const StereoFrame 
         _show = img_up;
         char text[100] = {0};
         sprintf(text, "Frame %d: %ld Features %d/%d", kf_count, msg.keyframe_id, count_3d, pts_up.size());
-        cv::putText(_show, text, cv::Point2f(20, 30), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+        cv::putText(_show, text, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
     }
     
     return vframe;
@@ -468,18 +471,24 @@ VisualImageDesc LoopCam::generate_stereo_image_descriptor(const StereoFrame & ms
                 cv::arrowedLine(_show, pts_up[i], pts_down[i], cv::Scalar(255, 255, 0), 1);
 
                 // sprintf(title, "[%3.1f,%3.1f,%3.1f]", pt_cam.x(), pt_cam.y(), pt_cam.z());
-                // cv::putText(_show, title, pt + cv::Point2f(0, 5), CV_FONT_HERSHEY_SIMPLEX, 0.3, cv::Scalar(255, 255, 0), 1);
+                // cv::putText(_show, title, pt + cv::Point2f(0, 5), cv::FONT_HERSHEY_SIMPLEX, 0.3, cv::Scalar(255, 255, 0), 1);
             }
         }
 
         char text[100] = {0};
         sprintf(text, "Frame %ld Features %d/%d", msg.keyframe_id, count_3d, pts_up.size());
-        cv::putText(_show, text, cv::Point2f(20, 30), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+        cv::putText(_show, text, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
     }
 
     if (_config.LOWER_CAM_AS_MAIN) {
+        if (params->debug_image) {
+            vframe1.raw_image = msg.left_images[vcam_id];
+        }
         return vframe1;
     } else {
+        if (params->debug_image) {
+            vframe0.raw_image = msg.left_images[vcam_id];
+        }
         return vframe0;
     }
 
