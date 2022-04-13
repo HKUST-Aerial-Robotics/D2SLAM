@@ -2,20 +2,16 @@
 
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
-#include <swarm_msgs/ImageDescriptor.h>
-#include <swarm_msgs/LoopEdge.h>
 #include <camodocal/camera_models/Camera.h>
 #include <camodocal/camera_models/PinholeCamera.h>
 #include <functional>
-// #include <vins/VIOKeyframe.h>
-#include <swarm_msgs/ImageDescriptor_t.hpp>
-#include <swarm_msgs/FisheyeFrameDescriptor_t.hpp>
 #include "d2frontend_params.h"
 #include "superpoint_tensorrt.h"
 #include "mobilenetvlad_tensorrt.h"
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <d2frontend/utils.h>
+#include "d2frontend/d2frontend_types.h"
 
 //#include <swarm_loop/HFNetSrv.h>
 
@@ -24,62 +20,9 @@ using namespace camodocal;
 using namespace Eigen;
 
 namespace D2Frontend {
-
-
 void match_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, 
     std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
     std::vector<int> & ids_up, std::vector<int> & ids_down);
-
-    
-struct StereoFrame{
-    ros::Time stamp;
-    int keyframe_id;
-    std::vector<cv::Mat> left_images, right_images, depth_images;
-    Swarm::Pose pose_drone;
-    std::vector<Swarm::Pose> left_extrisincs, right_extrisincs;
-
-    StereoFrame():stamp(0) {
-
-    }
-
-    StereoFrame(ros::Time _stamp, cv::Mat _left_image, cv::Mat _right_image, 
-        Swarm::Pose _left_extrinsic, Swarm::Pose _right_extrinsic, int self_id):
-        stamp(_stamp)
-    {
-        left_images.push_back(_left_image);
-        right_images.push_back(_right_image);
-        left_extrisincs.push_back(_left_extrinsic);
-        right_extrisincs.push_back(_right_extrinsic);
-        keyframe_id = generate_keyframe_id(_stamp, self_id);
-
-    }
-
-    StereoFrame(ros::Time _stamp, cv::Mat _left_image, cv::Mat _dep_image, 
-        Swarm::Pose _left_extrinsic, int self_id):
-        stamp(_stamp)
-    {
-        left_images.push_back(_left_image);
-        depth_images.push_back(_dep_image);
-        left_extrisincs.push_back(_left_extrinsic);
-        keyframe_id = generate_keyframe_id(_stamp, self_id);
-    }
-
-    // StereoFrame(vins::FlattenImages vins_flatten, int self_id):
-    //     stamp(vins_flatten.header.stamp) {
-    //     for (int i = 1; i < vins_flatten.up_cams.size(); i++) {
-    //         left_extrisincs.push_back(vins_flatten.extrinsic_up_cams[i]);
-    //         right_extrisincs.push_back(vins_flatten.extrinsic_down_cams[i]);
-            
-    //         auto _l = getImageFromMsg(vins_flatten.up_cams[i]);
-    //         auto _r = getImageFromMsg(vins_flatten.down_cams[i]);
-
-    //         left_images.push_back(_l->image);
-    //         right_images.push_back(_r->image);
-    //     }
-
-    //     keyframe_id = generate_keyframe_id(stamp, self_id);
-    // }
-};
 
 struct LoopCamConfig
 {
@@ -101,43 +44,6 @@ struct LoopCamConfig
     double TRIANGLE_THRES;
     int ACCEPT_MIN_3D_PTS;
     double DEPTH_FAR_THRES;
-};
-
-struct VisualImageDesc {
-    //This stands for single image
-    ros::Time timestamp;
-    StereoFrame * stereo_frame = nullptr;
-    cv::Mat raw_image;
-    int drone_id = 0;
-    uint64_t frame_id = 0; 
-    int camera_id = 0; //camera id in stereo_frame
-    Swarm::Pose extrinsic;
-    Swarm::Pose pose_drone; //IMU propagated pose
-    std::vector<Vector3d> landmarks_3d;
-    std::vector<Vector2d> landmarks_2d_norm; //normalized 2d 
-    std::vector<cv::Point2f> landmarks_2d; //normalized 2d 
-    std::vector<uint8_t> landmarks_flag; //0 no 3d, 1 has 3d
-    std::vector<int> landmarks_id; //0 no 3d, 1 has 3d
-
-    std::vector<float> image_desc;
-    std::vector<float> feature_descriptor;
-    bool prevent_adding_db = false;
-
-    std::vector<uint8_t> image; //Buffer to store compressed image.
-
-    int landmark_num() const {
-        return landmarks_2d.size();
-    }
-};
-
-struct VisualImageDescArray {
-    int drone_id = 0;
-    uint64_t frame_id;
-    ros::Time stamp;
-    std::vector<VisualImageDesc> images;
-    Swarm::Pose pose_drone;
-    int landmark_num;
-    bool prevent_adding_db;
 };
 
 class LoopCam {

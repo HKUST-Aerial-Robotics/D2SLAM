@@ -54,7 +54,7 @@ protected:
 
     void on_remote_frame_ros(const swarm_msgs::FisheyeFrameDescriptor & remote_img_desc);
 
-    void on_remote_image(const FisheyeFrameDescriptor_t & frame_desc);
+    void on_remote_image(const VisualImageDescArray & frame_desc);
 
     void process_stereoframe(StereoFrame * stereoframe);
 

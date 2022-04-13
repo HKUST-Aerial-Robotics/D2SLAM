@@ -90,6 +90,9 @@ void FeatureManager::update_feature(int _id, cv::Point2f pt2d, Vector2d pt2d_nor
 }
 
 bool D2FeatureTracker::process_keyframe(VisualImageDescArray * frames) {
+    if (current_keyframe != nullptr) {
+        delete current_keyframe;
+    }
     current_keyframe = frames;
     keyframe_count ++;
     //Register features

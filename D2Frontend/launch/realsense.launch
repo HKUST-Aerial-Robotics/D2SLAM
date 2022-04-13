@@ -13,7 +13,7 @@
     <arg name="vins_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/realsense.yaml" />
     <arg name="max_freq" default="1.0" />
     <arg name="superpoint_max_num" default="200" />
-    <arg name="match_index_dist" default="5" />
+    <arg name="match_index_dist" default="50" />
     <arg name="output_path" default="/home/dji/output/" />
     <arg name="min_loop_feature_num" default="20" />
     <arg name="init_loop_min_feature_num" default="20" />

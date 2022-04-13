@@ -145,10 +145,15 @@ void D2Frontend::process_stereoframe(StereoFrame * stereoframe) {
     bool is_keyframe = feature_tracker->track(vframearry);
     vframearry->prevent_adding_db = !is_keyframe;
     received_image = true;
+
+    if (is_keyframe) {
+        //Do we need to wait for VIO?
+        loop_detector->on_image_recv(*vframearry, debug_imgs);
+    }
     
     if (!is_keyframe) {
-        // delete vframearry;
-        // delete stereoframe;
+        delete vframearry;
+        delete stereoframe;
     }
 }
 
@@ -173,13 +178,13 @@ void D2Frontend::pub_node_frame(const FisheyeFrameDescriptor_t & viokf) {
 
 void D2Frontend::on_remote_frame_ros(const swarm_msgs::FisheyeFrameDescriptor & remote_img_desc) {
     // ROS_INFO("Remote");
-    if (received_image) {
-        this->on_remote_image(toLCMFisheyeDescriptor(remote_img_desc));
-    }
+    // if (received_image) {
+    //     this->on_remote_image(toLCMFisheyeDescriptor(remote_img_desc));
+    // }
 }
 
-void D2Frontend::on_remote_image(const FisheyeFrameDescriptor_t & frame_desc) {
-    loop_detector->on_image_recv(frame_desc);
+void D2Frontend::on_remote_image(const VisualImageDescArray & frame_desc) {
+    // loop_detector->on_image_recv(frame_desc);
 }
 
 
@@ -208,7 +213,7 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
             if (params->enable_pub_remote_frame) {
                 remote_image_desc_pub.publish(toROSFisheyeDescriptor(frame_desc));
             }
-            this->on_remote_image(frame_desc);
+            // this->on_remote_image(frame_desc);
             this->pub_node_frame(frame_desc);
         }
     };
