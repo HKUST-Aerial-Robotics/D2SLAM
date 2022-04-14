@@ -280,6 +280,7 @@ VisualImageDesc LoopCam::generate_gray_depth_image_descriptor(const StereoFrame 
 
             vframe.landmarks_3d[i] = _pt3d;
             vframe.landmarks_flag[i] = 1;
+            vframe.landmarks_depth[i] = dep;
             count_3d ++;
         }
     }
@@ -303,7 +304,7 @@ VisualImageDesc LoopCam::generate_gray_depth_image_descriptor(const StereoFrame 
         for (unsigned int i = 0; i < vframe.landmarks_2d.size(); i++ ) {
             if (vframe.landmarks_flag[i]) { 
                 auto pt = vframe.landmarks_2d[i];
-                auto dep = vframe.landmarks_3d[i].z();
+                auto dep = vframe.landmarks_depth[i];
                 cv::circle(img_up, pt, 3, cv::Scalar(0, 255, 0), 1);
                 char idtext[100] = {};
                 sprintf(idtext, "%3.2f", dep);
@@ -522,6 +523,7 @@ VisualImageDesc LoopCam::extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img
         vframe.landmarks_3d.push_back(Vector3d(0., 0., 0.));
         vframe.landmarks_flag.push_back(0);
         vframe.landmarks_id.push_back(-1);
+        vframe.landmarks_depth.push_back(-1);
 
         if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
             for (int j = 0; j < FEATURE_DESC_SIZE; j ++) {

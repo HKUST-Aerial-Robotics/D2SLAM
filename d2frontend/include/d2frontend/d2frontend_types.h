@@ -89,6 +89,7 @@ struct VisualImageDesc {
     Swarm::Pose extrinsic; //Camera extrinsic
     Swarm::Pose pose_drone; //IMU propagated pose
     std::vector<Vector3d> landmarks_3d;
+    std::vector<float> landmarks_depth;
     std::vector<Vector2d> landmarks_2d_norm; //normalized 2d 
     std::vector<cv::Point2f> landmarks_2d; //normalized 2d 
     std::vector<uint8_t> landmarks_flag; //0 no 3d, 1 has 3d
@@ -119,6 +120,7 @@ struct VisualImageDesc {
         img_desc.landmarks_2d = toROSPoints(landmarks_2d);
         img_desc.landmarks_3d = toROSPoints(landmarks_3d);
         img_desc.landmarks_id = landmarks_id;
+        img_desc.landmarks_depth = landmarks_depth;
 
         img_desc.image_desc = image_desc;
         img_desc.image_width = image_width;
@@ -143,6 +145,7 @@ struct VisualImageDesc {
         img_desc.landmarks_2d_norm = toLCMPoints(landmarks_2d_norm);
         img_desc.landmarks_3d = toLCMPoints(landmarks_3d);
         img_desc.landmarks_id = landmarks_id;
+        img_desc.landmarks_depth = landmarks_depth;
         img_desc.landmark_num = landmarks_id.size();
 
         img_desc.image_desc = image_desc;
@@ -174,6 +177,7 @@ struct VisualImageDesc {
         landmarks_2d = toCV(desc.landmarks_2d);
         landmarks_flag = desc.landmarks_flag;
         landmarks_id = desc.landmarks_id;
+        landmarks_depth = desc.landmarks_depth;
         prevent_adding_db = desc.prevent_adding_db;
     }
 
@@ -192,6 +196,7 @@ struct VisualImageDesc {
         landmarks_2d = toCV(desc.landmarks_2d);
         landmarks_flag = desc.landmarks_flag;
         landmarks_id = desc.landmarks_id;
+        landmarks_depth = desc.landmarks_depth;
         prevent_adding_db = desc.prevent_adding_db;
     }
 

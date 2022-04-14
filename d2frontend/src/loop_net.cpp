@@ -76,6 +76,7 @@ void LoopNet::broadcast_img_desc(ImageDescriptor_t & img_des) {
             lm.landmark_2d = img_des.landmarks_2d[i];
             lm.landmark_3d = img_des.landmarks_3d[i];
             lm.landmark_flag = img_des.landmarks_flag[i];
+            lm.landmark_depth = img_des.landmarks_depth[i];
             lm.drone_id = img_des.drone_id;
             lm.desc_len = FEATURE_DESC_SIZE;
             lm.feature_descriptor = std::vector<float>(img_des.feature_descriptor.data() + i *FEATURE_DESC_SIZE, 
@@ -316,6 +317,8 @@ void LoopNet::on_landmark_recevied(const lcm::ReceiveBuffer* rbuf,
     tmp.landmarks_2d.push_back(msg->landmark_2d);
     tmp.landmarks_3d.push_back(msg->landmark_3d);
     tmp.landmarks_flag.push_back(msg->landmark_flag);
+    tmp.landmarks_id.push_back(msg->landmark_id);
+    tmp.landmarks_depth.push_back(msg->landmark_depth);
     tmp.feature_descriptor.insert(tmp.feature_descriptor.end(),
         msg->feature_descriptor.begin(),
         msg->feature_descriptor.begin()+FEATURE_DESC_SIZE
