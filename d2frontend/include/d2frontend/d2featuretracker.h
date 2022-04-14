@@ -37,21 +37,6 @@ namespace D2Frontend {
         }
     };
 
-    struct Feature {
-        int feature_id = -1;
-        std::vector<cv::Point2f> pts2d;
-        std::vector<Eigen::Vector2d> pts2d_norm;
-        std::vector<Eigen::Vector3d> pts3d;
-        Feature() {}
-        Feature(int _feature_id, cv::Point2f pt2d, Vector2d pt2d_norm, Vector3d pt3d):
-            feature_id(_feature_id)
-        {
-            pts2d.emplace_back(pt2d);
-            pts2d_norm.emplace_back(pt2d_norm);
-            pts3d.emplace_back(pt3d);
-        }
-    };
-
     struct FeatureManager {
         std::map<int, Feature> feature_db;
         int count = 0;

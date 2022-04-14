@@ -3,12 +3,10 @@
 namespace D2VINS {
 MSCKF::MSCKF() {
     Q_imu.setZero();
-    Q_imu.block<3, 3>(0, 0) = GYR_N*Matrix3d::Identity();
-    Q_imu.block<3, 3>(3, 3) = GYR_W*Matrix3d::Identity();
-
-    Q_imu.block<3, 3>(6, 6) = ACC_N*Matrix3d::Identity();
-    Q_imu.block<3, 3>(9, 9) = ACC_W*Matrix3d::Identity();
-
+    Q_imu.block<3, 3>(0, 0) = _config.gyr_n*Matrix3d::Identity();
+    Q_imu.block<3, 3>(3, 3) = _config.gyr_w*Matrix3d::Identity();
+    Q_imu.block<3, 3>(6, 6) = _config.acc_n*Matrix3d::Identity();
+    Q_imu.block<3, 3>(9, 9) = _config.acc_w*Matrix3d::Identity();
 }
 
 void MSCKF::predict(const double t, Vector3d _acc, Vector3d _gyro) {
@@ -40,7 +38,7 @@ void MSCKF::predict(const double t, Vector3d _acc, Vector3d _gyro) {
 
     //Naive intergation
     auto qdot = nominal_state.q_imu * omg_l;
-    auto vdot = Rq_hat*acc_hat + G;
+    auto vdot = Rq_hat*acc_hat + _config.Gravity;
     auto pdot = nominal_state.v_imu;
 
     //Internal the quaternion is save as [qw, qx, qy, qz] in Eigen
@@ -105,13 +103,14 @@ void MSCKF::predict(const double t, Vector3d _acc, Vector3d _gyro) {
 void MSCKF::add_keyframe(const double t) {
     //For convience, we require t here is exact same to last imu t
     if (t_last >= 0) {
-        assert(fabs(t - t_last) < 1/IMU_FREQ && "MSCKF new image must be added EXACTLY after the corresponding imu is applied!");
+        assert(fabs(t - t_last) < 1.0/_config.IMU_FREQ && "MSCKF new image must be added EXACTLY after the corresponding imu is applied!");
     }
 
     error_state.state_augmentation(t);
     nominal_state.add_keyframe(t);
 }
 
-// void MSCKF::update(const FeaturePerId & feature_by_id) {
-    
-// }
+void MSCKF::update(const D2Frontend::Feature & feature_by_id) {  
+}
+
+}

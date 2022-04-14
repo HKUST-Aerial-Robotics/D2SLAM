@@ -14,6 +14,21 @@ inline int generate_keyframe_id(ros::Time stamp, int self_id) {
     return (t_ms%100000)*10000 + self_id*1000000 + keyframe_count++;
 }
 
+struct Feature {
+    int feature_id = -1;
+    std::vector<cv::Point2f> pts2d;
+    std::vector<Eigen::Vector2d> pts2d_norm;
+    std::vector<Eigen::Vector3d> pts3d;
+    Feature() {}
+    Feature(int _feature_id, cv::Point2f pt2d, Vector2d pt2d_norm, Vector3d pt3d):
+        feature_id(_feature_id)
+    {
+        pts2d.emplace_back(pt2d);
+        pts2d_norm.emplace_back(pt2d_norm);
+        pts3d.emplace_back(pt3d);
+    }
+};
+
 struct StereoFrame{
     ros::Time stamp;
     int keyframe_id;
@@ -247,7 +262,5 @@ struct VisualImageDescArray {
         return ret;
     }
 };
-
-
 
 }

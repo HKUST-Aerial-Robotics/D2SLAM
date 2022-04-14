@@ -37,7 +37,6 @@ if (USE_TENSORRT)
   include_directories("$ENV{HOME}/source/TensorRT-7.1.3.4/include")
 
   link_directories(${TENSORRT_ROOT}/lib)
-  link_directories("$ENV{HOME}/source/yolo-tensorrt/build/")
   find_package(CUDA)
   include_directories(${CUDA_INCLUDE_DIRS} ${TORCH_INCLUDE_DIRS})
   add_definitions("-D USE_TENSORRT")
