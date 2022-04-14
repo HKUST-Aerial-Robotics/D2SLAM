@@ -144,6 +144,7 @@ void D2Frontend::process_stereoframe(StereoFrame * stereoframe) {
 
     if (is_keyframe) {
         //Do we need to wait for VIO?
+        loop_net->broadcast_fisheye_desc(*vframearry);
         loop_detector->on_image_recv(*vframearry, debug_imgs);
     }
     
@@ -178,6 +179,7 @@ void D2Frontend::on_remote_frame_ros(const swarm_msgs::FisheyeFrameDescriptor & 
 }
 
 void D2Frontend::on_remote_image(const VisualImageDescArray & frame_desc) {
+    ROS_INFO("Received from remote!");
     loop_detector->on_image_recv(frame_desc);
 }
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(D2Frontend)
+project(d2frontend)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -91,9 +91,9 @@ set_property(TARGET libd2frontend PROPERTY CXX_STANDARD 14)
 
 if (USE_TENSORRT)
   cuda_add_library(loop_cnn
-    src/superpoint_tensorrt.cpp
-    src/tensorrt_generic.cpp
-    src/mobilenetvlad_tensorrt.cpp
+    src/CNN/superpoint_tensorrt.cpp
+    src/CNN/tensorrt_generic.cpp
+    src/CNN/mobilenetvlad_tensorrt.cpp
   )
   target_link_libraries(loop_cnn nvinfer nvinfer_plugin  detector opencv_dnn)
 
@@ -158,6 +158,7 @@ target_link_libraries(${PROJECT_NAME}_node
   dw
   libd2frontend
 )
+
 
 target_link_libraries(${PROJECT_NAME}_net_tester
   ${catkin_LIBRARIES}

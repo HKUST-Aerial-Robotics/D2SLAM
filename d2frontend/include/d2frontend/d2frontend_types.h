@@ -127,6 +127,7 @@ struct VisualImageDesc {
         img_desc.landmarks_2d_norm = toLCMPoints(landmarks_2d_norm);
         img_desc.landmarks_3d = toLCMPoints(landmarks_3d);
         img_desc.landmarks_id = landmarks_id;
+        img_desc.landmark_num = landmarks_id.size();
 
         img_desc.image_desc = image_desc;
         img_desc.image_width = image_width;

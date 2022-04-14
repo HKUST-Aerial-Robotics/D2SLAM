@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>D2Frontend</name>
+  <name>d2frontend</name>
   <version>0.0.0</version>
   <description>The frontend of D2SLAM</description>
 

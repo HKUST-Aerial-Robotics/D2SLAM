@@ -20,6 +20,7 @@ void LoopNet::setup_network(std::string _lcm_uri) {
 
 void LoopNet::broadcast_fisheye_desc(VisualImageDescArray & image_array) {
     //Broadcast Three ImageDesc
+    ROS_INFO("Broadcasting keyframe!!!");
     auto fisheye_desc = image_array.toLCM();
     for (auto & img : fisheye_desc.images) {
         if (img.landmark_num > 0) {
@@ -49,7 +50,6 @@ void LoopNet::broadcast_img_desc(ImageDescriptor_t & img_des) {
             feature_num ++;
         }
     }
-
 
     ImageDescriptorHeader_t img_desc_header;
     img_desc_header.timestamp = img_des.timestamp;

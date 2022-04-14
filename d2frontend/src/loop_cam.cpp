@@ -130,7 +130,7 @@ cv::Mat drawMatches(std::vector<cv::Point2f> pts1, std::vector<cv::Point2f> pts2
 void match_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, 
         std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
         std::vector<int> & ids_up, std::vector<int> & ids_down) {
-    printf("match_local_features %ld %ld: ", pts_up.size(), pts_down.size());
+    // printf("match_local_features %ld %ld: ", pts_up.size(), pts_down.size());
     const cv::Mat desc_up( _desc_up.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_up.data());
     const cv::Mat desc_down( _desc_down.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_down.data());
 
@@ -194,7 +194,7 @@ VisualImageDescArray * LoopCam::process_stereoframe(const StereoFrame & msg, std
 
     tt_sum+= tt.toc();
     t_count+= 1;
-    ROS_INFO("[SWARM_LOOP] KF Count %d loop_cam cost avg %.1fms cur %.1fms", kf_count, tt_sum/t_count, tt.toc());
+    // ROS_INFO("[D2Frontend::LoopCam] KF Count %d loop_cam cost avg %.1fms cur %.1fms", kf_count, tt_sum/t_count, tt.toc());
 
     visual_array->frame_id = msg.keyframe_id;
     visual_array->pose_drone = msg.pose_drone;

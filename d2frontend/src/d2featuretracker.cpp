@@ -176,7 +176,8 @@ void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const Tra
         report.ft_time, report.parallex_num, report.long_track_num, report.mean_parallex()*100, _config.parallex_thres*100);
     cv::putText(img, buf, cv::Point2f(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
 
-    cv::imshow("featureTracker", img);
+    sprintf(buf, "featureTracker @ Drone %d", params->self_id);
+    cv::imshow(buf, img);
     cv::waitKey(1);
 }
 
