@@ -30,6 +30,21 @@ class LoopNet {
     bool send_img;
     bool send_whole_img_desc;
 
+    void on_loop_connection_recevied(const lcm::ReceiveBuffer* rbuf,
+                const std::string& chan, 
+                const LoopEdge_t* msg);
+
+    void on_img_desc_recevied(const lcm::ReceiveBuffer* rbuf,
+                const std::string& chan, 
+                const ImageDescriptor_t* msg);
+
+    void on_img_desc_header_recevied(const lcm::ReceiveBuffer* rbuf,
+                const std::string& chan, 
+                const ImageDescriptorHeader_t* msg);
+
+    void on_landmark_recevied(const lcm::ReceiveBuffer* rbuf,
+                const std::string& chan, 
+                const LandmarkDescriptor_t* msg);
 public:
     LoopNet(std::string _lcm_uri, bool _send_img, bool _send_whole_img_desc, double _recv_period = 0.5):
         lcm(_lcm_uri), send_img(_send_img), send_whole_img_desc(_send_whole_img_desc), recv_period(_recv_period) {
@@ -59,21 +74,6 @@ public:
 
     void broadcast_loop_connection(swarm_msgs::LoopEdge & loop_conn);
 
-    void on_loop_connection_recevied(const lcm::ReceiveBuffer* rbuf,
-                const std::string& chan, 
-                const LoopEdge_t* msg);
-
-    void on_img_desc_recevied(const lcm::ReceiveBuffer* rbuf,
-                const std::string& chan, 
-                const ImageDescriptor_t* msg);
-
-    void on_img_desc_header_recevied(const lcm::ReceiveBuffer* rbuf,
-                const std::string& chan, 
-                const ImageDescriptorHeader_t* msg);
-
-    void on_landmark_recevied(const lcm::ReceiveBuffer* rbuf,
-                const std::string& chan, 
-                const LandmarkDescriptor_t* msg);
 
     int lcm_handle() {
         return lcm.handle();

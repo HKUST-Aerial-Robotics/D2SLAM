@@ -211,7 +211,7 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     loop_net->frame_desc_callback = [&] (const FisheyeFrameDescriptor_t & frame_desc) {
         if (received_image) {
             if (params->enable_pub_remote_frame) {
-                remote_image_desc_pub.publish(toROSFisheyeDescriptor(frame_desc));
+                // remote_image_desc_pub.publish(toROSFisheyeDescriptor(frame_desc));
             }
             // this->on_remote_image(frame_desc);
             this->pub_node_frame(frame_desc);
