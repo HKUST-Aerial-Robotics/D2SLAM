@@ -65,6 +65,7 @@ namespace D2Frontend {
         nh.param<int>("min_keyframe_num", ftconfig->min_keyframe_num, 2);
 
         //Loop detector
+        nh.param<bool>("enable_loop", enable_loop, true);
         nh.param<bool>("is_4dof", loopdetectorconfig->is_4dof, true);
         nh.param<int>("init_loop_min_feature_num", loopdetectorconfig->INIT_MODE_MIN_LOOP_NUM, 10);
         nh.param<int>("match_index_dist", loopdetectorconfig->MATCH_INDEX_DIST, 10);

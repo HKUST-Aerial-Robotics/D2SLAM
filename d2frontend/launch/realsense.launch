@@ -21,6 +21,7 @@
     <arg name="init_loop_min_feature_num" default="20" />
     <arg name="nonkeyframe_waitsec" default="5.0" />
     <arg name="inter_drone_init_frames" default="3" />
+    <arg name="enable_loop" default="false" />
     
     <node pkg="vins" type="vins_node_fisheye" name="vins_estimator" output="log" if="$(arg vins)">
         <param name="config_file" type="string" value="$(arg vins_config_path)"/>
@@ -78,5 +79,6 @@
         <param name="camera_config_path" value="$(arg camera_config_path)" type="string" />
         <param name="vins_config_path" value="$(arg vins_config_path)" type="string" />
         <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
+        <param name="enable_loop" value="$(arg enable_loop)" type="bool" />
     </node>
 </launch>

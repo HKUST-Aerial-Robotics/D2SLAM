@@ -107,14 +107,13 @@ void D2Frontend::odometry_keyframe_callback(const nav_msgs::Odometry & odometry)
     if (_imagesraw.stamp.toSec() > 1000) {
         VIOKF_callback(_imagesraw);
     } else {
-        ROS_WARN("[SWARM_LOOP] (odometry_keyframe_callback) Flattened images correspond to this Keyframe not found: %f", odometry.header.stamp.toSec());
+        // ROS_WARN("[SWARM_LOOP] (odometry_keyframe_callback) Flattened images correspond to this Keyframe not found: %f", odometry.header.stamp.toSec());
     }
 }
 
 void D2Frontend::VIOnonKF_callback(const StereoFrame & stereoframe) {
     if (!received_image && (stereoframe.stamp - last_kftime).toSec() > INIT_ACCEPT_NONKEYFRAME_WAITSEC) {
-        //
-        ROS_INFO("[SWARM_LOOP] (VIOnonKF_callback) USE non vio kf as KF at first keyframe!");
+        // ROS_INFO("[SWARM_LOOP] (VIOnonKF_callback) USE non vio kf as KF at first keyframe!");
         VIOKF_callback(stereoframe);
         return;
     }
@@ -145,7 +144,9 @@ void D2Frontend::process_stereoframe(const StereoFrame & stereoframe) {
     if (is_keyframe) {
         //Do we need to wait for VIO?
         loop_net->broadcast_fisheye_desc(vframearry);
-        loop_detector->on_image_recv(vframearry, debug_imgs);
+        if (params->enable_loop) {
+            loop_detector->on_image_recv(vframearry, debug_imgs);
+        }
     }
 }
 

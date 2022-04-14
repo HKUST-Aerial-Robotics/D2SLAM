@@ -1,7 +1,7 @@
 #include <d2frontend/d2featuretracker.h>
 
 namespace D2Frontend {
-
+#define MIN_HOMOGRAPHY 6
 bool D2FeatureTracker::track(VisualImageDescArray & frames) {
     bool iskeyframe = false;
     frame_count ++;
@@ -203,6 +203,9 @@ void match_local_features(const std::vector<cv::Point2f> & pts_up, const std::ve
     }
 
     std::vector<unsigned char> mask;
+    if (up_2d.size() < MIN_HOMOGRAPHY) {
+        return;
+    }
     cv::findHomography(up_2d, down_2d, cv::RANSAC, 3, mask);
     reduceVector(ids_up, mask);
     reduceVector(ids_down, mask);

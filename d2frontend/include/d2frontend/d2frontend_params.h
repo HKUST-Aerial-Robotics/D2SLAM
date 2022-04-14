@@ -78,8 +78,9 @@ struct D2FrontendParams {
     bool enable_pub_remote_frame;
     bool enable_pub_local_frame;
     bool enable_sub_remote_frame;
-
     bool send_whole_img_desc;
+
+    bool enable_loop = true;
 
     //Topics
     std::string IMAGE0_TOPIC, IMAGE1_TOPIC, COMP_IMAGE0_TOPIC, COMP_IMAGE1_TOPIC, DEPTH_TOPIC;
