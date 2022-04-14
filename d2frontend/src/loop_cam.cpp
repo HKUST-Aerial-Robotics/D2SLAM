@@ -165,9 +165,9 @@ void match_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Poi
 
 
 
-VisualImageDescArray * LoopCam::process_stereoframe(const StereoFrame & msg, std::vector<cv::Mat> &imgs) {
-    VisualImageDescArray * visual_array = new VisualImageDescArray;
-    visual_array->stamp = msg.stamp;
+VisualImageDescArray LoopCam::process_stereoframe(const StereoFrame & msg, std::vector<cv::Mat> &imgs) {
+    VisualImageDescArray visual_array;
+    visual_array.stamp = msg.stamp;
     
     imgs.resize(msg.left_images.size());
 
@@ -178,11 +178,11 @@ VisualImageDescArray * LoopCam::process_stereoframe(const StereoFrame & msg, std
 
     for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
         if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
-            visual_array->images.push_back(generate_gray_depth_image_descriptor(msg, imgs[i], i, tmp));
-            visual_array->images[i].camera_id = i;
+            visual_array.images.push_back(generate_gray_depth_image_descriptor(msg, imgs[i], i, tmp));
+            visual_array.images[i].camera_id = i;
         } else {
-            visual_array->images.push_back(generate_stereo_image_descriptor(msg, imgs[i], i, tmp));
-            visual_array->images[i].camera_id = i;
+            visual_array.images.push_back(generate_stereo_image_descriptor(msg, imgs[i], i, tmp));
+            visual_array.images[i].camera_id = i;
         }
 
         if (_show.cols == 0) {
@@ -196,13 +196,13 @@ VisualImageDescArray * LoopCam::process_stereoframe(const StereoFrame & msg, std
     t_count+= 1;
     // ROS_INFO("[D2Frontend::LoopCam] KF Count %d loop_cam cost avg %.1fms cur %.1fms", kf_count, tt_sum/t_count, tt.toc());
 
-    visual_array->frame_id = msg.keyframe_id;
-    visual_array->pose_drone = msg.pose_drone;
-    visual_array->landmark_num = 0;
-    for (auto & frame : visual_array->images) {
-        visual_array->landmark_num += frame.landmark_num();
+    visual_array.frame_id = msg.keyframe_id;
+    visual_array.pose_drone = msg.pose_drone;
+    visual_array.landmark_num = 0;
+    for (auto & frame : visual_array.images) {
+        visual_array.landmark_num += frame.landmark_num();
     }
-    visual_array->drone_id = self_id;
+    visual_array.drone_id = self_id;
 
     if (show && !_show.empty()) {
         char text[100] = {0};
@@ -521,6 +521,7 @@ VisualImageDesc LoopCam::extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img
         vframe.landmarks_2d_norm.push_back(pt_up_norm);
         vframe.landmarks_3d.push_back(Vector3d(0., 0., 0.));
         vframe.landmarks_flag.push_back(0);
+        vframe.landmarks_id.push_back(-1);
 
         if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
             for (int j = 0; j < FEATURE_DESC_SIZE; j ++) {

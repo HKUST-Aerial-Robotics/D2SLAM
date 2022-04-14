@@ -1,4 +1,5 @@
 #include "MSCKF.hpp"
+#include <d2vins/utils.hpp>
 
 namespace D2VINS {
 MSCKF::MSCKF() {
@@ -9,7 +10,12 @@ MSCKF::MSCKF() {
     Q_imu.block<3, 3>(9, 9) = _config.acc_w*Matrix3d::Identity();
 }
 
-void MSCKF::predict(const double t, Vector3d _acc, Vector3d _gyro) {
+void MSCKF::initFirstPose() {
+    auto q0 = g2R(imubuf.mean_acc());
+    nominal_state.q_imu = q0;
+}
+
+void MSCKF::predict(const double t, const IMUData & imudata) {
     //Follows  Mourikis, Anastasios I., and Stergios I. Roumeliotis. 
     // "A multi-state constraint Kalman filter for vision-aided inertial navigation." 
     // Proceedings 2007 IEEE International Conference on Robotics and Automation. IEEE, 2007.
@@ -18,20 +24,24 @@ void MSCKF::predict(const double t, Vector3d _acc, Vector3d _gyro) {
         t_last = t;
     }
 
+    imubuf.add(imudata);
+    if (!initFirstPoseFlag) {
+        //First pose is inited in keyframe. So first pose must is a keyframe.
+        return;
+    }
+
     double dt = t - t_last;
 
-    static Vector3d acc_last = Vector3d(0.0, 0.0, 0.0);
-    static Vector3d gyro_last = Vector3d(0,0,0);
+    static IMUData imudatalast;
 
     //trapezoidal integration
-    Vector3d gyro = (_gyro + gyro_last)/2;
-    Vector3d acc = (_gyro + gyro_last)/2;
-    acc_last = _acc;
-    gyro_last = _gyro;
+    Vector3d gyro = (imudata.gyro + imudatalast.gyro)/2;
+    Vector3d acc = (imudata.acc + imudatalast.acc)/2;
+    imudatalast = imudata;
     
-    Vector3d angvel_hat = gyro - error_state.bias_gyro; //Planet angular velocity is ignored
+    Vector3d angvel_hat = imudata.gyro - error_state.bias_gyro; //Planet angular velocity is ignored
     Matrix3d Rq_hat = nominal_state.get_imu_R();
-    Vector3d acc_hat = acc - error_state.bias_acc;
+    Vector3d acc_hat = imudata.acc - error_state.bias_acc;
 
     //Nominal State
     Quaterniond omg_l(0, angvel_hat.x(), angvel_hat.y(), angvel_hat.z());
@@ -87,7 +97,6 @@ void MSCKF::predict(const double t, Vector3d _acc, Vector3d _gyro) {
     Phi = Phi + F_mat*dt;
     auto G = G_mat*dt;
     
-    // auto X_imu_new = Phi*error_state.get_imu_vector();
     // Suggest by (268)-(269) in Sola J. Quaternion kinematics for the error-state Kalman filter
     // We don't predict the error state space
     // Instead, we only predict the P of error state, and predict the nominal state
@@ -95,22 +104,27 @@ void MSCKF::predict(const double t, Vector3d _acc, Vector3d _gyro) {
     auto P_imu_other_new = Phi*error_state.get_imu_other_P();
 
     //Set states to error_state
-    // error_state.set_imu_vector(X_imu_new);
     error_state.set_imu_P(P_new);
     error_state.set_imu_other_P(P_imu_other_new);
 }
 
 void MSCKF::add_keyframe(const double t) {
     //For convience, we require t here is exact same to last imu t
+     if (!initFirstPoseFlag) {
+        if (imubuf.size() >= _config.init_imu_num) {
+            initFirstPose();
+        }
+        return;
+    }
     if (t_last >= 0) {
         assert(fabs(t - t_last) < 1.0/_config.IMU_FREQ && "MSCKF new image must be added EXACTLY after the corresponding imu is applied!");
     }
-
     error_state.state_augmentation(t);
     nominal_state.add_keyframe(t);
 }
 
 void MSCKF::update(const D2Frontend::Feature & feature_by_id) {  
+   
 }
 
 }

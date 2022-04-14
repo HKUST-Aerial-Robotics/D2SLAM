@@ -2,6 +2,11 @@
 using namespace Swarm;
 
 std::vector<float> MobileNetVLADTensorRT::inference(const cv::Mat & input) {
+    if (m_Engine == nullptr) {
+        std::cerr  << "MobileNetVLADTensorRT engine failed returing zero vector." << std::endl;
+        std::vector<float> ret(descriptor_size, 0.0);
+        return ret;
+    }
     cv::Mat _input;
     if (input.rows != height || input.cols != width) {
         cv::resize(input, _input, cv::Size(width, height));

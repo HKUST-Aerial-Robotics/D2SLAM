@@ -56,7 +56,7 @@ protected:
 
     void on_remote_image(const VisualImageDescArray & frame_desc);
 
-    void process_stereoframe(StereoFrame * stereoframe);
+    void process_stereoframe(const StereoFrame & stereoframe);
 
     ros::Subscriber camera_sub;
     ros::Subscriber viokeyframe_sub;

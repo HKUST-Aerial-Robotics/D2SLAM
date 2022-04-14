@@ -11,7 +11,7 @@ public:
     Vector3d bias_gyro; //bias in body frame
     Vector3d v_imu; //Velocity of Imu in global frame
     Vector3d bias_acc; //bias of acceleration
-    Vector3d p_imu; //bias of acceleration
+    Vector3d p_imu; //position
     std::vector<Swarm::Pose> camera_extrisincs; //[q, p]^T
     std::vector<Swarm::Pose> sld_win_poses;  //[q_{t-1},p_{t-1}], [q_{t-2},p_{t-2}] .., [q_{t-n},p_{t-n}]
 

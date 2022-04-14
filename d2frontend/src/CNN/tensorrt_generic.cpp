@@ -14,6 +14,10 @@ TensorRTInferenceGeneric::TensorRTInferenceGeneric(std::string input_blob_name, 
 void TensorRTInferenceGeneric::init(const std::string & engine_path) {
 
     m_Engine = loadTRTEngine(engine_path, nullptr, m_Logger);
+    if (m_Engine == nullptr) {
+        std::cerr  << "Load engine " << engine_path << " failed" << std::endl;
+        return;
+    }
     assert(m_Engine != nullptr);
     
     m_Context = m_Engine->createExecutionContext();

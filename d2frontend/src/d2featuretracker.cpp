@@ -2,20 +2,22 @@
 
 namespace D2Frontend {
 
-bool D2FeatureTracker::track(VisualImageDescArray * frames) {
+bool D2FeatureTracker::track(VisualImageDescArray & frames) {
     bool iskeyframe = false;
     frame_count ++;
     TrackReport report;
 
     TicToc tic;
-    if (current_keyframe == nullptr) {
-        iskeyframe = true;
+    if (!inited) {
+        inited = true;
+        ROS_INFO("[D2FeatureTracker] receive first, will init kf\n");
         process_keyframe(frames);
+        return true;
     } else {
-        for (auto & frame : frames->images) {
+        for (auto & frame : frames.images) {
             report.compose(track(frame));
         }
-        if (is_keyfame(report, frames)) {
+        if (is_keyframe(report)) {
             iskeyframe = true;
             process_keyframe(frames);
         }
@@ -24,7 +26,7 @@ bool D2FeatureTracker::track(VisualImageDescArray * frames) {
     report.ft_time = tic.toc();
 
     if (params->debug_image) {
-        for (auto & frame : frames->images) {
+        for (auto & frame : frames.images) {
             draw(frame, iskeyframe, report);
         }
     }
@@ -33,7 +35,7 @@ bool D2FeatureTracker::track(VisualImageDescArray * frames) {
 }
 
 TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
-    auto & previous = current_keyframe->images[frame.camera_id];
+    auto & previous = current_keyframe.images[frame.camera_id];
     auto & prev_pts = previous.landmarks_2d;
     auto & cur_pts = frame.landmarks_2d;
     std::vector<int> ids_down_to_up;
@@ -62,8 +64,8 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
 }
 
 
-bool D2FeatureTracker::is_keyfame(const TrackReport & report, VisualImageDescArray*frames) {
-    int prev_num = current_keyframe->landmark_num;
+bool D2FeatureTracker::is_keyframe(const TrackReport & report) {
+    int prev_num = current_keyframe.landmark_num;
     if (keyframe_count < _config.min_keyframe_num || 
         report.long_track_num < _config.long_track_thres ||
         prev_num < _config.last_track_thres ||
@@ -83,24 +85,16 @@ int FeatureManager::add_feature(cv::Point2f pt2d, Vector2d pt2d_norm, Vector3d p
 }
 
 void FeatureManager::update_feature(int _id, cv::Point2f pt2d, Vector2d pt2d_norm, Vector3d pt3d) {
-    auto & feature = feature_db[_id];
+    auto & feature = feature_db.at(_id);
     feature.pts2d.push_back(pt2d);
     feature.pts2d_norm.push_back(pt2d_norm);
     feature.pts3d.push_back(pt3d);
 }
 
-bool D2FeatureTracker::process_keyframe(VisualImageDescArray * frames) {
-    if (current_keyframe != nullptr) {
-        delete current_keyframe;
-    }
-    current_keyframe = frames;
+void D2FeatureTracker::process_keyframe(VisualImageDescArray & frames) {
     keyframe_count ++;
-    //Register features
-    for (auto & frame : frames->images) {
-        if (frame.landmarks_id.size() == 0) {
-            frame.landmarks_id.resize(frame.landmarks_2d.size());
-            std::fill(frame.landmarks_id.begin(), frame.landmarks_id.end(), -1);
-        }
+    auto img_num = frames.images.size();
+    for (auto & frame: frames.images) {
         for (unsigned int i = 0; i < frame.landmarks_2d.size(); i++) {
             if (frame.landmarks_id[i] < 0) {
                 auto _id = fmanger.add_feature(frame.landmarks_2d[i], frame.landmarks_2d_norm[i], frame.landmarks_3d[i]);
@@ -111,10 +105,12 @@ bool D2FeatureTracker::process_keyframe(VisualImageDescArray * frames) {
             }
         }
     }
+    current_keyframe = frames;
 }
 
 
 void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) {
+    // ROS_INFO("Drawing ... %d", keyframe_count);
     cv::Mat img = frame.raw_image;
     auto & cur_pts = frame.landmarks_2d;
     if (img.channels() == 1) {

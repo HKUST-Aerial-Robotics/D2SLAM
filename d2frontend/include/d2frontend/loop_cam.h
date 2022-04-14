@@ -72,7 +72,7 @@ public:
     VisualImageDesc extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img, bool superpoint_mode=false);
     VisualImageDesc generate_stereo_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
     VisualImageDesc generate_gray_depth_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
-    VisualImageDescArray * process_stereoframe(const StereoFrame & msg, std::vector<cv::Mat> & imgs);
+    VisualImageDescArray process_stereoframe(const StereoFrame & msg, std::vector<cv::Mat> & imgs);
 
     void encode_image(const cv::Mat & _img, VisualImageDesc & _img_desc);
     

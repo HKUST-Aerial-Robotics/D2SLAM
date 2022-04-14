@@ -46,20 +46,21 @@ namespace D2Frontend {
 
     class D2FeatureTracker {
         D2FTConfig _config;
-        VisualImageDescArray * current_keyframe = nullptr;
+        VisualImageDescArray current_keyframe;
         FeatureManager fmanger;
         int keyframe_count = 0;
         int frame_count = 0;
+        bool inited = false;
     public:
         D2FeatureTracker(D2FTConfig config):
             _config(config)
         {
         }
 
-        bool track(VisualImageDescArray * frames);
+        bool track(VisualImageDescArray & frames);
         TrackReport track(VisualImageDesc & frame);
-        bool process_keyframe(VisualImageDescArray * frames);
-        bool is_keyfame(const TrackReport & report, VisualImageDescArray*frames);
+        void process_keyframe(VisualImageDescArray & frames);
+        bool is_keyframe(const TrackReport & reports);
         void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report);
     };
 

@@ -82,7 +82,6 @@ struct StereoFrame{
 struct VisualImageDesc {
     //This stands for single image
     ros::Time stamp;
-    StereoFrame * stereo_frame = nullptr;
     cv::Mat raw_image;
     int drone_id = 0;
     uint64_t frame_id = 0; 
@@ -209,6 +208,10 @@ struct VisualImageDescArray {
     
     VisualImageDescArray() {}
     
+    ~VisualImageDescArray() {
+        // std::cout << "destorying  VisualImageDescArray " << frame_id << std::endl;
+    }
+
     VisualImageDescArray(const swarm_msgs::FisheyeFrameDescriptor & img_desc) {
         frame_id = img_desc.msg_id;
         prevent_adding_db = img_desc.prevent_adding_db;

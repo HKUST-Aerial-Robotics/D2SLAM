@@ -1,7 +1,12 @@
 #include "MSCKF_state.hpp"
 
-MSCKFStateVector::MSCKFStateVector() {
-    
+MSCKFStateVector::MSCKFStateVector():
+    q_imu(1.0, 0.0, 0.0, 0.0),
+    bias_gyro(0.0, 0.0, 0.0),
+    v_imu(0.0, 0.0, 0.0),
+    bias_acc(0.0, 0.0, 0.0),
+    p_imu(0.0, 0.0, 0.0)
+{
 }
 
 Matrix3d MSCKFStateVector::get_imu_R() const { 

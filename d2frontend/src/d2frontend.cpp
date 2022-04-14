@@ -62,28 +62,28 @@ StereoFrame D2Frontend::find_images_raw(const nav_msgs::Odometry & odometry) {
 void D2Frontend::stereo_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right) {
     auto _l = getImageFromMsg(left);
     auto _r = getImageFromMsg(right);
-    auto sframe = new StereoFrame(_l->header.stamp, _l->image, _r->image, params->left_extrinsic, params->right_extrinsic, params->self_id);
+    StereoFrame sframe(_l->header.stamp, _l->image, _r->image, params->left_extrinsic, params->right_extrinsic, params->self_id);
     process_stereoframe(sframe);
 }
 
 void D2Frontend::comp_stereo_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::CompressedImageConstPtr right) {
     auto _l = getImageFromMsg(left, cv::IMREAD_GRAYSCALE);
     auto _r = getImageFromMsg(right, cv::IMREAD_GRAYSCALE);
-    auto sframe = new StereoFrame(left->header.stamp, _l, _r, params->left_extrinsic, params->right_extrinsic, params->self_id);
+    StereoFrame sframe(left->header.stamp, _l, _r, params->left_extrinsic, params->right_extrinsic, params->self_id);
     process_stereoframe(sframe);
 }
 
 void D2Frontend::comp_depth_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::ImageConstPtr depth) {
     auto _l = getImageFromMsg(left, cv::IMREAD_GRAYSCALE);
     auto _d = getImageFromMsg(depth);
-    auto sframe = new StereoFrame(left->header.stamp, _l, _d->image, params->left_extrinsic, params->self_id);
+    StereoFrame sframe(left->header.stamp, _l, _d->image, params->left_extrinsic, params->self_id);
     process_stereoframe(sframe);
 }
 
 void D2Frontend::depth_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr depth) {
     auto _l = getImageFromMsg(left);
     auto _d = getImageFromMsg(depth);
-    auto sframe = new StereoFrame(left->header.stamp, _l->image, _d->image, params->left_extrinsic, params->self_id);
+    StereoFrame sframe(left->header.stamp, _l->image, _d->image, params->left_extrinsic, params->self_id);
     process_stereoframe(sframe);
 }
 
@@ -129,28 +129,23 @@ void D2Frontend::VIOnonKF_callback(const StereoFrame & stereoframe) {
 void D2Frontend::VIOKF_callback(const StereoFrame & stereoframe, bool nonkeyframe) {
 }
 
-void D2Frontend::process_stereoframe(StereoFrame * stereoframe) {
+void D2Frontend::process_stereoframe(const StereoFrame & stereoframe) {
     std::vector<cv::Mat> debug_imgs;
     static int count = 0;
-    // ROS_INFO("[D2Frontend::process_stereoframe] %d", count ++);
-    auto vframearry = loop_cam->process_stereoframe(*stereoframe, debug_imgs);
-    if (vframearry->landmark_num == 0) {
+    ROS_INFO("[D2Frontend::process_stereoframe] %d", count ++);
+    auto vframearry = loop_cam->process_stereoframe(stereoframe, debug_imgs);
+    if (vframearry.landmark_num == 0) {
         ROS_WARN("[SWARM_LOOP] Null img desc, CNN no ready");
         return;
     }
     bool is_keyframe = feature_tracker->track(vframearry);
-    vframearry->prevent_adding_db = !is_keyframe;
+    vframearry.prevent_adding_db = !is_keyframe;
     received_image = true;
 
     if (is_keyframe) {
         //Do we need to wait for VIO?
-        loop_net->broadcast_fisheye_desc(*vframearry);
-        loop_detector->on_image_recv(*vframearry, debug_imgs);
-    }
-    
-    if (!is_keyframe) {
-        delete vframearry;
-        delete stereoframe;
+        loop_net->broadcast_fisheye_desc(vframearry);
+        loop_detector->on_image_recv(vframearry, debug_imgs);
     }
 }
 
