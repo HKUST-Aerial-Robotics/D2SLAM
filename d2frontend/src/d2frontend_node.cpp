@@ -13,10 +13,9 @@ public:
 int main(int argc, char **argv)
 {
     cv::setNumThreads(1);
-    ros::init(argc, argv, "D2Frontend");
+    ros::init(argc, argv, "d2frontend");
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
-
 
     D2FrontendNode frontend(n);
     ros::MultiThreadedSpinner spinner(3);

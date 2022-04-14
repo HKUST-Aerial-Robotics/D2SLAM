@@ -121,6 +121,8 @@ struct VisualImageDesc {
         img_desc.timestamp = toLCMTime(stamp);
         img_desc.drone_id = drone_id;
         img_desc.feature_descriptor = feature_descriptor;
+        img_desc.feature_descriptor_size = feature_descriptor.size();
+
         img_desc.pose_drone = fromPose(pose_drone);
         img_desc.camera_extrinsic = fromPose(extrinsic);
         CVPoints2LCM(landmarks_2d, img_desc.landmarks_2d);
@@ -130,9 +132,13 @@ struct VisualImageDesc {
         img_desc.landmark_num = landmarks_id.size();
 
         img_desc.image_desc = image_desc;
+        img_desc.image_desc_size = image_desc.size();
+
         img_desc.image_width = image_width;
         img_desc.image_height = image_height;
         img_desc.image = image;
+        img_desc.image_size = image.size();
+        
         img_desc.prevent_adding_db = prevent_adding_db;
         img_desc.landmarks_flag = landmarks_flag;
         img_desc.direction = camera_id;
@@ -237,6 +243,7 @@ struct VisualImageDescArray {
         for (auto & _img: images) {
             ret.images.emplace_back(_img.toLCM());
         }
+        ret.image_num = images.size();
         return ret;
     }
 };
