@@ -48,8 +48,6 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
 
 void LoopCam::encode_image(const cv::Mat &_img, VisualImageDesc &_img_desc)
 {
-    auto start = high_resolution_clock::now();
-
     std::vector<int> jpg_params;
     jpg_params.push_back(cv::IMWRITE_JPEG_QUALITY);
     jpg_params.push_back(params->JPG_QUALITY);
@@ -493,8 +491,8 @@ VisualImageDesc LoopCam::generate_stereo_image_descriptor(const StereoFrame & ms
         }
         return vframe0;
     }
-
 }
+
 VisualImageDesc LoopCam::extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img, bool superpoint_mode)
 {
     auto start = high_resolution_clock::now();

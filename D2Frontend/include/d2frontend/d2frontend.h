@@ -50,7 +50,7 @@ protected:
     void VIOnonKF_callback(const StereoFrame & viokf);
     void VIOKF_callback(const StereoFrame & viokf, bool nonkeyframe = false);
 
-    void pub_node_frame(const FisheyeFrameDescriptor_t & viokf);
+    void pub_node_frame(const VisualImageDescArray & viokf);
 
     void on_remote_frame_ros(const swarm_msgs::FisheyeFrameDescriptor & remote_img_desc);
 

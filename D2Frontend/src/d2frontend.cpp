@@ -66,14 +66,12 @@ void D2Frontend::stereo_images_callback(const sensor_msgs::ImageConstPtr left, c
     process_stereoframe(sframe);
 }
 
-
 void D2Frontend::comp_stereo_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::CompressedImageConstPtr right) {
     auto _l = getImageFromMsg(left, cv::IMREAD_GRAYSCALE);
     auto _r = getImageFromMsg(right, cv::IMREAD_GRAYSCALE);
     auto sframe = new StereoFrame(left->header.stamp, _l, _r, params->left_extrinsic, params->right_extrinsic, params->self_id);
     process_stereoframe(sframe);
 }
-
 
 void D2Frontend::comp_depth_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::ImageConstPtr depth) {
     auto _l = getImageFromMsg(left, cv::IMREAD_GRAYSCALE);
@@ -128,10 +126,8 @@ void D2Frontend::VIOnonKF_callback(const StereoFrame & stereoframe) {
     }
 }
 
-
 void D2Frontend::VIOKF_callback(const StereoFrame & stereoframe, bool nonkeyframe) {
 }
-
 
 void D2Frontend::process_stereoframe(StereoFrame * stereoframe) {
     std::vector<cv::Mat> debug_imgs;
@@ -157,36 +153,33 @@ void D2Frontend::process_stereoframe(StereoFrame * stereoframe) {
     }
 }
 
-
-void D2Frontend::pub_node_frame(const FisheyeFrameDescriptor_t & viokf) {
+void D2Frontend::pub_node_frame(const VisualImageDescArray & viokf) {
     ROS_INFO("[SWARM_LOOP](pub_node_frame) drone %d pub nodeframe", viokf.drone_id);
     swarm_msgs::node_frame nf;
-    nf.header.stamp = toROSTime(viokf.timestamp);
-    nf.position.x = viokf.pose_drone.position[0];
-    nf.position.y = viokf.pose_drone.position[1];
-    nf.position.z = viokf.pose_drone.position[2];
-    nf.quat.x = viokf.pose_drone.orientation[0];
-    nf.quat.y = viokf.pose_drone.orientation[1];
-    nf.quat.z = viokf.pose_drone.orientation[2];
-    nf.quat.w = viokf.pose_drone.orientation[3];
+    nf.header.stamp = viokf.stamp;
+    nf.position.x = viokf.pose_drone.pos().x();
+    nf.position.y = viokf.pose_drone.pos().y();
+    nf.position.z = viokf.pose_drone.pos().z();
+    nf.quat.x = viokf.pose_drone.att().x();
+    nf.quat.y = viokf.pose_drone.att().y();
+    nf.quat.z = viokf.pose_drone.att().z();
+    nf.quat.w = viokf.pose_drone.att().w();
     nf.vo_available = true;
     nf.drone_id = viokf.drone_id;
-    nf.keyframe_id = viokf.msg_id;
+    nf.keyframe_id = viokf.frame_id;
     keyframe_pub.publish(nf);
 }
 
-
 void D2Frontend::on_remote_frame_ros(const swarm_msgs::FisheyeFrameDescriptor & remote_img_desc) {
     // ROS_INFO("Remote");
-    // if (received_image) {
-    //     this->on_remote_image(toLCMFisheyeDescriptor(remote_img_desc));
-    // }
+    if (received_image) {
+        this->on_remote_image(remote_img_desc);
+    }
 }
 
 void D2Frontend::on_remote_image(const VisualImageDescArray & frame_desc) {
-    // loop_detector->on_image_recv(frame_desc);
+    loop_detector->on_image_recv(frame_desc);
 }
-
 
 D2Frontend::D2Frontend () {}
 
@@ -208,12 +201,12 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
         this->on_loop_connection(loop_con, true);
     };
 
-    loop_net->frame_desc_callback = [&] (const FisheyeFrameDescriptor_t & frame_desc) {
+    loop_net->frame_desc_callback = [&] (const VisualImageDescArray & frame_desc) {
         if (received_image) {
             if (params->enable_pub_remote_frame) {
-                // remote_image_desc_pub.publish(toROSFisheyeDescriptor(frame_desc));
+                remote_image_desc_pub.publish(frame_desc.toROS());
             }
-            // this->on_remote_image(frame_desc);
+            this->on_remote_image(frame_desc);
             this->pub_node_frame(frame_desc);
         }
     };

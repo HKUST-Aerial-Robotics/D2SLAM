@@ -18,12 +18,13 @@ void LoopNet::setup_network(std::string _lcm_uri) {
     msg_recv_rate_callback = [&](int drone_id, float rate) {};
 }
 
-
-void LoopNet::broadcast_fisheye_desc(FisheyeFrameDescriptor_t & fisheye_desc) {
+void LoopNet::broadcast_fisheye_desc(VisualImageDescArray & image_array) {
     //Broadcast Three ImageDesc
+    auto fisheye_desc = image_array.toLCM();
     for (auto & img : fisheye_desc.images) {
-        if (img.landmark_num > 0)
-        broadcast_img_desc(img);
+        if (img.landmark_num > 0) {
+            broadcast_img_desc(img);
+        }
     }
 }
 
@@ -70,7 +71,7 @@ void LoopNet::broadcast_img_desc(ImageDescriptor_t & img_des) {
     for (size_t i = 0; i < img_des.landmark_num; i++ ) {
         if (img_des.landmarks_flag[i] > 0 || params->SEND_ALL_FEATURES) {
             LandmarkDescriptor_t lm;
-            lm.landmark_id = i;
+            lm.landmark_id = img_des.landmarks_id[i];
             lm.landmark_2d_norm = img_des.landmarks_2d_norm[i];
             lm.landmark_2d = img_des.landmarks_2d[i];
             lm.landmark_3d = img_des.landmarks_3d[i];

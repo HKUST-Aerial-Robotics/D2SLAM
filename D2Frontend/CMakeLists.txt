@@ -82,7 +82,7 @@ add_executable(${PROJECT_NAME}_spy
 )
 
 add_executable(${PROJECT_NAME}_net_tester
-  tests/loop_network_tester.cpp
+  tests/d2frontend_network_tester.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME}_nodelet PROPERTY CXX_STANDARD 14)

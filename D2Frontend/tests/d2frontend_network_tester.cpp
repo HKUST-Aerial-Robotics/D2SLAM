@@ -3,6 +3,7 @@
 #include "swarmcomm_msgs/drone_network_status.h"
 #include <thread>
 
+using namespace D2Frontend;
 class SwarmNetworkTester {
     LoopNet loopnet;
     ros::Publisher drone_status_pub;
@@ -17,7 +18,7 @@ public:
             this->receive_rate_callback(drone_id, rate);
         };
 
-        loopnet.frame_desc_callback  = [&](const FisheyeFrameDescriptor_t &) {
+        loopnet.frame_desc_callback = [&](const VisualImageDescArray &) {
         };
 
         drone_status_pub = nh.advertise<swarmcomm_msgs::drone_network_status>(

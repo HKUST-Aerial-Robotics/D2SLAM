@@ -7,6 +7,13 @@
 #include <swarm_msgs/swarm_lcm_converter.hpp>
 
 namespace D2Frontend {
+
+inline int generate_keyframe_id(ros::Time stamp, int self_id) {
+    static int keyframe_count = 0;
+    int t_ms = 0;//stamp.toSec()*1000;
+    return (t_ms%100000)*10000 + self_id*1000000 + keyframe_count++;
+}
+
 struct StereoFrame{
     ros::Time stamp;
     int keyframe_id;
