@@ -52,7 +52,7 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
             frame.landmarks_id[i] = feature_id;
             report.sum_parallex += (previous.landmarks_2d_norm[prev_index] - frame.landmarks_2d_norm[i]).norm();
             report.parallex_num ++;
-            if (fmanger.feature_db.at(feature_id).pts2d.size() >= _config.long_track_frames) {
+            if (fmanager->at(feature_id).pts2d.size() >= _config.long_track_frames) {
                 report.long_track_num ++;
             } else {
                 report.unmatched_num ++;
@@ -97,10 +97,10 @@ void D2FeatureTracker::process_keyframe(VisualImageDescArray & frames) {
     for (auto & frame: frames.images) {
         for (unsigned int i = 0; i < frame.landmarks_2d.size(); i++) {
             if (frame.landmarks_id[i] < 0) {
-                auto _id = fmanger.add_feature(frame.landmarks_2d[i], frame.landmarks_2d_norm[i], frame.landmarks_3d[i]);
+                auto _id = fmanager->add_feature(frame.landmarks_2d[i], frame.landmarks_2d_norm[i], frame.landmarks_3d[i]);
                 frame.landmarks_id[i] = _id;
             } else {
-                fmanger.update_feature(frame.landmarks_id[i], frame.landmarks_2d[i], 
+                fmanager->update_feature(frame.landmarks_id[i], frame.landmarks_2d[i], 
                         frame.landmarks_2d_norm[i], frame.landmarks_3d[i]);
             }
         }
@@ -146,12 +146,12 @@ void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const Tra
         auto _id = frame.landmarks_id[j];
         if (_id >= 0) {
             cv::Point2f prev;
-            auto & pts2d = fmanger.feature_db.at(_id).pts2d;
+            auto & pts2d = fmanager->at(_id).pts2d;
             if (!is_keyframe || pts2d.size() < 2) {
                 prev = pts2d.back();
             } else {
                 int index = pts2d.size()-2;
-                prev = fmanger.feature_db.at(_id).pts2d[index];
+                prev = fmanager->at(_id).pts2d[index];
             }
             cv::arrowedLine(img, prev, cur_pts[j], cv::Scalar(0, 255, 0), 1, 8, 0, 0.2);
         }
