@@ -131,7 +131,7 @@ void D2Frontend::VIOKF_callback(const StereoFrame & stereoframe, bool nonkeyfram
 void D2Frontend::process_stereoframe(const StereoFrame & stereoframe) {
     std::vector<cv::Mat> debug_imgs;
     static int count = 0;
-    ROS_INFO("[D2Frontend::process_stereoframe] %d", count ++);
+    // ROS_INFO("[D2Frontend::process_stereoframe] %d", count ++);
     auto vframearry = loop_cam->process_stereoframe(stereoframe, debug_imgs);
     if (vframearry.landmark_num == 0) {
         ROS_WARN("[SWARM_LOOP] Null img desc, CNN no ready");
@@ -139,11 +139,16 @@ void D2Frontend::process_stereoframe(const StereoFrame & stereoframe) {
     }
     bool is_keyframe = feature_tracker->track(vframearry);
     vframearry.prevent_adding_db = !is_keyframe;
+    vframearry.is_keyframe = is_keyframe;
     received_image = true;
+
+    frame_callback(vframearry);
 
     if (is_keyframe) {
         //Do we need to wait for VIO?
-        loop_net->broadcast_fisheye_desc(vframearry);
+        if (params->enable_network) {
+            loop_net->broadcast_fisheye_desc(vframearry);
+        }
         if (params->enable_loop) {
             loop_detector->on_image_recv(vframearry, debug_imgs);
         }
@@ -153,7 +158,7 @@ void D2Frontend::process_stereoframe(const StereoFrame & stereoframe) {
 void D2Frontend::pub_node_frame(const VisualImageDescArray & viokf) {
     ROS_INFO("[SWARM_LOOP](pub_node_frame) drone %d pub nodeframe", viokf.drone_id);
     swarm_msgs::node_frame nf;
-    nf.header.stamp = viokf.stamp;
+    nf.header.stamp = ros::Time(viokf.stamp);
     nf.position.x = viokf.pose_drone.pos().x();
     nf.position.y = viokf.pose_drone.pos().y();
     nf.position.z = viokf.pose_drone.pos().z();

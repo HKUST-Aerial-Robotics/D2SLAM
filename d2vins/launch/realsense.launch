@@ -23,7 +23,7 @@
     <arg name="inter_drone_init_frames" default="3" />
     <arg name="enable_loop" default="false" />
     
-    <node pkg="d2frontend" type="d2frontend_node" name="d2frontend" output="screen" >
+    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" >
         <rosparam>
             lcm_uri: udpm://224.0.0.251:7667?ttl=1
             jpg_quality: 75
@@ -55,6 +55,7 @@
             odometry_consistency_threshold: 3.0
             pos_covariance_per_meter: 0.01
             yaw_covariance_per_meter: 0.003
+            enable_network: false
         </rosparam>
         <param name="pca_comp_path" value="$(find d2frontend)/models/components_.csv" type="string" />
         <param name="output_path" value="$(arg output_path)" type="string" />
@@ -76,5 +77,6 @@
         <param name="vins_config_path" value="$(arg vins_config_path)" type="string" />
         <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
         <param name="enable_loop" value="$(arg enable_loop)" type="bool" />
+        <remap from="~imu" to="/dji_sdk_1/dji_sdk/imu" />
     </node>
 </launch>

@@ -81,6 +81,7 @@ struct D2FrontendParams {
     bool send_whole_img_desc;
 
     bool enable_loop = true;
+    bool enable_network = true;
 
     //Topics
     std::string IMAGE0_TOPIC, IMAGE1_TOPIC, COMP_IMAGE0_TOPIC, COMP_IMAGE1_TOPIC, DEPTH_TOPIC;

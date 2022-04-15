@@ -3,7 +3,7 @@ using namespace Swarm;
 
 std::vector<float> MobileNetVLADTensorRT::inference(const cv::Mat & input) {
     if (m_Engine == nullptr) {
-        std::cerr  << "MobileNetVLADTensorRT engine failed returing zero vector." << std::endl;
+        // std::cerr  << "MobileNetVLADTensorRT engine failed returing zero vector." << std::endl;
         std::vector<float> ret(descriptor_size, 0.0);
         return ret;
     }

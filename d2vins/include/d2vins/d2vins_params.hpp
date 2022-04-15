@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Eigen/Eigen>
 
 using namespace Eigen;
@@ -11,7 +13,7 @@ struct D2VINSConfig {
     double IMU_FREQ = 400.0;
     int init_imu_num = 10;
     Vector3d Gravity;
-    D2VINSConfig():Gravity(0.0, 0.0, -g_norm) {
+    D2VINSConfig():Gravity(0.0, 0.0, g_norm) {
     }
 };
 }

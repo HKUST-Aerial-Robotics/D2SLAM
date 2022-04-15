@@ -29,6 +29,8 @@ protected:
 
     std::set<ros::Time> received_keyframe_stamps;
 
+    virtual void frame_callback(const VisualImageDescArray & viokf) {};
+
     void on_loop_connection (LoopEdge & loop_con, bool is_local = false);
 
     std::queue<StereoFrame> raw_stereo_images;

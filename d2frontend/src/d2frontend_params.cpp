@@ -86,6 +86,7 @@ namespace D2Frontend {
         nh.param<std::string>("lcm_uri", _lcm_uri, "udpm://224.0.0.251:7667?ttl=1");
         nh.param<bool>("send_all_features", SEND_ALL_FEATURES, false);
         nh.param<double>("recv_msg_duration", recv_msg_duration, 0.5);
+        nh.param<bool>("enable_network", enable_network, true);
 
 
         //Read VINS params.

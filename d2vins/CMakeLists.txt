@@ -3,6 +3,7 @@ project(d2vins)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
+set(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -Wall -Wno-deprecated-declarations -Wno-format -Wno-reorder")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -17,7 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
  INCLUDE_DIRS include
 #  LIBRARIES d2vins
-#  CATKIN_DEPENDS d2frontend roscpp rospy swarm_msgs
+ CATKIN_DEPENDS d2frontend roscpp rospy swarm_msgs
 #  DEPENDS system_lib
 )
 
@@ -37,6 +38,8 @@ add_library(${PROJECT_NAME}_MSCKF
   src/MSCKF/MSCKF_state.cpp
 )
 
+link_directories(/home/xuhao/swarm_ws/devel/lib)
+
 add_dependencies(${PROJECT_NAME}_MSCKF ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_library(${PROJECT_NAME}_estimator
@@ -45,12 +48,12 @@ add_library(${PROJECT_NAME}_estimator
 
 add_dependencies(${PROJECT_NAME}_MSCKF ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_executable(${PROJECT_NAME}_node src/MSCKF/MSCKF_node.cpp)
-set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
+add_executable(${PROJECT_NAME}_node src/d2vins_node.cpp)
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}_MSCKF
   ${PROJECT_NAME}_estimator
+  libd2frontend
 )
 

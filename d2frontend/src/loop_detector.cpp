@@ -17,7 +17,7 @@ void LoopDetector::on_image_recv(const VisualImageDescArray & flatten_desc, std:
     auto start = high_resolution_clock::now();
     
     if (t0 < 0) {
-        t0 = flatten_desc.stamp.toSec();
+        t0 = flatten_desc.stamp;
     }
 
     if (flatten_desc.images.size() == 0) {
@@ -25,7 +25,7 @@ void LoopDetector::on_image_recv(const VisualImageDescArray & flatten_desc, std:
         return;
     }
 
-    ego_motion_traj.push(flatten_desc.stamp, flatten_desc.pose_drone);
+    ego_motion_traj.push(ros::Time(flatten_desc.stamp), flatten_desc.pose_drone);
 
     int drone_id = flatten_desc.drone_id;
     int images_num = flatten_desc.images.size();
@@ -644,8 +644,8 @@ bool LoopDetector::compute_loop(const VisualImageDescArray & new_frame_desc, con
 
     bool success = false;
 
-    double told = old_frame_desc.stamp.toSec() - t0;
-    double tnew = new_frame_desc.stamp.toSec() - t0;
+    double told = old_frame_desc.stamp - t0;
+    double tnew = new_frame_desc.stamp - t0;
     ROS_INFO("Compute loop drone %d(dir %d)->%d(dir %d) t %f->%f(%f) msgid %d->%d landmarks %d:%d. Init %d", 
         old_frame_desc.drone_id, main_dir_old, new_frame_desc.drone_id, main_dir_new,
         told, tnew, tnew - told,
@@ -756,7 +756,7 @@ bool LoopDetector::compute_loop(const VisualImageDescArray & new_frame_desc, con
             cv::hconcat(show, _matched_imgs[i], show);
         }
 
-        double dt = (new_frame_desc.stamp - old_frame_desc.stamp).toSec();
+        double dt = (new_frame_desc.stamp - old_frame_desc.stamp);
         if (success) {
             auto ypr = DP_old_to_new.rpy()*180/M_PI;
             sprintf(title, "MAP-BASED EDGE %d->%d dt %3.3fs inliers %d", 
@@ -795,10 +795,10 @@ bool LoopDetector::compute_loop(const VisualImageDescArray & new_frame_desc, con
         ret.relative_pose = DP_old_to_new.to_ros_pose();
 
         ret.drone_id_a = old_frame_desc.drone_id;
-        ret.ts_a = old_frame_desc.stamp;
+        ret.ts_a = ros::Time(old_frame_desc.stamp);
 
         ret.drone_id_b = new_frame_desc.drone_id;
-        ret.ts_b = new_frame_desc.stamp;
+        ret.ts_b = ros::Time(new_frame_desc.stamp);
 
         ret.self_pose_a = toROSPose(old_frame_desc.pose_drone);
         ret.self_pose_b = toROSPose(new_frame_desc.pose_drone);

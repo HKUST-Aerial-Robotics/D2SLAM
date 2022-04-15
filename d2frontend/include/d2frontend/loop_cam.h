@@ -2,8 +2,6 @@
 
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
-#include <camodocal/camera_models/Camera.h>
-#include <camodocal/camera_models/PinholeCamera.h>
 #include <functional>
 #include "d2frontend_params.h"
 #include "superpoint_tensorrt.h"
@@ -16,8 +14,11 @@
 //#include <swarm_loop/HFNetSrv.h>
 
 using namespace swarm_msgs;
-using namespace camodocal;
 using namespace Eigen;
+namespace camodocal {
+class Camera;
+typedef boost::shared_ptr< Camera > CameraPtr;
+}
 
 namespace D2Frontend {
 void match_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, 
@@ -76,7 +77,7 @@ public:
 
     void encode_image(const cv::Mat & _img, VisualImageDesc & _img_desc);
     
-    CameraPtr cam;
+    camodocal::CameraPtr cam;
     cv::Mat cameraMatrix;
 
     CameraConfig get_camera_configuration() const {

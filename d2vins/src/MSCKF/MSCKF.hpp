@@ -1,5 +1,6 @@
-#include "MSCKF_state.hpp"
 #include <d2vins/d2vins_types.hpp>
+#include <d2vins/d2vins_params.hpp>
+#include "MSCKF_state.hpp"
 
 namespace D2VINS {
 class MSCKF {

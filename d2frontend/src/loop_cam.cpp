@@ -6,6 +6,8 @@
 #include <swarm_msgs/swarm_lcm_converter.hpp>
 #include <chrono>
 #include <opencv2/core/eigen.hpp>
+#include <camodocal/camera_models/Camera.h>
+#include <camodocal/camera_models/PinholeCamera.h>
 
 using namespace std::chrono;
 
@@ -167,7 +169,7 @@ void match_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Poi
 
 VisualImageDescArray LoopCam::process_stereoframe(const StereoFrame & msg, std::vector<cv::Mat> &imgs) {
     VisualImageDescArray visual_array;
-    visual_array.stamp = msg.stamp;
+    visual_array.stamp = msg.stamp.toSec();
     
     imgs.resize(msg.left_images.size());
 
@@ -222,7 +224,7 @@ VisualImageDesc LoopCam::generate_gray_depth_image_descriptor(const StereoFrame 
     if (vcam_id > msg.left_images.size()) {
         ROS_WARN("Flatten images too few");
         VisualImageDesc ides;
-        ides.stamp = msg.stamp;
+        ides.stamp = msg.stamp.toSec();
         return ides;
     }
     
@@ -238,7 +240,7 @@ VisualImageDesc LoopCam::generate_gray_depth_image_descriptor(const StereoFrame 
     auto start = high_resolution_clock::now();
     // std::cout << "Downsample and encode Cost " << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 << "ms" << std::endl;
 
-    vframe.stamp = msg.stamp;
+    vframe.stamp = msg.stamp.toSec();
     vframe.drone_id = self_id; // -1 is self drone;
     vframe.extrinsic = msg.left_extrisincs[vcam_id];
     vframe.pose_drone = msg.pose_drone;
@@ -342,13 +344,13 @@ VisualImageDesc LoopCam::generate_stereo_image_descriptor(const StereoFrame & ms
     auto start = high_resolution_clock::now();
     // std::cout << "Downsample and encode Cost " << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 << "ms" << std::endl;
 
-    vframe0.stamp = msg.stamp;
+    vframe0.stamp = msg.stamp.toSec();
     vframe0.drone_id = self_id; // -1 is self drone;
     vframe0.extrinsic = msg.left_extrisincs[vcam_id];
     vframe0.pose_drone = msg.pose_drone;
     vframe0.frame_id = msg.keyframe_id;
 
-    vframe1.stamp = msg.stamp;
+    vframe1.stamp = msg.stamp.toSec();
     vframe1.drone_id = self_id; // -1 is self drone;
     vframe1.extrinsic = msg.right_extrisincs[vcam_id];
     vframe1.pose_drone = msg.pose_drone;
@@ -499,7 +501,7 @@ VisualImageDesc LoopCam::extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img
     auto start = high_resolution_clock::now();
 
     VisualImageDesc vframe;
-    vframe.stamp = stamp;
+    vframe.stamp = stamp.toSec();
 
     if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
         cv::Mat roi = img(cv::Rect(0, img.rows*3/4, img.cols, img.rows/4));
