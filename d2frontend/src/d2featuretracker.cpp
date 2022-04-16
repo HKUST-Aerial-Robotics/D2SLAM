@@ -43,7 +43,7 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
     matchLocalFeatures(prev_pts, cur_pts, previous.landmark_descriptor, frame.landmark_descriptor, ids_down_to_up);
     for (size_t i = 0; i < ids_down_to_up.size(); i++) { 
         if (ids_down_to_up[i] >= 0) {
-            assert(ids_down_to_up[i] < previous.landmark_num() && "too large");
+            assert(ids_down_to_up[i] < previous.landmarkNum() && "too large");
             auto prev_index = ids_down_to_up[i];
             auto landmark_id = previous.landmarks[prev_index].landmark_id;
             frame.landmarks[i].landmark_id = landmark_id;
@@ -62,7 +62,7 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
 
 
 bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
-    int prev_num = current_keyframe.landmark_num;
+    int prev_num = current_keyframe.landmarkNum();
     if (keyframe_count < _config.min_keyframe_num || 
         report.long_track_num < _config.long_track_thres ||
         prev_num < _config.last_track_thres ||
@@ -89,9 +89,8 @@ void LandmarkManager::updateLandmark(const LandmarkPerFrame & lm) {
 
 void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
     keyframe_count ++;
-    auto img_num = frames.images.size();
     for (auto & frame: frames.images) {
-        for (unsigned int i = 0; i < frame.landmark_num(); i++) {
+        for (unsigned int i = 0; i < frame.landmarkNum(); i++) {
             if (frame.landmarks[i].landmark_id < 0) {
                 auto _id = lmanager->addLandmark(frame.landmarks[i]);
                 frame.landmarks[i].setLandmarkId(_id);

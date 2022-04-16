@@ -67,7 +67,7 @@ public:
             sprintf(frame_name, "Frame %ld", img_desc.frame_id);
             cv::putText(ret, frame_name, cv::Point2f(10,10), cv::FONT_HERSHEY_PLAIN, 0.8,  cv::Scalar(0,255,0));
 
-            sprintf(frame_name, "Landmark num %ld", img_desc.landmark_num);
+            sprintf(frame_name, "Landmark num %ld", img_desc.landmarkNum());
             cv::putText(ret, frame_name, cv::Point2f(10,20), cv::FONT_HERSHEY_PLAIN, 0.8,  cv::Scalar(0,255,0));
 
             cv::imshow(win_name, ret);

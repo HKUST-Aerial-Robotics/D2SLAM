@@ -200,10 +200,6 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
 
     visual_array.frame_id = msg.keyframe_id;
     visual_array.pose_drone = msg.pose_drone;
-    visual_array.landmark_num = 0;
-    for (auto & frame : visual_array.images) {
-        visual_array.landmark_num += frame.landmark_num();
-    }
     visual_array.drone_id = self_id;
 
     if (show && !_show.empty()) {
@@ -256,7 +252,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
 
     std::vector<int> ids_up, ids_down;
 
-    if (vframe.landmark_num() < _config.ACCEPT_MIN_3D_PTS) {
+    if (vframe.landmarkNum() < _config.ACCEPT_MIN_3D_PTS) {
         return vframe;
     }
     
@@ -304,7 +300,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
 
         cv::cvtColor(img_up, img_up, cv::COLOR_GRAY2BGR);
 
-        for (unsigned int i = 0; i < vframe.landmark_num(); i++ ) {
+        for (unsigned int i = 0; i < vframe.landmarkNum(); i++ ) {
             if (vframe.landmarks[i].flag) { 
                 auto pt = vframe.landmarks[i].pt2d;
                 auto dep = vframe.landmarks[i].depth;
@@ -364,7 +360,7 @@ VisualImageDesc LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, 
     auto pts_down = vframe1.landmarks2D();
     std::vector<int> ids_up, ids_down;
 
-    if (vframe0.landmark_num() > _config.ACCEPT_MIN_3D_PTS) {
+    if (vframe0.landmarkNum() > _config.ACCEPT_MIN_3D_PTS) {
         matchLocalFeatures(pts_up, pts_down, vframe0.landmark_descriptor, vframe1.landmark_descriptor, ids_up, ids_down);
     } else {
         return vframe0;
@@ -525,6 +521,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, b
         cam->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
         Eigen::Vector2d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z());
         LandmarkPerFrame lm;
+        lm.pt2d = pt_up;
         lm.pt2d_norm = pt_up_norm;
         vframe.landmarks.emplace_back(lm);
 
@@ -550,8 +547,8 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, b
                 // ROS_INFO("Received response from server desc.size %ld", desc.size());
                 // ROSPoints2LCM(local_kpts, img_des.landmarks_2d);
                 vframe.feature_descriptor = local_descriptors;
-                vframe.landmarks_flag.resize(img_des.landmark_num());
-                std::fill(vframe.landmarks_flag.begin(),vframe.landmarks_flag.begin()+vframe.landmark_num(),0);  
+                vframe.landmarks_flag.resize(img_des.landmarkNum());
+                std::fill(vframe.landmarks_flag.begin(),vframe.landmarks_flag.begin()+vframe.landmarkNum(),0);  
                 return vframe;
             }
         }
@@ -568,7 +565,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, b
                 ROSPoints2LCM(local_kpts, img_des.landmarks_2d);
                 img_des.landmark_num = local_kpts.size();
                 vframe.feature_descriptor = local_descriptors;
-                vframe.landmarks_flag.resize(vframe.landmark_num());
+                vframe.landmarks_flag.resize(vframe.landmarkNum());
                 std::fill(vframe.landmarks_flag.begin(),vframe.landmarks_flag.begin()+vframe.landmark_num,0);  
                 return vframe;
             }

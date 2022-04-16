@@ -86,7 +86,7 @@ struct VisualImageDesc {
     int image_width = 0;
     int image_height = 0;
 
-    int landmark_num() const {
+    int landmarkNum() const {
         return landmarks.size();
     }
     
@@ -194,7 +194,6 @@ struct VisualImageDescArray {
     double stamp;
     std::vector<VisualImageDesc> images;
     Swarm::Pose pose_drone;
-    int landmark_num;
     bool prevent_adding_db;
     bool is_keyframe = false;
 
@@ -202,6 +201,14 @@ struct VisualImageDescArray {
         for (auto & image : images) {
             image.syncIds(drone_id, frame_id);
         }
+    }
+    
+    int landmarkNum() const {
+        int num = 0;
+        for (auto & img : images) {
+            num += img.landmarkNum();
+        }
+        return num;
     }
     
     VisualImageDescArray() {}
@@ -215,7 +222,6 @@ struct VisualImageDescArray {
         prevent_adding_db = img_desc.prevent_adding_db;
         drone_id = img_desc.drone_id;
         stamp = img_desc.header.stamp.toSec();
-        landmark_num = img_desc.landmark_num;
         pose_drone = Swarm::Pose(img_desc.pose_drone);
         for (auto & _img: img_desc.images) {
             images.emplace_back(_img);
@@ -227,7 +233,6 @@ struct VisualImageDescArray {
         prevent_adding_db = img_desc.prevent_adding_db;
         drone_id = img_desc.drone_id;
         stamp = toROSTime(img_desc.timestamp).toSec();
-        landmark_num = img_desc.landmark_num;
         pose_drone = Swarm::Pose(img_desc.pose_drone);
         for (auto & _img: img_desc.images) {
             images.emplace_back(_img);
@@ -240,7 +245,7 @@ struct VisualImageDescArray {
         ret.prevent_adding_db = prevent_adding_db;
         ret.drone_id = drone_id;
         ret.header.stamp = ros::Time(stamp);
-        ret.landmark_num = landmark_num;
+        ret.landmark_num = landmarkNum();
         ret.pose_drone = pose_drone.to_ros_pose();
         for (auto & _img: images) {
             ret.images.emplace_back(_img.toROS());
@@ -254,7 +259,7 @@ struct VisualImageDescArray {
         ret.prevent_adding_db = prevent_adding_db;
         ret.drone_id = drone_id;
         ret.timestamp = toLCMTime(ros::Time(stamp));
-        ret.landmark_num = landmark_num;
+        ret.landmark_num = landmarkNum();
         ret.pose_drone = fromPose(pose_drone);
         for (auto & _img: images) {
             ret.images.emplace_back(_img.toLCM());

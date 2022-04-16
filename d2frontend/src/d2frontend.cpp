@@ -133,7 +133,7 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     static int count = 0;
     // ROS_INFO("[D2Frontend::processStereoframe] %d", count ++);
     auto vframearry = loop_cam->processStereoframe(stereoframe, debug_imgs);
-    if (vframearry.landmark_num == 0) {
+    if (vframearry.landmarkNum() == 0) {
         ROS_WARN("[SWARM_LOOP] Null img desc, CNN no ready");
         return;
     }
