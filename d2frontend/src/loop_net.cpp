@@ -3,33 +3,33 @@
 #include "d2frontend/loop_detector.h"
 
 namespace D2Frontend {
-void LoopNet::setup_network(std::string _lcm_uri) {
+void LoopNet::setupNetwork(std::string _lcm_uri) {
     if (!lcm.good()) {
         ROS_ERROR("LCM %s failed", _lcm_uri.c_str());
         exit(-1);
     }
-    lcm.subscribe("SWARM_LOOP_IMG_DES", &LoopNet::on_img_desc_recevied, this);
-    lcm.subscribe("SWARM_LOOP_CONN", &LoopNet::on_loop_connection_recevied, this);
+    lcm.subscribe("SWARM_LOOP_IMG_DES", &LoopNet::onImgDescRecevied, this);
+    lcm.subscribe("SWARM_LOOP_CONN", &LoopNet::onLoopConnectionRecevied, this);
     
-    lcm.subscribe("VIOKF_HEADER", &LoopNet::on_img_desc_header_recevied, this);
-    lcm.subscribe("VIOKF_LANDMARKS", &LoopNet::on_landmark_recevied, this);
+    lcm.subscribe("VIOKF_HEADER", &LoopNet::onImgDescHeaderRecevied, this);
+    lcm.subscribe("VIOKF_LANDMARKS", &LoopNet::onLandmarkRecevied, this);
 
     srand((unsigned)time(NULL)); 
     msg_recv_rate_callback = [&](int drone_id, float rate) {};
 }
 
-void LoopNet::broadcast_fisheye_desc(VisualImageDescArray & image_array) {
+void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array) {
     //Broadcast Three ImageDesc
     // ROS_INFO("Broadcasting keyframe!!!");
     auto fisheye_desc = image_array.toLCM();
     for (auto & img : fisheye_desc.images) {
         if (img.landmark_num > 0) {
-            broadcast_img_desc(img);
+            broadcastImgDesc(img);
         }
     }
 }
 
-void LoopNet::broadcast_img_desc(ImageDescriptor_t & img_des) {
+void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des) {
     int64_t msg_id = rand() + img_des.timestamp.nsec;
     img_des.msg_id = msg_id;
     sent_message.insert(img_des.msg_id);
@@ -119,14 +119,14 @@ void LoopNet::broadcast_img_desc(ImageDescriptor_t & img_des) {
     // ROS_INFO("Sent Message KEYFRAME %ld with %d/%d landmarks g_desc %d total %d bytes", msg_id, feature_num,img_des.landmark_num, img_desc_header.image_desc_size, byte_sent);
 }
 
-void LoopNet::broadcast_loop_connection(swarm_msgs::LoopEdge & loop_conn) {
+void LoopNet::broadcastLoopConnection(swarm_msgs::LoopEdge & loop_conn) {
     auto _loop_conn = toLCMLoopEdge(loop_conn);
 
     sent_message.insert(_loop_conn.id);
     lcm.publish("SWARM_LOOP_CONN", &_loop_conn);
 }
 
-void LoopNet::on_img_desc_recevied(const lcm::ReceiveBuffer* rbuf,
+void LoopNet::onImgDescRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
                 const ImageDescriptor_t* msg) {
     
@@ -136,10 +136,10 @@ void LoopNet::on_img_desc_recevied(const lcm::ReceiveBuffer* rbuf,
     }
     
     ROS_INFO("Received drone %d image from LCM!!!", msg->drone_id);
-    this->image_desc_callback(*msg);
+    this->imageDescCallback(*msg);
 }
 
-void LoopNet::image_desc_callback(const ImageDescriptor_t & image){
+void LoopNet::imageDescCallback(const ImageDescriptor_t & image){
     int64_t frame_hash = image.msg_id;
 
     if (received_frames.find(frame_hash) == received_frames.end()) {
@@ -171,7 +171,7 @@ void LoopNet::image_desc_callback(const ImageDescriptor_t & image){
     }
 }
 
-void LoopNet::on_loop_connection_recevied(const lcm::ReceiveBuffer* rbuf,
+void LoopNet::onLoopConnectionRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
                 const LoopEdge_t* msg) {
 
@@ -184,18 +184,18 @@ void LoopNet::on_loop_connection_recevied(const lcm::ReceiveBuffer* rbuf,
 }
 
 
-void LoopNet::on_img_desc_header_recevied(const lcm::ReceiveBuffer* rbuf,
+void LoopNet::onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
     const std::string& chan, 
     const ImageDescriptorHeader_t* msg) {
 
-    if(msg_blocked(msg->msg_id)) {
+    if(msgBlocked(msg->msg_id)) {
         return;
     }
 
     recv_lock.lock();
 
     ROS_INFO("ImageDescriptorHeader from drone (%d): msg_id: %ld feature num %d", msg->drone_id, msg->msg_id, msg->feature_num);
-    update_recv_img_desc_ts(msg->msg_id, true);
+    updateRecvImgDescTs(msg->msg_id, true);
 
     if (received_images.find(msg->msg_id) == received_images.end()) {
         ImageDescriptor_t tmp;
@@ -220,7 +220,7 @@ void LoopNet::on_img_desc_header_recevied(const lcm::ReceiveBuffer* rbuf,
     recv_lock.unlock();
 }
 
-void LoopNet::scan_recv_packets() {
+void LoopNet::scanRecvPackets() {
     double tnow = ros::Time::now().toSec();
     std::vector<int64_t> finish_recv;
     recv_lock.lock();
@@ -259,7 +259,7 @@ void LoopNet::scan_recv_packets() {
         //Processed recevied message
         msg.landmark_num = msg.landmarks.size();
         if (msg.landmarks.size() > 0) {
-            this->image_desc_callback(msg);
+            this->imageDescCallback(msg);
         }
         received_images.erase(_id);
     }
@@ -296,14 +296,14 @@ void LoopNet::scan_recv_packets() {
     recv_lock.unlock();
 }
 
-void LoopNet::on_landmark_recevied(const lcm::ReceiveBuffer* rbuf,
+void LoopNet::onLandmarkRecevied(const lcm::ReceiveBuffer* rbuf,
     const std::string& chan, 
     const LandmarkDescriptor_t* msg) {
-    if(msg_blocked(msg->header_id)) {
+    if(msgBlocked(msg->header_id)) {
         return;
     }
     recv_lock.lock();
-    update_recv_img_desc_ts(msg->header_id, false);
+    updateRecvImgDescTs(msg->header_id, false);
     if (received_images.find(msg->header_id) == received_images.end()) {
         ImageDescriptor_t tmp;
         received_images[msg->header_id] = tmp; 
@@ -318,11 +318,11 @@ void LoopNet::on_landmark_recevied(const lcm::ReceiveBuffer* rbuf,
     tmp.landmark_descriptor_size = tmp.landmark_descriptor.size();
     recv_lock.unlock();
     
-    scan_recv_packets();
+    scanRecvPackets();
 }
 
 
-void LoopNet::update_recv_img_desc_ts(int64_t id, bool is_header) {
+void LoopNet::updateRecvImgDescTs(int64_t id, bool is_header) {
     if(is_header) {
         msg_header_recv_time[id] = ros::Time::now().toSec();
     }

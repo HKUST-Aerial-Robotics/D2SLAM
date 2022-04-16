@@ -39,7 +39,7 @@ void image_callback_0(const sensor_msgs::ImageConstPtr& msg) {
     if (c % 10 == 0) {
         cv_bridge::CvImageConstPtr ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
         auto img_des = cam.feature_detect(ptr->image);
-        ld.on_image_recv(img_des, ptr->image);
+        ld.onImageRecv(img_des, ptr->image);
     }
     c++;
 }
@@ -49,15 +49,15 @@ void image_callback_1(const sensor_msgs::ImageConstPtr& msg) {
     cam.on_camera_message(msg);
 }
 
-void VIOKF_callback(const vins::VIOKeyframe & viokf) {
+void vioKFCallback(const vins::VIOKeyframe & viokf) {
     auto start = high_resolution_clock::now();
     auto ret = cam.on_keyframe_message(viokf);
     std::cout << "Cam Cost " << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 << "ms" << std::endl;
     //Check ides vaild
 #ifdef DEBUG_IMAGE
-    ld.on_image_recv(ret.first, ret.second);
+    ld.onImageRecv(ret.first, ret.second);
 #else
-    ld.on_image_recv(ret.first);
+    ld.onImageRecv(ret.first);
 #endif
     std::cout << "Cam+LD Cost " << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 << "ms" <<  std::endl;
 }
@@ -69,7 +69,7 @@ int test_loop_detector(ros::NodeHandle & nh) {
 
 int test_single_loop(ros::NodeHandle & nh) {
     auto sb = nh.subscribe(camera_topic, 1000, image_callback_1);
-    auto sb2 = nh.subscribe(viokeyframe_topic, 1000, VIOKF_callback);
+    auto sb2 = nh.subscribe(viokeyframe_topic, 1000, vioKFCallback);
     ros::spin();
 }
 

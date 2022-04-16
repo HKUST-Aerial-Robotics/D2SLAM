@@ -36,8 +36,8 @@ bool D2FeatureTracker::track(VisualImageDescArray & frames) {
 
 TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
     auto & previous = current_keyframe.images[frame.camera_id];
-    auto prev_pts = previous.landmarks_2d();
-    auto cur_pts = frame.landmarks_2d();
+    auto prev_pts = previous.landmarks2D();
+    auto cur_pts = frame.landmarks2D();
     std::vector<int> ids_down_to_up;
     TrackReport report;
     matchLocalFeatures(prev_pts, cur_pts, previous.landmark_descriptor, frame.landmark_descriptor, ids_down_to_up);
@@ -56,7 +56,7 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
             }
         }
     }
-    // printf("sum_parallex %f num %d mean %.2f\n", report.sum_parallex, report.parallex_num, report.mean_parallex());
+    // printf("sum_parallex %f num %d mean %.2f\n", report.sum_parallex, report.parallex_num, report.meanParallex());
     return report;
 }
 
@@ -67,7 +67,7 @@ bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
         report.long_track_num < _config.long_track_thres ||
         prev_num < _config.last_track_thres ||
         report.unmatched_num > _config.new_feature_thres*prev_num || //Unmatched is assumed to be new
-        report.mean_parallex() > _config.parallex_thres) { //Attenion, if mismatch this will be big
+        report.meanParallex() > _config.parallex_thres) { //Attenion, if mismatch this will be big
             return true;
     }
     return false;
@@ -107,7 +107,7 @@ void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
 void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) {
     // ROS_INFO("Drawing ... %d", keyframe_count);
     cv::Mat img = frame.raw_image;
-    auto cur_pts = frame.landmarks_2d();
+    auto cur_pts = frame.landmarks2D();
     if (img.channels() == 1) {
         cv::cvtColor(img, img, cv::COLOR_GRAY2BGR);
     }
@@ -164,7 +164,7 @@ void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const Tra
         frame.camera_id, is_keyframe);
     cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
     sprintf(buf, "TRACK %.1fms NUM %d LONG %d Parallex %.1f\%/%.1f",
-        report.ft_time, report.parallex_num, report.long_track_num, report.mean_parallex()*100, _config.parallex_thres*100);
+        report.ft_time, report.parallex_num, report.long_track_num, report.meanParallex()*100, _config.parallex_thres*100);
     cv::putText(img, buf, cv::Point2f(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
 
     sprintf(buf, "featureTracker @ Drone %d", params->self_id);

@@ -16,10 +16,10 @@ public:
     std::vector<Swarm::Pose> sld_win_poses;  //[q_{t-1},p_{t-1}], [q_{t-2},p_{t-2}] .., [q_{t-n},p_{t-n}]
 
 
-    void add_keyframe(double t);
+    void addKeyframe(double t);
     
     MSCKFStateVector();
-    Eigen::VectorXd get_full_vector();
+    Eigen::VectorXd getFullVector();
     Matrix3d get_imu_R() const;
 };
 
@@ -41,20 +41,20 @@ public:
 
     MSCKFErrorStateVector(const MSCKFStateVector & state0);
     
-    void state_augmentation(double t);
+    void stateAugmentation(double t);
     
-    VectorXd get_full_vector() const;
-    Eigen::Matrix<double, IMU_STATE_DIM, 1> get_imu_vector() const;
-    Eigen::Matrix<double, IMU_STATE_DIM, IMU_STATE_DIM> get_imu_P() const;
-    Eigen::Matrix<double, IMU_STATE_DIM, Eigen::Dynamic> get_imu_other_P() const;
+    VectorXd getFullVector() const;
+    Eigen::Matrix<double, IMU_STATE_DIM, 1> getImuVector() const;
+    Eigen::Matrix<double, IMU_STATE_DIM, IMU_STATE_DIM> getImuP() const;
+    Eigen::Matrix<double, IMU_STATE_DIM, Eigen::Dynamic> getImuOtherP() const;
 
-    void set_imu_vector(Eigen::Matrix<double, IMU_STATE_DIM, 1> v);
-    void set_imu_P(Eigen::Matrix<double, IMU_STATE_DIM, IMU_STATE_DIM> _P);
-    void set_imu_other_P(Eigen::Matrix<double, IMU_STATE_DIM, Eigen::Dynamic> _P);
+    void setImuVector(Eigen::Matrix<double, IMU_STATE_DIM, 1> v);
+    void setImuP(Eigen::Matrix<double, IMU_STATE_DIM, IMU_STATE_DIM> _P);
+    void setImuOtherP(Eigen::Matrix<double, IMU_STATE_DIM, Eigen::Dynamic> _P);
     
     void reset(MSCKFStateVector & state); //Reset with MSCKF state
 
-    unsigned int state_dim_full() {
+    unsigned int stateDimFull() {
         return IMU_STATE_DIM + camera_extrisincs.size() * 6 + sld_win_poses.size() * 6;
     }
 

@@ -25,7 +25,7 @@ public:
             "/swarm_loop/drone_network_status", 10);
         timer = nh.createTimer(ros::Duration(1.0), &SwarmNetworkTester::timerCallback, this);
         th = std::thread([&] {
-            while(0 == loopnet.lcm_handle()) {
+            while(0 == loopnet.lcmHandle()) {
         }
     });
 
@@ -58,7 +58,7 @@ public:
         for (auto & lm : dummy_desc.landmarks) {
             lm.flag = 1;
         }
-        loopnet.broadcast_img_desc(dummy_desc);
+        loopnet.broadcastImgDesc(dummy_desc);
         count++;
     }
 };

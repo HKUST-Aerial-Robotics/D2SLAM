@@ -18,7 +18,7 @@ public:
     MSCKF();
     void initFirstPose();
     void predict(const double t, const IMUData & imudata);
-    void add_keyframe(const double t); //For convience, we require t here is exact same to last imu t
+    void addKeyframe(const double t); //For convience, we require t here is exact same to last imu t
     void update(const D2Frontend::LandmarkPerId & feature_by_id);
 };
 }

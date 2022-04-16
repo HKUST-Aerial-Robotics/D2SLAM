@@ -11,7 +11,7 @@ class D2VINSNode :  public D2Frontend
     ros::Subscriber imu_sub;
 
 protected:
-    virtual void frame_callback(const VisualImageDescArray & viokf) override {
+    virtual void frameCallback(const VisualImageDescArray & viokf) override {
         VisualImageDescArray _viokf = viokf; //Here we do not need to copy desc.
         estimator.inputImage(_viokf);
     };

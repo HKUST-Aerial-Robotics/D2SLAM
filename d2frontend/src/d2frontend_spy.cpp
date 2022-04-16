@@ -44,7 +44,7 @@ public:
         timer = nh.createTimer(ros::Duration(0.03), &SwarmLoopSpy::timer_callback, this);
     }
 
-      void on_loop_connection (LoopEdge & loop_con, bool is_local = false) {
+      void onLoopConnection (LoopEdge & loop_con, bool is_local = false) {
         ROS_INFO("Loop conn from %d to %d", loop_con.drone_id_a, loop_con.drone_id_b);
     }
 
@@ -55,7 +55,7 @@ public:
             char frame_name[100] = {0};
             sprintf(win_name, "Drone: %d", img_desc.drone_id);
             auto ret = cv::imdecode(img_desc.images[1].image, cv::IMREAD_GRAYSCALE);
-            auto nowPts = img_desc.images[1].landmarks_2d();
+            auto nowPts = img_desc.images[1].landmarks2D();
 
             cv::cvtColor(ret, ret, cv::COLOR_GRAY2BGR);
             for (auto pt: nowPts) {
@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
     SwarmLoopSpy loopnode(nh);
 
     std::thread thread([&] {
-        while(0 == loopnode.loop_net->lcm_handle()) {
+        while(0 == loopnode.loop_net->lcmHandle()) {
         }
     });
     ros::spin();

@@ -60,11 +60,11 @@ protected:
     double t0 = -1;
     int loop_count = 0;
     
-    bool compute_loop(const VisualImageDescArray & new_fisheye_desc, const VisualImageDescArray & old_fisheye_desc,
+    bool computeLoop(const VisualImageDescArray & new_fisheye_desc, const VisualImageDescArray & old_fisheye_desc,
         int main_dir_new, int main_dir_old,
         std::vector<cv::Mat> img_new, std::vector<cv::Mat> img_old, LoopEdge & ret, bool init_mode=false);
 
-    bool compute_correspond_features(const VisualImageDesc & new_img_desc, const VisualImageDesc & old_img_desc, 
+    bool computeCorrespondFeatures(const VisualImageDesc & new_img_desc, const VisualImageDesc & old_img_desc, 
         std::vector<cv::Point2f> &new_norm_2d,
         std::vector<cv::Point3f> &new_3d,
         std::vector<int> &new_idx,
@@ -73,7 +73,7 @@ protected:
         std::vector<int> &old_idx
     );
 
-    bool compute_correspond_features(const VisualImageDescArray & new_img_desc, const VisualImageDescArray & old_img_desc, 
+    bool computeCorrespondFeatures(const VisualImageDescArray & new_img_desc, const VisualImageDescArray & old_img_desc, 
         int main_dir_new,
         int main_dir_old,
         std::vector<cv::Point2f> &new_norm_2d,
@@ -88,7 +88,7 @@ protected:
         std::map<int, std::pair<int, int>> &index2dirindex_old
     );
 
-    int compute_relative_pose(
+    int computeRelativePose(
         const std::vector<cv::Point2f> now_norm_2d,
         const std::vector<cv::Point3f> now_3d,
 
@@ -105,29 +105,29 @@ protected:
         int &inlier_num
         );
 
-    int add_to_database(const VisualImageDescArray & new_fisheye_desc);
-    int add_to_database(const VisualImageDesc & new_img_desc);
-    VisualImageDescArray & query_fisheyeframe_from_database(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & direction_new, int & direction_old);
-    int query_from_database(const VisualImageDesc & new_img_desc, bool init_mode, bool nonkeyframe, double & distance);
-    int query_from_database(const VisualImageDesc & new_img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & distance);
+    int addToDatabase(const VisualImageDescArray & new_fisheye_desc);
+    int addToDatabase(const VisualImageDesc & new_img_desc);
+    VisualImageDescArray & queryDescArrayFromFatabase(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & direction_new, int & direction_old);
+    int queryFromDatabase(const VisualImageDesc & new_img_desc, bool init_mode, bool nonkeyframe, double & distance);
+    int queryFromDatabase(const VisualImageDesc & new_img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & distance);
 
 
     std::set<int> all_nodes;
 
-    bool check_loop_odometry_consistency(LoopEdge & loop_conn) const;
+    bool checkLoopOdometryConsistency(LoopEdge & loop_conn) const;
     Swarm::DroneTrajectory ego_motion_traj;
 
 public:
     std::function<void(LoopEdge &)> on_loop_cb;
     int self_id = -1;
     LoopDetector(int self_id, const LoopDetectorConfig & config);
-    void on_image_recv(const VisualImageDescArray & img_des, std::vector<cv::Mat> img = std::vector<cv::Mat>(0));
-    void on_loop_connection(LoopEdge & loop_conn);
+    void onImageRecv(const VisualImageDescArray & img_des, std::vector<cv::Mat> img = std::vector<cv::Mat>(0));
+    void onLoopConnection(LoopEdge & loop_conn);
     LoopCam * loop_cam = nullptr;
     bool enable_visualize = true;
     cv::Mat decode_image(const VisualImageDesc & _img_desc);
 
-    int database_size() const;
+    int databaseSize() const;
 
 };
 }

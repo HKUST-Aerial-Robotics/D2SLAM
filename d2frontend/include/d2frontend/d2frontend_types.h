@@ -92,7 +92,7 @@ struct VisualImageDesc {
     
     VisualImageDesc() {}
 
-    void sync_ids(int _drone_id, FrameIdType _frame_id) {
+    void syncIds(int _drone_id, FrameIdType _frame_id) {
         drone_id = drone_id;
         frame_id = _frame_id;
         for (auto & lm : landmarks) {
@@ -101,7 +101,7 @@ struct VisualImageDesc {
         }
     }
 
-    std::vector<cv::Point2f> landmarks_2d() const {
+    std::vector<cv::Point2f> landmarks2D() const {
         std::vector<cv::Point2f> ret;
         for (auto & lm : landmarks) {
             ret.emplace_back(lm.pt2d);
@@ -200,7 +200,7 @@ struct VisualImageDescArray {
 
     void sync_landmark_ids() {
         for (auto & image : images) {
-            image.sync_ids(drone_id, frame_id);
+            image.syncIds(drone_id, frame_id);
         }
     }
     

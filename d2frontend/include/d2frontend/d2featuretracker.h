@@ -32,7 +32,7 @@ struct TrackReport {
         unmatched_num += report.unmatched_num;
     }
 
-    double mean_parallex() const {
+    double meanParallex() const {
         return sum_parallex/parallex_num;
     }
 };

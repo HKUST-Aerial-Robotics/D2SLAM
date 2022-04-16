@@ -29,36 +29,36 @@ protected:
 
     std::set<ros::Time> received_keyframe_stamps;
 
-    virtual void frame_callback(const VisualImageDescArray & viokf) {};
+    virtual void frameCallback(const VisualImageDescArray & viokf) {};
 
-    void on_loop_connection (LoopEdge & loop_con, bool is_local = false);
+    void onLoopConnection (LoopEdge & loop_con, bool is_local = false);
 
     std::queue<StereoFrame> raw_stereo_images;
     std::mutex raw_stereo_image_lock;
 
-    StereoFrame find_images_raw(const nav_msgs::Odometry & odometry);
+    StereoFrame findImagesRaw(const nav_msgs::Odometry & odometry);
 
     // void flatten_raw_callback(const ::FlattenImages & viokf);
-    void stereo_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right);
-    void comp_stereo_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::CompressedImageConstPtr right);
-    void comp_depth_images_callback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::ImageConstPtr right);
-    void depth_images_callback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr depth);
+    void stereoImagesCallback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right);
+    void compStereoImagesCallback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::CompressedImageConstPtr right);
+    void compDepthImagesCallback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::ImageConstPtr right);
+    void depthImagesCallback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr depth);
     double last_invoke = 0;
     
-    void odometry_callback(const nav_msgs::Odometry & odometry);
+    void odometryCallback(const nav_msgs::Odometry & odometry);
 
-    void odometry_keyframe_callback(const nav_msgs::Odometry & odometry);
+    void odometryKeyframeCallback(const nav_msgs::Odometry & odometry);
 
-    void VIOnonKF_callback(const StereoFrame & viokf);
-    void VIOKF_callback(const StereoFrame & viokf, bool nonkeyframe = false);
+    void viononKFCallback(const StereoFrame & viokf);
+    void vioKFCallback(const StereoFrame & viokf, bool nonkeyframe = false);
 
-    void pub_node_frame(const VisualImageDescArray & viokf);
+    void pubNodeFrame(const VisualImageDescArray & viokf);
 
-    void on_remote_frame_ros(const swarm_msgs::ImageArrayDescriptor & remote_img_desc);
+    void onRemoteFrameROS(const swarm_msgs::ImageArrayDescriptor & remote_img_desc);
 
-    void on_remote_image(const VisualImageDescArray & frame_desc);
+    void onRemoteImage(const VisualImageDescArray & frame_desc);
 
-    void process_stereoframe(const StereoFrame & stereoframe);
+    void processStereoframe(const StereoFrame & stereoframe);
 
     ros::Subscriber camera_sub;
     ros::Subscriber viokeyframe_sub;

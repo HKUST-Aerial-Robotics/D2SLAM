@@ -70,17 +70,17 @@ public:
     // LoopDetector * loop_detector = nullptr;
     LoopCam(LoopCamConfig config, ros::NodeHandle & nh);
     
-    VisualImageDesc extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img, bool superpoint_mode=false);
-    VisualImageDesc generate_stereo_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
-    VisualImageDesc generate_gray_depth_image_descriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
-    VisualImageDescArray process_stereoframe(const StereoFrame & msg, std::vector<cv::Mat> & imgs);
+    VisualImageDesc extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, bool superpoint_mode=false);
+    VisualImageDesc generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
+    VisualImageDesc generateGrayDepthImageDescriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
+    VisualImageDescArray processStereoframe(const StereoFrame & msg, std::vector<cv::Mat> & imgs);
 
-    void encode_image(const cv::Mat & _img, VisualImageDesc & _img_desc);
+    void encodeImage(const cv::Mat & _img, VisualImageDesc & _img_desc);
     
     camodocal::CameraPtr cam;
     cv::Mat cameraMatrix;
 
-    CameraConfig get_camera_configuration() const {
+    CameraConfig getCameraConfiguration() const {
         return camera_configuration;
     }
 };

@@ -100,15 +100,15 @@ void MSCKF::predict(const double t, const IMUData & imudata) {
     // Suggest by (268)-(269) in Sola J. Quaternion kinematics for the error-state Kalman filter
     // We don't predict the error state space
     // Instead, we only predict the P of error state, and predict the nominal state
-    auto P_new = Phi*error_state.get_imu_P()*Phi.transpose() + G*Q_imu*G.transpose();
-    auto P_imu_other_new = Phi*error_state.get_imu_other_P();
+    auto P_new = Phi*error_state.getImuP()*Phi.transpose() + G*Q_imu*G.transpose();
+    auto P_imu_other_new = Phi*error_state.getImuOtherP();
 
     //Set states to error_state
-    error_state.set_imu_P(P_new);
-    error_state.set_imu_other_P(P_imu_other_new);
+    error_state.setImuP(P_new);
+    error_state.setImuOtherP(P_imu_other_new);
 }
 
-void MSCKF::add_keyframe(const double t) {
+void MSCKF::addKeyframe(const double t) {
     //For convience, we require t here is exact same to last imu t
      if (!initFirstPoseFlag) {
         if (imubuf.size() >= _config.init_imu_num) {
@@ -119,8 +119,8 @@ void MSCKF::add_keyframe(const double t) {
     if (t_last >= 0) {
         assert(fabs(t - t_last) < 1.0/_config.IMU_FREQ && "MSCKF new image must be added EXACTLY after the corresponding imu is applied!");
     }
-    error_state.state_augmentation(t);
-    nominal_state.add_keyframe(t);
+    error_state.stateAugmentation(t);
+    nominal_state.addKeyframe(t);
 }
 
 void MSCKF::update(const D2Frontend::LandmarkPerId & feature_by_id) {  

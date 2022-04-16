@@ -31,19 +31,19 @@ class LoopNet {
     bool send_img;
     bool send_whole_img_desc;
 
-    void on_loop_connection_recevied(const lcm::ReceiveBuffer* rbuf,
+    void onLoopConnectionRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
                 const LoopEdge_t* msg);
 
-    void on_img_desc_recevied(const lcm::ReceiveBuffer* rbuf,
+    void onImgDescRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
                 const ImageDescriptor_t* msg);
 
-    void on_img_desc_header_recevied(const lcm::ReceiveBuffer* rbuf,
+    void onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
                 const ImageDescriptorHeader_t* msg);
 
-    void on_landmark_recevied(const lcm::ReceiveBuffer* rbuf,
+    void onLandmarkRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
                 const LandmarkDescriptor_t* msg);
     std::map<int64_t, ImageDescriptor_t> received_images;
@@ -58,10 +58,10 @@ class LoopNet {
     std::map<int64_t, ImageArrayDescriptor_t> received_frames;
 
 
-    void setup_network(std::string _lcm_uri);
-    void image_desc_callback(const ImageDescriptor_t & image);
-    void update_recv_img_desc_ts(int64_t id, bool is_header=false);
-    bool msg_blocked(int64_t _id) {
+    void setupNetwork(std::string _lcm_uri);
+    void imageDescCallback(const ImageDescriptor_t & image);
+    void updateRecvImgDescTs(int64_t id, bool is_header=false);
+    bool msgBlocked(int64_t _id) {
         return blacklist.find(_id) != blacklist.end() || sent_message.find(_id) != sent_message.end();
     }
 public:
@@ -71,17 +71,17 @@ public:
 
     LoopNet(std::string _lcm_uri, bool _send_img, bool _send_whole_img_desc, double _recv_period = 0.5):
         lcm(_lcm_uri), send_img(_send_img), send_whole_img_desc(_send_whole_img_desc), recv_period(_recv_period) {
-        this->setup_network(_lcm_uri);
+        this->setupNetwork(_lcm_uri);
         msg_recv_rate_callback = [&](const int, float) {};
     }
 
-    void broadcast_loop_connection(swarm_msgs::LoopEdge & loop_conn);
-    void broadcast_fisheye_desc(VisualImageDescArray & image_array);
-    void broadcast_img_desc(ImageDescriptor_t & img_des);
+    void broadcastLoopConnection(swarm_msgs::LoopEdge & loop_conn);
+    void broadcastVisualImageDescArray(VisualImageDescArray & image_array);
+    void broadcastImgDesc(ImageDescriptor_t & img_des);
 
-    void scan_recv_packets();
+    void scanRecvPackets();
 
-    int lcm_handle() {
+    int lcmHandle() {
         return lcm.handle();
     }
 };
