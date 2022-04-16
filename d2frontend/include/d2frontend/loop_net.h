@@ -13,7 +13,7 @@
 #include <set>
 #include <swarm_msgs/ImageDescriptorHeader_t.hpp>
 #include <swarm_msgs/LandmarkDescriptor_t.hpp>
-#include <swarm_msgs/FisheyeFrameDescriptor_t.hpp>
+#include <swarm_msgs/ImageArrayDescriptor_t.hpp>
 #include <mutex>
 
 using namespace swarm_msgs;
@@ -55,7 +55,7 @@ class LoopNet {
     std::set<int64_t> active_receving_msg;
     std::set<int64_t> active_receving_frames;
     std::set<int64_t> blacklist;
-    std::map<int64_t, FisheyeFrameDescriptor_t> received_frames;
+    std::map<int64_t, ImageArrayDescriptor_t> received_frames;
 
 
     void setup_network(std::string _lcm_uri);

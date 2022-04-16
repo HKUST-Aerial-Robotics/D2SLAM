@@ -43,7 +43,7 @@ void LoopDetector::on_image_recv(const VisualImageDescArray & flatten_desc, std:
                 flatten_desc.landmark_num);
         } else {
             ROS_INFO("[SWARM_LOOP] Detector start process KeyFrame from %d with landmark: %d and lm desc size %d", drone_id,
-                flatten_desc.images[0].landmarks_2d.size(), flatten_desc.images[0].feature_descriptor.size());
+                flatten_desc.images[0].landmark_num(), flatten_desc.images[0].landmark_descriptor.size());
         }
     }
 
@@ -549,23 +549,18 @@ bool LoopDetector::compute_correspond_features(const VisualImageDesc & new_img_d
         std::vector<cv::Point2f> &old_norm_2d,
         std::vector<cv::Point3f> &old_3d,
         std::vector<int> &old_idx) {
-    // ROS_INFO("[SWARM_LOOP](LoopDetector::compute_correspond_features) %d %d ", new_img_desc.landmarks_2d.size(), new_img_desc.feature_descriptor.size());
-    assert(new_img_desc.landmarks_2d.size() * FEATURE_DESC_SIZE == new_img_desc.feature_descriptor.size() && "Desciptor size of new img desc must equal to to landmarks*256!!!");
-    assert(old_img_desc.landmarks_2d.size() * FEATURE_DESC_SIZE == old_img_desc.feature_descriptor.size() && "Desciptor size of old img desc must equal to to landmarks*256!!!");
+    // ROS_INFO("[SWARM_LOOP](LoopDetector::compute_correspond_features) %d %d ", new_img_desc.landmark_num(), new_img_desc.landmark_descriptor.size());
+    assert(new_img_desc.landmark_num() * FEATURE_DESC_SIZE == new_img_desc.landmark_descriptor.size() && "Desciptor size of new img desc must equal to to landmarks*256!!!");
+    assert(old_img_desc.landmark_num() * FEATURE_DESC_SIZE == old_img_desc.landmark_descriptor.size() && "Desciptor size of old img desc must equal to to landmarks*256!!!");
 
-    auto _old_norm_2d = toCV(old_img_desc.landmarks_2d_norm);
-    auto _old_2d = old_img_desc.landmarks_2d;
-    auto _old_3d = toCV(old_img_desc.landmarks_3d);
-    
-    auto _now_norm_2d = toCV(new_img_desc.landmarks_2d_norm);
-    auto _now_2d = new_img_desc.landmarks_2d;
-    auto _now_3d = toCV(new_img_desc.landmarks_3d);
+    auto & _old_lms = old_img_desc.landmarks;
+    auto & _now_lms = new_img_desc.landmarks;
 
-    cv::Mat desc_now( _now_norm_2d.size(), FEATURE_DESC_SIZE, CV_32F);
-    memcpy(desc_now.data, new_img_desc.feature_descriptor.data(), new_img_desc.feature_descriptor.size()*sizeof(float));
+    cv::Mat desc_now( new_img_desc.landmark_num(), FEATURE_DESC_SIZE, CV_32F);
+    memcpy(desc_now.data, new_img_desc.landmark_descriptor.data(), new_img_desc.landmark_descriptor.size()*sizeof(float));
 
-    cv::Mat desc_old( old_img_desc.landmarks_2d.size(), FEATURE_DESC_SIZE, CV_32F);
-    memcpy(desc_old.data, old_img_desc.feature_descriptor.data(), old_img_desc.feature_descriptor.size()*sizeof(float));
+    cv::Mat desc_old( old_img_desc.landmark_num(), FEATURE_DESC_SIZE, CV_32F);
+    memcpy(desc_old.data, old_img_desc.landmark_descriptor.data(), old_img_desc.landmark_descriptor.size()*sizeof(float));
     
     cv::BFMatcher bfmatcher(cv::NORM_L2, true);
     std::vector<cv::DMatch> _matches;
@@ -577,18 +572,18 @@ bool LoopDetector::compute_correspond_features(const VisualImageDesc & new_img_d
     for (auto match : _matches) {
         int now_id = match.queryIdx;
         int old_id = match.trainIdx;
-        if (new_img_desc.landmarks_flag[now_id]) {
-            new_2d.push_back(_now_2d[now_id]);
-            old_2d.push_back(_old_2d[old_id]);
+        if (new_img_desc.landmarks[now_id].flag) {
+            new_2d.push_back(_now_lms[now_id].pt2d);
+            old_2d.push_back(_old_lms[old_id].pt2d);
 
             new_idx.push_back(now_id);
             old_idx.push_back(old_id);
 
-            new_3d.push_back(_now_3d[now_id]);
-            new_norm_2d.push_back(_now_norm_2d[now_id]);
+            new_3d.push_back(toCV(_now_lms[now_id].pt3d));
+            new_norm_2d.push_back(toCV(_now_lms[now_id].pt2d_norm));
 
-            old_3d.push_back(_old_3d[old_id]);
-            old_norm_2d.push_back(_old_norm_2d[old_id]);
+            old_3d.push_back(toCV(_old_lms[old_id].pt3d));
+            old_norm_2d.push_back(toCV(_old_lms[old_id].pt2d_norm));
         }
     }
 
@@ -717,8 +712,8 @@ bool LoopDetector::compute_loop(const VisualImageDescArray & new_frame_desc, con
 
             int new_pt_id = index2dirindex_new[i].second;
             int new_dir_id = index2dirindex_new[i].first;
-            auto pt_old = old_frame_desc.images[old_dir_id].landmarks_2d[old_pt_id];
-            auto pt_new = new_frame_desc.images[new_dir_id].landmarks_2d[new_pt_id];
+            auto pt_old = old_frame_desc.images[old_dir_id].landmarks[old_pt_id].pt2d;
+            auto pt_new = new_frame_desc.images[new_dir_id].landmarks[new_pt_id].pt2d;
 
             cv::line(_matched_imgs[old_dir_id], pt_old, pt_new + cv::Point2f(0, imgs_old[old_dir_id].rows), cv::Scalar(0, 0, 255));
             cv::circle(_matched_imgs[old_dir_id], pt_old, 3, cv::Scalar(255, 0, 0), 1);
@@ -734,8 +729,8 @@ bool LoopDetector::compute_loop(const VisualImageDescArray & new_frame_desc, con
 
             int new_pt_id = index2dirindex_new[idi].second;
             int new_dir_id = index2dirindex_new[idi].first;
-            auto pt_old = old_frame_desc.images[old_dir_id].landmarks_2d[old_pt_id];
-            auto pt_new = new_frame_desc.images[new_dir_id].landmarks_2d[new_pt_id];
+            auto pt_old = old_frame_desc.images[old_dir_id].landmarks[old_pt_id].pt2d;
+            auto pt_new = new_frame_desc.images[new_dir_id].landmarks[new_pt_id].pt2d;
             if (_matched_imgs[old_dir_id].empty()) {
                 continue;
             }

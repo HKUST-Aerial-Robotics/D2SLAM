@@ -1,4 +1,4 @@
-#include "feature_manager.hpp"
+#include "landmark_manager.hpp"
 #include "d2vins/d2vins_types.hpp"
 
 using namespace Eigen;
@@ -26,7 +26,7 @@ protected:
     std::vector<Swarm::Pose> extrinsic; //extrinsic of cameras
 public:
     double td = 0.0; //estimated td;
-    void add_frame(const VINSFrame & frame, bool is_keyframe) {
+    void addFrame(const VINSFrame & frame, bool is_keyframe) {
 
     }
 };

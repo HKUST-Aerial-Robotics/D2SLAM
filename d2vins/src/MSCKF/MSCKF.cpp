@@ -123,7 +123,7 @@ void MSCKF::add_keyframe(const double t) {
     nominal_state.add_keyframe(t);
 }
 
-void MSCKF::update(const D2Frontend::Feature & feature_by_id) {  
+void MSCKF::update(const D2Frontend::LandmarkPerId & feature_by_id) {  
    
 }
 

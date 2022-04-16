@@ -1,12 +1,15 @@
 #pragma once
 #include <ros/ros.h>
 #include <swarm_msgs/ImageDescriptor_t.hpp>
-#include <swarm_msgs/FisheyeFrameDescriptor_t.hpp>
-#include <swarm_msgs/FisheyeFrameDescriptor.h>
+#include <swarm_msgs/ImageArrayDescriptor_t.hpp>
 #include <swarm_msgs/Pose.h>
 #include <swarm_msgs/swarm_lcm_converter.hpp>
+#include "d2landmarks.h"
 
 namespace D2Frontend {
+
+typedef uint64_t FrameIdType;
+typedef int LandmarkIdType;
 
 inline int generate_keyframe_id(ros::Time stamp, int self_id) {
     static int keyframe_count = 0;
@@ -14,22 +17,7 @@ inline int generate_keyframe_id(ros::Time stamp, int self_id) {
     return (t_ms%100000)*10000 + self_id*1000000 + keyframe_count++;
 }
 
-struct Feature {
-    int feature_id = -1;
-    std::vector<cv::Point2f> pts2d;
-    std::vector<Eigen::Vector2d> pts2d_norm;
-    std::vector<Eigen::Vector3d> pts3d;
-    Feature() {}
-    Feature(int _feature_id, cv::Point2f pt2d, Vector2d pt2d_norm, Vector3d pt3d):
-        feature_id(_feature_id)
-    {
-        pts2d.emplace_back(pt2d);
-        pts2d_norm.emplace_back(pt2d_norm);
-        pts3d.emplace_back(pt3d);
-    }
-};
-
-struct StereoFrame{
+struct StereoFrame {
     ros::Time stamp;
     int keyframe_id;
     std::vector<cv::Mat> left_images, right_images, depth_images;
@@ -84,19 +72,14 @@ struct VisualImageDesc {
     double stamp;
     cv::Mat raw_image;
     int drone_id = 0;
-    uint64_t frame_id = 0; 
+    FrameIdType frame_id = 0; 
     int camera_id = 0; //camera id in stereo_frame
     Swarm::Pose extrinsic; //Camera extrinsic
     Swarm::Pose pose_drone; //IMU propagated pose
-    std::vector<Vector3d> landmarks_3d;
-    std::vector<float> landmarks_depth;
-    std::vector<Vector2d> landmarks_2d_norm; //normalized 2d 
-    std::vector<cv::Point2f> landmarks_2d; //normalized 2d 
-    std::vector<uint8_t> landmarks_flag; //0 no 3d, 1 has 3d
-    std::vector<int32_t> landmarks_id; //0 no 3d, 1 has 3d
+    std::vector<LandmarkPerFrame> landmarks;
 
     std::vector<float> image_desc;
-    std::vector<float> feature_descriptor;
+    std::vector<float> landmark_descriptor;
     bool prevent_adding_db = false;
 
     std::vector<uint8_t> image; //Buffer to store compressed image.
@@ -104,30 +87,43 @@ struct VisualImageDesc {
     int image_height = 0;
 
     int landmark_num() const {
-        return landmarks_2d.size();
+        return landmarks.size();
     }
     
     VisualImageDesc() {}
+
+    void sync_ids(int _drone_id, FrameIdType _frame_id) {
+        drone_id = drone_id;
+        frame_id = _frame_id;
+        for (auto & lm : landmarks) {
+            lm.drone_id = drone_id;
+            lm.frame_id = frame_id;
+        }
+    }
+
+    std::vector<cv::Point2f> landmarks_2d() const {
+        std::vector<cv::Point2f> ret;
+        for (auto & lm : landmarks) {
+            ret.emplace_back(lm.pt2d);
+        }
+        return ret;
+    }
 
     swarm_msgs::ImageDescriptor toROS() const {
         swarm_msgs::ImageDescriptor img_desc;
         img_desc.header.stamp = ros::Time(stamp);
         img_desc.drone_id = drone_id;
-        img_desc.feature_descriptor = feature_descriptor;
+        img_desc.landmark_descriptor = landmark_descriptor;
         img_desc.pose_drone = toROSPose(pose_drone);
         img_desc.camera_extrinsic = toROSPose(extrinsic);
-        img_desc.landmarks_2d_norm = toROSPoints(landmarks_2d_norm);
-        img_desc.landmarks_2d = toROSPoints(landmarks_2d);
-        img_desc.landmarks_3d = toROSPoints(landmarks_3d);
-        img_desc.landmarks_id = landmarks_id;
-        img_desc.landmarks_depth = landmarks_depth;
-
+        for (auto landmark: landmarks) {
+            img_desc.landmarks.emplace_back(landmark.toROS());
+        }
         img_desc.image_desc = image_desc;
         img_desc.image_width = image_width;
         img_desc.image_height = image_height;
         img_desc.image = image;
         img_desc.prevent_adding_db = prevent_adding_db;
-        img_desc.landmarks_flag = landmarks_flag;
         img_desc.direction = camera_id;
         return img_desc;
     }
@@ -136,18 +132,15 @@ struct VisualImageDesc {
         ImageDescriptor_t img_desc;
         img_desc.timestamp = toLCMTime(ros::Time(stamp));
         img_desc.drone_id = drone_id;
-        img_desc.feature_descriptor = feature_descriptor;
-        img_desc.feature_descriptor_size = feature_descriptor.size();
+        img_desc.landmark_descriptor = landmark_descriptor;
+        img_desc.landmark_descriptor_size = landmark_descriptor.size();
 
         img_desc.pose_drone = fromPose(pose_drone);
         img_desc.camera_extrinsic = fromPose(extrinsic);
-        CVPoints2LCM(landmarks_2d, img_desc.landmarks_2d);
-        img_desc.landmarks_2d_norm = toLCMPoints(landmarks_2d_norm);
-        img_desc.landmarks_3d = toLCMPoints(landmarks_3d);
-        img_desc.landmarks_id = landmarks_id;
-        img_desc.landmarks_depth = landmarks_depth;
-        img_desc.landmark_num = landmarks_id.size();
-
+        img_desc.landmark_num = landmarks.size();
+        for (auto landmark: landmarks) {
+            img_desc.landmarks.emplace_back(landmark.toLCM());
+        }
         img_desc.image_desc = image_desc;
         img_desc.image_desc_size = image_desc.size();
 
@@ -157,7 +150,6 @@ struct VisualImageDesc {
         img_desc.image_size = image.size();
         
         img_desc.prevent_adding_db = prevent_adding_db;
-        img_desc.landmarks_flag = landmarks_flag;
         img_desc.direction = camera_id;
         return img_desc;
     }
@@ -168,17 +160,14 @@ struct VisualImageDesc {
     {
         stamp = desc.header.stamp.toSec();
         drone_id = desc.drone_id;
-        feature_descriptor = desc.feature_descriptor;
+        landmark_descriptor = desc.landmark_descriptor;
         image_desc = desc.image_desc;
         image = desc.image;
         camera_id = desc.direction;
-        landmarks_2d_norm = toEigen(desc.landmarks_2d_norm);
-        landmarks_3d = toEigen3d(desc.landmarks_3d);
-        landmarks_2d = toCV(desc.landmarks_2d);
-        landmarks_flag = desc.landmarks_flag;
-        landmarks_id = desc.landmarks_id;
-        landmarks_depth = desc.landmarks_depth;
         prevent_adding_db = desc.prevent_adding_db;
+        for (auto landmark: desc.landmarks) {
+            landmarks.emplace_back(landmark);
+        }
     }
 
     VisualImageDesc(const ImageDescriptor_t & desc):
@@ -187,30 +176,33 @@ struct VisualImageDesc {
     {
         stamp = toROSTime(desc.timestamp).toSec();
         drone_id = desc.drone_id;
-        feature_descriptor = desc.feature_descriptor;
+        landmark_descriptor = desc.landmark_descriptor;
         image_desc = desc.image_desc;
         image = desc.image;
         camera_id = desc.direction;
-        landmarks_2d_norm = toEigen(desc.landmarks_2d_norm);
-        landmarks_3d = toEigen3d(desc.landmarks_3d);
-        landmarks_2d = toCV(desc.landmarks_2d);
-        landmarks_flag = desc.landmarks_flag;
-        landmarks_id = desc.landmarks_id;
-        landmarks_depth = desc.landmarks_depth;
         prevent_adding_db = desc.prevent_adding_db;
+        for (auto landmark: desc.landmarks) {
+            landmarks.emplace_back(landmark);
+        }
     }
 
 };
 
 struct VisualImageDescArray {
     int drone_id = 0;
-    uint64_t frame_id;
+    FrameIdType frame_id;
     double stamp;
     std::vector<VisualImageDesc> images;
     Swarm::Pose pose_drone;
     int landmark_num;
     bool prevent_adding_db;
     bool is_keyframe = false;
+
+    void sync_landmark_ids() {
+        for (auto & image : images) {
+            image.sync_ids(drone_id, frame_id);
+        }
+    }
     
     VisualImageDescArray() {}
     
@@ -218,7 +210,7 @@ struct VisualImageDescArray {
         // std::cout << "destorying  VisualImageDescArray " << frame_id << std::endl;
     }
 
-    VisualImageDescArray(const swarm_msgs::FisheyeFrameDescriptor & img_desc) {
+    VisualImageDescArray(const swarm_msgs::ImageArrayDescriptor & img_desc) {
         frame_id = img_desc.msg_id;
         prevent_adding_db = img_desc.prevent_adding_db;
         drone_id = img_desc.drone_id;
@@ -230,7 +222,7 @@ struct VisualImageDescArray {
         }
     }
 
-    VisualImageDescArray(const FisheyeFrameDescriptor_t & img_desc) {
+    VisualImageDescArray(const ImageArrayDescriptor_t & img_desc) {
         frame_id = img_desc.msg_id;
         prevent_adding_db = img_desc.prevent_adding_db;
         drone_id = img_desc.drone_id;
@@ -242,8 +234,8 @@ struct VisualImageDescArray {
         }
     }
 
-    swarm_msgs::FisheyeFrameDescriptor toROS() const {
-        swarm_msgs::FisheyeFrameDescriptor ret;
+    swarm_msgs::ImageArrayDescriptor toROS() const {
+        swarm_msgs::ImageArrayDescriptor ret;
         ret.msg_id = frame_id;
         ret.prevent_adding_db = prevent_adding_db;
         ret.drone_id = drone_id;
@@ -256,8 +248,8 @@ struct VisualImageDescArray {
         return ret;
     }
 
-    FisheyeFrameDescriptor_t toLCM() const {
-        FisheyeFrameDescriptor_t ret;
+    ImageArrayDescriptor_t toLCM() const {
+        ImageArrayDescriptor_t ret;
         ret.msg_id = frame_id;
         ret.prevent_adding_db = prevent_adding_db;
         ret.drone_id = drone_id;

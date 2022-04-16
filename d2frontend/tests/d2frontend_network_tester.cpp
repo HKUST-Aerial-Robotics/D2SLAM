@@ -49,16 +49,15 @@ public:
         dummy_desc.drone_id = self_id;
         dummy_desc.msg_id = count + self_id*1000000;
         dummy_desc.landmark_num = 200;
-        dummy_desc.feature_descriptor.resize(200*64);
-        dummy_desc.feature_descriptor_size = dummy_desc.feature_descriptor.size();
+        dummy_desc.landmark_descriptor.resize(200*64);
+        dummy_desc.landmark_descriptor_size = dummy_desc.landmark_descriptor.size();
         dummy_desc.image_desc.resize(4096);
         dummy_desc.image_desc_size = 4096;
         dummy_desc.image_size = 0;
-        dummy_desc.landmarks_2d_norm.resize(dummy_desc.landmark_num);
-        dummy_desc.landmarks_2d.resize(dummy_desc.landmark_num);
-        dummy_desc.landmarks_3d.resize(dummy_desc.landmark_num);
-        dummy_desc.landmarks_flag.resize(dummy_desc.landmark_num);
-        std::fill(dummy_desc.landmarks_flag.begin(), dummy_desc.landmarks_flag.end(), 1);
+        dummy_desc.landmarks.resize(dummy_desc.landmark_num);
+        for (auto & lm : dummy_desc.landmarks) {
+            lm.flag = 1;
+        }
         loopnet.broadcast_img_desc(dummy_desc);
         count++;
     }

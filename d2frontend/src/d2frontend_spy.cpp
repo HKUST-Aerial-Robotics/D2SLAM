@@ -55,7 +55,7 @@ public:
             char frame_name[100] = {0};
             sprintf(win_name, "Drone: %d", img_desc.drone_id);
             auto ret = cv::imdecode(img_desc.images[1].image, cv::IMREAD_GRAYSCALE);
-            auto nowPts = img_desc.images[1].landmarks_2d;
+            auto nowPts = img_desc.images[1].landmarks_2d();
 
             cv::cvtColor(ret, ret, cv::COLOR_GRAY2BGR);
             for (auto pt: nowPts) {

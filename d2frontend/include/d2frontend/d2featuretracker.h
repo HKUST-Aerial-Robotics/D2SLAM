@@ -37,22 +37,22 @@ struct TrackReport {
     }
 };
 
-class FeatureManager {
+class LandmarkManager {
 protected:
-    std::map<int, Feature> feature_db;
+    std::map<int, LandmarkPerId> landmark_db;
     int count = 0;
 public:
-    virtual int add_feature(cv::Point2f pt2d, Vector2d pt2d_norm, Vector3d pt3d);
-    virtual void update_feature(int _id, cv::Point2f pt2d, Vector2d pt2d_norm, Vector3d pt3d);
-    Feature & at(int i) {
-        return feature_db.at(i);
+    virtual int addLandmark(const LandmarkPerFrame & lm);
+    virtual void updateLandmark(const LandmarkPerFrame & lm);
+    LandmarkPerId & at(int i) {
+        return landmark_db.at(i);
     }
 };
 
 class D2FeatureTracker {
     D2FTConfig _config;
     VisualImageDescArray current_keyframe;
-    FeatureManager * fmanager = nullptr;
+    LandmarkManager * lmanager = nullptr;
     int keyframe_count = 0;
     int frame_count = 0;
     bool inited = false;
@@ -60,17 +60,17 @@ public:
     D2FeatureTracker(D2FTConfig config):
         _config(config)
     {
-        fmanager = new FeatureManager;
+        lmanager = new LandmarkManager;
     }
 
     bool track(VisualImageDescArray & frames);
     TrackReport track(VisualImageDesc & frame);
-    void process_keyframe(VisualImageDescArray & frames);
-    bool is_keyframe(const TrackReport & reports);
+    void processKeyframe(VisualImageDescArray & frames);
+    bool isKeyframe(const TrackReport & reports);
     void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report);
 };
 
-void match_local_features(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
+void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
     std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
     std::vector<int> & ids_down_to_up);
 

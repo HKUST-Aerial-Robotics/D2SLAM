@@ -129,10 +129,10 @@ cv::Mat drawMatches(std::vector<cv::Point2f> pts1, std::vector<cv::Point2f> pts2
     return _show;
 }
 
-void match_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, 
+void matchLocalFeatures(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, 
         std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
         std::vector<int> & ids_up, std::vector<int> & ids_down) {
-    // printf("match_local_features %ld %ld: ", pts_up.size(), pts_down.size());
+    // printf("matchLocalFeatures %ld %ld: ", pts_up.size(), pts_down.size());
     const cv::Mat desc_up( _desc_up.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_up.data());
     const cv::Mat desc_down( _desc_down.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_down.data());
 
@@ -216,6 +216,7 @@ VisualImageDescArray LoopCam::process_stereoframe(const StereoFrame & msg, std::
         cv::waitKey(10);
     }
     kf_count ++;
+    visual_array.sync_landmark_ids();
     return visual_array;
 }
 
@@ -251,11 +252,11 @@ VisualImageDesc LoopCam::generate_gray_depth_image_descriptor(const StereoFrame 
 
     auto image_left = msg.left_images[vcam_id];
 
-    auto & pts_up = vframe.landmarks_2d;
+    auto pts_up = vframe.landmarks_2d();
 
     std::vector<int> ids_up, ids_down;
 
-    if (vframe.landmarks_2d.size() < _config.ACCEPT_MIN_3D_PTS) {
+    if (vframe.landmark_num() < _config.ACCEPT_MIN_3D_PTS) {
         return vframe;
     }
     
@@ -280,9 +281,9 @@ VisualImageDesc LoopCam::generate_gray_depth_image_descriptor(const StereoFrame 
             Eigen::Vector3d _pt3d(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z(), 1);
             _pt3d = pose_cam * (_pt3d*dep);
 
-            vframe.landmarks_3d[i] = _pt3d;
-            vframe.landmarks_flag[i] = 1;
-            vframe.landmarks_depth[i] = dep;
+            vframe.landmarks[i].pt3d = _pt3d;
+            vframe.landmarks[i].flag = 1;
+            vframe.landmarks[i].depth = dep;
             count_3d ++;
         }
     }
@@ -303,10 +304,10 @@ VisualImageDesc LoopCam::generate_gray_depth_image_descriptor(const StereoFrame 
 
         cv::cvtColor(img_up, img_up, cv::COLOR_GRAY2BGR);
 
-        for (unsigned int i = 0; i < vframe.landmarks_2d.size(); i++ ) {
-            if (vframe.landmarks_flag[i]) { 
-                auto pt = vframe.landmarks_2d[i];
-                auto dep = vframe.landmarks_depth[i];
+        for (unsigned int i = 0; i < vframe.landmark_num(); i++ ) {
+            if (vframe.landmarks[i].flag) { 
+                auto pt = vframe.landmarks[i].pt2d;
+                auto dep = vframe.landmarks[i].depth;
                 cv::circle(img_up, pt, 3, cv::Scalar(0, 255, 0), 1);
                 char idtext[100] = {};
                 sprintf(idtext, "%3.2f", dep);
@@ -359,12 +360,12 @@ VisualImageDesc LoopCam::generate_stereo_image_descriptor(const StereoFrame & ms
     auto image_left = msg.left_images[vcam_id];
     auto image_right = msg.right_images[vcam_id];
 
-    auto & pts_up = vframe0.landmarks_2d;
-    auto & pts_down = vframe1.landmarks_2d;
+    auto pts_up = vframe0.landmarks_2d();
+    auto pts_down = vframe1.landmarks_2d();
     std::vector<int> ids_up, ids_down;
 
-    if (vframe0.landmarks_2d.size() > _config.ACCEPT_MIN_3D_PTS) {
-        match_local_features(pts_up, pts_down, vframe0.feature_descriptor, vframe1.feature_descriptor, ids_up, ids_down);
+    if (vframe0.landmark_num() > _config.ACCEPT_MIN_3D_PTS) {
+        matchLocalFeatures(pts_up, pts_down, vframe0.landmark_descriptor, vframe1.landmark_descriptor, ids_up, ids_down);
     } else {
         return vframe0;
     }
@@ -407,12 +408,14 @@ VisualImageDesc LoopCam::generate_stereo_image_descriptor(const StereoFrame & ms
         int idx_down = ids_down[i];
         // ides.landmarks_2d.push_back(pt2d);
         // ides.landmarks_2d_norm.push_back(pt2d_norm);
-        vframe0.landmarks_3d[idx] = point_3d;
-        vframe0.landmarks_flag[idx] = 1;
+        vframe0.landmarks[idx].pt3d = point_3d;
+        vframe0.landmarks[idx].flag = 1; 
+        //TODO:Set depth!!!
 
-        vframe1.landmarks_3d[idx_down] = point_3d;
-        vframe1.landmarks_flag[idx_down] = 1;
+        vframe1.landmarks[idx_down].pt3d = point_3d;
+        vframe1.landmarks[idx_down].flag = 1;
         count_3d ++;
+        assert("Set depth before use" && false);
         // std::cout << "Insert" << FEATURE_DESC_SIZE * ids[i] << "to" << FEATURE_DESC_SIZE * (ids[i] + 1)  << std::endl;
 
         // desc_new.insert(desc_new.end(), ides.feature_descriptor.begin() + FEATURE_DESC_SIZE * ids[i], ides.feature_descriptor.begin() + FEATURE_DESC_SIZE * (ids[i] + 1) );
@@ -456,7 +459,7 @@ VisualImageDesc LoopCam::generate_stereo_image_descriptor(const StereoFrame & ms
             cv::circle(img_down, pt, 1, cv::Scalar(255, 0, 0), -1);
         }
 
-        for (auto _pt : vframe0.landmarks_2d) {
+        for (auto _pt : vframe0.landmarks_2d()) {
             cv::Point2f pt(_pt.x, _pt.y);
             cv::circle(img_up, pt, 3, cv::Scalar(0, 0, 255), 1);
         }
@@ -465,10 +468,10 @@ VisualImageDesc LoopCam::generate_stereo_image_descriptor(const StereoFrame & ms
         for (unsigned int i = 0; i < pts_up.size(); i++)
         {
             int idx = ids_up[i];
-            if (vframe0.landmarks_flag[idx]) {
+            if (vframe0.landmarks[idx].flag) {
                 char title[100] = {0};
                 auto pt = pts_up[i];
-                auto point3d = vframe0.landmarks_3d[idx];
+                auto point3d = vframe0.landmarks[idx].pt3d;
                 auto pt_cam = pose_up.att().inverse() * (point3d - pose_up.pos());
                 cv::circle(_show, pt, 3, cv::Scalar(0, 255, 0), 1);
                 cv::arrowedLine(_show, pts_up[i], pts_down[i], cv::Scalar(255, 255, 0), 1);
@@ -508,28 +511,26 @@ VisualImageDesc LoopCam::extractor_img_desc_deepnet(ros::Time stamp, cv::Mat img
         roi.setTo(cv::Scalar(0, 0, 0));
     }
 #ifdef USE_TENSORRT
-    superpoint_net.inference(img, vframe.landmarks_2d, vframe.feature_descriptor);
+    std::vector<cv::Point2f> landmarks_2d;
+    superpoint_net.inference(img, landmarks_2d, vframe.landmark_descriptor);
 
     if (!superpoint_mode) {
         vframe.image_desc = netvlad_net.inference(img);
     }
 
-    for (unsigned int i = 0; i < vframe.landmarks_2d.size(); i++)
+    for (unsigned int i = 0; i < landmarks_2d.size(); i++)
     {
-        auto pt_up = vframe.landmarks_2d[i];
+        auto pt_up = landmarks_2d[i];
         Eigen::Vector3d pt_up3d;
         cam->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
         Eigen::Vector2d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z());
-
-        vframe.landmarks_2d_norm.push_back(pt_up_norm);
-        vframe.landmarks_3d.push_back(Vector3d(0., 0., 0.));
-        vframe.landmarks_flag.push_back(0);
-        vframe.landmarks_id.push_back(-1);
-        vframe.landmarks_depth.push_back(-1);
+        LandmarkPerFrame lm;
+        lm.pt2d_norm = pt_up_norm;
+        vframe.landmarks.emplace_back(lm);
 
         if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
             for (int j = 0; j < FEATURE_DESC_SIZE; j ++) {
-                fsp << vframe.feature_descriptor[i*FEATURE_DESC_SIZE + j] << " ";
+                fsp << vframe.landmark_descriptor[i*FEATURE_DESC_SIZE + j] << " ";
             }
             fsp << std::endl;
         }

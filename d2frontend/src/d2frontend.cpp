@@ -172,7 +172,7 @@ void D2Frontend::pub_node_frame(const VisualImageDescArray & viokf) {
     keyframe_pub.publish(nf);
 }
 
-void D2Frontend::on_remote_frame_ros(const swarm_msgs::FisheyeFrameDescriptor & remote_img_desc) {
+void D2Frontend::on_remote_frame_ros(const swarm_msgs::ImageArrayDescriptor & remote_img_desc) {
     // ROS_INFO("Remote");
     if (received_image) {
         this->on_remote_image(remote_img_desc);
@@ -264,11 +264,11 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     }
 
     if (params->enable_pub_remote_frame) {
-        remote_image_desc_pub = nh.advertise<swarm_msgs::FisheyeFrameDescriptor>("remote_frame_desc", 10);
+        remote_image_desc_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("remote_frame_desc", 10);
     }
 
     if (params->enable_pub_local_frame) {
-        local_image_desc_pub = nh.advertise<swarm_msgs::FisheyeFrameDescriptor>("local_frame_desc", 10);
+        local_image_desc_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("local_frame_desc", 10);
     }
     
 

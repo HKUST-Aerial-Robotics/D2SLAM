@@ -10,7 +10,7 @@
 #include <thread>
 #include <nav_msgs/Odometry.h>
 #include <mutex>
-#include <swarm_msgs/FisheyeFrameDescriptor.h>
+#include <swarm_msgs/ImageArrayDescriptor.h>
 #include <opencv2/core/eigen.hpp>
 #include <sensor_msgs/CompressedImage.h>
 
@@ -54,7 +54,7 @@ protected:
 
     void pub_node_frame(const VisualImageDescArray & viokf);
 
-    void on_remote_frame_ros(const swarm_msgs::FisheyeFrameDescriptor & remote_img_desc);
+    void on_remote_frame_ros(const swarm_msgs::ImageArrayDescriptor & remote_img_desc);
 
     void on_remote_image(const VisualImageDescArray & frame_desc);
 

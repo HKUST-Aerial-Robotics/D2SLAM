@@ -1,6 +1,6 @@
 #include "d2vins/d2vins_types.hpp"
 #include "d2vins/d2vins_params.hpp"
-#include "feature_manager.hpp"
+#include "landmark_manager.hpp"
 #include "d2vinsstate.hpp"
 
 using namespace Eigen;
@@ -21,7 +21,7 @@ protected:
 public:
     void inputImu(IMUData data);
     void inputImage(D2Frontend::VisualImageDescArray & frame);
-    std::pair<double, Swarm::Pose> get_imu_propagation() const;
-    std::pair<double, Swarm::Pose> get_odometry() const;
+    std::pair<double, Swarm::Pose> getImuPropagation() const;
+    std::pair<double, Swarm::Pose> getOdometry() const;
 };
 }

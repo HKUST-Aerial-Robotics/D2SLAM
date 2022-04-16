@@ -21,7 +21,7 @@ typedef boost::shared_ptr< Camera > CameraPtr;
 }
 
 namespace D2Frontend {
-void match_local_features(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, 
+void matchLocalFeatures(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, 
     std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
     std::vector<int> & ids_up, std::vector<int> & ids_down);
 
