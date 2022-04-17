@@ -1,7 +1,5 @@
 #pragma once
 #include <ros/ros.h>
-#include <swarm_msgs/ImageDescriptor_t.hpp>
-#include <swarm_msgs/ImageArrayDescriptor_t.hpp>
 #include <swarm_msgs/Pose.h>
 #include <swarm_msgs/swarm_lcm_converter.hpp>
 #include "d2landmarks.h"

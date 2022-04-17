@@ -5,15 +5,11 @@
 #include <swarm_msgs/LoopEdge.h>
 #include <string>
 #include <lcm/lcm-cpp.hpp>
-#include <swarm_msgs/ImageDescriptor_t.hpp>
 #include "d2frontend/d2frontend_params.h"
 #include "d2frontend/d2frontend_types.h"
 #include <swarm_msgs/swarm_lcm_converter.hpp>
 #include <functional>
 #include <set>
-#include <swarm_msgs/ImageDescriptorHeader_t.hpp>
-#include <swarm_msgs/LandmarkDescriptor_t.hpp>
-#include <swarm_msgs/ImageArrayDescriptor_t.hpp>
 #include <mutex>
 
 using namespace swarm_msgs;

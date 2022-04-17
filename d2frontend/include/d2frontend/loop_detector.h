@@ -2,7 +2,6 @@
 
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
-#include <swarm_msgs/ImageDescriptor.h>
 #include <swarm_msgs/LoopEdge.h>
 #include <d2frontend/d2frontend_params.h>
 #include <d2frontend/loop_cam.h>

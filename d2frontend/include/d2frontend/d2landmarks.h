@@ -1,7 +1,7 @@
 #pragma once
 #include <ros/ros.h>
 #include <swarm_msgs/Landmark.h>
-#include <swarm_msgs/Landmark_t.hpp>
+#include <swarm_msgs/lcm_gen/Landmark_t.hpp>
 
 namespace D2Frontend {
 

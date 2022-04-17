@@ -1,5 +1,4 @@
 #include <d2frontend/loop_detector.h>
-#include <swarm_msgs/swarm_lcm_converter.hpp>
 #include <chrono> 
 #include <d2frontend/utils.h>
 
