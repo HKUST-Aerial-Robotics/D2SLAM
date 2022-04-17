@@ -13,7 +13,7 @@ using namespace std::chrono;
 
 double TRIANGLE_THRES;
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) : 
     camera_configuration(config.camera_configuration),
     self_id(config.self_id),

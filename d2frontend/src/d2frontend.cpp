@@ -19,7 +19,7 @@ namespace backward
     backward::SignalHandling sh;
 }
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 void D2Frontend::onLoopConnection (LoopEdge & loop_con, bool is_local) {
     if(is_local) {
         loop_net->broadcastLoopConnection(loop_con);

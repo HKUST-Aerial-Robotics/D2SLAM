@@ -13,20 +13,18 @@ void D2Estimator::inputImu(IMUData data) {
     
 }
 
-bool D2Estimator::tryinitFirstPose(const D2Frontend::VisualImageDescArray & frame) {
+bool D2Estimator::tryinitFirstPose(const D2FrontEnd::VisualImageDescArray & frame) {
     if (imubuf.size() < config.init_imu_num) {
         return false;
     }
     auto q0 = Utility::g2R(imubuf.mean_acc());
     last_odom = Swarm::Odometry(frame.stamp, Swarm::Pose(q0, Vector3d::Zero()));
 
-    VINSFrame first_frame(frame);
+    //Easily use the average value as gyrobias now
+    //Also the ba with average acc - g
+    VINSFrame first_frame(frame, imubuf.mean_acc() - Gravity, imubuf.mean_gyro());
     first_frame.odom = last_odom;
 
-    //Easily use the average value as gyrobias now
-    first_frame.Bg = imubuf.mean_gyro();
-    //Also the ba with average acc - g
-    first_frame.Ba = imubuf.mean_acc() - Gravity;
     state.addFrame(first_frame, true);
     
     printf("[D2VINS::D2Estimator] Init pose with IMU: %s\n", last_odom.toStr().c_str());
@@ -35,18 +33,15 @@ bool D2Estimator::tryinitFirstPose(const D2Frontend::VisualImageDescArray & fram
     return true;
 }
 
-VINSFrame D2Estimator::initFrame(const D2Frontend::VisualImageDescArray & _frame) {
+VINSFrame D2Estimator::initFrame(const D2FrontEnd::VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
-    VINSFrame frame(_frame);
+    auto _imu = imubuf.back(_frame.stamp + state.td);
+    VINSFrame frame(_frame, _imu, state.lastFrame());
     if (config.init_method == D2VINSConfig::INIT_POSE_IMU) {
-        auto _imu = imubuf.back(_frame.stamp + state.td);
         frame.odom = _imu.propagation(state.lastFrame());
     } else {
     }
 
-    frame.Ba = state.lastFrame().Ba;
-    frame.Bg = state.lastFrame().Bg;
-    
     bool is_keyframe = _frame.is_keyframe; //Is keyframe is done in frontend
     state.addFrame(frame, is_keyframe);
 
@@ -57,7 +52,7 @@ VINSFrame D2Estimator::initFrame(const D2Frontend::VisualImageDescArray & _frame
     return frame;
 }
 
-void D2Estimator::inputImage(D2Frontend::VisualImageDescArray & _frame) {
+void D2Estimator::inputImage(D2FrontEnd::VisualImageDescArray & _frame) {
     if(!initFirstPoseFlag) {
         printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imubuf.size());
         initFirstPoseFlag = tryinitFirstPose(_frame);

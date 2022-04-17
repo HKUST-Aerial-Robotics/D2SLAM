@@ -16,7 +16,7 @@
 
 using namespace std::chrono; 
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 class D2Frontend {
 protected:
     LoopDetector * loop_detector = nullptr;

@@ -19,11 +19,11 @@ protected:
     Swarm::Odometry last_prop_odom; //last imu propagation odometry
 
     //Internal functions
-    bool tryinitFirstPose(const D2Frontend::VisualImageDescArray & frame);
-    VINSFrame initFrame(const D2Frontend::VisualImageDescArray & _frame);
+    bool tryinitFirstPose(const D2FrontEnd::VisualImageDescArray & frame);
+    VINSFrame initFrame(const D2FrontEnd::VisualImageDescArray & _frame);
 public:
     void inputImu(IMUData data);
-    void inputImage(D2Frontend::VisualImageDescArray & frame);
+    void inputImage(D2FrontEnd::VisualImageDescArray & frame);
     Swarm::Odometry getImuPropagation() const;
     Swarm::Odometry getOdometry() const;
 };

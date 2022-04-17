@@ -3,7 +3,7 @@
 #include <swarm_msgs/Landmark.h>
 #include <swarm_msgs/lcm_gen/Landmark_t.hpp>
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 
 typedef uint64_t FrameIdType;
 typedef int LandmarkIdType;

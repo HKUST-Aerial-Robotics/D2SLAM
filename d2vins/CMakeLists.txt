@@ -49,7 +49,11 @@ add_library(${PROJECT_NAME}_estimator
 
 add_dependencies(${PROJECT_NAME}_MSCKF ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_executable(${PROJECT_NAME}_node src/d2vins_node.cpp)
+add_executable(${PROJECT_NAME}_node 
+  src/d2vins_node.cpp
+  src/d2vins_params.cpp
+)
+
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}

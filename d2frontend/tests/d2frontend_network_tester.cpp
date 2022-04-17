@@ -3,7 +3,7 @@
 #include "swarmcomm_msgs/drone_network_status.h"
 #include <thread>
 
-using namespace D2Frontend;
+using namespace D2FrontEnd;
 class SwarmNetworkTester {
     LoopNet loopnet;
     ros::Publisher drone_status_pub;

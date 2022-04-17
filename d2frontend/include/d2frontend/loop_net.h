@@ -14,7 +14,7 @@
 
 using namespace swarm_msgs;
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 class LoopNet {
     lcm::LCM lcm;
 

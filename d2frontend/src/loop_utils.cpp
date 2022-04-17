@@ -4,7 +4,7 @@
 
 using namespace std::chrono; 
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 cv::Mat getImageFromMsg(const sensor_msgs::CompressedImageConstPtr &img_msg, int flag) {
     return cv::imdecode(img_msg->data, flag);
 }

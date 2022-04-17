@@ -7,7 +7,7 @@ using namespace std::chrono;
 #define USE_FUNDMENTAL
 #define MAX_LOOP_ID 100000000
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 void LoopDetector::onImageRecv(const VisualImageDescArray & flatten_desc, std::vector<cv::Mat> imgs) {
     TicToc tt;
     static double t_sum = 0;

@@ -1,7 +1,6 @@
 #include "d2frontend/d2frontend.h"
 
-
-class D2FrontendNode :  public D2Frontend::D2Frontend
+class D2FrontendNode :  public D2FrontEnd::D2Frontend
 {
 public:
     D2FrontendNode(ros::NodeHandle & nh)

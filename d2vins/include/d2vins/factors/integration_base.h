@@ -12,6 +12,7 @@
 #include <d2vins/d2vins_params.hpp>
 #include <d2vins/utils.hpp>
 #include <ceres/ceres.h>
+#include <d2vins/d2imu.hpp>
 
 enum StateOrder
 {
@@ -38,8 +39,7 @@ class IntegrationBase
   public:
     IntegrationBase() = delete;
     IntegrationBase(const Eigen::Vector3d &_acc_0, const Eigen::Vector3d &_gyr_0,
-                    const Eigen::Vector3d &_linearized_ba, const Eigen::Vector3d &_linearized_bg, 
-                    const D2VINSConfig & config)
+                    const Eigen::Vector3d &_linearized_ba, const Eigen::Vector3d &_linearized_bg)
         : acc_0{_acc_0}, gyr_0{_gyr_0}, linearized_acc{_acc_0}, linearized_gyr{_gyr_0},
           linearized_ba{_linearized_ba}, linearized_bg{_linearized_bg},
             jacobian{Eigen::Matrix<double, 15, 15>::Identity()}, covariance{Eigen::Matrix<double, 15, 15>::Zero()},
@@ -47,12 +47,31 @@ class IntegrationBase
 
     {
         noise = Eigen::Matrix<double, 18, 18>::Zero();
-        noise.block<3, 3>(0, 0) =  (config.acc_n * config.acc_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(3, 3) =  (config.gyr_n * config.gyr_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(6, 6) =  (config.acc_n * config.acc_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(9, 9) =  (config.gyr_n * config.gyr_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(12, 12) =  (config.acc_w * config.acc_w) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(15, 15) =  (config.gyr_w * config.gyr_w) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(0, 0) =  (params->acc_n * params->acc_n) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(3, 3) =  (params->gyr_n * params->gyr_n) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(6, 6) =  (params->acc_n * params->acc_n) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(9, 9) =  (params->gyr_n * params->gyr_n) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(12, 12) =  (params->acc_w * params->acc_w) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(15, 15) =  (params->gyr_w * params->gyr_w) * Eigen::Matrix3d::Identity();
+    }
+
+    IntegrationBase(const IMUBuffer & buf, const Eigen::Vector3d &_linearized_ba, const Eigen::Vector3d &_linearized_bg):
+        acc_0{buf[0].acc}, gyr_0{buf[0].gyro}, linearized_acc{buf[0].acc}, linearized_gyr{buf[0].gyro},
+        linearized_ba{_linearized_ba}, linearized_bg{_linearized_bg},
+        jacobian{Eigen::Matrix<double, 15, 15>::Identity()}, covariance{Eigen::Matrix<double, 15, 15>::Zero()},
+        sum_dt{0.0}, delta_p{Eigen::Vector3d::Zero()}, delta_q{Eigen::Quaterniond::Identity()}, delta_v{Eigen::Vector3d::Zero()}
+    {
+        noise = Eigen::Matrix<double, 18, 18>::Zero();
+        noise.block<3, 3>(0, 0) =  (params->acc_n * params->acc_n) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(3, 3) =  (params->gyr_n * params->gyr_n) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(6, 6) =  (params->acc_n * params->acc_n) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(9, 9) =  (params->gyr_n * params->gyr_n) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(12, 12) =  (params->acc_w * params->acc_w) * Eigen::Matrix3d::Identity();
+        noise.block<3, 3>(15, 15) =  (params->gyr_w * params->gyr_w) * Eigen::Matrix3d::Identity();
+
+        for (auto & imu : buf.buf) {
+            push_back(imu.dt, imu.acc, imu.gyro);
+        }
     }
 
     void push_back(double dt, const Eigen::Vector3d &acc, const Eigen::Vector3d &gyr)

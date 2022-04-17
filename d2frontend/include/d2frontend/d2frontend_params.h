@@ -40,7 +40,7 @@
 #define FEATURE_DESC_SIZE 64
 #define ACCEPT_SP_MATCH_DISTANCE 0.7
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 enum CameraConfig{
     STEREO_PINHOLE = 0,
     STEREO_FISHEYE = 1,

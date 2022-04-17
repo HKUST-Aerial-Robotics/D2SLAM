@@ -2,7 +2,7 @@
 #include <time.h> 
 #include "d2frontend/loop_detector.h"
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 void LoopNet::setupNetwork(std::string _lcm_uri) {
     if (!lcm.good()) {
         ROS_ERROR("LCM %s failed", _lcm_uri.c_str());

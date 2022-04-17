@@ -1,6 +1,6 @@
 #include <d2frontend/d2featuretracker.h>
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 #define MIN_HOMOGRAPHY 6
 bool D2FeatureTracker::track(VisualImageDescArray & frames) {
     bool iskeyframe = false;

@@ -5,7 +5,7 @@
 #include "swarm_msgs/swarm_lcm_converter.hpp"
 #include <opencv2/core/eigen.hpp>
 
-namespace D2Frontend {
+namespace D2FrontEnd {
     D2FrontendParams * params;
     D2FrontendParams::D2FrontendParams(ros::NodeHandle & nh)
     {

@@ -12,7 +12,7 @@ namespace backward
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
 
-namespace D2Frontend
+namespace D2FrontEnd
 {
     class D2FrontendNode : public nodelet::Nodelet, public D2Frontend
     {
@@ -28,4 +28,4 @@ namespace D2Frontend
     };
 }
 
-PLUGINLIB_EXPORT_CLASS(D2Frontend::D2FrontendNode, nodelet::Nodelet);
+PLUGINLIB_EXPORT_CLASS(D2FrontEnd::D2FrontendNode, nodelet::Nodelet);

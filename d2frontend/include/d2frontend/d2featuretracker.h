@@ -7,7 +7,7 @@ using namespace Eigen;
 
 #define MAX_FEATURE_NUM 10000000
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 struct D2FTConfig {
     bool show_feature_id = true;
     int long_track_thres = 20;

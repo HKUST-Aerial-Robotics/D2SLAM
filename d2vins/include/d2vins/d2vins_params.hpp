@@ -2,6 +2,7 @@
 
 #include <Eigen/Eigen>
 using namespace Eigen;
+#include <ros/ros.h>
 
 const Vector3d Gravity = Vector3d(0, 0, 9.805);
 
@@ -24,4 +25,7 @@ struct D2VINSConfig {
     D2VINSConfig() {
     }
 };
+
+extern D2VINSConfig * params;
+void initParams(ros::NodeHandle & nh);
 }

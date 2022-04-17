@@ -18,7 +18,7 @@ using namespace swarm_msgs;
 
 #define REMOTE_MAGIN_NUMBER 1000000
 
-namespace D2Frontend {
+namespace D2FrontEnd {
 
 struct LoopDetectorConfig {
     int MATCH_INDEX_DIST;

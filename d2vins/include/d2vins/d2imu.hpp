@@ -1,6 +1,5 @@
 #pragma once
 #include "sensor_msgs/Imu.h"
-#include "factors/imu_factor.h"
 #include "swarm_msgs/Pose.h"
 #include <swarm_msgs/Odometry.h>
 
@@ -26,9 +25,9 @@ class IMUBuffer
 protected:
     size_t searchClosest(double t) const;
     IMUBuffer slice(int i0, int i1) const;
-
 public:
     std::vector<IMUData> buf;
+
     double t_last = 0.0;
     void add(const IMUData & data);
 
@@ -48,5 +47,13 @@ public:
 
     Swarm::Odometry propagation(const Swarm::Odometry & odom, const Vector3d & Ba, const Vector3d & Bg) const;
     Swarm::Odometry propagation(const VINSFrame & baseframe) const;
+    
+    IMUData operator[](int i) const {
+        return buf[i];
+    }
+    
+    IMUData & operator[](int i) {
+        return buf[i];
+    }
 };
 }

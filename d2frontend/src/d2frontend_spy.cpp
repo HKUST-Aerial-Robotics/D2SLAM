@@ -12,7 +12,7 @@ namespace backward
     backward::SignalHandling sh;
 }
 using namespace std::chrono; 
-using namespace D2Frontend; 
+using namespace D2FrontEnd; 
 
 class SwarmLoopSpy {
 public:
