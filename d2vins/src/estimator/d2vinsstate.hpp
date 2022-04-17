@@ -11,9 +11,11 @@ protected:
 public:
     double td = 0.0; //estimated td;
     void addFrame(const VINSFrame & frame, bool is_keyframe) {
+        sld_win.push_back(frame);
     }
 
     VINSFrame lastFrame() const {
+        assert(sld_win.size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastFrame()");
         return sld_win.back();
     }
 };

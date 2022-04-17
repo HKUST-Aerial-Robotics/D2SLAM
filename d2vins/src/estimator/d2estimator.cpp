@@ -44,10 +44,18 @@ VINSFrame D2Estimator::initFrame(const D2Frontend::VisualImageDescArray & _frame
         frame.pose = pose_vel.first;
         frame.V = pose_vel.second;
     } else {
-        //TODO
     }
+
+    frame.Ba = state.lastFrame().Ba;
+    frame.Bg = state.lastFrame().Bg;
+    
     bool is_keyframe = _frame.is_keyframe; //Is keyframe is done in frontend
     state.addFrame(frame, is_keyframe);
+
+    if (config.verbose) {
+        printf("[D2VINS::D2Estimator] Initialize VINSFrame with %d: %s\n", 
+            config.init_method, frame.toStr().c_str());
+    }
     return frame;
 }
 

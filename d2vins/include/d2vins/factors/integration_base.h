@@ -10,6 +10,7 @@
 #pragma once
 
 #include <d2vins/d2vins_params.hpp>
+#include <d2vins/utils.hpp>
 #include <ceres/ceres.h>
 
 enum StateOrder
