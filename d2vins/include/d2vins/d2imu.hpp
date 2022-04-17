@@ -2,6 +2,7 @@
 #include "sensor_msgs/Imu.h"
 #include "factors/imu_factor.h"
 #include "swarm_msgs/Pose.h"
+#include <swarm_msgs/Odometry.h>
 
 namespace D2VINS {
 
@@ -45,8 +46,7 @@ public:
 
     IMUBuffer periodIMU(double t0, double t1) const;
 
-    std::pair<Swarm::Pose, Vector3d> propagation(const Swarm::Pose & p0, 
-            const Vector3d & V0, const Vector3d & Ba, const Vector3d & Bg) const;
-    std::pair<Swarm::Pose, Vector3d> propagation(const VINSFrame & baseframe) const;
+    Swarm::Odometry propagation(const Swarm::Odometry & odom, const Vector3d & Ba, const Vector3d & Bg) const;
+    Swarm::Odometry propagation(const VINSFrame & baseframe) const;
 };
 }

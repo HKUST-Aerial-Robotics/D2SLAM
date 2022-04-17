@@ -18,10 +18,10 @@ bool D2Estimator::tryinitFirstPose(const D2Frontend::VisualImageDescArray & fram
         return false;
     }
     auto q0 = Utility::g2R(imubuf.mean_acc());
-    last_pose = Swarm::Pose(q0, Vector3d::Zero());
+    last_odom = Swarm::Odometry(frame.stamp, Swarm::Pose(q0, Vector3d::Zero()));
 
     VINSFrame first_frame(frame);
-    first_frame.pose = last_pose;
+    first_frame.odom = last_odom;
 
     //Easily use the average value as gyrobias now
     first_frame.Bg = imubuf.mean_gyro();
@@ -29,7 +29,7 @@ bool D2Estimator::tryinitFirstPose(const D2Frontend::VisualImageDescArray & fram
     first_frame.Ba = imubuf.mean_acc() - Gravity;
     state.addFrame(first_frame, true);
     
-    printf("[D2VINS::D2Estimator] Init pose with IMU: %s\n", last_pose.tostr().c_str());
+    printf("[D2VINS::D2Estimator] Init pose with IMU: %s\n", last_odom.toStr().c_str());
     printf("[D2VINS::D2Estimator] Gyro bias: %.3f %.3f %.3f\n", first_frame.Bg.x(), first_frame.Bg.y(), first_frame.Bg.z());
     printf("[D2VINS::D2Estimator] Acc  bias: %.3f %.3f %.3f\n\n", first_frame.Ba.x(), first_frame.Ba.y(), first_frame.Ba.z());
     return true;
@@ -40,9 +40,7 @@ VINSFrame D2Estimator::initFrame(const D2Frontend::VisualImageDescArray & _frame
     VINSFrame frame(_frame);
     if (config.init_method == D2VINSConfig::INIT_POSE_IMU) {
         auto _imu = imubuf.back(_frame.stamp + state.td);
-        auto pose_vel = _imu.propagation(state.lastFrame());
-        frame.pose = pose_vel.first;
-        frame.V = pose_vel.second;
+        frame.odom = _imu.propagation(state.lastFrame());
     } else {
     }
 
@@ -77,8 +75,12 @@ void D2Estimator::inputImage(D2Frontend::VisualImageDescArray & _frame) {
 
 }
 
-std::pair<double, Swarm::Pose> D2Estimator::getImuPropagation() const {
-    return std::make_pair(last_propagation_t, last_propagation_pose);
+Swarm::Odometry D2Estimator::getImuPropagation() const {
+    return last_prop_odom;
+}
+
+Swarm::Odometry D2Estimator::getOdometry() const {
+    return last_odom;
 }
 
 

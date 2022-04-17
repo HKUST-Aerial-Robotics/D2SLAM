@@ -2,6 +2,7 @@
 #include "d2vins/d2vins_params.hpp"
 #include "landmark_manager.hpp"
 #include "d2vinsstate.hpp"
+#include <swarm_msgs/Odometry.h>
 
 using namespace Eigen;
 namespace D2VINS {
@@ -14,11 +15,8 @@ protected:
     bool initFirstPoseFlag = false;   
     D2EstimatorState state;
     IMUBuffer imubuf;
-    Swarm::Pose last_pose; //Last pose;
-    double last_pose_t = 0.0;
-
-    Swarm::Pose last_propagation_pose; //Last pose;
-    double last_propagation_t = 0.0;
+    Swarm::Odometry last_odom; //last accuacy odometry
+    Swarm::Odometry last_prop_odom; //last imu propagation odometry
 
     //Internal functions
     bool tryinitFirstPose(const D2Frontend::VisualImageDescArray & frame);
@@ -26,7 +24,7 @@ protected:
 public:
     void inputImu(IMUData data);
     void inputImage(D2Frontend::VisualImageDescArray & frame);
-    std::pair<double, Swarm::Pose> getImuPropagation() const;
-    std::pair<double, Swarm::Pose> getOdometry() const;
+    Swarm::Odometry getImuPropagation() const;
+    Swarm::Odometry getOdometry() const;
 };
 }

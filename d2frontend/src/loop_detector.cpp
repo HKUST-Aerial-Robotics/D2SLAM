@@ -308,12 +308,12 @@ bool LoopDetector::checkLoopOdometryConsistency(LoopEdge & loop_conn) const {
     auto md = Swarm::computeSquaredMahalanobisDistance(dp.log_map(), cov_vec);
     if (md >  _config.odometry_consistency_threshold) {
         ROS_INFO("[SWARM_LOOP] LoopEdge-Odometry consistency check failed %.1f, odom %s loop %s dp %s.", 
-            md, odom.first.tostr().c_str(), edge.relative_pose.tostr().c_str(), dp.tostr().c_str());
+            md, odom.first.toStr().c_str(), edge.relative_pose.toStr().c_str(), dp.toStr().c_str());
         return false;
     }
 
     ROS_INFO("[SWARM_LOOP] LoopEdge-Odometry consistency OK %.1f odom %s loop %s dp %s.", md, 
-        odom.first.tostr().c_str(), edge.relative_pose.tostr().c_str(), dp.tostr().c_str());
+        odom.first.toStr().c_str(), edge.relative_pose.toStr().c_str(), dp.toStr().c_str());
     return true;
 }
 
@@ -408,7 +408,7 @@ int LoopDetector::computeRelativePose(
 
     success = pnp_result_verify(success, init_mode, inliers.rows, RPerr, DP_old_to_new);
 
-    ROS_INFO("[SWARM_LOOP] DPose %s PnPRansac %d inlines %d/%d, dyaw %f dpos %f. Geometry Check %f", DP_old_to_new.tostr().c_str(), success, inliers.rows, matched_2d_norm_old.size(), fabs(DP_old_to_new.yaw())*57.3, DP_old_to_new.pos().norm(), RPerr);
+    ROS_INFO("[SWARM_LOOP] DPose %s PnPRansac %d inlines %d/%d, dyaw %f dpos %f. Geometry Check %f", DP_old_to_new.toStr().c_str(), success, inliers.rows, matched_2d_norm_old.size(), fabs(DP_old_to_new.yaw())*57.3, DP_old_to_new.pos().norm(), RPerr);
     inlier_num = inliers.rows;
 
     for (int i = 0; i < inlier_num; i++) {
