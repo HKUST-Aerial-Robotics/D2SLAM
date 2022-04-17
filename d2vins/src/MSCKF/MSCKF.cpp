@@ -11,7 +11,7 @@ MSCKF::MSCKF() {
 }
 
 void MSCKF::initFirstPose() {
-    auto q0 = g2R(imubuf.mean_acc());
+    auto q0 = Utility::g2R(imubuf.mean_acc());
     nominal_state.q_imu = q0;
 }
 
@@ -48,7 +48,7 @@ void MSCKF::predict(const double t, const IMUData & imudata) {
 
     //Naive intergation
     auto qdot = nominal_state.q_imu * omg_l;
-    auto vdot = Rq_hat*acc_hat + _config.Gravity;
+    auto vdot = Rq_hat*acc_hat + Gravity;
     auto pdot = nominal_state.v_imu;
 
     //Internal the quaternion is save as [qw, qx, qy, qz] in Eigen

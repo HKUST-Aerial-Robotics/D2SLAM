@@ -8,44 +8,70 @@ void D2Estimator::inputImu(IMUData data) {
     if (!initFirstPoseFlag) {
         return;
     }
+
+    //Propagation current with last Bias.
+    
 }
 
 bool D2Estimator::tryinitFirstPose(const D2Frontend::VisualImageDescArray & frame) {
     if (imubuf.size() < config.init_imu_num) {
         return false;
     }
-    auto q0 = g2R(imubuf.mean_acc());
+    auto q0 = Utility::g2R(imubuf.mean_acc());
     last_pose = Swarm::Pose(q0, Vector3d::Zero());
 
-    VINSFrame firstFrame(frame);
-    firstFrame.pose = last_pose;
+    VINSFrame first_frame(frame);
+    first_frame.pose = last_pose;
 
     //Easily use the average value as gyrobias now
-    firstFrame.Bg = imubuf.mean_gyro();
+    first_frame.Bg = imubuf.mean_gyro();
     //Also the ba with average acc - g
-    firstFrame.Ba = imubuf.mean_acc() - config.Gravity;
+    first_frame.Ba = imubuf.mean_acc() - Gravity;
+    state.addFrame(first_frame, true);
     
     printf("[D2VINS::D2Estimator] Init pose with IMU: %s\n", last_pose.tostr().c_str());
-    printf("[D2VINS::D2Estimator] Gyro bias: %.3f %.3f %.3f\n", firstFrame.Bg.x(), firstFrame.Bg.y(), firstFrame.Bg.z());
-    printf("[D2VINS::D2Estimator] Acc  bias: %.3f %.3f %.3f\n\n", firstFrame.Ba.x(), firstFrame.Ba.y(), firstFrame.Ba.z());
+    printf("[D2VINS::D2Estimator] Gyro bias: %.3f %.3f %.3f\n", first_frame.Bg.x(), first_frame.Bg.y(), first_frame.Bg.z());
+    printf("[D2VINS::D2Estimator] Acc  bias: %.3f %.3f %.3f\n\n", first_frame.Ba.x(), first_frame.Ba.y(), first_frame.Ba.z());
     return true;
 }
 
-void D2Estimator::inputImage(D2Frontend::VisualImageDescArray & frame) {
+VINSFrame D2Estimator::initFrame(const D2Frontend::VisualImageDescArray & _frame) {
+    //First we init corresponding pose for with IMU
+    VINSFrame frame(_frame);
+    if (config.init_method == D2VINSConfig::INIT_POSE_IMU) {
+        auto _imu = imubuf.back(_frame.stamp + state.td);
+        auto pose_vel = _imu.propagation(state.lastFrame());
+        frame.pose = pose_vel.first;
+        frame.V = pose_vel.second;
+    } else {
+        //TODO
+    }
+    bool is_keyframe = _frame.is_keyframe; //Is keyframe is done in frontend
+    state.addFrame(frame, is_keyframe);
+    return frame;
+}
+
+void D2Estimator::inputImage(D2Frontend::VisualImageDescArray & _frame) {
     if(!initFirstPoseFlag) {
         printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imubuf.size());
-        initFirstPoseFlag = tryinitFirstPose(frame);
-        if (!initFirstPoseFlag) {
-            return;
-        }
+        initFirstPoseFlag = tryinitFirstPose(_frame);
+        return;
     }
 
-    while (!imubuf.avaiable(frame.stamp + state.td)) {
+    double t_imu_frame = _frame.stamp + state.td;
+    while (!imubuf.avaiable(t_imu_frame)) {
         //Wait for IMU
         usleep(2000);
         printf("[D2VINS::D2Estimator] wait for imu...\n");
     }
-    
+
+    auto frame = initFrame(_frame);
+
 }
+
+std::pair<double, Swarm::Pose> D2Estimator::getImuPropagation() const {
+    return std::make_pair(last_propagation_t, last_propagation_pose);
+}
+
 
 }

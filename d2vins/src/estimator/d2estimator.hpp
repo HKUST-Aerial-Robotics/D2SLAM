@@ -15,9 +15,14 @@ protected:
     D2EstimatorState state;
     IMUBuffer imubuf;
     Swarm::Pose last_pose; //Last pose;
+    double last_pose_t = 0.0;
+
+    Swarm::Pose last_propagation_pose; //Last pose;
+    double last_propagation_t = 0.0;
 
     //Internal functions
     bool tryinitFirstPose(const D2Frontend::VisualImageDescArray & frame);
+    VINSFrame initFrame(const D2Frontend::VisualImageDescArray & _frame);
 public:
     void inputImu(IMUData data);
     void inputImage(D2Frontend::VisualImageDescArray & frame);

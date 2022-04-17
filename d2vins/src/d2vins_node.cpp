@@ -18,6 +18,7 @@ protected:
 
     virtual void imu_callback(const sensor_msgs::Imu & imu) {
         IMUData data(imu);
+        data.dt = 1/400.0; //TODO
         estimator.inputImu(data);
     }
 
