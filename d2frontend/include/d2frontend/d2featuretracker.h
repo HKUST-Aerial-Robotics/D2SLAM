@@ -39,7 +39,7 @@ struct TrackReport {
 
 class LandmarkManager {
 protected:
-    std::map<int, LandmarkPerId> landmark_db;
+    std::map<LandmarkIdType, LandmarkPerId> landmark_db;
     int count = 0;
 public:
     virtual int addLandmark(const LandmarkPerFrame & lm);

@@ -1,5 +1,6 @@
 #include "landmark_manager.hpp"
-#include "d2vins/d2vins_types.hpp"
+#include <d2vins/d2vins_params.hpp>
+#include <d2vins/d2vins_types.hpp>
 
 using namespace Eigen;
 namespace D2VINS {
@@ -7,11 +8,106 @@ namespace D2VINS {
 class D2EstimatorState {
 protected:
     std::vector<VINSFrame> sld_win;
+    std::map<D2FrontEnd::FrameIdType, VINSFrame*> frame_db;
     std::vector<Swarm::Pose> extrinsic; //extrinsic of cameras
+    D2LandmarkManager lmanager;
+    std::map<D2FrontEnd::FrameIdType, state_type*> _frame_pose_state;
+    std::map<D2FrontEnd::FrameIdType, state_type*> _frame_spd_Bias_state;
+    std::vector<state_type*> _camera_extrinsic_state;
+
+
+    void popFrame(int index) {
+        //Remove from sliding window
+        auto frame_id = sld_win[index].frame_id;
+        sld_win.erase(sld_win.begin() + index);
+        lmanager.popFrame(frame_id);
+        frame_db.erase(frame_id);
+        delete _frame_pose_state[frame_id];
+        delete _frame_spd_Bias_state[frame_id];
+        _frame_pose_state.erase(frame_id);
+        _frame_spd_Bias_state.erase(frame_id);
+    }
+
 public:
-    double td = 0.0; //estimated td;
-    void addFrame(const VINSFrame & frame, bool is_keyframe) {
+    state_type td = 0.0;
+    D2EstimatorState() {}
+    void init(std::vector<Swarm::Pose> _extrinsic, double _td) {
+        extrinsic = _extrinsic;
+        for (auto & pose : extrinsic) {
+            auto _p = new state_type[POSE_SIZE];
+            pose.to_vector(_p);
+            _camera_extrinsic_state.push_back(_p);
+        }
+        td = _td;
+    }
+
+    size_t size() const {
+        return sld_win.size();
+    }
+
+    VINSFrame & getFrame(int index) {
+        return sld_win[index];
+    }
+
+    VINSFrame & baseFrame() {
+        return sld_win[0];
+    }
+
+    double * getPoseState(D2FrontEnd::FrameIdType frame_id) const {
+        return _frame_pose_state.at(frame_id);
+    }
+
+    double * getExtrinsicState(int i) const {
+        return _camera_extrinsic_state[i];
+    }
+
+    double * getSpdBiasState(D2FrontEnd::FrameIdType frame_id) const {
+        return _frame_spd_Bias_state.at(frame_id);
+    }
+    
+    double * getLandmarkState(D2FrontEnd::LandmarkIdType landmark_id) const {
+        return lmanager.getLandmarkState(landmark_id);
+    }
+
+    std::vector<D2FrontEnd::LandmarkPerId> availableLandmarkMeasurements() const {
+        return lmanager.availableMeasurements();
+    }
+
+
+    void addFrame(const D2FrontEnd::VisualImageDescArray & images, const VINSFrame & frame, bool is_keyframe) {
         sld_win.push_back(frame);
+        frame_db[frame.frame_id] = &(sld_win.back());
+        _frame_pose_state[frame.frame_id] = new state_type[POSE_SIZE];
+        _frame_spd_Bias_state[frame.frame_id] = new state_type[FRAME_SPDBIAS_SIZE];
+        frame.toVector(_frame_pose_state[frame.frame_id], _frame_spd_Bias_state[frame.frame_id]);
+        if (sld_win.size() > params->max_sld_win_size) {
+            if (sld_win[sld_win.size() - 2].is_keyframe) {
+                popFrame(0);
+            } else {
+                popFrame(sld_win.size() - 2);
+            }
+        }
+        lmanager.addKeyframe(images, td);
+        printf("[D2VINS::D2EstimatorState] add frame %ld, current %ld frame\n", images.frame_id, sld_win.size());
+    }
+
+    void syncFromState() {
+        //copy state buffer to structs.
+        //First sync the poses
+        for (auto it : _frame_pose_state) {
+            auto frame_id = it.first;
+            frame_db.at(frame_id)->fromVector(it.second, _frame_spd_Bias_state.at(frame_id));
+        }
+
+        for (size_t i = 0; i < extrinsic.size(); i ++ ) {
+            extrinsic[i].from_vector(_camera_extrinsic_state[i]);
+        }
+
+        lmanager.syncState(baseFrame());
+    }
+
+    void pre_solve() {
+        lmanager.initialLandmarks(frame_db, baseFrame());
     }
 
     VINSFrame lastFrame() const {

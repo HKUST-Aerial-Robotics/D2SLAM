@@ -9,7 +9,7 @@
 namespace D2VINS {
 struct VINSFrame {
     double stamp = 0;
-    int frame_id = -1;
+    FrameIdType frame_id = -1;
     int drone_id = -1;
     bool is_keyframe = false;
     Swarm::Odometry odom;
@@ -37,8 +37,39 @@ struct VINSFrame {
     
     std::string toStr() {
         char buf[256] = {0};
-        sprintf(buf, "VINSFrame %d@%d Odom: %s", frame_id, drone_id, odom.toStr().c_str());
+        sprintf(buf, "VINSFrame %ld@%d Odom: %s", frame_id, drone_id, odom.toStr().c_str());
         return std::string(buf);
+    }
+
+    void toVector(state_type * _pose, state_type * _spd_bias) const {
+        odom.pose().to_vector(_pose);
+        _spd_bias[0] = odom.vel().x();
+        _spd_bias[1] = odom.vel().y();
+        _spd_bias[2] = odom.vel().z();
+
+        _spd_bias[3] = Ba.x();
+        _spd_bias[4] = Ba.y();
+        _spd_bias[5] = Ba.z();
+        
+        _spd_bias[6] = Bg.x();
+        _spd_bias[7] = Bg.y();
+        _spd_bias[8] = Bg.z();
+    }
+
+    void fromVector(state_type * _pose, state_type * _spd_bias) {
+        odom.pose().from_vector(_pose);
+        
+        odom.vel().x() = _spd_bias[0];
+        odom.vel().y() = _spd_bias[1];
+        odom.vel().z() = _spd_bias[2];
+        
+        Ba.x() = _spd_bias[3];
+        Ba.y() = _spd_bias[4];
+        Ba.z() = _spd_bias[5];
+
+        Bg.x() = _spd_bias[6];
+        Bg.y() = _spd_bias[7];
+        Bg.z() = _spd_bias[8];
     }
 };
 

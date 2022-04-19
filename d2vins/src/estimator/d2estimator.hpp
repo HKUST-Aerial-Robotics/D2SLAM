@@ -3,14 +3,13 @@
 #include "landmark_manager.hpp"
 #include "d2vinsstate.hpp"
 #include <swarm_msgs/Odometry.h>
+#include <ceres/ceres.h>
 
 using namespace Eigen;
 namespace D2VINS {
 
 class D2Estimator {
 protected:
-    D2VINSConfig config;
-
     //Internal states
     bool initFirstPoseFlag = false;   
     D2EstimatorState state;
@@ -21,10 +20,14 @@ protected:
     //Internal functions
     bool tryinitFirstPose(const D2FrontEnd::VisualImageDescArray & frame);
     VINSFrame initFrame(const D2FrontEnd::VisualImageDescArray & _frame);
+    void solve();
+    void setupImuFactors(ceres::Problem & problem);
+    void setupLandmarkFactors(ceres::Problem & problem);
 public:
     void inputImu(IMUData data);
     void inputImage(D2FrontEnd::VisualImageDescArray & frame);
     Swarm::Odometry getImuPropagation() const;
     Swarm::Odometry getOdometry() const;
+    void init();
 };
 }

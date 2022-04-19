@@ -46,8 +46,12 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
             assert(ids_down_to_up[i] < previous.landmarkNum() && "too large");
             auto prev_index = ids_down_to_up[i];
             auto landmark_id = previous.landmarks[prev_index].landmark_id;
-            frame.landmarks[i].landmark_id = landmark_id;
-            report.sum_parallex += (previous.landmarks[prev_index].pt2d_norm - frame.landmarks[i].pt2d_norm).norm();
+            auto &cur_lm = frame.landmarks[i];
+            auto &prev_lm = frame.landmarks[i];
+            cur_lm.landmark_id = landmark_id;
+            cur_lm.velocity = Vector3d(cur_lm.pt2d_norm.x() - prev_lm.pt2d_norm.x(), cur_lm.pt2d_norm.y() - prev_lm.pt2d_norm.y(), 0.);
+            cur_lm.velocity /= (frame.stamp - current_keyframe.stamp);
+            report.sum_parallex += (prev_lm.pt2d_norm - cur_lm.pt2d_norm).norm();
             report.parallex_num ++;
             if (lmanager->at(landmark_id).track.size() >= _config.long_track_frames) {
                 report.long_track_num ++;

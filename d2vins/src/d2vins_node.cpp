@@ -30,11 +30,10 @@ protected:
 
 public:
     D2VINSNode(ros::NodeHandle & nh) {
-        imu_sub  = nh.subscribe("imu", 1, &D2VINSNode::imu_callback, this, ros::TransportHints().tcpNoDelay());
+        imu_sub  = nh.subscribe("/dji_sdk_1/dji_sdk/imu", 1, &D2VINSNode::imu_callback, this, ros::TransportHints().tcpNoDelay());
         Init(nh);
         initParams(nh);
     }
-    
 };
 
 int main(int argc, char **argv)

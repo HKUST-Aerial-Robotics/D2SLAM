@@ -278,7 +278,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
             _pt3d = pose_cam * (_pt3d*dep);
 
             vframe.landmarks[i].pt3d = _pt3d;
-            vframe.landmarks[i].flag = 1;
+            vframe.landmarks[i].flag = LandmarkFlag::INITIALIZED;
             vframe.landmarks[i].depth = dep;
             count_3d ++;
         }
@@ -405,11 +405,11 @@ VisualImageDesc LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, 
         // ides.landmarks_2d.push_back(pt2d);
         // ides.landmarks_2d_norm.push_back(pt2d_norm);
         vframe0.landmarks[idx].pt3d = point_3d;
-        vframe0.landmarks[idx].flag = 1; 
+        vframe0.landmarks[idx].flag = LandmarkFlag::INITIALIZED; 
         //TODO:Set depth!!!
 
         vframe1.landmarks[idx_down].pt3d = point_3d;
-        vframe1.landmarks[idx_down].flag = 1;
+        vframe1.landmarks[idx_down].flag = LandmarkFlag::INITIALIZED;
         count_3d ++;
         assert("Set depth before use" && false);
         // std::cout << "Insert" << FEATURE_DESC_SIZE * ids[i] << "to" << FEATURE_DESC_SIZE * (ids[i] + 1)  << std::endl;

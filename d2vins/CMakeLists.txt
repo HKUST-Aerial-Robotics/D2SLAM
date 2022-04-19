@@ -23,6 +23,7 @@ catkin_package(
 )
 
 find_package(Eigen3 REQUIRED)
+find_package(Ceres REQUIRED)
 
 ## Your package locations should be listed before other locations
 include_directories(
@@ -30,6 +31,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
+  ${CERES_INCLUDE_DIRS}
 )
 
 # Declare a C++ library
@@ -59,6 +61,7 @@ target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}_MSCKF
   ${PROJECT_NAME}_estimator
+  ${CERES_LIBRARIES}
   libd2frontend
   dw
 )
