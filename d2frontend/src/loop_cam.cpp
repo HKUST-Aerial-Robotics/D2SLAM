@@ -280,6 +280,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
             vframe.landmarks[i].pt3d = _pt3d;
             vframe.landmarks[i].flag = LandmarkFlag::INITIALIZED;
             vframe.landmarks[i].depth = dep;
+            vframe.landmarks[i].depth_mea = true;
             count_3d ++;
         }
     }

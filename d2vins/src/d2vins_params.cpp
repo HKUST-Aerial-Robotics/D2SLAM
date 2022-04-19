@@ -10,6 +10,7 @@ void initParams(ros::NodeHandle & nh) {
     params = new D2VINSConfig;
     std::string vins_config_path;
     nh.param<std::string>("vins_config_path", vins_config_path, "");
+    nh.param<bool>("verbose", params->verbose, false);
     params->init(vins_config_path);
 }
 
@@ -32,6 +33,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     acc_w = fsSettings["acc_w"];
     gyr_n = fsSettings["gyr_n"];
     gyr_w = fsSettings["gyr_w"];
+    depth_sqrt_inf = fsSettings["depth_sqrt_inf"];
     Gravity = Vector3d(0., 0., fsSettings["g_norm"]);
 
     solver_time = fsSettings["max_solver_time"];

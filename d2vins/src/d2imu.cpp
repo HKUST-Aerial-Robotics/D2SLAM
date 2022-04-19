@@ -48,16 +48,18 @@ size_t IMUBuffer::size() const {
     return buf.size();
 }
 
-bool IMUBuffer::avaiable(double t) const {
+bool IMUBuffer::available(double t) const {
     return t_last > t;
 }
 
 IMUBuffer IMUBuffer::pop(double t) {
     auto i0 = searchClosest(t);
     IMUBuffer ret;
-    ret.buf = std::vector<IMUData>(buf.begin(), buf.begin() + i0);
-    ret.t_last = ret.buf.back().t;
-    buf.erase(buf.begin(), buf.begin() + i0);
+    if (i0 > 0) {
+        ret.buf = std::vector<IMUData>(buf.begin(), buf.begin() + i0);
+        ret.t_last = ret.buf.back().t;
+        buf.erase(buf.begin(), buf.begin() + i0);
+    }
     return ret;
 }
 
@@ -90,7 +92,7 @@ Swarm::Odometry IMUBuffer::propagation(const Swarm::Odometry & prev_odom, const 
     for (auto & imu: buf) {
         Vector3d un_acc_0 = prev_odom.att() * (acc_last - Ba) - Gravity;
         Vector3d un_gyr = 0.5 * (gyro_last + imu.gyro) - Bg;
-        odom.att() = prev_odom.att() * Utility::deltaQ(un_gyr * imu.dt);
+        odom.att() = odom.att() * Utility::deltaQ(un_gyr * imu.dt);
         Vector3d un_acc_1 = odom.att() * (imu.acc - Ba) - Gravity;
         Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
         odom.pos() += imu.dt * odom.vel() + 0.5 * imu.dt * imu.dt * un_acc;

@@ -26,6 +26,7 @@ struct LandmarkPerFrame {
     Eigen::Vector3d velocity;
     double depth = -1;
     double cur_td = 0.0;
+    bool depth_mea = false;
 
     void setLandmarkId(LandmarkIdType id) {
         landmark_id = id;

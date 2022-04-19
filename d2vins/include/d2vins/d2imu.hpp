@@ -37,7 +37,7 @@ public:
 
     size_t size() const;
 
-    bool avaiable(double t) const;
+    bool available(double t) const;
 
     IMUBuffer pop(double t);
 

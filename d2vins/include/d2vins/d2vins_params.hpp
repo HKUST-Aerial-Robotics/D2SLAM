@@ -33,7 +33,10 @@ struct D2VINSConfig {
     bool estimate_extrinsic = false;
     int camera_num = 1; // number of cameras;
     int min_solve_frames = 9;
+    int frame_step = 3; //step of frame to use in backend.
     double solver_time = 0.04;
+    double min_inv_dep = 1e-1; //10 meter away
+    double depth_sqrt_inf = 20.0;
     std::string output_folder;
     enum {
         INIT_POSE_IMU,
