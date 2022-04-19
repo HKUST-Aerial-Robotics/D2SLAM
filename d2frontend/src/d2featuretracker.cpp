@@ -47,10 +47,15 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
             auto prev_index = ids_down_to_up[i];
             auto landmark_id = previous.landmarks[prev_index].landmark_id;
             auto &cur_lm = frame.landmarks[i];
-            auto &prev_lm = frame.landmarks[i];
+            auto &prev_lm = previous.landmarks[prev_index];
             cur_lm.landmark_id = landmark_id;
             cur_lm.velocity = Vector3d(cur_lm.pt2d_norm.x() - prev_lm.pt2d_norm.x(), cur_lm.pt2d_norm.y() - prev_lm.pt2d_norm.y(), 0.);
             cur_lm.velocity /= (frame.stamp - current_keyframe.stamp);
+            // printf("frame_count %d landmark_id %d prev pt %.2f %.2f cur pt %.2f %.2f vel %.2f %.2f\n", 
+            //         frame_count,
+            //         landmark_id,
+            //         prev_lm.pt2d_norm.x(), prev_lm.pt2d_norm.y(), cur_lm.pt2d_norm.x(), cur_lm.pt2d_norm.y(), 
+            //         cur_lm.velocity.x(), cur_lm.velocity.y());
             report.sum_parallex += (prev_lm.pt2d_norm - cur_lm.pt2d_norm).norm();
             report.parallex_num ++;
             if (lmanager->at(landmark_id).track.size() >= _config.long_track_frames) {
@@ -86,9 +91,11 @@ int LandmarkManager::addLandmark(const LandmarkPerFrame & lm) {
 
 void LandmarkManager::updateLandmark(const LandmarkPerFrame & lm) {
     if (landmark_db.find(lm.landmark_id) == landmark_db.end()) {
-        landmark_db[lm.landmark_id] = LandmarkPerFrame();
+        landmark_db[lm.landmark_id] = lm;
+    } else {
+        landmark_db.at(lm.landmark_id).add(lm);
     }
-    landmark_db.at(lm.landmark_id).add(lm);;
+    assert(lm.landmark_id >= 0 && "landmark id must > 0");
 }
 
 void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
@@ -97,6 +104,8 @@ void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
         for (unsigned int i = 0; i < frame.landmarkNum(); i++) {
             if (frame.landmarks[i].landmark_id < 0) {
                 auto _id = lmanager->addLandmark(frame.landmarks[i]);
+                // printf("addLM frame_count %d landmark_id %d cur pt %.2f %.2f\n", 
+                //     frame_count, _id, frame.landmarks[i].pt2d_norm.x(), frame.landmarks[i].pt2d_norm.y());
                 frame.landmarks[i].setLandmarkId(_id);
             } else {
                 lmanager->updateLandmark(frame.landmarks[i]);
@@ -173,6 +182,8 @@ void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const Tra
     sprintf(buf, "featureTracker @ Drone %d", params->self_id);
     cv::imshow(buf, img);
     cv::waitKey(1);
+    sprintf(buf, "/home/xuhao/output/images/featureTracker%06d.jpg", frame_count);
+    cv::imwrite(buf, img);
 }
 
 void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 

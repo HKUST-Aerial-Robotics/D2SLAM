@@ -56,7 +56,7 @@ namespace D2FrontEnd {
         loopcamconfig->self_id = self_id;
 
         //Feature tracker.
-        nh.param<bool>("show_feature_id", ftconfig->show_feature_id, false);
+        nh.param<bool>("show_feature_id", ftconfig->show_feature_id, true);
         nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
         nh.param<int>("long_track_frames", ftconfig->long_track_frames, 4);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);

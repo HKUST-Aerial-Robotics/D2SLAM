@@ -1,8 +1,8 @@
 #include <d2vins/utils.hpp>
 #include "d2estimator.hpp" 
 #include "unistd.h"
-#include <d2vins/factors/imu_factor.h>
-#include <d2vins/factors/projectionTwoFrameOneCamFactor.h>
+#include "../factors/imu_factor.h"
+#include "../factors/projectionTwoFrameOneCamFactor.h"
 
 namespace D2VINS {
 void D2Estimator::init() {
@@ -40,7 +40,7 @@ bool D2Estimator::tryinitFirstPose(const D2FrontEnd::VisualImageDescArray & fram
     return true;
 }
 
-VINSFrame D2Estimator::initFrame(const D2FrontEnd::VisualImageDescArray & _frame) {
+void D2Estimator::addFrame(const D2FrontEnd::VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
     auto _imu = imubuf.back(_frame.stamp + state.td);
     VINSFrame frame(_frame, _imu, state.lastFrame());
@@ -56,7 +56,6 @@ VINSFrame D2Estimator::initFrame(const D2FrontEnd::VisualImageDescArray & _frame
         printf("[D2VINS::D2Estimator] Initialize VINSFrame with %d: %s\n", 
             params->init_method, frame.toStr().c_str());
     }
-    return frame;
 }
 
 void D2Estimator::inputImage(D2FrontEnd::VisualImageDescArray & _frame) {
@@ -73,8 +72,37 @@ void D2Estimator::inputImage(D2FrontEnd::VisualImageDescArray & _frame) {
         printf("[D2VINS::D2Estimator] wait for imu...\n");
     }
 
-    auto frame = initFrame(_frame);
-    solve();
+    addFrame(_frame);
+    // if (state.size() > params->min_solve_frames) {
+    //     solve();
+    // }
+    frame_count ++;
+}
+
+void D2Estimator::setStateProperties(ceres::Problem & problem) {
+    if (!params->estimate_td) {
+        problem.SetParameterBlockConstant(&state.td);
+    }
+
+    ceres::LocalParameterization* pose_local_parameterization = new ceres::ProductParameterization (new ceres::IdentityParameterization(3), 
+        new ceres::EigenQuaternionParameterization());
+
+    //set LocalParameterization
+    for (size_t i = 0; i < state.size(); i ++ ) {
+        auto & frame_a = state.getFrame(i);
+        problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_parameterization);
+    }
+
+    for (int i = 0; i < params->camera_num; i ++) {
+        if (!params->estimate_extrinsic) {
+            problem.SetParameterBlockConstant(state.getExtrinsicState(i));
+        } else {
+            problem.SetParameterization(state.getExtrinsicState(i), pose_local_parameterization);
+        }
+    }
+
+    //Current no margarin, fix the first pose
+    problem.SetParameterBlockConstant(state.getPoseState(state.baseFrame().frame_id));
 }
 
 void D2Estimator::solve() {
@@ -82,25 +110,21 @@ void D2Estimator::solve() {
     ceres::Problem problem;
     setupImuFactors(problem);
     setupLandmarkFactors(problem);
+    setStateProperties(problem);
 
-    if (!params->estimate_td) {
-        problem.SetParameterBlockConstant(&state.td);
-    }
 
-    if (!params->estimate_extrinsic) {
-        for (int i = 0; i < params->camera_num; i ++) {
-            problem.SetParameterBlockConstant(state.getExtrinsicState(i));
-        }
-    }
-
-    //Current no margarin, fix the first pose
-    problem.SetParameterBlockConstant(state.getPoseState(state.baseFrame().frame_id));
-
-    ceres::Solver::Options options;
     ceres::Solver::Summary summary;
-    ceres::Solve(options, &problem, &summary);
-    std::cout << summary.FullReport() << std::endl;
+    ceres::Solve(params->options, &problem, &summary);
+    // std::cout << summary.FullReport() << std::endl;
+    std::cout << summary.BriefReport() << std::endl;
     state.syncFromState();
+    last_odom = state.lastFrame().odom;
+
+    printf("[D2VINS] frame_count %d odom %s td %.1fms\n", frame_count, last_odom.toStr().c_str(), state.td*1000);
+
+    //Reprogation
+    auto _imu = imubuf.back(state.lastFrame().stamp + state.td);
+    last_prop_odom = _imu.propagation(state.lastFrame());
 }
 
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {
@@ -131,6 +155,13 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                 state.getPoseState(lm.track[i].frame_id), 
                 state.getExtrinsicState(lm.track[0].camera_id),
                 state.getLandmarkState(lm_id), &state.td);
+            // Check
+            // printf("[D2VINS::D2Estimator] Check landmark %d frame %ld<->%ld\n", lm_id, lm.track[0].frame_id, lm.track[i].frame_id);
+            // std::vector<double*> params{state.getPoseState(lm.track[0].frame_id), 
+            //     state.getPoseState(lm.track[i].frame_id), 
+            //     state.getExtrinsicState(lm.track[0].camera_id),
+            //     state.getLandmarkState(lm_id), &state.td};
+            // f_td->check(params.data());
         }
     }
 }

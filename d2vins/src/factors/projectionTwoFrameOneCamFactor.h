@@ -15,6 +15,7 @@
 #include <ceres/ceres.h>
 #include <Eigen/Dense>
 
+namespace D2VINS {
 class ProjectionTwoFrameOneCamFactor : public ceres::SizedCostFunction<2, 7, 7, 7, 1, 1>
 {
   public:
@@ -31,3 +32,4 @@ class ProjectionTwoFrameOneCamFactor : public ceres::SizedCostFunction<2, 7, 7, 
     static Eigen::Matrix2d sqrt_info;
     static double sum_t;
 };
+}

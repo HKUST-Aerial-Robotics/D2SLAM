@@ -47,13 +47,16 @@ add_dependencies(${PROJECT_NAME}_MSCKF ${${PROJECT_NAME}_EXPORTED_TARGETS} ${cat
 add_library(${PROJECT_NAME}_estimator
   src/estimator/d2estimator.cpp
   src/d2imu.cpp
+  src/d2vins_types.cpp
+  src/d2vins_params.cpp
+  src/estimator/visualization.cpp
+  src/factors/projectionTwoFrameOneCamFactor.cpp
 )
 
 add_dependencies(${PROJECT_NAME}_MSCKF ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(${PROJECT_NAME}_node 
   src/d2vins_node.cpp
-  src/d2vins_params.cpp
 )
 
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

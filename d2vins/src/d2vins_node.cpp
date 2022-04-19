@@ -22,7 +22,7 @@ protected:
         estimator.inputImage(_viokf);
     };
 
-    virtual void imu_callback(const sensor_msgs::Imu & imu) {
+    virtual void imuCallback(const sensor_msgs::Imu & imu) {
         IMUData data(imu);
         data.dt = 1.0/params->IMU_FREQ; //TODO
         estimator.inputImu(data);
@@ -30,9 +30,10 @@ protected:
 
 public:
     D2VINSNode(ros::NodeHandle & nh) {
-        imu_sub  = nh.subscribe("/dji_sdk_1/dji_sdk/imu", 1, &D2VINSNode::imu_callback, this, ros::TransportHints().tcpNoDelay());
         Init(nh);
         initParams(nh);
+        estimator.init();
+        imu_sub  = nh.subscribe("/dji_sdk_1/dji_sdk/imu", 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
     }
 };
 

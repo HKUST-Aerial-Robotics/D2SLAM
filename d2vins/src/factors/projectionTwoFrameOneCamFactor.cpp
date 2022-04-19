@@ -10,7 +10,9 @@
  *******************************************************/
 
 #include "projectionTwoFrameOneCamFactor.h"
+#include <d2vins/utils.hpp>
 
+namespace D2VINS {
 Eigen::Matrix2d ProjectionTwoFrameOneCamFactor::sqrt_info;
 double ProjectionTwoFrameOneCamFactor::sum_t;
 
@@ -42,7 +44,6 @@ ProjectionTwoFrameOneCamFactor::ProjectionTwoFrameOneCamFactor(const Eigen::Vect
 
 bool ProjectionTwoFrameOneCamFactor::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
-    TicToc tic_toc;
     Eigen::Vector3d Pi(parameters[0][0], parameters[0][1], parameters[0][2]);
     Eigen::Quaterniond Qi(parameters[0][6], parameters[0][3], parameters[0][4], parameters[0][5]);
 
@@ -140,12 +141,19 @@ bool ProjectionTwoFrameOneCamFactor::Evaluate(double const *const *parameters, d
         if (jacobians[4])
         {
             Eigen::Map<Eigen::Vector2d> jacobian_td(jacobians[4]);
+#ifdef UNIT_SPHERE_ERROR
             jacobian_td = reduce * ric.transpose() * Rj.transpose() * Ri * ric * velocity_i / inv_dep_i * -1.0  +
                           sqrt_info * tangent_base * velocity_j;
+#else
+            jacobian_td = reduce * ric.transpose() * Rj.transpose() * Ri * ric * velocity_i / inv_dep_i * -1.0  +
+                          sqrt_info * velocity_j.head(2);
+#endif
+            if (!jacobian_td.allFinite()) {
+                std::cout << "not finite!!!!" << std::endl;
+                exit(0);
+            }
         }
     }
-    sum_t += tic_toc.toc();
-
     return true;
 }
 
@@ -269,4 +277,5 @@ void ProjectionTwoFrameOneCamFactor::check(double **parameters)
     std::cout << num_jacobian.block<2, 6>(0, 12) << std::endl;
     std::cout << num_jacobian.block<2, 1>(0, 18) << std::endl;
     std::cout << num_jacobian.block<2, 1>(0, 19) << std::endl;
+}
 }

@@ -6,8 +6,8 @@
 #include <ceres/ceres.h>
 
 using namespace Eigen;
-namespace D2VINS {
 
+namespace D2VINS {
 class D2Estimator {
 protected:
     //Internal states
@@ -19,10 +19,12 @@ protected:
 
     //Internal functions
     bool tryinitFirstPose(const D2FrontEnd::VisualImageDescArray & frame);
-    VINSFrame initFrame(const D2FrontEnd::VisualImageDescArray & _frame);
+    void addFrame(const D2FrontEnd::VisualImageDescArray & _frame);
     void solve();
     void setupImuFactors(ceres::Problem & problem);
     void setupLandmarkFactors(ceres::Problem & problem);
+    void setStateProperties(ceres::Problem & problem);
+    int frame_count = 0;
 public:
     void inputImu(IMUData data);
     void inputImage(D2FrontEnd::VisualImageDescArray & frame);

@@ -75,18 +75,23 @@ public:
 
 
     void addFrame(const D2FrontEnd::VisualImageDescArray & images, const VINSFrame & frame, bool is_keyframe) {
+        if (sld_win.size() >= 2 && !sld_win[sld_win.size() - 1].is_keyframe) {
+            //If last frame is not keyframe then remove it.
+            popFrame(sld_win.size() - 1);
+        }
+
         sld_win.push_back(frame);
         frame_db[frame.frame_id] = &(sld_win.back());
         _frame_pose_state[frame.frame_id] = new state_type[POSE_SIZE];
         _frame_spd_Bias_state[frame.frame_id] = new state_type[FRAME_SPDBIAS_SIZE];
         frame.toVector(_frame_pose_state[frame.frame_id], _frame_spd_Bias_state[frame.frame_id]);
+
         if (sld_win.size() > params->max_sld_win_size) {
             if (sld_win[sld_win.size() - 2].is_keyframe) {
                 popFrame(0);
-            } else {
-                popFrame(sld_win.size() - 2);
             }
         }
+
         lmanager.addKeyframe(images, td);
         printf("[D2VINS::D2EstimatorState] add frame %ld, current %ld frame\n", images.frame_id, sld_win.size());
     }
@@ -103,11 +108,11 @@ public:
             extrinsic[i].from_vector(_camera_extrinsic_state[i]);
         }
 
-        lmanager.syncState(baseFrame());
+        lmanager.syncState(extrinsic, frame_db);
     }
 
     void pre_solve() {
-        lmanager.initialLandmarks(frame_db, baseFrame());
+        lmanager.initialLandmarks(frame_db, extrinsic);
     }
 
     VINSFrame lastFrame() const {

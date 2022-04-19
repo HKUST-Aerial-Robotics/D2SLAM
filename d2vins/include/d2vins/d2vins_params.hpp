@@ -6,17 +6,18 @@
 
 using namespace Eigen;
 
-const Vector3d Gravity = Vector3d(0, 0, 9.805);
-
 #define POSE_SIZE 7
 #define FRAME_SPDBIAS_SIZE 9
 #define TD_SIZE 1
 #define INV_DEP_SIZE 1
 #define POS_SIZE 3
 
-typedef double state_type;
 
 namespace D2VINS {
+
+typedef double state_type;
+extern Vector3d Gravity;
+
 struct D2VINSConfig {
     double acc_n = 0.1;
     double gyr_n = 0.05;
@@ -31,7 +32,9 @@ struct D2VINSConfig {
     bool estimate_td = false;
     bool estimate_extrinsic = false;
     int camera_num = 1; // number of cameras;
+    int min_solve_frames = 9;
     double solver_time = 0.04;
+    std::string output_folder;
     enum {
         INIT_POSE_IMU,
         INIT_POSE_PNP
@@ -47,15 +50,8 @@ struct D2VINSConfig {
     std::vector<Swarm::Pose> camera_extrinsics;
     double td_initial = 0.0;
     ceres::Solver::Options options;
+    void init(const std::string & config_file);
 
-    D2VINSConfig() {
-    }
-    void init() {
-        options.linear_solver_type = ceres::DENSE_SCHUR;
-        options.num_threads = 1;
-        options.trust_region_strategy_type = ceres::DOGLEG;
-        options.max_solver_time_in_seconds = solver_time;
-    }
 };
 
 extern D2VINSConfig * params;
