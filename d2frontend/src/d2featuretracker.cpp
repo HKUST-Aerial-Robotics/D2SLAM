@@ -182,8 +182,10 @@ void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const Tra
     sprintf(buf, "featureTracker @ Drone %d", params->self_id);
     cv::imshow(buf, img);
     cv::waitKey(1);
-    sprintf(buf, "/home/xuhao/output/images/featureTracker%06d.jpg", frame_count);
-    cv::imwrite(buf, img);
+    if (_config.write_to_file) {
+        sprintf(buf, "%s/featureTracker%06d.jpg", _config.output_folder.c_str(), frame_count);
+        cv::imwrite(buf, img);
+    }
 }
 
 void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 

@@ -6,9 +6,10 @@
 #include "../factors/projectionTwoFrameOneCamFactor.h"
 
 namespace D2VINS {
-void D2Estimator::init() {
+void D2Estimator::init(ros::NodeHandle & nh) {
     state.init(params->camera_extrinsics, params->td_initial);
     ProjectionTwoFrameOneCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
+    visual.init(nh, this);
 }
 
 void D2Estimator::inputImu(IMUData data) {
@@ -131,6 +132,7 @@ void D2Estimator::solve() {
     //Reprogation
     auto _imu = imubuf.back(state.lastFrame().stamp + state.td);
     last_prop_odom = _imu.propagation(state.lastFrame());
+    visual.postSolve();
 }
 
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {
@@ -147,8 +149,7 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
 
 void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     auto lms = state.availableLandmarkMeasurements();
-    ceres::LossFunction *loss_function;
-    loss_function = new ceres::HuberLoss(1.0);
+    ceres::LossFunction * loss_function = new ceres::HuberLoss(1.0);
     for (auto & lm : lms) {
         auto lm_id = lm.landmark_id;
         auto & firstObs = lm.track[0];
@@ -187,5 +188,8 @@ Swarm::Odometry D2Estimator::getOdometry() const {
     return last_odom;
 }
 
+D2EstimatorState & D2Estimator::getState() {
+    return state;
+}
 
 }

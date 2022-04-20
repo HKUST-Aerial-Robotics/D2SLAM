@@ -127,5 +127,10 @@ public:
         assert(sld_win.size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastFrame()");
         return *sld_win.back();
     }
+
+    std::vector<D2FrontEnd::LandmarkPerId> getInitializedLandmarks() const {
+        return lmanager.getInitializedLandmarks();
+    }
+
 };
 }

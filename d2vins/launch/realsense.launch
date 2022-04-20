@@ -14,7 +14,7 @@
     <arg name="camera_config_path" default="/home/xuhao/data/realsense/left.yaml" />
     <arg name="vins_config_path" default="/home/xuhao/data/realsense/realsense.yaml" />
     <arg name="max_freq" default="1.0" />
-    <arg name="superpoint_max_num" default="200" />
+    <arg name="superpoint_max_num" default="300" />
     <arg name="match_index_dist" default="50" />
     <arg name="output_path" default="/home/dji/output/" />
     <arg name="min_loop_feature_num" default="20" />

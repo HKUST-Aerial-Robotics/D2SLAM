@@ -52,32 +52,35 @@ void D2LandmarkManager::initialLandmarks(const std::map<D2FrontEnd::FrameIdType,
         auto ext = extrinsic[lm_per_frame.camera_id];
         if (lm.track.size() > params->landmark_estimate_tracks) {
             if (lm.flag == D2FrontEnd::LandmarkFlag::UNINITIALIZED) {
-                //Initialize by motion.
-                Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
-                pos = pos * 10; //Initial to 10 meter away... TODO: Initial with motion
-                pos = firstFrame.odom.pose()*ext*pos;
-                lm.position = pos;
-                lm.flag = D2FrontEnd::LandmarkFlag::INITIALIZED;
-                if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-                    *landmark_state[lm_id] = 0.1;
-                    // printf("[D2VINS::D2LandmarkManager] initialLandmarks (UNINITIALIZED) LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f\n",
-                        // lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z());
+                if (lm.track[0].depth_mea) {
+                    //Use depth to initial
+                    Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
+                    pos = pos* lm_per_frame.depth;
+                    pos = firstFrame.odom.pose()*ext*pos;
+                    lm.position = pos;
+                    if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
+                        *landmark_state[lm_id] = 1/lm_per_frame.depth;
+                        // printf("[D2VINS::D2LandmarkManager] initialLandmarks LM %d inv_dep/dep %.2f/%.2f frame %ld pose %s pos %.2f %.2f %.2f\n",
+                        //     lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm_per_frame.frame_id, 
+                        //         firstFrame.odom.pose().toStr().c_str(),  lm.position.x(), lm.position.y(), lm.position.z());
+                    } else {
+                        memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
+                    }
+                    lm.flag = D2FrontEnd::LandmarkFlag::INITIALIZED;
                 } else {
-                    memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
-                }
-            } else if(lm.flag == D2FrontEnd::LandmarkFlag::INITIALIZED) {
-                //Use depth to initial
-                Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
-                pos = pos* lm_per_frame.depth;
-                pos = firstFrame.odom.pose()*ext*pos;
-                lm.position = pos;
-                if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-                    *landmark_state[lm_id] = 1/lm_per_frame.depth;
-                    // printf("[D2VINS::D2LandmarkManager] initialLandmarks LM %d inv_dep/dep %.2f/%.2f frame %ld pose %s pos %.2f %.2f %.2f\n",
-                    //     lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm_per_frame.frame_id, 
-                    //         firstFrame.odom.pose().toStr().c_str(),  lm.position.x(), lm.position.y(), lm.position.z());
-                } else {
-                    memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
+                    //Initialize by motion.
+                    Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
+                    pos = pos * 10; //Initial to 10 meter away... TODO: Initial with motion
+                    pos = firstFrame.odom.pose()*ext*pos;
+                    lm.position = pos;
+                    lm.flag = D2FrontEnd::LandmarkFlag::INITIALIZED;
+                    if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
+                        *landmark_state[lm_id] = 0.1;
+                        // printf("[D2VINS::D2LandmarkManager] initialLandmarks (UNINITIALIZED) LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f\n",
+                            // lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z());
+                    } else {
+                        memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
+                    }
                 }
             } else if(lm.flag == D2FrontEnd::LandmarkFlag::ESTIMATED) {
                 //Extracting depth from estimated pos
@@ -112,7 +115,7 @@ void D2LandmarkManager::syncState(const std::vector<Swarm::Pose> & extrinsic, co
                 lm.position = pos;
                 lm.flag = D2FrontEnd::LandmarkFlag::ESTIMATED;
                 // printf("[D2VINS::D2LandmarkManager] update LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f\n",
-                    // lm_id, inv_dep, 1./inv_dep, pos.x(), pos.y(), pos.z());
+                //     lm_id, inv_dep, 1./inv_dep, pos.x(), pos.y(), pos.z());
             } else {
                 lm.position.x() = it.second[0];
                 lm.position.y() = it.second[1];
@@ -138,4 +141,16 @@ void D2LandmarkManager::popFrame(D2FrontEnd::FrameIdType frame_id) {
     }
     related_landmarks.erase(frame_id);
 }
+
+std::vector<D2FrontEnd::LandmarkPerId> D2LandmarkManager::getInitializedLandmarks() const {
+    std::vector<D2FrontEnd::LandmarkPerId> lm_per_frame_vec;
+    for (auto it : landmark_db) {
+        auto & lm = it.second;
+        if (lm.track.size() > params->landmark_estimate_tracks && lm.flag >= D2FrontEnd::LandmarkFlag::INITIALIZED) {
+            lm_per_frame_vec.push_back(lm);
+        }
+    }
+    return lm_per_frame_vec;
+}
+
 }

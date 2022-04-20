@@ -35,7 +35,7 @@ public:
     D2VINSNode(ros::NodeHandle & nh) {
         Init(nh);
         initParams(nh);
-        estimator.init();
+        estimator.init(nh);
         imu_sub  = nh.subscribe("/dji_sdk_1/dji_sdk/imu", 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
     }
 };

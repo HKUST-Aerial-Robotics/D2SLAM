@@ -4,6 +4,7 @@
 #include "d2vinsstate.hpp"
 #include <swarm_msgs/Odometry.h>
 #include <ceres/ceres.h>
+#include "visualization.hpp"
 
 using namespace Eigen;
 
@@ -25,11 +26,13 @@ protected:
     void setupLandmarkFactors(ceres::Problem & problem);
     void setStateProperties(ceres::Problem & problem);
     int frame_count = 0;
+    D2Visualization visual;
 public:
     void inputImu(IMUData data);
     void inputImage(D2FrontEnd::VisualImageDescArray & frame);
     Swarm::Odometry getImuPropagation() const;
     Swarm::Odometry getOdometry() const;
-    void init();
+    void init(ros::NodeHandle & nh);
+    D2EstimatorState & getState();
 };
 }

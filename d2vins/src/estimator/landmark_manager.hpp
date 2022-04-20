@@ -15,6 +15,7 @@ public:
     void initialLandmarks(const std::map<D2FrontEnd::FrameIdType, VINSFrame*> & frame_db, const std::vector<Swarm::Pose> & extrinsic);
     void syncState(const std::vector<Swarm::Pose> & extrinsic, const std::map<D2FrontEnd::FrameIdType, VINSFrame*> & frame_db);
     void popFrame(D2FrontEnd::FrameIdType frame_id);
+    std::vector<D2FrontEnd::LandmarkPerId> getInitializedLandmarks() const;
 
 };
 

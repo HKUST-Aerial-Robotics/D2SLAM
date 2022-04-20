@@ -16,6 +16,8 @@ struct D2FTConfig {
     double new_feature_thres = 0.5;
     double parallex_thres = 10.0/460.0;
     int min_keyframe_num = 2;
+    bool write_to_file = false;
+    std::string output_folder = "/root/output/";
 };
 
 struct TrackReport {
