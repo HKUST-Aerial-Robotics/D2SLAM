@@ -26,7 +26,7 @@ struct D2VINSConfig {
     // double g_norm = 9.805;
     double IMU_FREQ = 400.0;
     int init_imu_num = 10;
-    int max_sld_win_size = 10;
+    int max_sld_win_size = 100;
     int landmark_estimate_tracks = 4; //thres for landmark to tracking
     double focal_length = 460.0;
     bool estimate_td = false;
@@ -37,11 +37,13 @@ struct D2VINSConfig {
     double solver_time = 0.04;
     double min_inv_dep = 1e-1; //10 meter away
     double depth_sqrt_inf = 20.0;
+    int pnp_min_inliers = 8;
+    int pnp_iteratives = 100;
     std::string output_folder;
     enum {
         INIT_POSE_IMU,
         INIT_POSE_PNP
-    } init_method = INIT_POSE_IMU;
+    } init_method = INIT_POSE_PNP;
 
     bool verbose = true;
 

@@ -28,8 +28,8 @@ protected:
     void setStateProperties(ceres::Problem & problem);
     int frame_count = 0;
     D2Visualization visual;
-    Swarm::Pose initialFramePnP(const VisualImageDescArray & frame);
-
+    std::pair<bool, Swarm::Pose> initialFramePnP(const VisualImageDescArray & frame);
+    int solve_count = 0;
 public:
     D2Estimator() {}
     void inputImu(IMUData data);

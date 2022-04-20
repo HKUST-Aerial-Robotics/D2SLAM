@@ -15,10 +15,6 @@ void initParams(ros::NodeHandle & nh) {
 }
 
 void D2VINSConfig::init(const std::string & config_file) {
-    options.linear_solver_type = ceres::DENSE_SCHUR;
-    options.num_threads = 1;
-    options.trust_region_strategy_type = ceres::DOGLEG;
-    options.max_solver_time_in_seconds = solver_time;
 
     printf("[D2VINS::D2VINSConfig] readConfig from file %s\n", config_file.c_str());
     cv::FileStorage fsSettings;
@@ -43,6 +39,11 @@ void D2VINSConfig::init(const std::string & config_file) {
     camera_num = fsSettings["num_of_cam"];
     td_initial = fsSettings["td"];
 
+    //Sliding window
+    max_sld_win_size = fsSettings["max_sld_win_size"];
+    landmark_estimate_tracks = fsSettings["landmark_estimate_tracks"];
+    min_solve_frames = fsSettings["min_solve_frames"];
+
     estimate_td = (int)fsSettings["estimate_td"];
     estimate_extrinsic = (int)fsSettings["estimate_extrinsic"];
 
@@ -55,6 +56,12 @@ void D2VINSConfig::init(const std::string & config_file) {
         cv::cv2eigen(cv_T, T);
         camera_extrinsics.push_back(Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3)));
     }
+
+    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.num_threads = 1;
+    options.trust_region_strategy_type = ceres::DOGLEG;
+    options.max_solver_time_in_seconds = solver_time;
+
 }
 
 }

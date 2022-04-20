@@ -1,6 +1,7 @@
 #include "landmark_manager.hpp"
 #include <d2vins/d2vins_params.hpp>
 #include <d2vins/d2vins_types.hpp>
+#include "../factors/integration_base.h"
 
 using namespace Eigen;
 namespace D2VINS {
@@ -72,6 +73,10 @@ public:
         return lmanager.getLandmarkState(landmark_id);
     }
 
+    Swarm::Pose getExtrinsic(int i) const {
+        return extrinsic[i];
+    }
+
     std::vector<LandmarkPerId> availableLandmarkMeasurements() const {
         return lmanager.availableMeasurements();
     }
@@ -120,6 +125,11 @@ public:
     }
 
     void pre_solve() {
+        for (auto frame : sld_win) {
+            if (frame->pre_integrations != nullptr) {
+                frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
+            }
+        }
         lmanager.initialLandmarks(frame_db, extrinsic);
     }
 
@@ -130,6 +140,22 @@ public:
 
     std::vector<LandmarkPerId> getInitializedLandmarks() const {
         return lmanager.getInitializedLandmarks();
+    }
+
+    LandmarkPerId & getLandmarkbyId(LandmarkIdType id) {
+        return lmanager.getLandmark(id);
+    }
+
+    bool hasLandmark(LandmarkIdType id) const {
+        return lmanager.hasLandmark(id);
+    }
+
+    void printSldWin() const {
+        printf("=========SLDWIN=========\n");
+        for (int i = 0; i < sld_win.size(); i ++) {
+            printf("index %d frame_id %ld frame: %s\n", i, sld_win[i]->frame_id, sld_win[i]->toStr().c_str());
+        }
+        printf("========================\n");
     }
 
 };

@@ -19,7 +19,8 @@ VINSFrame::VINSFrame(const D2FrontEnd::VisualImageDescArray & frame, const Vecto
 
 std::string VINSFrame::toStr() {
     char buf[256] = {0};
-    sprintf(buf, "VINSFrame %ld@%d Odom: %s", frame_id, drone_id, odom.toStr().c_str());
+    sprintf(buf, "VINSFrame %ld@%d Odom: %s Ba %.2f %.2f %.2f Bg %.2f %.2f %.2f ", frame_id, drone_id, odom.toStr().c_str(),
+        Ba(0), Ba(1), Ba(2), Bg(0), Bg(1), Bg(2));
     return std::string(buf);
 }
 

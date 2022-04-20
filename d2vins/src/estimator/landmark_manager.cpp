@@ -1,5 +1,3 @@
-#pragma once
-
 #include "landmark_manager.hpp"
 
 namespace D2VINS {
@@ -50,48 +48,46 @@ void D2LandmarkManager::initialLandmarks(const std::map<FrameIdType, VINSFrame*>
         const auto & firstFrame = *frame_db.at(lm_per_frame.frame_id);
         auto pt2d_n = lm_per_frame.pt2d_norm;
         auto ext = extrinsic[lm_per_frame.camera_id];
-        if (lm.track.size() > params->landmark_estimate_tracks) {
-            if (lm.flag == LandmarkFlag::UNINITIALIZED) {
-                if (lm.track[0].depth_mea) {
-                    //Use depth to initial
-                    Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
-                    pos = pos* lm_per_frame.depth;
-                    pos = firstFrame.odom.pose()*ext*pos;
-                    lm.position = pos;
-                    if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-                        *landmark_state[lm_id] = 1/lm_per_frame.depth;
-                        // printf("[D2VINS::D2LandmarkManager] initialLandmarks LM %d inv_dep/dep %.2f/%.2f frame %ld pose %s pos %.2f %.2f %.2f\n",
-                        //     lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm_per_frame.frame_id, 
-                        //         firstFrame.odom.pose().toStr().c_str(),  lm.position.x(), lm.position.y(), lm.position.z());
-                    } else {
-                        memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
-                    }
-                    lm.flag = LandmarkFlag::INITIALIZED;
-                } else {
-                    //Initialize by motion.
-                    Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
-                    pos = pos * 10; //Initial to 10 meter away... TODO: Initial with motion
-                    pos = firstFrame.odom.pose()*ext*pos;
-                    lm.position = pos;
-                    lm.flag = LandmarkFlag::INITIALIZED;
-                    if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-                        *landmark_state[lm_id] = 0.1;
-                        // printf("[D2VINS::D2LandmarkManager] initialLandmarks (UNINITIALIZED) LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f\n",
-                            // lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z());
-                    } else {
-                        memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
-                    }
-                }
-            } else if(lm.flag == LandmarkFlag::ESTIMATED) {
-                //Extracting depth from estimated pos
+        if (lm.flag == LandmarkFlag::UNINITIALIZED) {
+            if (lm.track[0].depth_mea) {
+                //Use depth to initial
+                Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
+                pos = pos* lm_per_frame.depth;
+                pos = firstFrame.odom.pose()*ext*pos;
+                lm.position = pos;
                 if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-                    Vector3d pos_cam = (firstFrame.odom.pose()*ext).inverse()*lm.position;
-                    *landmark_state[lm_id] = 1/pos_cam.z();
-                    // printf("[D2VINS::D2LandmarkManager] initialLandmarks LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f\n",
-                    //     lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z());
+                    *landmark_state[lm_id] = 1/lm_per_frame.depth;
+                    // printf("[D2VINS::D2LandmarkManager] initialLandmarks LM %d inv_dep/dep %.2f/%.2f frame %ld pose %s pos %.2f %.2f %.2f\n",
+                    //     lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm_per_frame.frame_id, 
+                    //         firstFrame.odom.pose().toStr().c_str(),  lm.position.x(), lm.position.y(), lm.position.z());
                 } else {
                     memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
                 }
+                lm.flag = LandmarkFlag::INITIALIZED;
+            } else if (lm.track.size() >= params->landmark_estimate_tracks) {
+                //Initialize by motion.
+                Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
+                pos = pos * 10; //Initial to 10 meter away... TODO: Initial with motion
+                pos = firstFrame.odom.pose()*ext*pos;
+                lm.position = pos;
+                lm.flag = LandmarkFlag::INITIALIZED;
+                if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
+                    *landmark_state[lm_id] = 0.1;
+                    // printf("[D2VINS::D2LandmarkManager] initialLandmarks (UNINITIALIZED) LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f\n",
+                        // lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z());
+                } else {
+                    memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
+                }
+            }
+        } else if(lm.flag == LandmarkFlag::ESTIMATED) {
+            //Extracting depth from estimated pos
+            if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
+                Vector3d pos_cam = (firstFrame.odom.pose()*ext).inverse()*lm.position;
+                *landmark_state[lm_id] = 1/pos_cam.z();
+                // printf("[D2VINS::D2LandmarkManager] initialLandmarks LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f\n",
+                //     lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z());
+            } else {
+                memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
             }
         }
     }
@@ -151,6 +147,14 @@ std::vector<LandmarkPerId> D2LandmarkManager::getInitializedLandmarks() const {
         }
     }
     return lm_per_frame_vec;
+}
+
+LandmarkPerId & D2LandmarkManager::getLandmark(LandmarkIdType landmark_id) {
+    return landmark_db.at(landmark_id);
+}
+
+bool D2LandmarkManager::hasLandmark(LandmarkIdType landmark_id) const {
+    return landmark_db.find(landmark_id) != landmark_db.end();
 }
 
 }
