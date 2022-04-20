@@ -29,7 +29,7 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements() const {
     std::vector<LandmarkPerId> ret;
     for (auto & it: landmark_db) {
         auto & lm = it.second;
-        if (lm.track.size() > params->landmark_estimate_tracks) {
+        if (lm.track.size() >= params->landmark_estimate_tracks) {
             ret.push_back(lm);
         }
     }
@@ -65,19 +65,19 @@ void D2LandmarkManager::initialLandmarks(const std::map<FrameIdType, VINSFrame*>
                 }
                 lm.flag = LandmarkFlag::INITIALIZED;
             } else if (lm.track.size() >= params->landmark_estimate_tracks) {
-                //Initialize by motion.
-                Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
-                pos = pos * 10; //Initial to 10 meter away... TODO: Initial with motion
-                pos = firstFrame.odom.pose()*ext*pos;
-                lm.position = pos;
-                lm.flag = LandmarkFlag::INITIALIZED;
-                if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-                    *landmark_state[lm_id] = 0.1;
-                    // printf("[D2VINS::D2LandmarkManager] initialLandmarks (UNINITIALIZED) LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f\n",
-                        // lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z());
-                } else {
-                    memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
-                }
+                // //Initialize by motion.
+                // Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
+                // pos = pos * 10; //Initial to 10 meter away... TODO: Initial with motion
+                // pos = firstFrame.odom.pose()*ext*pos;
+                // lm.position = pos; 
+                // lm.flag = LandmarkFlag::INITIALIZED;
+                // if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
+                //     *landmark_state[lm_id] = 0.1;
+                //     // printf("[D2VINS::D2LandmarkManager] initialLandmarks (UNINITIALIZED) LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f\n",
+                //         // lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z());
+                // } else {
+                //     memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
+                // }
             }
         } else if(lm.flag == LandmarkFlag::ESTIMATED) {
             //Extracting depth from estimated pos

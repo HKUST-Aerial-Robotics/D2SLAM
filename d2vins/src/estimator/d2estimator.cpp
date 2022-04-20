@@ -4,6 +4,7 @@
 #include "../factors/imu_factor.h"
 #include "../factors/depth_factor.h"
 #include "../factors/projectionTwoFrameOneCamFactor.h"
+#include "../factors/projectionTwoFrameOneCamFactorNoTD.h"
 #include <d2frontend/utils.h>
 
 namespace D2VINS {
@@ -43,7 +44,7 @@ bool D2Estimator::tryinitFirstPose(const VisualImageDescArray & frame) {
     return true;
 }
 
-std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescArray & frame) {
+std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescArray & frame, const Swarm::Pose & pose) {
     //Only use first image for initialization.
     auto & image = frame.images[0];
     std::vector<cv::Point3f> pts3d;
@@ -66,9 +67,12 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
     cv::Mat inliers;
     cv::Mat D, rvec, t;
     cv::Mat K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0);
-    bool success = cv::solvePnPRansac(pts3d, pts2d, K, D, rvec, t, false,  params->pnp_iteratives,  3, 0.99,  inliers);
+    D2FrontEnd::PnPInitialFromCamPose(pose*state.getExtrinsic(0), rvec, t);
+    // bool success = cv::solvePnP(pts3d, pts2d, K, D, rvec, t, true);
+    bool success = cv::solvePnPRansac(pts3d, pts2d, K, D, rvec, t, true, params->pnp_iteratives,  3, 0.99,  inliers);
     auto pose_cam = D2FrontEnd::PnPRestoCamPose(rvec, t);
     auto pose_imu = pose_cam*state.getExtrinsic(0).inverse();
+    // printf("[D2VINS::D2Estimator] PnP initial %s final %s points %d\n", pose.toStr().c_str(), pose_imu.toStr().c_str(), pts3d.size());
     return std::make_pair(success, pose_imu);
 }
 
@@ -84,7 +88,7 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
         frame.odom = _imu.propagation(state.lastFrame());
     } else {
         auto odom_imu = _imu.propagation(state.lastFrame());
-        auto pnp_init = initialFramePnP(_frame);
+        auto pnp_init = initialFramePnP(_frame, state.lastFrame().odom.pose());
         if (!pnp_init.first) {
             //Use IMU
             printf("[D2VINS::D2Estimator] Initialization failed, use IMU instead.\n");
@@ -97,10 +101,10 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
     bool is_keyframe = _frame.is_keyframe; //Is keyframe is done in frontend
     state.addFrame(_frame, frame, is_keyframe);
 
-    // if (params->verbose) {
+    if (params->verbose) {
         printf("[D2VINS::D2Estimator] Initialize VINSFrame with %d: %s\n", 
             params->init_method, frame.toStr().c_str());
-    // }
+    }
 }
 
 void D2Estimator::inputImage(VisualImageDescArray & _frame) {
@@ -165,7 +169,7 @@ void D2Estimator::solve() {
     state.syncFromState();
     last_odom = state.lastFrame().odom;
 
-    printf("[D2VINS] solve_count %d frame_count %d odom %s td %.1fms\n", solve_count, frame_count, last_odom.toStr().c_str(), state.td*1000);
+    printf("[D2VINS] solve_count %d landmarks %d odom %s td %.1fms\n", solve_count, current_landmark_num, last_odom.toStr().c_str(), state.td*1000);
 
     //Reprogation
     auto _imu = imubuf.back(state.lastFrame().stamp + state.td);
@@ -183,7 +187,7 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
         auto & frame_b = state.getFrame(i + 1);
         auto pre_integrations = frame_b.pre_integrations; //Prev to cuurent
         IMUFactor* imu_factor = new IMUFactor(pre_integrations);
-        problem.AddResidualBlock(imu_factor, NULL, 
+        problem.AddResidualBlock(imu_factor, nullptr, 
             state.getPoseState(frame_a.frame_id), state.getSpdBiasState(frame_a.frame_id), 
             state.getPoseState(frame_b.frame_id), state.getSpdBiasState(frame_b.frame_id));
     }
@@ -191,6 +195,7 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
 
 void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     auto lms = state.availableLandmarkMeasurements();
+    current_landmark_num = lms.size();
     auto loss_function = new ceres::HuberLoss(1.0);    
     for (auto & lm : lms) {
         auto lm_id = lm.landmark_id;
@@ -211,23 +216,27 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                     state.getExtrinsicState(firstObs.camera_id),
                     state.getLandmarkState(lm_id), &state.td);
             } else {
-                auto f_td = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1);
-                problem.AddResidualBlock(f_td, loss_function,
+                ceres::CostFunction * f_lm = nullptr;
+                if (lm.track[i].depth_mea && params->fuse_dep && lm.track[i].depth < params->max_depth_to_fuse) {
+                    f_lm = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1, lm.track[i].depth_mea);
+                } else {
+                    f_lm = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1);
+                }
+                problem.AddResidualBlock(f_lm, loss_function,
                     state.getPoseState(firstObs.frame_id), 
                     state.getPoseState(lm.track[i].frame_id), 
                     state.getExtrinsicState(firstObs.camera_id),
                     state.getLandmarkState(lm_id));
-                // printf("[D2VINS::D2Estimator] Check landmark %d dep_init/mea %.2f %.2fframe %ld<->%ld\n", 
+                // printf("[D2VINS::D2Estimator] Check landmark %d dep_init/mea %.2f %.2f frame %ld<->%ld\n", 
                 //     lm_id, 1/(*state.getLandmarkState(lm_id)), firstObs.depth, lm.track[0].frame_id, lm.track[i].frame_id);
-                // ProjectionTwoFrameOneCamFactorNoTD f_test(mea0, mea1);
-                // f_test.test(state.getPoseState(firstObs.frame_id), 
-                //     state.getPoseState(lm.track[i].frame_id), 
-                //     state.getExtrinsicState(firstObs.camera_id),
-                //     state.getLandmarkState(lm_id));
+                // ProjectionTwoFrameOneCamFactorNoTD f_test(mea0, mea1, lm.track[i].depth);
+                // f_test.test(state.getPoseState(firstObs.frame_id), state.getPoseState(lm.track[i].frame_id), 
+                //     state.getExtrinsicState(firstObs.camera_id), state.getLandmarkState(lm_id));
             }
         }
         problem.SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
     }
+    // exit(0);
 }
 
 Swarm::Odometry D2Estimator::getImuPropagation() const {

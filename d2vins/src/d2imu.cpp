@@ -93,6 +93,7 @@ Swarm::Odometry IMUBuffer::propagation(const Swarm::Odometry & prev_odom, const 
         Vector3d un_acc_0 = prev_odom.att() * (acc_last - Ba) - Gravity;
         Vector3d un_gyr = 0.5 * (gyro_last + imu.gyro) - Bg;
         odom.att() = odom.att() * Utility::deltaQ(un_gyr * imu.dt);
+        odom.att().normalize();
         Vector3d un_acc_1 = odom.att() * (imu.acc - Ba) - Gravity;
         Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
         odom.pos() += imu.dt * odom.vel() + 0.5 * imu.dt * imu.dt * un_acc;
@@ -100,7 +101,6 @@ Swarm::Odometry IMUBuffer::propagation(const Swarm::Odometry & prev_odom, const 
         acc_last = imu.acc;
         gyro_last = imu.gyro;
     }
-
     return odom;
 }
 

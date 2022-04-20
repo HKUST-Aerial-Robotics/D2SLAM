@@ -43,10 +43,10 @@ struct D2VINSConfig {
     bool fuse_dep = true;
     double max_depth_to_fuse = 5.;
     std::string output_folder;
-    enum {
+    enum InitialMethod {
         INIT_POSE_IMU,
         INIT_POSE_PNP
-    } init_method = INIT_POSE_IMU;
+    } init_method = INIT_POSE_PNP;
 
     bool verbose = true;
 
