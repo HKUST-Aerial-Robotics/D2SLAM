@@ -44,7 +44,7 @@ struct D2VINSConfig {
     enum {
         INIT_POSE_IMU,
         INIT_POSE_PNP
-    } init_method = INIT_POSE_PNP;
+    } init_method = INIT_POSE_IMU;
 
     bool verbose = true;
 

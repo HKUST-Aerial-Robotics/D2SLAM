@@ -21,7 +21,8 @@ std::string VINSFrame::toStr() {
     char buf[256] = {0};
     char buf_imu[128] = {0};
     if (pre_integrations != nullptr) {
-        sprintf(buf_imu, "dP %3.2f %.2f %3.2f dQ %3.2f %3.2f %3.2f %3.2f dV %3.2f %3.2f %3.2f", 
+    sprintf(buf_imu, "size %ld sumdt %.1fms dP %3.2f %.2f %3.2f dQ %3.2f %3.2f %3.2f %3.2f dV %3.2f %3.2f %3.2f", 
+        pre_integrations->acc_buf.size(), pre_integrations->sum_dt*1000,
         pre_integrations->delta_p.x(), pre_integrations->delta_p.y(), pre_integrations->delta_p.z(),
         pre_integrations->delta_q.w(), pre_integrations->delta_q.x(), pre_integrations->delta_q.y(), pre_integrations->delta_q.z(),
         pre_integrations->delta_v.x(), pre_integrations->delta_v.y(), pre_integrations->delta_v.z());

@@ -175,6 +175,10 @@ void D2Estimator::solve() {
     if (params->debug_print_states) {
         state.printSldWin();
     }
+
+    // if (solve_count > 20) {
+    //     exit(0);
+    // }
 }
 
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {
