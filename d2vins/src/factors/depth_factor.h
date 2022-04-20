@@ -9,7 +9,7 @@ namespace D2VINS {
 class OneFrameDepth {
   public:
     OneFrameDepth(double depth):
-        _inv_dep(depth) {
+        _inv_dep(1/depth) {
         sqrt_inf = params->depth_sqrt_inf;
     }
     template<typename T>

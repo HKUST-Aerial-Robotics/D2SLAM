@@ -17,12 +17,10 @@ void D2Estimator::inputImu(IMUData data) {
     if (!initFirstPoseFlag) {
         return;
     }
-
     //Propagation current with last Bias.
-    
 }
 
-bool D2Estimator::tryinitFirstPose(const D2FrontEnd::VisualImageDescArray & frame) {
+bool D2Estimator::tryinitFirstPose(const VisualImageDescArray & frame) {
     if (imubuf.size() < params->init_imu_num) {
         return false;
     }
@@ -42,7 +40,16 @@ bool D2Estimator::tryinitFirstPose(const D2FrontEnd::VisualImageDescArray & fram
     return true;
 }
 
-void D2Estimator::addFrame(const D2FrontEnd::VisualImageDescArray & _frame) {
+Swarm::Pose D2Estimator::initialFramePnP(const VisualImageDescArray & frame) {
+    //Only use first image for initialization.
+    auto & image = frame.images[0];
+    for (auto & lm: image.landmarks) {
+
+    }
+}
+
+
+void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
     state.clearFrame();
     if (state.size() > 0) {
@@ -66,7 +73,7 @@ void D2Estimator::addFrame(const D2FrontEnd::VisualImageDescArray & _frame) {
     }
 }
 
-void D2Estimator::inputImage(D2FrontEnd::VisualImageDescArray & _frame) {
+void D2Estimator::inputImage(VisualImageDescArray & _frame) {
     if(!initFirstPoseFlag) {
         printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imubuf.size());
         initFirstPoseFlag = tryinitFirstPose(_frame);
@@ -92,20 +99,21 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
         problem.SetParameterBlockConstant(&state.td);
     }
 
-    ceres::LocalParameterization* pose_local_parameterization = new ceres::ProductParameterization (new ceres::IdentityParameterization(3), 
-        new ceres::EigenQuaternionParameterization());
-
+    ceres::EigenQuaternionManifold quat_manifold;
+    ceres::EuclideanManifold<3> euc_manifold;
+    auto pose_manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
+   
     //set LocalParameterization
     for (size_t i = 0; i < state.size(); i ++ ) {
         auto & frame_a = state.getFrame(i);
-        problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_parameterization);
+        problem.SetManifold(state.getPoseState(frame_a.frame_id), pose_manifold);
     }
 
     for (int i = 0; i < params->camera_num; i ++) {
         if (!params->estimate_extrinsic) {
             problem.SetParameterBlockConstant(state.getExtrinsicState(i));
         } else {
-            problem.SetParameterization(state.getExtrinsicState(i), pose_local_parameterization);
+            problem.SetManifold(state.getExtrinsicState(i), pose_manifold);
         }
     }
 
@@ -149,14 +157,16 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
 
 void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     auto lms = state.availableLandmarkMeasurements();
-    ceres::LossFunction * loss_function = new ceres::HuberLoss(1.0);
+    auto loss_function = new ceres::HuberLoss(1.0);    
     for (auto & lm : lms) {
         auto lm_id = lm.landmark_id;
         auto & firstObs = lm.track[0];
         auto mea0 = firstObs.measurement();
         if (firstObs.depth_mea) {
             auto f_dep = OneFrameDepth::Create(firstObs.depth);
-            problem.AddResidualBlock(f_dep, loss_function, state.getLandmarkState(lm_id));
+            problem.AddResidualBlock(f_dep, nullptr, state.getLandmarkState(lm_id));
+            printf("[D2VINS::D2Estimator] add depth factor %d intial %f mea %f\n", 
+                lm_id, *state.getLandmarkState(lm_id), firstObs.depth);
         }
         for (auto i = 1; i < lm.track.size(); i++) {
             auto mea1 = firstObs.measurement();

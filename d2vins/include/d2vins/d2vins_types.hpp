@@ -4,6 +4,14 @@
 #include "utils.hpp"
 #include <swarm_msgs/Odometry.h>
 #include "d2imu.hpp"
+
+using D2FrontEnd::LandmarkPerId;
+using D2FrontEnd::LandmarkPerFrame;
+using D2FrontEnd::FrameIdType;
+using D2FrontEnd::LandmarkIdType;
+using D2FrontEnd::LandmarkFlag;
+using D2FrontEnd::VisualImageDescArray;
+
 namespace D2VINS {
 class IntegrationBase;
 
@@ -20,9 +28,9 @@ struct VINSFrame {
     VINSFrame():Ba(0., 0., 0.), Bg(0., 0., 0.)
     {}
     
-    VINSFrame(const D2FrontEnd::VisualImageDescArray & frame, const IMUBuffer & buf, const VINSFrame & prev_frame);
+    VINSFrame(const VisualImageDescArray & frame, const IMUBuffer & buf, const VINSFrame & prev_frame);
     
-    VINSFrame(const D2FrontEnd::VisualImageDescArray & frame, const Vector3d & _Ba, const Vector3d & _Bg);
+    VINSFrame(const VisualImageDescArray & frame, const Vector3d & _Ba, const Vector3d & _Bg);
 
     std::string toStr();
 

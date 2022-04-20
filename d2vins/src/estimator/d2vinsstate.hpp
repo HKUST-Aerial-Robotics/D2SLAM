@@ -8,11 +8,11 @@ namespace D2VINS {
 class D2EstimatorState {
 protected:
     std::vector<VINSFrame*> sld_win;
-    std::map<D2FrontEnd::FrameIdType, VINSFrame*> frame_db;
+    std::map<FrameIdType, VINSFrame*> frame_db;
     std::vector<Swarm::Pose> extrinsic; //extrinsic of cameras
     D2LandmarkManager lmanager;
-    std::map<D2FrontEnd::FrameIdType, state_type*> _frame_pose_state;
-    std::map<D2FrontEnd::FrameIdType, state_type*> _frame_spd_Bias_state;
+    std::map<FrameIdType, state_type*> _frame_pose_state;
+    std::map<FrameIdType, state_type*> _frame_spd_Bias_state;
     std::vector<state_type*> _camera_extrinsic_state;
 
     void popFrame(int index) {
@@ -56,7 +56,7 @@ public:
         return *sld_win[0];
     }
 
-    double * getPoseState(D2FrontEnd::FrameIdType frame_id) const {
+    double * getPoseState(FrameIdType frame_id) const {
         return _frame_pose_state.at(frame_id);
     }
 
@@ -64,15 +64,15 @@ public:
         return _camera_extrinsic_state[i];
     }
 
-    double * getSpdBiasState(D2FrontEnd::FrameIdType frame_id) const {
+    double * getSpdBiasState(FrameIdType frame_id) const {
         return _frame_spd_Bias_state.at(frame_id);
     }
     
-    double * getLandmarkState(D2FrontEnd::LandmarkIdType landmark_id) const {
+    double * getLandmarkState(LandmarkIdType landmark_id) const {
         return lmanager.getLandmarkState(landmark_id);
     }
 
-    std::vector<D2FrontEnd::LandmarkPerId> availableLandmarkMeasurements() const {
+    std::vector<LandmarkPerId> availableLandmarkMeasurements() const {
         return lmanager.availableMeasurements();
     }
 
@@ -89,7 +89,7 @@ public:
         }
     }
 
-    void addFrame(const D2FrontEnd::VisualImageDescArray & images, const VINSFrame & _frame, bool is_keyframe) {
+    void addFrame(const VisualImageDescArray & images, const VINSFrame & _frame, bool is_keyframe) {
         auto * frame = new VINSFrame;
         *frame = _frame;
         sld_win.push_back(frame);
@@ -128,7 +128,7 @@ public:
         return *sld_win.back();
     }
 
-    std::vector<D2FrontEnd::LandmarkPerId> getInitializedLandmarks() const {
+    std::vector<LandmarkPerId> getInitializedLandmarks() const {
         return lmanager.getInitializedLandmarks();
     }
 

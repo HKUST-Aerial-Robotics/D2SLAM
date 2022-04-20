@@ -7,6 +7,7 @@
 #include "visualization.hpp"
 
 using namespace Eigen;
+using D2FrontEnd::VisualImageDescArray;
 
 namespace D2VINS {
 class D2Estimator {
@@ -19,17 +20,20 @@ protected:
     Swarm::Odometry last_prop_odom; //last imu propagation odometry
 
     //Internal functions
-    bool tryinitFirstPose(const D2FrontEnd::VisualImageDescArray & frame);
-    void addFrame(const D2FrontEnd::VisualImageDescArray & _frame);
+    bool tryinitFirstPose(const VisualImageDescArray & frame);
+    void addFrame(const VisualImageDescArray & _frame);
     void solve();
     void setupImuFactors(ceres::Problem & problem);
     void setupLandmarkFactors(ceres::Problem & problem);
     void setStateProperties(ceres::Problem & problem);
     int frame_count = 0;
     D2Visualization visual;
+    Swarm::Pose initialFramePnP(const VisualImageDescArray & frame);
+
 public:
+    D2Estimator() {}
     void inputImu(IMUData data);
-    void inputImage(D2FrontEnd::VisualImageDescArray & frame);
+    void inputImage(VisualImageDescArray & frame);
     Swarm::Odometry getImuPropagation() const;
     Swarm::Odometry getOdometry() const;
     void init(ros::NodeHandle & nh);
