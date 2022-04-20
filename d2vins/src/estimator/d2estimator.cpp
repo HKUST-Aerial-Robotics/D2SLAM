@@ -175,10 +175,6 @@ void D2Estimator::solve() {
     if (params->debug_print_states) {
         state.printSldWin();
     }
-
-    // if (solve_count > 20) {
-    //     exit(0);
-    // }
 }
 
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {
@@ -195,17 +191,14 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
 
 void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     auto lms = state.availableLandmarkMeasurements();
-    auto loss_function = nullptr;//new ceres::HuberLoss(1.0);    
+    auto loss_function = new ceres::HuberLoss(1.0);    
     for (auto & lm : lms) {
         auto lm_id = lm.landmark_id;
         auto & firstObs = lm.track[0];
         auto mea0 = firstObs.measurement();
-        if (firstObs.depth_mea) {
+        if (firstObs.depth_mea && params->fuse_dep && firstObs.depth < params->max_depth_to_fuse) {
             auto f_dep = OneFrameDepth::Create(firstObs.depth);
-            problem.AddResidualBlock(f_dep, nullptr, state.getLandmarkState(lm_id));
-            // printf("[D2VINS::D2Estimator] add depth factor %d intial %f mea %f\n", 
-            //     lm_id, *state.getLandmarkState(lm_id), firstObs.depth);
-            // Check
+            problem.AddResidualBlock(f_dep, loss_function, state.getLandmarkState(lm_id));
         }
         for (auto i = 1; i < lm.track.size(); i++) {
             auto mea1 = lm.track[i].measurement();
