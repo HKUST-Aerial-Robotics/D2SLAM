@@ -124,7 +124,7 @@ public:
         lmanager.syncState(extrinsic, frame_db);
     }
 
-    void pre_solve() {
+    void preSolve() {
         for (auto frame : sld_win) {
             if (frame->pre_integrations != nullptr) {
                 frame->pre_integrations->repropagate(frame->Ba, frame->Bg);

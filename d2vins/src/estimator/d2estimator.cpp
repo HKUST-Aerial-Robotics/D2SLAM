@@ -11,6 +11,8 @@ void D2Estimator::init(ros::NodeHandle & nh) {
     state.init(params->camera_extrinsics, params->td_initial);
     ProjectionTwoFrameOneCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     visual.init(nh, this);
+    Swarm::Pose ext = state.getExtrinsic(0);
+    printf("[D2VINS::D2Estimator] extrinsic %s\n", ext.toStr().c_str());
 }
 
 void D2Estimator::inputImu(IMUData data) {
@@ -90,7 +92,6 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
             odom_imu.pose() = pnp_init.second;
         }
         frame.odom = odom_imu;
-
     }
 
     bool is_keyframe = _frame.is_keyframe; //Is keyframe is done in frontend
@@ -121,16 +122,12 @@ void D2Estimator::inputImage(VisualImageDescArray & _frame) {
         solve();
     } else {
         //Presolve only for initialization.
-        state.pre_solve();
+        state.preSolve();
     }
     frame_count ++;
 }
 
 void D2Estimator::setStateProperties(ceres::Problem & problem) {
-    if (!params->estimate_td) {
-        problem.SetParameterBlockConstant(&state.td);
-    }
-
     ceres::EigenQuaternionManifold quat_manifold;
     ceres::EuclideanManifold<3> euc_manifold;
     auto pose_manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
@@ -155,7 +152,7 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
 
 void D2Estimator::solve() {
     solve_count ++;
-    state.pre_solve();
+    state.preSolve();
     ceres::Problem problem;
     setupImuFactors(problem);
     setupLandmarkFactors(problem);
@@ -175,11 +172,9 @@ void D2Estimator::solve() {
     last_prop_odom = _imu.propagation(state.lastFrame());
     visual.postSolve();
 
-    state.printSldWin();
-
-    // if (solve_count > 3) {
-    //     exit(0);
-    // }
+    if (params->debug_print_states) {
+        state.printSldWin();
+    }
 }
 
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {
@@ -206,18 +201,34 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
             problem.AddResidualBlock(f_dep, nullptr, state.getLandmarkState(lm_id));
             // printf("[D2VINS::D2Estimator] add depth factor %d intial %f mea %f\n", 
             //     lm_id, *state.getLandmarkState(lm_id), firstObs.depth);
+            // Check
         }
         for (auto i = 1; i < lm.track.size(); i++) {
-            auto mea1 = firstObs.measurement();
-            auto f_td = new ProjectionTwoFrameOneCamFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,
-                firstObs.cur_td, lm.track[i].cur_td);
-            problem.AddResidualBlock(f_td, loss_function,
-                state.getPoseState(firstObs.frame_id), 
-                state.getPoseState(lm.track[i].frame_id), 
-                state.getExtrinsicState(firstObs.camera_id),
-                state.getLandmarkState(lm_id), &state.td);
+            auto mea1 = lm.track[i].measurement();
+            if (params->estimate_td) {
+                auto f_td = new ProjectionTwoFrameOneCamFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,
+                    firstObs.cur_td, lm.track[i].cur_td);
+                problem.AddResidualBlock(f_td, loss_function,
+                    state.getPoseState(firstObs.frame_id), 
+                    state.getPoseState(lm.track[i].frame_id), 
+                    state.getExtrinsicState(firstObs.camera_id),
+                    state.getLandmarkState(lm_id), &state.td);
+            } else {
+                auto f_td = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1);
+                problem.AddResidualBlock(f_td, loss_function,
+                    state.getPoseState(firstObs.frame_id), 
+                    state.getPoseState(lm.track[i].frame_id), 
+                    state.getExtrinsicState(firstObs.camera_id),
+                    state.getLandmarkState(lm_id));
+                // printf("[D2VINS::D2Estimator] Check landmark %d dep_init/mea %.2f %.2fframe %ld<->%ld\n", 
+                //     lm_id, 1/(*state.getLandmarkState(lm_id)), firstObs.depth, lm.track[0].frame_id, lm.track[i].frame_id);
+                // ProjectionTwoFrameOneCamFactorNoTD f_test(mea0, mea1);
+                // f_test.test(state.getPoseState(firstObs.frame_id), 
+                //     state.getPoseState(lm.track[i].frame_id), 
+                //     state.getExtrinsicState(firstObs.camera_id),
+                //     state.getLandmarkState(lm_id));
+            }
         }
-
         problem.SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
     }
 }

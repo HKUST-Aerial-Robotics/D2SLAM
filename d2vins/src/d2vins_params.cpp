@@ -46,6 +46,7 @@ void D2VINSConfig::init(const std::string & config_file) {
 
     estimate_td = (int)fsSettings["estimate_td"];
     estimate_extrinsic = (int)fsSettings["estimate_extrinsic"];
+    debug_print_states = (int)fsSettings["debug_print_states"];
 
     for (auto i = 0; i < camera_num; i ++) {
         char name[32] = {0};

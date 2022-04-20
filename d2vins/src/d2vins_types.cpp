@@ -19,8 +19,15 @@ VINSFrame::VINSFrame(const D2FrontEnd::VisualImageDescArray & frame, const Vecto
 
 std::string VINSFrame::toStr() {
     char buf[256] = {0};
-    sprintf(buf, "VINSFrame %ld@%d Odom: %s Ba %.2f %.2f %.2f Bg %.2f %.2f %.2f ", frame_id, drone_id, odom.toStr().c_str(),
-        Ba(0), Ba(1), Ba(2), Bg(0), Bg(1), Bg(2));
+    char buf_imu[128] = {0};
+    if (pre_integrations != nullptr) {
+        sprintf(buf_imu, "dP %3.2f %.2f %3.2f dQ %3.2f %3.2f %3.2f %3.2f dV %3.2f %3.2f %3.2f", 
+        pre_integrations->delta_p.x(), pre_integrations->delta_p.y(), pre_integrations->delta_p.z(),
+        pre_integrations->delta_q.w(), pre_integrations->delta_q.x(), pre_integrations->delta_q.y(), pre_integrations->delta_q.z(),
+        pre_integrations->delta_v.x(), pre_integrations->delta_v.y(), pre_integrations->delta_v.z());
+    }
+    sprintf(buf, "VINSFrame %ld@%d Odom: %s\nBa %.2f %.2f %.2f Bg %.2f %.2f %.2f pre_integrations %s\n", frame_id, drone_id, odom.toStr().c_str(),
+        Ba(0), Ba(1), Ba(2), Bg(0), Bg(1), Bg(2), buf_imu);
     return std::string(buf);
 }
 

@@ -39,6 +39,7 @@ struct D2VINSConfig {
     double depth_sqrt_inf = 20.0;
     int pnp_min_inliers = 8;
     int pnp_iteratives = 100;
+    bool debug_print_states = false;
     std::string output_folder;
     enum {
         INIT_POSE_IMU,
