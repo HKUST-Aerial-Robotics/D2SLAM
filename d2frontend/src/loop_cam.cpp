@@ -302,7 +302,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
         cv::cvtColor(img_up, img_up, cv::COLOR_GRAY2BGR);
 
         for (unsigned int i = 0; i < vframe.landmarkNum(); i++ ) {
-            if (vframe.landmarks[i].flag) { 
+            if (vframe.landmarks[i].depth_mea) { 
                 auto pt = vframe.landmarks[i].pt2d;
                 auto dep = vframe.landmarks[i].depth;
                 cv::circle(img_up, pt, 3, cv::Scalar(0, 255, 0), 1);

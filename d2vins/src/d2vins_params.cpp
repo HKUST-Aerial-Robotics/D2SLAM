@@ -39,6 +39,10 @@ void D2VINSConfig::init(const std::string & config_file) {
     camera_num = fsSettings["num_of_cam"];
     td_initial = fsSettings["td"];
 
+    fuse_dep = (int) fsSettings["fuse_dep"];
+    max_depth_to_fuse = fsSettings["max_depth_to_fuse"];
+
+
     //Sliding window
     max_sld_win_size = fsSettings["max_sld_win_size"];
     landmark_estimate_tracks = fsSettings["landmark_estimate_tracks"];

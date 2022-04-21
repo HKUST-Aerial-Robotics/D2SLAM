@@ -49,11 +49,11 @@ public:
     Swarm::Odometry propagation(const VINSFrame & baseframe) const;
     
     IMUData operator[](int i) const {
-        return buf[i];
+        return buf.at(i);
     }
     
     IMUData & operator[](int i) {
-        return buf[i];
+        return buf.at(i);
     }
 };
 }

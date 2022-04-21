@@ -83,6 +83,7 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
         imubuf.pop(state.firstFrame().stamp + state.td);
     }
     auto _imu = imubuf.periodIMU(state.lastFrame().stamp + state.td, _frame.stamp + state.td);
+    assert(_imu.size() > 0 && "IMU buffer is empty");
     VINSFrame frame(_frame, _imu, state.lastFrame());
     if (params->init_method == D2VINSConfig::INIT_POSE_IMU) {
         frame.odom = _imu.propagation(state.lastFrame());
