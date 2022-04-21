@@ -18,11 +18,22 @@ using namespace D2VINS;
 namespace D2VINS {
 class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
 {
+    bool check = false;
+    Eigen::Matrix<double, 15, 15> sqrt_info;
   public:
     IMUFactor() = delete;
     IMUFactor(IntegrationBase* _pre_integration):pre_integration(_pre_integration)
     {
+        sqrt_info = Eigen::LLT<Eigen::Matrix<double, 15, 15>>(pre_integration->covariance.inverse()).matrixL().transpose();
     }
+
+    void testEvaluate(std::vector<double*> param, double *residuals, double **jacobians)
+    {
+        check = true;
+        this->Evaluate(param.data(), residuals, jacobians);
+        check = false;
+    }
+
     virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
     {
 
@@ -68,10 +79,16 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
         residual = pre_integration->evaluate(Pi, Qi, Vi, Bai, Bgi,
                                             Pj, Qj, Vj, Baj, Bgj);
 
-        Eigen::Matrix<double, 15, 15> sqrt_info = Eigen::LLT<Eigen::Matrix<double, 15, 15>>(pre_integration->covariance.inverse()).matrixL().transpose();
         //sqrt_info.setIdentity();
+        if (check) {
+            std::cout << "residuals: " << residual.transpose() << std::endl;
+        }
+        
         residual = sqrt_info * residual;
-
+        if (check) {
+            std::cout << "residuals_with_inf: " << residual.transpose() << std::endl;
+        }
+        
         if (jacobians)
         {
             double sum_dt = pre_integration->sum_dt;

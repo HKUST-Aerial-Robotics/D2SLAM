@@ -172,7 +172,7 @@ void D2Estimator::solve() {
     ceres::Solver::Summary summary;
     ceres::Solve(params->options, &problem, &summary);
     // std::cout << summary.FullReport() << std::endl;
-    // std::cout << summary.BriefReport() << std::endl;
+    std::cout << summary.BriefReport() << std::endl;
     state.syncFromState();
     last_odom = state.lastFrame().odom;
 
@@ -197,6 +197,16 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
         problem.AddResidualBlock(imu_factor, nullptr, 
             state.getPoseState(frame_a.frame_id), state.getSpdBiasState(frame_a.frame_id), 
             state.getPoseState(frame_b.frame_id), state.getSpdBiasState(frame_b.frame_id));
+        //Check the factor
+        // printf("[D2VINS::D2Estimator] Add IMU factor %d %d\n", frame_a.frame_id, frame_b.frame_id);
+        // printf("Preintegration: relative p %3.2f %3.2f %3.2f\n", pre_integrations[0].delta_p.x(), pre_integrations[0].delta_p.y(), pre_integrations[0].delta_p.z());
+        // printf("Preintegration: delta    q %3.2f %3.2f %3.2f %3.2f\n", pre_integrations[0].delta_q.w(), pre_integrations[0].delta_q.x(), pre_integrations[0].delta_q.y(), pre_integrations[0].delta_q.z());
+        // auto rp = frame_a.odom.pose().inverse()*frame_b.odom.pose();
+        // printf("current relative pose: %s\n", rp.toStr().c_str());
+        // std::vector<double*> params{state.getPoseState(frame_a.frame_id), state.getSpdBiasState(frame_a.frame_id), 
+        //     state.getPoseState(frame_b.frame_id), state.getSpdBiasState(frame_b.frame_id)};
+        // Matrix<double, 15, 1> residuals;
+        // imu_factor->testEvaluate(params, residuals.data(), nullptr);
     }
 }
 
@@ -225,7 +235,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
             } else {
                 ceres::CostFunction * f_lm = nullptr;
                 if (lm.track[i].depth_mea && params->fuse_dep && lm.track[i].depth < params->max_depth_to_fuse) {
-                    f_lm = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1, lm.track[i].depth_mea);
+                    f_lm = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1, lm.track[i].depth);
                 } else {
                     f_lm = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1);
                 }

@@ -38,7 +38,10 @@ sensor_msgs::PointCloud toPointCloud(const std::vector<D2FrontEnd::LandmarkPerId
         if (landmarks[i].flag == D2FrontEnd::LandmarkFlag::ESTIMATED) {
             //set color to green
             color = Vector3i(0., 255., 0.);
-        } 
+        } else if (landmarks[i].flag == D2FrontEnd::LandmarkFlag::OUTLIER) {
+            //set color to gray
+            color = Vector3i(200., 200., 200.);
+        }
         uint32_t hex_r = (0xff & color(0)) << 16;
         uint32_t hex_g = (0xff & color(1)) << 8;
         uint32_t hex_b = (0xff & color(2));

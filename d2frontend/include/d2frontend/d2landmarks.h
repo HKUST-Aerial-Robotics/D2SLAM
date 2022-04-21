@@ -12,6 +12,7 @@ enum LandmarkFlag {
     UNINITIALIZED = 0,
     INITIALIZED = 1, //Initialized by stereo
     ESTIMATED = 2, //ESTIMATE
+    OUTLIER=3
 };
 
 struct LandmarkPerFrame {

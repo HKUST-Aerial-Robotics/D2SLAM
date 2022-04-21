@@ -24,8 +24,13 @@ void D2VINSConfig::init(const std::string & config_file) {
         std::cerr << "ERROR:" << ex.what() << " Can't open config file" << std::endl;
         exit(-1);
     }
+
+    //Inputs
+    camera_num = fsSettings["num_of_cam"];
     IMU_FREQ = fsSettings["imu_freq"];
     td_max_diff = 1.5/IMU_FREQ;
+
+    //Measurements
     acc_n = fsSettings["acc_n"];
     acc_w = fsSettings["acc_w"];
     gyr_n = fsSettings["gyr_n"];
@@ -33,27 +38,31 @@ void D2VINSConfig::init(const std::string & config_file) {
     depth_sqrt_inf = fsSettings["depth_sqrt_inf"];
     Gravity = Vector3d(0., 0., fsSettings["g_norm"]);
 
+    //Outputs
+    fsSettings["output_path"] >> output_folder;
+    debug_print_states = (int)fsSettings["debug_print_states"];
+
+    //Solver
     solver_time = fsSettings["max_solver_time"];
     options.max_num_iterations = fsSettings["max_num_iterations"];
-    fsSettings["output_path"] >> output_folder;
 
-    camera_num = fsSettings["num_of_cam"];
+    //Estimation
     td_initial = fsSettings["td"];
-
+    estimate_td = (int)fsSettings["estimate_td"];
+    estimate_extrinsic = (int)fsSettings["estimate_extrinsic"];
     fuse_dep = (int) fsSettings["fuse_dep"];
     max_depth_to_fuse = fsSettings["max_depth_to_fuse"];
-
+    init_method = (InitialMethod) (int)fsSettings["init_method"];
 
     //Sliding window
     max_sld_win_size = fsSettings["max_sld_win_size"];
     landmark_estimate_tracks = fsSettings["landmark_estimate_tracks"];
     min_solve_frames = fsSettings["min_solve_frames"];
 
-    estimate_td = (int)fsSettings["estimate_td"];
-    estimate_extrinsic = (int)fsSettings["estimate_extrinsic"];
-    debug_print_states = (int)fsSettings["debug_print_states"];
-    init_method = (InitialMethod) (int)fsSettings["init_method"];
-
+    //Outlier rejection
+    perform_outlier_rejection_num = fsSettings["perform_outlier_rejection_num"];
+    landmark_outlier_threshold = fsSettings["thres_outlier"];
+    
     for (auto i = 0; i < camera_num; i ++) {
         char name[32] = {0};
         sprintf(name, "body_T_cam%d", i);
@@ -64,10 +73,14 @@ void D2VINSConfig::init(const std::string & config_file) {
         camera_extrinsics.push_back(Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3)));
     }
 
-    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
     options.num_threads = 1;
-    options.trust_region_strategy_type = ceres::DOGLEG;
+    options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;// ceres::DOGLEG;
     options.max_solver_time_in_seconds = solver_time;
+    // options.linear_solver_type = ceres::DENSE_SCHUR;
+    // options.num_threads = 1;
+    // options.trust_region_strategy_type = ceres::DOGLEG;
+    // options.max_solver_time_in_seconds = solver_time;
 
 }
 

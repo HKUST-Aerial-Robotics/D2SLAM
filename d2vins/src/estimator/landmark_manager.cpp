@@ -29,7 +29,8 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements() const {
     std::vector<LandmarkPerId> ret;
     for (auto & it: landmark_db) {
         auto & lm = it.second;
-        if (lm.track.size() >= params->landmark_estimate_tracks) {
+        if (lm.track.size() >= params->landmark_estimate_tracks && 
+            lm.flag >= LandmarkFlag::INITIALIZED && lm.flag != LandmarkFlag::OUTLIER) {
             ret.push_back(lm);
         }
     }
@@ -89,11 +90,48 @@ void D2LandmarkManager::initialLandmarks(const std::map<FrameIdType, VINSFrame*>
 }
 
 void D2LandmarkManager::outlierRejection(const std::map<FrameIdType, VINSFrame*> & frame_db, const std::vector<Swarm::Pose> & extrinsic) {
-
+    int remove_count = 0;
+    int total_count = 0;
+    if (estimated_landmark_size < params->perform_outlier_rejection_num) {
+        return;
+    }
+    for (auto & it: landmark_db) {
+        auto & lm = it.second;
+        auto lm_id = it.first;
+        if(lm.flag == LandmarkFlag::ESTIMATED) {
+            double err_sum = 0;
+            double err_cnt = 0;
+            total_count ++;
+            for (int i = 1; i < lm.track.size(); i ++) {
+                auto pose = frame_db.at(lm.track[i].frame_id)->odom.pose();
+                auto ext = extrinsic[lm.track[i].camera_id];
+                auto pt2d_n = lm.track[i].pt2d_norm;
+                Vector3d pos_cam = (pose*ext).inverse()*lm.position;
+                pos_cam = pos_cam/pos_cam.z();
+                //Compute reprojection error
+                Vector2d reproj_error = pt2d_n - pos_cam.head<2>();
+                // printf("[D2VINS::D2LandmarkManager] outlierRejection LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f reproj_error %.2f %.2f\n",
+                    // lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z(), reproj_error.x(), reproj_error.y());
+                err_sum += reproj_error.norm();
+                err_cnt += 1;
+            }
+            if (err_cnt > 0) {
+                double reproj_err = err_sum/err_cnt;
+                if (reproj_err*params->focal_length > params->landmark_outlier_threshold) {
+                    remove_count ++;
+                    lm.flag = LandmarkFlag::OUTLIER;
+                    // printf("[D2VINS::D2LandmarkManager] outlierRejection LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f reproj_error %.2f\n",
+                    //     lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z(), reproj_err*params->focal_length);
+                }
+            }
+        }
+    }
+    printf("[D2VINS::D2LandmarkManager] outlierRejection remove %d/%d landmarks\n", remove_count, total_count);
 }
 
 void D2LandmarkManager::syncState(const std::vector<Swarm::Pose> & extrinsic, const std::map<FrameIdType, VINSFrame*> & frame_db) {
     //Sync inverse depth to 3D positions
+    estimated_landmark_size = 0;
     for (auto it : landmark_state) {
         auto lm_id = it.first;
         auto & lm = landmark_db.at(lm_id);
@@ -117,7 +155,9 @@ void D2LandmarkManager::syncState(const std::vector<Swarm::Pose> & extrinsic, co
                 lm.position.x() = it.second[0];
                 lm.position.y() = it.second[1];
                 lm.position.z() = it.second[2];
+                lm.flag = LandmarkFlag::ESTIMATED;
             }
+            estimated_landmark_size ++;
         }
     }
 }
