@@ -25,6 +25,7 @@ void D2VINSConfig::init(const std::string & config_file) {
         exit(-1);
     }
     IMU_FREQ = fsSettings["imu_freq"];
+    td_max_diff = 1.5/IMU_FREQ;
     acc_n = fsSettings["acc_n"];
     acc_w = fsSettings["acc_w"];
     gyr_n = fsSettings["gyr_n"];

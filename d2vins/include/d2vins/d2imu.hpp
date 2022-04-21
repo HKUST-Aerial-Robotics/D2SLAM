@@ -24,6 +24,8 @@ class IMUBuffer
 {
 protected:
     size_t searchClosest(double t) const;
+    //Search [i0, i1)
+    size_t searchClosest(double t, int i0, int i1) const;
     IMUBuffer slice(int i0, int i1) const;
 public:
     std::vector<IMUData> buf;
@@ -47,7 +49,6 @@ public:
 
     Swarm::Odometry propagation(const Swarm::Odometry & odom, const Vector3d & Ba, const Vector3d & Bg) const;
     Swarm::Odometry propagation(const VINSFrame & baseframe) const;
-    
     IMUData operator[](int i) const {
         return buf.at(i);
     }

@@ -84,6 +84,11 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
     }
     auto _imu = imubuf.periodIMU(state.lastFrame().stamp + state.td, _frame.stamp + state.td);
     assert(_imu.size() > 0 && "IMU buffer is empty");
+    if (fabs(_imu[_imu.size()-1].t - _frame.stamp - state.td) > params->td_max_diff && frame_count > 10) {
+        printf("[D2VINS::D2Estimator] Too large time difference %.3f\n", _imu[_imu.size()-1].t - _frame.stamp - state.td);
+        printf("[D2VINS::D2Estimator] Prev frame  %.3f cur   %.3f td%.1fms\n", state.lastFrame().stamp + state.td, _frame.stamp + state.td, state.td*1000);
+        printf("[D2VINS::D2Estimator] Imu t_start %.3f t_end %.3f num %d t_last %.3f\n", _imu[0].t, _imu[_imu.size()-1].t, _imu.size(), imubuf[imubuf.size()-1].t);
+    }
     VINSFrame frame(_frame, _imu, state.lastFrame());
     if (params->init_method == D2VINSConfig::INIT_POSE_IMU) {
         frame.odom = _imu.propagation(state.lastFrame());

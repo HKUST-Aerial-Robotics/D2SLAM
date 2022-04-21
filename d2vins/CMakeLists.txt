@@ -51,6 +51,7 @@ add_library(${PROJECT_NAME}_estimator
   src/d2vins_params.cpp
   src/estimator/visualization.cpp
   src/estimator/landmark_manager.cpp
+  src/estimator/d2vinsstate.cpp
   src/factors/projectionTwoFrameOneCamFactor.cpp
 )
 
