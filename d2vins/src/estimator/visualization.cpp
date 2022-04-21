@@ -11,6 +11,7 @@ void D2Visualization::init(ros::NodeHandle & nh, D2Estimator * estimator) {
     pcl_pub = nh.advertise<sensor_msgs::PointCloud>("point_cloud", 1000);
     odom_pub = nh.advertise<nav_msgs::Odometry>("odometry", 1000);
     imu_prop_pub = nh.advertise<nav_msgs::Odometry>("imu_propagation", 1000);
+    path_pub = nh.advertise<nav_msgs::Path>("path", 1000);
     _estimator = estimator;
 }
 
@@ -21,6 +22,15 @@ void D2Visualization::postSolve() {
     imu_prop_pub.publish(imu_prop);
     auto pcl = _estimator->getState().getInitializedLandmarks();
     pcl_pub.publish(toPointCloud(pcl));
+
+    geometry_msgs::PoseStamped pose_stamped;
+    pose_stamped.header = odom.header;
+    pose_stamped.header.frame_id = "world";
+    pose_stamped.pose = odom.pose.pose;
+    path.header = odom.header;
+    path.header.frame_id = "world";
+    path.poses.push_back(pose_stamped);
+    path_pub.publish(path);
 }
 
 sensor_msgs::PointCloud toPointCloud(const std::vector<D2FrontEnd::LandmarkPerId> landmarks) {

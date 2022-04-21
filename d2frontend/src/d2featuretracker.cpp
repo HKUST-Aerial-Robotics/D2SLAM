@@ -188,9 +188,9 @@ void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const Tra
     }
 }
 
-void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
+void D2FeatureTracker::matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
         std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
-        std::vector<int> & ids_down_to_up) {
+        std::vector<int> & ids_down_to_up) const {
     // printf("matchLocalFeatures %ld %ld: ", pts_up.size(), pts_down.size());
     const cv::Mat desc_up( _desc_up.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_up.data());
     const cv::Mat desc_down( _desc_down.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_down.data());
@@ -214,12 +214,14 @@ void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vect
     }
 
     std::vector<unsigned char> mask;
-    if (up_2d.size() < MIN_HOMOGRAPHY) {
-        return;
+    if (_config.check_homography) {
+        if (up_2d.size() < MIN_HOMOGRAPHY) {
+            return;
+        }
+        cv::findHomography(up_2d, down_2d, cv::RANSAC, _config.ransacReprojThreshold, mask);
+        reduceVector(ids_up, mask);
+        reduceVector(ids_down, mask);
     }
-    cv::findHomography(up_2d, down_2d, cv::RANSAC, 3, mask);
-    reduceVector(ids_up, mask);
-    reduceVector(ids_down, mask);
     for (auto i = 0; i < ids_up.size(); i++) {
         ids_down_to_up[ids_down[i]] = ids_up[i];
     }

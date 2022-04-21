@@ -11,10 +11,10 @@
     <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640_rtx3080_fp16.trt" />
     <!-- <arg name="camera_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/left.yaml" /> -->
     <!-- <arg name="vins_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/realsense.yaml" /> -->
-    <arg name="camera_config_path" default="/home/xuhao/data/realsense/left.yaml" />
-    <arg name="vins_config_path" default="/home/xuhao/data/realsense/realsense.yaml" />
+    <arg name="camera_config_path" default="/home/xuhao/data/drone3-ri/Configs/SwarmConfig1/realsense/left.yaml" />
+    <arg name="vins_config_path" default="/home/xuhao/data/drone3-ri/Configs/SwarmConfig1/realsense/realsense_d2slam.yaml" />
     <arg name="max_freq" default="1.0" />
-    <arg name="superpoint_max_num" default="300" />
+    <arg name="superpoint_max_num" default="200" />
     <arg name="match_index_dist" default="50" />
     <arg name="output_path" default="/home/dji/output/" />
     <arg name="min_loop_feature_num" default="20" />
@@ -23,7 +23,7 @@
     <arg name="inter_drone_init_frames" default="3" />
     <arg name="enable_loop" default="false" />
     
-    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen"     >
+    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" >
         <rosparam>
             lcm_uri: udpm://224.0.0.251:7667?ttl=1
             jpg_quality: 75
@@ -36,7 +36,7 @@
             enable_sub_remote_img: false
             accept_min_3d_pts: 30
             recv_msg_duration: 0.5
-            superpoint_thres: 0.2
+            superpoint_thres: 0.15
             triangle_thres: 0.012
             #triangle_thres: 0.008
             min_direction_loop: 1
@@ -57,6 +57,8 @@
             yaw_covariance_per_meter: 0.003
             enable_network: false
             show_feature_id: false
+            check_homography: false
+            ransacReprojThreshold: 10.0
         </rosparam>
         <param name="pca_comp_path" value="$(find d2frontend)/models/components_.csv" type="string" />
         <param name="output_path" value="$(arg output_path)" type="string" />

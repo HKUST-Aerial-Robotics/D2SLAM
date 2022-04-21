@@ -17,6 +17,8 @@ struct D2FTConfig {
     double parallex_thres = 10.0/460.0;
     int min_keyframe_num = 2;
     bool write_to_file = false;
+    bool check_homography = false;
+    double ransacReprojThreshold = 10;
     std::string output_folder = "/root/output/";
 };
 
@@ -70,10 +72,10 @@ public:
     void processKeyframe(VisualImageDescArray & frames);
     bool isKeyframe(const TrackReport & reports);
     void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report);
+    void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
+        std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
+        std::vector<int> & ids_down_to_up) const;
 };
 
-void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
-    std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
-    std::vector<int> & ids_down_to_up);
 
 } 

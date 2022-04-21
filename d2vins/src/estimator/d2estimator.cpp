@@ -176,7 +176,8 @@ void D2Estimator::solve() {
     state.syncFromState();
     last_odom = state.lastFrame().odom;
 
-    printf("[D2VINS] solve_count %d landmarks %d odom %s td %.1fms\n", solve_count, current_landmark_num, last_odom.toStr().c_str(), state.td*1000);
+    printf("[D2VINS] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
+        current_landmark_num, last_odom.toStr().c_str(), state.td*1000, summary.total_time_in_seconds*1000);
 
     //Reprogation
     auto _imu = imubuf.back(state.lastFrame().stamp + state.td);

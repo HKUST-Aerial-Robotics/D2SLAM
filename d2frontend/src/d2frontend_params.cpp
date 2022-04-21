@@ -63,6 +63,8 @@ namespace D2FrontEnd {
         nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);
         nh.param<double>("parallex_thres", ftconfig->parallex_thres, 10.0/460.0);
         nh.param<int>("min_keyframe_num", ftconfig->min_keyframe_num, 2);
+        nh.param<bool>("check_homography", ftconfig->check_homography, true);
+        nh.param<double>("ransacReprojThreshold", ftconfig->ransacReprojThreshold, 10.0);
 
         //Loop detector
         nh.param<bool>("enable_loop", enable_loop, true);
