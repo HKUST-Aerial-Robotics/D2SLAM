@@ -44,6 +44,10 @@ VINSFrame & D2EstimatorState::firstFrame() {
     return *sld_win[0];
 }
 
+int D2EstimatorState::getPoseIndex(FrameIdType frame_id) const {
+    return frame_indices.at(frame_id);
+}
+
 double * D2EstimatorState::getPoseState(FrameIdType frame_id) const {
     return _frame_pose_state.at(frame_id);
 }
@@ -79,6 +83,14 @@ void D2EstimatorState::clearFrame() {
             popFrame(0);
         }
     }
+    updatePoseIndices();
+}
+
+void D2EstimatorState::updatePoseIndices() {
+    frame_indices.clear();
+    for (int i = 0; i < sld_win.size(); i++) {
+        frame_indices[sld_win[i]->frame_id] = i;
+    }
 }
 
 void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSFrame & _frame, bool is_keyframe) {
@@ -94,6 +106,7 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
     if (params->verbose) {
         printf("[D2VINS::D2EstimatorState] add frame %ld, current %ld frame\n", images.frame_id, sld_win.size());
     }
+    updatePoseIndices();
 }
 
 void D2EstimatorState::syncFromState() {

@@ -8,6 +8,7 @@ class D2EstimatorState {
 protected:
     std::vector<VINSFrame*> sld_win;
     std::map<FrameIdType, VINSFrame*> frame_db;
+    std::map<FrameIdType, int> frame_indices;
     std::vector<Swarm::Pose> extrinsic; //extrinsic of cameras
     D2LandmarkManager lmanager;
     std::map<FrameIdType, state_type*> _frame_pose_state;
@@ -16,28 +17,40 @@ protected:
 
     void popFrame(int index);
     void outlierRejection();
+    void updatePoseIndices();
 public:
     state_type td = 0.0;
 
     D2EstimatorState() {}
     void init(std::vector<Swarm::Pose> _extrinsic, double _td);
     size_t size() const;
-    VINSFrame & getFrame(int index);
-    VINSFrame & firstFrame();
+
+    //Get states
     double * getPoseState(FrameIdType frame_id) const;
+    int getPoseIndex(FrameIdType frame_id) const;
     double * getExtrinsicState(int i) const;
     double * getSpdBiasState(FrameIdType frame_id) const;
     double * getLandmarkState(LandmarkIdType landmark_id) const;
     Swarm::Pose getExtrinsic(int i) const;
     std::vector<LandmarkPerId> availableLandmarkMeasurements() const;
-    void clearFrame();
-    void addFrame(const VisualImageDescArray & images, const VINSFrame & _frame, bool is_keyframe) ;
-    void syncFromState();
-    void preSolve();
-    VINSFrame lastFrame() const;
     std::vector<LandmarkPerId> getInitializedLandmarks() const;
     LandmarkPerId & getLandmarkbyId(LandmarkIdType id);
     bool hasLandmark(LandmarkIdType id) const;
+
+    //Frame operations
+    void clearFrame();
+    void addFrame(const VisualImageDescArray & images, const VINSFrame & _frame, bool is_keyframe);
+
+    //Frame access    
+    VINSFrame & getFrame(int index);
+    VINSFrame & firstFrame();
+    VINSFrame lastFrame() const;
+    
+    //Solving process
+    void syncFromState();
+    void preSolve();
+
+    //Debug
     void printSldWin() const;
 };
 }

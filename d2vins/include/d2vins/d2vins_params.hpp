@@ -45,6 +45,7 @@ struct D2VINSConfig {
     double td_max_diff = 0.0025;
     double landmark_outlier_threshold = 10.0;
     int perform_outlier_rejection_num = 50;
+    int min_measurements_per_keyframe = 10;
     std::string output_folder;
     enum InitialMethod {
         INIT_POSE_IMU,
