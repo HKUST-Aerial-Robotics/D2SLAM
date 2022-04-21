@@ -18,6 +18,7 @@ public:
     std::vector<LandmarkPerId> getInitializedLandmarks() const;
     LandmarkPerId & getLandmark(LandmarkIdType landmark_id);
     bool hasLandmark(LandmarkIdType landmark_id) const;
+    void outlierRejection(const std::map<FrameIdType, VINSFrame*> & frame_db, const std::vector<Swarm::Pose> & extrinsic);
 };
 
 }

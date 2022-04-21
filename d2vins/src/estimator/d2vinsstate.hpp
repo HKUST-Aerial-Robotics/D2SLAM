@@ -15,6 +15,7 @@ protected:
     std::vector<state_type*> _camera_extrinsic_state;
 
     void popFrame(int index);
+    void outlierRejection();
 public:
     state_type td = 0.0;
 

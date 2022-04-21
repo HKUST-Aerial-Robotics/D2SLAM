@@ -103,17 +103,21 @@ void D2EstimatorState::syncFromState() {
         auto frame_id = it.first;
         frame_db.at(frame_id)->fromVector(it.second, _frame_spd_Bias_state.at(frame_id));
     }
-
     for (size_t i = 0; i < extrinsic.size(); i ++ ) {
         extrinsic[i].from_vector(_camera_extrinsic_state[i]);
     }
-
     for (auto frame : sld_win) {
         if (frame->pre_integrations != nullptr) {
             frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
         }
     }
     lmanager.syncState(extrinsic, frame_db);
+    outlierRejection();
+}
+
+void D2EstimatorState::outlierRejection() {
+    //Perform outlier rejection of landmarks
+    lmanager.outlierRejection(frame_db, extrinsic);
 }
 
 void D2EstimatorState::preSolve() {
