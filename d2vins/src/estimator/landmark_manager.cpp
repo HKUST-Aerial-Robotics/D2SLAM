@@ -41,6 +41,10 @@ double * D2LandmarkManager::getLandmarkState(LandmarkIdType landmark_id) const {
     return landmark_state.at(landmark_id);
 }
 
+FrameIdType D2LandmarkManager::getLandmarkBaseFrame(LandmarkIdType landmark_id) const {
+    return landmark_db.at(landmark_id).track[0].frame_id;
+}
+
 void D2LandmarkManager::initialLandmarks(const std::map<FrameIdType, VINSFrame*> & frame_db, const std::vector<Swarm::Pose> & extrinsic) {
     for (auto & it: landmark_db) {
         auto & lm = it.second;

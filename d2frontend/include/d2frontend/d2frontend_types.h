@@ -6,9 +6,6 @@
 
 namespace D2FrontEnd {
 
-typedef uint64_t FrameIdType;
-typedef int LandmarkIdType;
-
 inline int generate_keyframe_id(ros::Time stamp, int self_id) {
     static int keyframe_count = 0;
     int t_ms = 0;//stamp.toSec()*1000;

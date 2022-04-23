@@ -5,6 +5,7 @@
 #include <swarm_msgs/Odometry.h>
 #include <ceres/ceres.h>
 #include "visualization.hpp"
+#include "marginalize.hpp"
 
 using namespace Eigen;
 using D2FrontEnd::VisualImageDescArray;
@@ -18,7 +19,7 @@ protected:
     IMUBuffer imubuf;
     Swarm::Odometry last_odom; //last accuacy odometry
     Swarm::Odometry last_prop_odom; //last imu propagation odometry
-
+    Marginalizer * marginalizer = nullptr;
     //Internal functions
     bool tryinitFirstPose(const VisualImageDescArray & frame);
     void addFrame(const VisualImageDescArray & _frame);
@@ -32,6 +33,7 @@ protected:
         const Swarm::Pose & pose);
     int solve_count = 0;
     int current_landmark_num = 0;
+    ceres::Problem * problem = nullptr;
 public:
     D2Estimator() {}
     void inputImu(IMUData data);

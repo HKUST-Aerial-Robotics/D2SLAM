@@ -40,7 +40,7 @@ bool D2Estimator::tryinitFirstPose(const VisualImageDescArray & frame) {
     
     printf("\033[0;32m[D2VINS::D2Estimator] Init pose with IMU: %s\n", last_odom.toStr().c_str());
     printf("\033[0;32m[D2VINS::D2Estimator] Gyro bias: %.3f %.3f %.3f\n", first_frame.Bg.x(), first_frame.Bg.y(), first_frame.Bg.z());
-    printf("\033[0;32m[D2VINS::D2Estimator] Acc  bias: %.3f %.3f %.3f\033[0;30m\n\n", first_frame.Ba.x(), first_frame.Ba.y(), first_frame.Ba.z());
+    printf("\033[0;32m[D2VINS::D2Estimator] Acc  bias: %.3f %.3f %.3f\033[0m\n\n", first_frame.Ba.x(), first_frame.Ba.y(), first_frame.Ba.z());
     return true;
 }
 
@@ -87,7 +87,7 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
     if (fabs(_imu[_imu.size()-1].t - _frame.stamp - state.td) > params->td_max_diff && frame_count > 10) {
         printf("\033[0;31m[D2VINS::D2Estimator] Too large time difference %.3f\n", _imu[_imu.size()-1].t - _frame.stamp - state.td);
         printf("\033[0;31m[D2VINS::D2Estimator] Prev frame  %.3f cur   %.3f td %.1fms\n", state.lastFrame().stamp + state.td, _frame.stamp + state.td, state.td*1000);
-        printf("\033[0;31m[D2VINS::D2Estimator] Imu t_start %.3f t_end %.3f num %d t_last %.3f\033[0;30m\n", _imu[0].t, _imu[_imu.size()-1].t, _imu.size(), imubuf[imubuf.size()-1].t);
+        printf("\033[0;31m[D2VINS::D2Estimator] Imu t_start %.3f t_end %.3f num %ld t_last %.3f\033[0m\n", _imu[0].t, _imu[_imu.size()-1].t, _imu.size(), imubuf[imubuf.size()-1].t);
     }
     VINSFrame frame(_frame, _imu, state.lastFrame());
     if (params->init_method == D2VINSConfig::INIT_POSE_IMU) {
@@ -97,7 +97,7 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
         auto pnp_init = initialFramePnP(_frame, state.lastFrame().odom.pose());
         if (!pnp_init.first) {
             //Use IMU
-            printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed, use IMU instead.\033[0;30m\n");
+            printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed, use IMU instead.\033[0m\n");
         } else {
             odom_imu.pose() = pnp_init.second;
         }
@@ -162,16 +162,17 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
 }
 
 void D2Estimator::solve() {
+    marginalizer = new Marginalizer(&state);
+    state.setMarginalizer(marginalizer);
     solve_count ++;
     state.preSolve();
-    ceres::Problem problem;
-    setupImuFactors(problem);
-    setupLandmarkFactors(problem);
-    setStateProperties(problem);
+    problem = new ceres::Problem();
+    setupImuFactors(*problem);
+    setupLandmarkFactors(*problem);
+    setStateProperties(*problem);
 
     ceres::Solver::Summary summary;
-    ceres::Solve(params->options, &problem, &summary);
-    // std::cout << summary.FullReport() << std::endl;
+    ceres::Solve(params->options, problem, &summary);
     std::cout << summary.BriefReport() << std::endl;
     state.syncFromState();
     last_odom = state.lastFrame().odom;
@@ -198,16 +199,7 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
         problem.AddResidualBlock(imu_factor, nullptr, 
             state.getPoseState(frame_a.frame_id), state.getSpdBiasState(frame_a.frame_id), 
             state.getPoseState(frame_b.frame_id), state.getSpdBiasState(frame_b.frame_id));
-        //Check the factor
-        // printf("[D2VINS::D2Estimator] Add IMU factor %d %d\n", frame_a.frame_id, frame_b.frame_id);
-        // printf("Preintegration: relative p %3.2f %3.2f %3.2f\n", pre_integrations[0].delta_p.x(), pre_integrations[0].delta_p.y(), pre_integrations[0].delta_p.z());
-        // printf("Preintegration: delta    q %3.2f %3.2f %3.2f %3.2f\n", pre_integrations[0].delta_q.w(), pre_integrations[0].delta_q.x(), pre_integrations[0].delta_q.y(), pre_integrations[0].delta_q.z());
-        // auto rp = frame_a.odom.pose().inverse()*frame_b.odom.pose();
-        // printf("current relative pose: %s\n", rp.toStr().c_str());
-        // std::vector<double*> params{state.getPoseState(frame_a.frame_id), state.getSpdBiasState(frame_a.frame_id), 
-        //     state.getPoseState(frame_b.frame_id), state.getSpdBiasState(frame_b.frame_id)};
-        // Matrix<double, 15, 1> residuals;
-        // imu_factor->testEvaluate(params, residuals.data(), nullptr);
+        marginalizer->addImuResidual(imu_factor, frame_a.frame_id, frame_b.frame_id);
     }
 }
 
@@ -247,6 +239,8 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                     state.getPoseState(lm.track[i].frame_id), 
                     state.getExtrinsicState(firstObs.camera_id),
                     state.getLandmarkState(lm_id));
+                marginalizer->addLandmarkResidual(f_lm, loss_function,
+                    firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_id);
                 // printf("[D2VINS::D2Estimator] Check landmark %d dep_init/mea %.2f %.2f frame %ld<->%ld\n", 
                 //     lm_id, 1/(*state.getLandmarkState(lm_id)), firstObs.depth, lm.track[0].frame_id, lm.track[i].frame_id);
                 // ProjectionTwoFrameOneCamFactorNoTD f_test(mea0, mea1, lm.track[i].depth);
@@ -257,12 +251,11 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
         }
         problem.SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
     }
-    // exit(0);
 
     //Check the measurements number of each keyframe
     for (auto i = 0; i < state.size(); i++) {
         if (keyframe_measurements[i] < params->min_measurements_per_keyframe) {
-            printf("\033[0;31m[D2VINS::D2Estimator] keyframe index %d frame_id %d has only %d measurements\033[0m\n", 
+            printf("\033[0;31m[D2VINS::D2Estimator] keyframe index %d frame_id %ld has only %d measurements\033[0m\n", 
                 i, state.getFrame(i).frame_id, keyframe_measurements[i]);
         }
     }

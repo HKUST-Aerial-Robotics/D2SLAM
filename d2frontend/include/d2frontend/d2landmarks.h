@@ -6,7 +6,7 @@
 namespace D2FrontEnd {
 
 typedef uint64_t FrameIdType;
-typedef int LandmarkIdType;
+typedef int64_t LandmarkIdType;
 
 enum LandmarkFlag {
     UNINITIALIZED = 0,

@@ -73,6 +73,14 @@ static Eigen::Matrix<typename Derived::Scalar, 4, 4> Qright(const Eigen::Quatern
     return ans;
 }
 
+template <typename Derived>
+Eigen::SparseMatrix<Derived> inverse(const Eigen::SparseMatrix<Derived> & A) {
+    Eigen::SparseMatrix<Derived> I(A.rows(), A.cols());
+    I.setIdentity();
+    Eigen::SimplicialLLT<Eigen::SparseMatrix<Derived>> solver;
+    solver.compute(A);
+    Eigen::SparseMatrix<Derived> A_inv = solver.solve(I);
+    return A_inv;
 }
-
+}
 }

@@ -2,6 +2,7 @@
 #include <d2vins/d2vins_params.hpp>
 #include <d2vins/d2vins_types.hpp>
 #include "../factors/integration_base.h"
+#include "marginalize.hpp"
 
 using namespace Eigen;
 namespace D2VINS {
@@ -49,6 +50,10 @@ int D2EstimatorState::getPoseIndex(FrameIdType frame_id) const {
 }
 
 double * D2EstimatorState::getPoseState(FrameIdType frame_id) const {
+    if (_frame_pose_state.find(frame_id) == _frame_pose_state.end()) {
+        printf("\033[0;31m[D2VINS::D2EstimatorState] frame %ld not found\033[0m\n", frame_id);
+        exit(-1);
+    }
     return _frame_pose_state.at(frame_id);
 }
 
@@ -64,6 +69,10 @@ double * D2EstimatorState::getLandmarkState(LandmarkIdType landmark_id) const {
     return lmanager.getLandmarkState(landmark_id);
 }
 
+FrameIdType D2EstimatorState::getLandmarkBaseFrame(LandmarkIdType landmark_id) const {
+    return lmanager.getLandmarkBaseFrame(landmark_id);
+}
+
 Swarm::Pose D2EstimatorState::getExtrinsic(int i) const {
     return extrinsic[i];
 }
@@ -76,10 +85,10 @@ void D2EstimatorState::clearFrame() {
     if (sld_win.size() >= 2 && !sld_win[sld_win.size() - 1]->is_keyframe) {
         //If last frame is not keyframe then remove it.
         popFrame(sld_win.size() - 1);
-    }
-
-    if (sld_win.size() >= params->max_sld_win_size) {
+    } else if (sld_win.size() >= params->max_sld_win_size) {
         if (sld_win[sld_win.size() - 2]->is_keyframe) {
+            std::set<FrameIdType> clear_frames{sld_win[0]->frame_id};
+            marginalizer->marginalize(clear_frames);
             popFrame(0);
         }
     }

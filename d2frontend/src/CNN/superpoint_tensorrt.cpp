@@ -104,7 +104,7 @@ SuperPointTensorRT::SuperPointTensorRT(std::string engine_path,
     m_InputSize = height*width;
     m_OutputTensors.push_back(outputTensorSemi);
     m_OutputTensors.push_back(outputTensorDesc);
-    std::cout << "Trying to init TRT engine of SuperPointTensorRT" << engine_path << std::endl;
+    std::cout << "Trying to init TRT engine of SuperPointTensorRT: " << engine_path << std::endl;
     init(engine_path);
 
     pca_comp_T = load_csv_mat_eigen(_pca_comp).transpose();

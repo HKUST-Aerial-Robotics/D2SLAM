@@ -5,6 +5,8 @@
 #include <Eigen/Dense>
 #include <d2vins/d2vins_params.hpp>
 
+// #define CHECK_RESIDUAL
+
 namespace D2VINS {
 class ProjectionTwoFrameOneCamFactorNoTD
 {
@@ -54,6 +56,7 @@ public:
         residual.x() = (pts_camera_j.x() * est_inv_dep_j) - pts_j.x();
         residual.y() = (pts_camera_j.y() * est_inv_dep_j) - pts_j.y();
 #endif
+#ifdef CHECK_RESIDUAL
         if (enable_check) {
             auto tmp  = qic * pts_camera_i + tic;
             printf("Qi:         : %.2f, %.2f, %.2f, %.2f\n", Qi.w(), Qi.x(), Qi.y(), Qi.z());
@@ -74,16 +77,16 @@ public:
             printf("pts_camera_j: %.2f, %.2f, %.2f\n", pts_camera_j(0), pts_camera_j(1), pts_camera_j(2));
             printf("resid_n_inf : %.2f, %.2f\n", residual(0), residual(1));
         }
-
+#endif
         residual = ProjectionTwoFrameOneCamFactor::sqrt_info * residual;
         if (enable_depth) {
             residuals[2] = (est_inv_dep_j - inv_dep_j) * dep_sqrt_inf;
         }
-
+#ifdef CHECK_RESIDUAL
         if (enable_check) {
             printf("resididual  : %.2f, %.2f\n", residual(0), residual(1));
         }
-
+#endif
         return true;
     }
 
