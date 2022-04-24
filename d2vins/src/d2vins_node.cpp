@@ -3,12 +3,12 @@
 #include "sensor_msgs/Imu.h"
 #include "estimator/d2estimator.hpp"
 
-#define BACKWARD_HAS_DW 1
-#include <backward.hpp>
-namespace backward
-{
-    backward::SignalHandling sh;
-}
+// #define BACKWARD_HAS_DW 1
+// #include <backward.hpp>
+// namespace backward
+// {
+//     backward::SignalHandling sh;
+// }
 
 using namespace D2VINS;
 class D2VINSNode :  public D2FrontEnd::D2Frontend

@@ -83,7 +83,6 @@ void Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
     //Clear previous states
     params_list.clear();
     _params.clear();
-    printf("[D2VINS] Marginalize: frame_id %ld\n", *remove_frame_ids.begin());
     //We first remove all factors that does not evolved frame
     int eff_residual_size = 0;
     for (auto it = residual_info_list.begin(); it != residual_info_list.end();) {
@@ -114,8 +113,8 @@ void Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
     auto eff_param_size = ret.first;
     auto remove_state_size = ret.second;
     int keep_state_size = eff_param_size - remove_state_size;
-    printf("[D2VINS::Marginalizer::marginalize] eff_param_size: %d, eff_residual_size: %d remove param size %d \n", 
-        eff_param_size, eff_residual_size, remove_state_size);
+    printf("[D2VINS::Marginalizer::marginalize] frame_id %ld eff_param_size: %d remove param size %d eff_residual_size: %d \n", 
+         *remove_frame_ids.begin(), eff_param_size, remove_state_size, eff_residual_size);
 
     //Then evaluate all residuals
     //Setup Jacobian
@@ -139,6 +138,11 @@ void Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
                 for (auto j = 0; j < param_size; j ++) {
                     triplet_list.push_back(Eigen::Triplet<state_type>(i0 + i, j0 + j, J_blk(i, j)));
                     // printf("J[%d, %d] = %f\n", i0 + i, j0 + j, J_blk(i, j));
+                    if (i0 + i >= eff_residual_size || j0 + j >= eff_param_size) {
+                        printf("J[%d, %d] = %f\n", i0 + i, j0 + j, J_blk(i, j));
+                        fflush(stdout);
+                        exit(0);
+                    }
                 }
             }
         }
@@ -157,20 +161,21 @@ void Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
     SparseMat H22 = H.block(keep_state_size, keep_state_size, remove_state_size, remove_state_size);
     SparseMat H22_inv = Utility::inverse(H22);
     SparseMat A = H11 - H12 * H22_inv * SparseMatrix<double>(H12.transpose());
-    auto b = residual_vec.segment(0, keep_state_size) - H12 * H22_inv * residual_vec.segment(keep_state_size, remove_state_size);
+    VectorXd b = residual_vec.segment(0, keep_state_size) - H12 * H22_inv * residual_vec.segment(keep_state_size, remove_state_size);
     printf("[D2VINS::Marginalizer] time cost %.1fms\n", tic.toc());
-
-    // printf("[D2VINS::Marginalizer] solve A time %.3fms\n", tic_j.toc());
-    // MatrixXd err = MatrixXd(H22)*MatrixXd(H22_inv) - MatrixXd::Identity(remove_state_size, remove_state_size);
-    // printf("[D2VINS::Marginalizer] H22*H22_inv - I: %.1e\n", err.norm()/H22.norm());
-    // fflush(stdout);
-    // exit(0);
-    // std::cout << "J" << J << std::endl;
-    // std::cout << "H" << H << std::endl;
-    // std::cout << "H22" << H22 << std::endl;
-    // std::cout << "H22_inv" << H22_inv << std::endl;
-    // std::cout << "H22*H22_inv" << I_ << std::endl;
-    // std::cout << "A" << A << std::endl;
+    // tic_j.tic();
+    auto linearized_jac = Utility::Linv(A, b);
+    // Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> solver;
+    // solver.compute(A);
+    // // b = solver.permutationP() * b;
+    // auto L = solver.derived().matrixL();
+    // std::cout << L << std::endl;
+    // auto linear_jac = L.toDense();
+    // std::cout << linear_jac << std::endl;
+    // printf("b rows %d cols %d L rows %d cols %d\n", b.rows(), b.cols(), L.rows(), L.cols());
+    // std::cout << L.toDense() << std::endl;
+    // L.toDense().solveInPlace(b);
+    // printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
 }
 
 std::pair<int, int> Marginalizer::sortParams() {

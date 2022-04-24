@@ -134,7 +134,7 @@ void D2EstimatorState::syncFromState() {
         }
     }
     lmanager.syncState(extrinsic, frame_db);
-    outlierRejection();
+    // outlierRejection();
 }
 
 void D2EstimatorState::outlierRejection() {

@@ -82,5 +82,16 @@ Eigen::SparseMatrix<Derived> inverse(const Eigen::SparseMatrix<Derived> & A) {
     Eigen::SparseMatrix<Derived> A_inv = solver.solve(I);
     return A_inv;
 }
+
+template <typename Derived>
+Eigen::MatrixXd Linv(const Eigen::SparseMatrix<Derived> & A, VectorXd & b) {
+    //Now construt the margin factors.
+    Eigen::SimplicialLLT<Eigen::SparseMatrix<Derived>> solver;
+    solver.compute(A);
+    auto L = solver.matrixL();
+    L.solveInPlace(b);
+    return Eigen::MatrixXd(1,1);
+}
+
 }
 }
