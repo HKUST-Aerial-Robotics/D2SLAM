@@ -51,8 +51,6 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
         Eigen::Vector3d Baj(parameters[3][3], parameters[3][4], parameters[3][5]);
         Eigen::Vector3d Bgj(parameters[3][6], parameters[3][7], parameters[3][8]);
 
-        auto Jv2x_i = Utility::jacTan2q(Qi);
-        auto Jv2x_j = Utility::jacTan2q(Qj);
 //Eigen::Matrix<double, 15, 15> Fd;
 //Eigen::Matrix<double, 15, 12> Gd;
 
@@ -115,16 +113,16 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
                 jacobian_pose_i.setZero();
 
                 jacobian_pose_i.block<3, 3>(O_P, O_P) = -Qi.inverse().toRotationMatrix();
-                jacobian_pose_i.block<3, 4>(O_P, O_R) = Utility::skewSymmetric(Qi.inverse() * (0.5 * Gravity * sum_dt * sum_dt + Pj - Pi - Vi * sum_dt)) * Jv2x_i;
+                jacobian_pose_i.block<3, 3>(O_P, O_R) = Utility::skewSymmetric(Qi.inverse() * (0.5 * Gravity * sum_dt * sum_dt + Pj - Pi - Vi * sum_dt));
 
 #if 0
             jacobian_pose_i.block<3, 3>(O_R, O_R) = -(Qj.inverse() * Qi).toRotationMatrix();
 #else
                 Eigen::Quaterniond corrected_delta_q = pre_integration->delta_q * Utility::deltaQ(dq_dbg * (Bgi - pre_integration->linearized_bg));
-                jacobian_pose_i.block<3, 4>(O_R, O_R) = -(Utility::Qleft(Qj.inverse() * Qi) * Utility::Qright(corrected_delta_q)).bottomRightCorner<3, 3>() * Jv2x_i;
+                jacobian_pose_i.block<3, 3>(O_R, O_R) = -(Utility::Qleft(Qj.inverse() * Qi) * Utility::Qright(corrected_delta_q)).bottomRightCorner<3, 3>();
 #endif
 
-                jacobian_pose_i.block<3, 4>(O_V, O_R) = Utility::skewSymmetric(Qi.inverse() * (Gravity * sum_dt + Vj - Vi)) * Jv2x_i;
+                jacobian_pose_i.block<3, 3>(O_V, O_R) = Utility::skewSymmetric(Qi.inverse() * (Gravity * sum_dt + Vj - Vi));
 
                 jacobian_pose_i = sqrt_info * jacobian_pose_i;
 
@@ -175,7 +173,7 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
             jacobian_pose_j.block<3, 3>(O_R, O_R) = Eigen::Matrix3d::Identity();
 #else
                 Eigen::Quaterniond corrected_delta_q = pre_integration->delta_q * Utility::deltaQ(dq_dbg * (Bgi - pre_integration->linearized_bg));
-                jacobian_pose_j.block<3, 4>(O_R, O_R) = Utility::Qleft(corrected_delta_q.inverse() * Qi.inverse() * Qj).bottomRightCorner<3, 3>()*Jv2x_j;
+                jacobian_pose_j.block<3, 3>(O_R, O_R) = Utility::Qleft(corrected_delta_q.inverse() * Qi.inverse() * Qj).bottomRightCorner<3, 3>();
 #endif
 
                 jacobian_pose_j = sqrt_info * jacobian_pose_j;
