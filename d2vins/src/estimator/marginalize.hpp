@@ -112,6 +112,9 @@ protected:
     void addExtrinsicParam(int camera_id);
     std::pair<int, int> sortParams();
     void addParam(state_type * param, ParamsType type, FrameIdType _id, bool is_remove);
+    
+    VectorXd evaluate(SparseMat & J, int eff_residual_size, int eff_param_size);
+    int filterResiduals();
 public:
     Marginalizer(D2EstimatorState * _state): state(_state) {}
     void addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,

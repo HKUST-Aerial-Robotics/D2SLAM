@@ -53,6 +53,8 @@ add_library(${PROJECT_NAME}_estimator
   src/estimator/d2vinsstate.cpp
   src/estimator/marginalize.cpp
   src/factors/projectionTwoFrameOneCamFactor.cpp
+  src/factors/prior_factor.cpp
+  src/factors/pose_local_parameterization.cpp
 )
 
 add_dependencies(${PROJECT_NAME}_MSCKF ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

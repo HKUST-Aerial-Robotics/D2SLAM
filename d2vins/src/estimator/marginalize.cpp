@@ -54,7 +54,7 @@ void Marginalizer::addLandmarkStateParam(LandmarkIdType landmark_id) {
 void Marginalizer::addExtrinsicParam(int camera_id) {
     auto _ptr = state->getExtrinsicState(camera_id);
     addParam(_ptr, EXTRINSIC, camera_id, false);
-}
+}   
 
 void Marginalizer::addParam(state_type * pointer, ParamsType type, FrameIdType _id, bool is_remove) {
     if (_params.find(pointer) == _params.end()) {
@@ -76,18 +76,56 @@ void Marginalizer::addParam(state_type * pointer, ParamsType type, FrameIdType _
         } else {
             param.size = POS_SIZE;
         }
+    } else if (type == POSE) {
+        param.size = POSE_SIZE;
+    } else if (type == EXTRINSIC) {
+        param.size = POSE_SIZE;
+    } else {
+        printf("Unknown param type\n");
+        exit(1);
     }
     _params[pointer] = param;
 }
 
+VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_param_size) {
+    //Then evaluate all residuals
+    //Setup Jacobian
+    //row: sort by residual_info_list
+    //col: sort by params_list
+    int cul_res_size = 0;
+    std::vector<Eigen::Triplet<state_type>> triplet_list;
+    VectorXd residual_vec(eff_residual_size);
+    for (auto info : residual_info_list) {
+        info->Evaluate(state);
+        auto params = info->paramsList(state);
+        auto residual_size = info->residualSize();
+        residual_vec.segment(cul_res_size, residual_size) = info->residuals;
+        for (auto param_blk_i = 0; param_blk_i < params.size(); param_blk_i ++) {
+            auto & J_blk = info->jacobians[param_blk_i];
+            //Place this J to row: cul_res_size, col: param_indices
+            auto i0 = cul_res_size;
+            auto j0 = _params.at(params[param_blk_i].first).index;
+            auto param_size = params[param_blk_i].second;
+            for (auto i = 0; i < residual_size; i ++) {
+                for (auto j = 0; j < param_size; j ++) {
+                    triplet_list.push_back(Eigen::Triplet<state_type>(i0 + i, j0 + j, J_blk(i, j)));
+                    // printf("J[%d, %d] = %f\n", i0 + i, j0 + j, J_blk(i, j));
+                    if (i0 + i >= eff_residual_size || j0 + j >= eff_param_size) {
+                        printf("J0 %d\n", j0);
+                        printf("J[%d, %d] = %f size %d, %d\n", i0 + i, j0 + j, J_blk(i, j), eff_residual_size, eff_param_size);
+                        fflush(stdout);
+                        exit(0);
+                    }
+                }
+            }
+        }
+        cul_res_size += residual_size;
+    }
+    J.setFromTriplets(triplet_list.begin(), triplet_list.end());
+    return residual_vec;
+}
 
-void Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
-    TicToc tic;
-    remove_frame_ids = _remove_frame_ids;
-    //Clear previous states
-    params_list.clear();
-    _params.clear();
-    //We first remove all factors that does not evolved frame
+int Marginalizer::filterResiduals() {
     int eff_residual_size = 0;
     for (auto it = residual_info_list.begin(); it != residual_info_list.end();) {
         if ((*it)->relavant(remove_frame_ids)) {
@@ -113,68 +151,45 @@ void Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
             it = residual_info_list.erase(it);
         }
     }
+    return eff_residual_size;
+}
+
+void Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
+    TicToc tic;
+    remove_frame_ids = _remove_frame_ids;
+    //Clear previous states
+    params_list.clear();
+    _params.clear();
+    //We first remove all factors that does not evolved frame
+
+    auto eff_residual_size = filterResiduals();
+    
     auto ret = sortParams(); //sort the parameters
+    
     auto eff_param_size = ret.first;
     auto remove_state_size = ret.second;
     int keep_state_size = eff_param_size - remove_state_size;
+
     printf("[D2VINS::Marginalizer::marginalize] frame_id %ld eff_param_size: %d remove param size %d eff_residual_size: %d \n", 
          *remove_frame_ids.begin(), eff_param_size, remove_state_size, eff_residual_size);
-
-    //Then evaluate all residuals
-    //Setup Jacobian
-    //row: sort by residual_info_list
-    //col: sort by params_list
-    int cul_res_size = 0;
-    std::vector<Eigen::Triplet<state_type>> triplet_list;
-    VectorXd residual_vec(eff_residual_size);
-    for (auto info : residual_info_list) {
-        info->Evaluate(state);
-        auto params = info->paramsList(state);
-        auto residual_size = info->residualSize();
-        residual_vec.segment(cul_res_size, residual_size) = info->residuals;
-        for (auto param_blk_i = 0; param_blk_i < params.size(); param_blk_i ++) {
-            auto & J_blk = info->jacobians[param_blk_i];
-            //Place this J to row: cul_res_size, col: param_indices
-            auto i0 = cul_res_size;
-            auto j0 = _params.at(params[param_blk_i].first).index;
-            auto param_size = params[param_blk_i].second;
-            for (auto i = 0; i < residual_size; i ++) {
-                for (auto j = 0; j < param_size; j ++) {
-                    triplet_list.push_back(Eigen::Triplet<state_type>(i0 + i, j0 + j, J_blk(i, j)));
-                    // printf("J[%d, %d] = %f\n", i0 + i, j0 + j, J_blk(i, j));
-                    if (i0 + i >= eff_residual_size || j0 + j >= eff_param_size) {
-                        printf("J[%d, %d] = %f\n", i0 + i, j0 + j, J_blk(i, j));
-                        fflush(stdout);
-                        exit(0);
-                    }
-                }
-            }
-        }
-        cul_res_size += residual_size;
-    }
-
-    TicToc tic_j;
     SparseMat J(eff_residual_size, eff_param_size);
-    J.setFromTriplets(triplet_list.begin(), triplet_list.end());
+    auto residual_vec = evaluate(J, eff_residual_size, eff_param_size);
+    
     SparseMat H = SparseMatrix<double>(J.transpose())*J;
-    // printf("[D2VINS::Marginalizer] J^TJ time %.3fms\n", tic_j.toc());
-
     SparseMat H11 = H.block(0, 0, keep_state_size, keep_state_size);
     SparseMat H12 = H.block(0, keep_state_size, keep_state_size, remove_state_size);
     SparseMat H22 = H.block(keep_state_size, keep_state_size, remove_state_size, remove_state_size);
     SparseMat H22_inv = Utility::inverse(H22);
     SparseMat A = H11 - H12 * H22_inv * SparseMatrix<double>(H12.transpose());
     VectorXd b = residual_vec.segment(0, keep_state_size) - H12 * H22_inv * residual_vec.segment(keep_state_size, remove_state_size);
-    tic_j.tic();
+    TicToc tic_j;
     auto linearized_jac = toJacRes(A, b);
     printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
     printf("[D2VINS::Marginalizer] time cost %.1fms\n", tic.toc());
-
 }
 
 std::pair<int, int> Marginalizer::sortParams() {
     int remove_size = 0;
-    int total_size = 0;
     params_list.clear();
     for (auto it: _params) {
         params_list.push_back(it.second);
@@ -189,12 +204,12 @@ std::pair<int, int> Marginalizer::sortParams() {
         auto & _param = _params.at(params_list[i].pointer);
         _param.index = cul_param_size;
         cul_param_size += _param.size;
+        printf("Param %p type %d size %d index %d cul_param_size %d\n", params_list[i].pointer, _param.type, _param.size, _param.index, cul_param_size);
         if (_param.is_remove) {
             remove_size += _param.size;
         }
-        total_size += _param.size;
     }
-    return make_pair(total_size, remove_size);
+    return make_pair(cul_param_size, remove_size);
 }
 
 void ResidualInfo::Evaluate(std::vector<double*> params) {
