@@ -1,7 +1,11 @@
 #include "marginalize.hpp"
 #include <d2vins/utils.hpp>
+#include "../factors/prior_factor.h"
 
 namespace D2VINS {
+
+MatrixXd toJacRes(const SparseMat & A, VectorXd & b);
+
 void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
     FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id) {
     auto * info = new LandmarkTwoFrameOneCamResInfo();
@@ -155,27 +159,17 @@ void Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
     SparseMat H = SparseMatrix<double>(J.transpose())*J;
     // printf("[D2VINS::Marginalizer] J^TJ time %.3fms\n", tic_j.toc());
 
-    tic_j.tic();
     SparseMat H11 = H.block(0, 0, keep_state_size, keep_state_size);
     SparseMat H12 = H.block(0, keep_state_size, keep_state_size, remove_state_size);
     SparseMat H22 = H.block(keep_state_size, keep_state_size, remove_state_size, remove_state_size);
     SparseMat H22_inv = Utility::inverse(H22);
     SparseMat A = H11 - H12 * H22_inv * SparseMatrix<double>(H12.transpose());
     VectorXd b = residual_vec.segment(0, keep_state_size) - H12 * H22_inv * residual_vec.segment(keep_state_size, remove_state_size);
+    tic_j.tic();
+    auto linearized_jac = toJacRes(A, b);
+    printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
     printf("[D2VINS::Marginalizer] time cost %.1fms\n", tic.toc());
-    // tic_j.tic();
-    auto linearized_jac = Utility::Linv(A, b);
-    // Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> solver;
-    // solver.compute(A);
-    // // b = solver.permutationP() * b;
-    // auto L = solver.derived().matrixL();
-    // std::cout << L << std::endl;
-    // auto linear_jac = L.toDense();
-    // std::cout << linear_jac << std::endl;
-    // printf("b rows %d cols %d L rows %d cols %d\n", b.rows(), b.cols(), L.rows(), L.cols());
-    // std::cout << L.toDense() << std::endl;
-    // L.toDense().solveInPlace(b);
-    // printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
+
 }
 
 std::pair<int, int> Marginalizer::sortParams() {
@@ -264,5 +258,32 @@ void LandmarkTwoFrameOneCamResInfo::Evaluate(D2EstimatorState * state) {
     ((ResidualInfo*)this)->Evaluate(params);
 }
 
+
+class MyLLT : public Eigen::SimplicialLLT<Eigen::SparseMatrix<double>, Eigen::Lower, Eigen::NaturalOrdering<int>> {
+public:
+    MatrixXd matrixLDense() const {
+        eigen_assert(Base::m_factorizationIsOk && "Simplicial LLT not factorized");
+        return MatrixXd(Base::m_matrix);
+    }
+    void solveLb(VectorXd & b) {
+      Traits::getL(Base::m_matrix).solveInPlace(b);
+    }
+};
+
+MatrixXd toJacRes(const SparseMat & A, VectorXd & b) {
+    // Ideally we should use sparse MyLLT for this, but it has some unknown bug. So we use a dense version.
+    // auto ret = A.toDense();
+    // MyLLT solver;
+    // solver.compute(A);
+    // assert(solver.info() == Eigen::Success && "LLT failed");
+    // auto L = solver.matrixLDense();
+    // printf("b rows %d cols %d L rows %d cols %d\n", b.rows(), b.cols(), L.rows(), L.cols());
+    // solver.solveLb(b);
+    // fflush(stdout);
+    auto Adense = A.toDense();
+    LLT<MatrixXd> llt(Adense);
+    llt.matrixL().solveInPlace(b);
+    return llt.matrixL();
+}
 
 }

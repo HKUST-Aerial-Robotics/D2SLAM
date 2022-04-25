@@ -79,18 +79,19 @@ Eigen::SparseMatrix<Derived> inverse(const Eigen::SparseMatrix<Derived> & A) {
     I.setIdentity();
     Eigen::SimplicialLLT<Eigen::SparseMatrix<Derived>> solver;
     solver.compute(A);
+    assert(solver.info() == Eigen::Success && "LLT failed");
     Eigen::SparseMatrix<Derived> A_inv = solver.solve(I);
     return A_inv;
 }
 
 template <typename Derived>
-Eigen::MatrixXd Linv(const Eigen::SparseMatrix<Derived> & A, VectorXd & b) {
-    //Now construt the margin factors.
-    Eigen::SimplicialLLT<Eigen::SparseMatrix<Derived>> solver;
-    solver.compute(A);
-    auto L = solver.matrixL();
-    L.solveInPlace(b);
-    return Eigen::MatrixXd(1,1);
+static Eigen::Matrix<typename Derived::Scalar, 3, 4> jacTan2q(const Eigen::QuaternionBase<Derived> &q) {
+    //Convert the quaternion from the tangent space to the real quaternion
+    Eigen::Matrix<typename Derived::Scalar, 3, 4> ans;
+    ans << q.w(), -q.z(), q.y(), -q.x(),
+        q.z(), q.w(), -q.x(), -q.y(),
+        -q.y(), q.x(), q.w(), -q.z();
+    return ans;
 }
 
 }

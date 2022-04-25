@@ -177,6 +177,8 @@ void D2Estimator::solve() {
     state.syncFromState();
     last_odom = state.lastFrame().odom;
 
+    std::cout << summary.FullReport() << std::endl;
+
     printf("[D2VINS] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
         current_landmark_num, last_odom.toStr().c_str(), state.td*1000, summary.total_time_in_seconds*1000);
 
@@ -188,6 +190,7 @@ void D2Estimator::solve() {
     if (params->debug_print_states) {
         state.printSldWin();
     }
+    // exit(0);
 }
 
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {
@@ -208,6 +211,13 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     current_landmark_num = lms.size();
     auto loss_function = new ceres::HuberLoss(1.0);    
     std::vector<int> keyframe_measurements(state.size(), 0);
+    
+    if (params->estimate_td) {
+        printf("Manual diff on landmarks\n");
+    } else {
+        printf("Auto diff on landmarks\n");
+    }
+
     for (auto & lm : lms) {
         auto lm_id = lm.landmark_id;
         auto & firstObs = lm.track[0];

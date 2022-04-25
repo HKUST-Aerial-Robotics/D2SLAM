@@ -2,10 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(d2vins)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
-set(CMAKE_CXX_FLAGS_RELEASE "-g -O0 -Wall -Wno-deprecated-declarations -Wno-format -Wno-reorder")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wno-deprecated-declarations -Wno-format -Wno-reorder")
-set(CMAKE_CXX_FLAGS "-g -O0")
+add_compile_options(-g -O3 -Wall -Wno-deprecated-declarations -Wno-format -Wno-reorder)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
