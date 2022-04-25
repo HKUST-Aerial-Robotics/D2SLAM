@@ -29,9 +29,71 @@ struct ParamInfo {
     bool is_remove = false;
     ParamsType type;
     FrameIdType id;
+    ParamInfo() {}
 };
 
 class ResidualInfo {
+protected:
+    ParamInfo paramInfoFramePose(D2EstimatorState * state, FrameIdType id) const {
+        ParamInfo info;
+        info.pointer = state->getPoseState(id);
+        info.index = -1;
+        info.size = POSE_SIZE;
+        info.eff_size = POSE_EFF_SIZE;
+        info.type = POSE;
+        info.id = id;
+        return info;
+    }
+
+    ParamInfo paramInfoExtrinsic(D2EstimatorState * state, int camera_id) const {
+        ParamInfo info;
+        info.pointer = state->getExtrinsicState(camera_id);
+        info.index = -1;
+        info.size = POSE_SIZE;
+        info.eff_size = POSE_EFF_SIZE;
+        info.type = POSE;
+        info.id = camera_id;
+        return info;
+    }
+
+    ParamInfo paramInfoLandmark(D2EstimatorState * state, int landmark_id) const {
+        ParamInfo info;
+        info.pointer = state->getLandmarkState(landmark_id);
+        info.index = -1;
+        if (params->landmark_param == D2VINS::D2VINSConfig::LM_INV_DEP) {
+            info.size = INV_DEP_SIZE;
+            info.eff_size = INV_DEP_SIZE;
+        } else {
+            info.size = POS_SIZE;
+            info.eff_size = POS_SIZE;
+        }
+        info.type = LANDMARK;
+        info.id = landmark_id;
+        return info;
+    }
+
+    ParamInfo paramInfoSpeedBias(D2EstimatorState * state, FrameIdType id) const {
+        ParamInfo info;
+        info.pointer = state->getSpdBiasState(id);
+        info.index = -1;
+        info.size = FRAME_SPDBIAS_SIZE;
+        info.eff_size = FRAME_SPDBIAS_SIZE;
+        info.type = SPEED_BIAS;
+        info.id = id;
+        return info;
+    }
+
+    ParamInfo paramInfoTd(D2EstimatorState * state, int camera_id) const {
+        ParamInfo info;
+        info.pointer = state->getTdState(camera_id);
+        info.index = -1;
+        info.size = TD_SIZE;
+        info.eff_size = TD_SIZE;
+        info.type = TD;
+        info.id = -1;
+        return info;
+    }
+
 public:
     int parameter_size;
     ResidualType residual_type;
@@ -43,7 +105,7 @@ public:
     virtual void Evaluate(std::vector<state_type*>params);
     virtual void Evaluate(D2EstimatorState * state) = 0;
     virtual bool relavant(const std::set<FrameIdType> & frame_id) const = 0;
-    virtual std::vector<std::pair<state_type*, int>> paramsList(D2EstimatorState * state) const = 0;
+    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const = 0;
     int residualSize() const {
         return cost_function->num_residuals();
     }
@@ -63,16 +125,12 @@ public:
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
     }
-    virtual std::vector<std::pair<state_type*, int>> paramsList(D2EstimatorState * state) const override {
-        std::vector<std::pair<state_type*, int>> params_list;
-        params_list.push_back(make_pair(state->getPoseState(frame_ida), POSE_SIZE));
-        params_list.push_back(make_pair(state->getPoseState(frame_idb), POSE_SIZE));
-        params_list.push_back(make_pair(state->getExtrinsicState(camera_id), POSE_SIZE));
-        if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-            params_list.push_back(make_pair(state->getLandmarkState(landmark_id), INV_DEP_SIZE));
-        } else {
-            params_list.push_back(make_pair(state->getLandmarkState(landmark_id), POS_SIZE));
-        }
+    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
+        std::vector<ParamInfo> params_list;
+        params_list.push_back(paramInfoFramePose(state, frame_ida));
+        params_list.push_back(paramInfoFramePose(state, frame_idb));
+        params_list.push_back(paramInfoExtrinsic(state, camera_id));
+        params_list.push_back(paramInfoLandmark(state, landmark_id));
         return params_list;
     }
 };
@@ -83,17 +141,13 @@ public:
         residual_type = ResidualType::LandmarkTwoFrameOneCamResidualTD;
     }
     virtual void Evaluate(D2EstimatorState * state) override;
-    virtual std::vector<std::pair<state_type*, int>> paramsList(D2EstimatorState * state) const override {
-        std::vector<std::pair<state_type*, int>> params_list;
-        params_list.push_back(make_pair(state->getPoseState(frame_ida), POSE_SIZE));
-        params_list.push_back(make_pair(state->getPoseState(frame_idb), POSE_SIZE));
-        params_list.push_back(make_pair(state->getExtrinsicState(camera_id), POSE_SIZE));
-        if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-            params_list.push_back(make_pair(state->getLandmarkState(landmark_id), INV_DEP_SIZE));
-        } else {
-            params_list.push_back(make_pair(state->getLandmarkState(landmark_id), POS_SIZE));
-        }
-        params_list.push_back(make_pair(state->getTdState(camera_id), 1));
+    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
+        std::vector<ParamInfo> params_list;
+        params_list.push_back(paramInfoFramePose(state, frame_ida));
+        params_list.push_back(paramInfoFramePose(state, frame_idb));
+        params_list.push_back(paramInfoExtrinsic(state, camera_id));
+        params_list.push_back(paramInfoLandmark(state, landmark_id));
+        params_list.push_back(paramInfoTd(state, camera_id));
         return params_list;
     }
 };
@@ -108,12 +162,12 @@ public:
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
     }
-    virtual std::vector<std::pair<double*, int>> paramsList(D2EstimatorState * state) const override {
-        std::vector<std::pair<double*, int>> params_list;
-        params_list.push_back(make_pair(state->getPoseState(frame_ida), POSE_SIZE));
-        params_list.push_back(make_pair(state->getSpdBiasState(frame_ida), FRAME_SPDBIAS_SIZE));
-        params_list.push_back(make_pair(state->getPoseState(frame_idb), POSE_SIZE));
-        params_list.push_back(make_pair(state->getSpdBiasState(frame_idb), FRAME_SPDBIAS_SIZE));
+    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
+        std::vector<ParamInfo> params_list;
+        params_list.push_back(paramInfoFramePose(state, frame_ida));
+        params_list.push_back(paramInfoSpeedBias(state, frame_ida));
+        params_list.push_back(paramInfoFramePose(state, frame_idb));
+        params_list.push_back(paramInfoSpeedBias(state, frame_idb));
         return params_list;
     }
 };
@@ -132,12 +186,12 @@ protected:
     std::map<state_type*, ParamInfo> _params; // indx of parameters in params vector as sortd by params_list
 
 
-    void addFramePoseParams(FrameIdType frame_id);
-    void addLandmarkStateParam(LandmarkIdType frame_id);
-    void addExtrinsicParam(int camera_id);
-    void addTdStateParam(int camera_id);
+    // void addFramePoseParams(FrameIdType frame_id);
+    // void addLandmarkStateParam(LandmarkIdType frame_id);
+    // void addExtrinsicParam(int camera_id);
+    // void addTdStateParam(int camera_id);
+    // void addParam(state_type * param, ParamsType type, FrameIdType _id, bool is_remove);
     std::pair<int, int> sortParams();
-    void addParam(state_type * param, ParamsType type, FrameIdType _id, bool is_remove);
     
     VectorXd evaluate(SparseMat & J, int eff_residual_size, int eff_param_size);
     int filterResiduals();

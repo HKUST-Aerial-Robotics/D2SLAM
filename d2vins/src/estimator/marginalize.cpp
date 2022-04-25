@@ -41,71 +41,6 @@ void Marginalizer::addImuResidual(ceres::CostFunction * cost_function,  FrameIdT
     residual_info_list.push_back(info);
 }
 
-void Marginalizer::addFramePoseParams(FrameIdType frame_id) {
-    auto _ptr = state->getPoseState(frame_id);
-    auto _ptr_spd_bias = state->getSpdBiasState(frame_id);
-    bool is_remove = false;
-    if (remove_frame_ids.find(frame_id) != remove_frame_ids.end()) {
-        is_remove = true;
-    }
-    addParam(_ptr, POSE, frame_id, is_remove);
-    addParam(_ptr_spd_bias, SPEED_BIAS, frame_id, is_remove);
-}
-
-void Marginalizer::addTdStateParam(int camera_id) {
-    auto _ptr = state->getTdState(camera_id);
-    addParam(_ptr, TD, camera_id, false);
-}
-
-void Marginalizer::addLandmarkStateParam(LandmarkIdType landmark_id) {
-    auto _ptr = state->getLandmarkState(landmark_id);
-    FrameIdType base_frame_id = state->getLandmarkBaseFrame(landmark_id);
-    bool is_remove = false;
-    if (remove_frame_ids.find(base_frame_id) != remove_frame_ids.end()) {
-        is_remove = true;
-        // printf("Landmark %ld inv_dep will be removed\n", landmark_id);
-    }
-    addParam(_ptr, LANDMARK, landmark_id, is_remove);
-}
-
-void Marginalizer::addExtrinsicParam(int camera_id) {
-    auto _ptr = state->getExtrinsicState(camera_id);
-    addParam(_ptr, EXTRINSIC, camera_id, false);
-}   
-
-void Marginalizer::addParam(state_type * pointer, ParamsType type, FrameIdType _id, bool is_remove) {
-    if (_params.find(pointer) == _params.end()) {
-        // printf("Add param block %p\n", pointer);
-    } else {
-        return;
-    }
-
-    ParamInfo param;
-    param.pointer = pointer;
-    param.type = type;
-    param.id = _id;
-    param.is_remove = is_remove;
-    if (type == SPEED_BIAS) {
-        param.size = FRAME_SPDBIAS_SIZE;
-    } else if (type == LANDMARK) {
-        if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-            param.size = INV_DEP_SIZE;
-        } else {
-            param.size = POS_SIZE;
-        }
-    } else if (type == POSE) {
-        param.size = POSE_SIZE;
-    } else if (type == EXTRINSIC) {
-        param.size = POSE_SIZE;
-    } else if (type == TD) {
-        param.size = 1;
-    } else {
-        printf("Unknown param type\n");
-        exit(1);
-    }
-    _params[pointer] = param;
-}
-
 VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_param_size) {
     //Then evaluate all residuals
     //Setup Jacobian
@@ -123,10 +58,12 @@ VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_pa
             auto & J_blk = info->jacobians[param_blk_i];
             //Place this J to row: cul_res_size, col: param_indices
             auto i0 = cul_res_size;
-            auto j0 = _params.at(params[param_blk_i].first).index;
-            auto param_size = params[param_blk_i].second;
+            auto j0 = _params.at(params[param_blk_i].pointer).index;
+            auto param_size = params[param_blk_i].size;
+            auto blk_eff_param_size = params[param_blk_i].eff_size;
             for (auto i = 0; i < residual_size; i ++) {
-                for (auto j = 0; j < param_size; j ++) {
+                for (auto j = 0; j < blk_eff_param_size; j ++) {
+                    //We only copy the eff param part, that is: on tangent space.
                     triplet_list.push_back(Eigen::Triplet<state_type>(i0 + i, j0 + j, J_blk(i, j)));
                     // printf("J[%d, %d] = %f\n", i0 + i, j0 + j, J_blk(i, j));
                     if (i0 + i >= eff_residual_size || j0 + j >= eff_param_size) {
@@ -149,28 +86,22 @@ int Marginalizer::filterResiduals() {
     for (auto it = residual_info_list.begin(); it != residual_info_list.end();) {
         if ((*it)->relavant(remove_frame_ids)) {
             eff_residual_size += (*it)->residualSize();
-            if ((*it)->residual_type == ResidualType::IMUResidual) {
-                auto info = static_cast<ImuResInfo*>(*it);
-                addFramePoseParams(info->frame_ida);
-                addFramePoseParams(info->frame_idb);
-                // printf("Adding residual of IMU %ld<->%ld\n", info->frame_ida, info->frame_idb);
-            } else if ((*it)->residual_type == ResidualType::LandmarkTwoFrameOneCamResidual) {
-                auto info = static_cast<LandmarkTwoFrameOneCamResInfo*>(*it);
-                // printf("Adding landmark of %ld<->%ld\n", info->frame_ida, info->frame_idb);
-                addFramePoseParams(info->frame_ida);
-                addFramePoseParams(info->frame_idb);
-                addExtrinsicParam(info->camera_id);
-                addLandmarkStateParam(info->landmark_id);
-            } else if ((*it)->residual_type == ResidualType::LandmarkTwoFrameOneCamResidualTD) {
-                auto info = static_cast<LandmarkTwoFrameOneCamResInfoTD*>(*it);
-                addFramePoseParams(info->frame_ida);
-                addFramePoseParams(info->frame_idb);
-                addExtrinsicParam(info->camera_id);
-                addLandmarkStateParam(info->landmark_id);
-                addTdStateParam(info->camera_id);
-            }
-            else {
-                printf("Unknown residual type\n");
+            auto param_list = (*it)->paramsList(state);
+            for (auto param : param_list) {
+                //Check if param should be remove
+                bool is_remove = false;
+                if ((param.type == POSE || param.type == SPEED_BIAS) && remove_frame_ids.find(param.id) != remove_frame_ids.end()) {
+                    is_remove = true;
+                }
+                if (param.type == LANDMARK) {
+                    FrameIdType base_frame_id = state->getLandmarkBaseFrame(param.id);
+                    bool is_remove = false;
+                    if (remove_frame_ids.find(base_frame_id) != remove_frame_ids.end()) {
+                        is_remove = true;
+                    }
+                }
+                param.is_remove = is_remove;
+                _params[param.pointer] = param;
             }
             it++;
         } else {
@@ -226,14 +157,14 @@ std::pair<int, int> Marginalizer::sortParams() {
         return a.is_remove < b.is_remove;
     });
 
-    int cul_param_size = 0;
+    int cul_param_size = 0; //here on tangent space
     for (unsigned i = 0; i < params_list.size(); i++) {
         auto & _param = _params.at(params_list[i].pointer);
         _param.index = cul_param_size;
-        cul_param_size += _param.size;
+        cul_param_size += _param.eff_size;
         // printf("Param %p type %d size %d index %d cul_param_size %d\n", params_list[i].pointer, _param.type, _param.size, _param.index, cul_param_size);
         if (_param.is_remove) {
-            remove_size += _param.size;
+            remove_size += _param.eff_size;
         }
     }
     return make_pair(cul_param_size, remove_size);
