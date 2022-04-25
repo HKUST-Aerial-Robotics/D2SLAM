@@ -5,6 +5,7 @@
 #include "../factors/depth_factor.h"
 #include "../factors/projectionTwoFrameOneCamFactor.h"
 #include "../factors/projectionTwoFrameOneCamFactorNoTD.h"
+#include "../factors/pose_local_parameterization.h"
 #include <d2frontend/utils.h>
 
 namespace D2VINS {
@@ -138,21 +139,23 @@ void D2Estimator::inputImage(VisualImageDescArray & _frame) {
 }
 
 void D2Estimator::setStateProperties(ceres::Problem & problem) {
-    ceres::EigenQuaternionManifold quat_manifold;
-    ceres::EuclideanManifold<3> euc_manifold;
-    auto pose_manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
-   
+    // ceres::EigenQuaternionManifold quat_manifold;
+    // ceres::EuclideanManifold<3> euc_manifold;
+    // auto pose_manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
+    auto pose_local_param = new PoseLocalParameterization;
     //set LocalParameterization
     for (size_t i = 0; i < state.size(); i ++ ) {
         auto & frame_a = state.getFrame(i);
-        problem.SetManifold(state.getPoseState(frame_a.frame_id), pose_manifold);
+        // problem.SetManifold(state.getPoseState(frame_a.frame_id), pose_manifold);
+        problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
     }
 
     for (int i = 0; i < params->camera_num; i ++) {
         if (!params->estimate_extrinsic) {
             problem.SetParameterBlockConstant(state.getExtrinsicState(i));
         } else {
-            problem.SetManifold(state.getExtrinsicState(i), pose_manifold);
+            // problem.SetManifold(state.getExtrinsicState(i), pose_manifold);
+            problem.SetParameterization(state.getExtrinsicState(i), pose_local_param);
         }
     }
 
@@ -238,6 +241,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                     state.getExtrinsicState(firstObs.camera_id),
                     state.getLandmarkState(lm_id), &state.td);
             } else {
+                printf("[D2VINS] Auto diff on landmarks, may has error on local param\n");
                 ceres::CostFunction * f_lm = nullptr;
                 if (lm.track[i].depth_mea && params->fuse_dep && lm.track[i].depth < params->max_depth_to_fuse) {
                     f_lm = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1, lm.track[i].depth);
