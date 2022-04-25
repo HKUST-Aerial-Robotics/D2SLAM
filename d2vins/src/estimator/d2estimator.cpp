@@ -248,7 +248,9 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                     state.getPoseState(firstObs.frame_id), 
                     state.getPoseState(lm.track[i].frame_id), 
                     state.getExtrinsicState(firstObs.camera_id),
-                    state.getLandmarkState(lm_id), &state.td);
+                    state.getLandmarkState(lm_id), state.getTdState(lm.track[i].frame_id));
+                marginalizer->addLandmarkResidual(f_td, loss_function,
+                    firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_id, true);
             } else {
                 printf("[D2VINS] Auto diff on landmarks, may has error on local param\n");
                 ceres::CostFunction * f_lm = nullptr;

@@ -9,7 +9,8 @@ typedef Eigen::SparseMatrix<state_type> SparseMat;
 enum ResidualType {
     NONE,
     IMUResidual,
-    LandmarkTwoFrameOneCamResidual
+    LandmarkTwoFrameOneCamResidual,
+    LandmarkTwoFrameOneCamResidualTD
 };
 
 class ResidualInfo {
@@ -58,6 +59,28 @@ public:
     }
 };
 
+class LandmarkTwoFrameOneCamResInfoTD : public LandmarkTwoFrameOneCamResInfo {
+public:
+    LandmarkTwoFrameOneCamResInfoTD() {
+        residual_type = ResidualType::LandmarkTwoFrameOneCamResidualTD;
+    }
+    virtual void Evaluate(D2EstimatorState * state) override;
+    virtual std::vector<std::pair<state_type*, int>> paramsList(D2EstimatorState * state) const override {
+        std::vector<std::pair<state_type*, int>> params_list;
+        params_list.push_back(make_pair(state->getPoseState(frame_ida), POSE_SIZE));
+        params_list.push_back(make_pair(state->getPoseState(frame_idb), POSE_SIZE));
+        params_list.push_back(make_pair(state->getExtrinsicState(camera_id), POSE_SIZE));
+        if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
+            params_list.push_back(make_pair(state->getLandmarkState(landmark_id), INV_DEP_SIZE));
+        } else {
+            params_list.push_back(make_pair(state->getLandmarkState(landmark_id), POS_SIZE));
+        }
+        params_list.push_back(make_pair(state->getTdState(camera_id), 1));
+        return params_list;
+    }
+};
+
+
 class ImuResInfo : public ResidualInfo {
 public:
     FrameIdType frame_ida;
@@ -81,7 +104,8 @@ enum ParamsType {
     POSE,
     SPEED_BIAS,
     LANDMARK,
-    EXTRINSIC
+    EXTRINSIC,
+    TD
 };
 
 struct ParamInfo {
@@ -110,6 +134,7 @@ protected:
     void addFramePoseParams(FrameIdType frame_id);
     void addLandmarkStateParam(LandmarkIdType frame_id);
     void addExtrinsicParam(int camera_id);
+    void addTdStateParam(int camera_id);
     std::pair<int, int> sortParams();
     void addParam(state_type * param, ParamsType type, FrameIdType _id, bool is_remove);
     
@@ -118,7 +143,7 @@ protected:
 public:
     Marginalizer(D2EstimatorState * _state): state(_state) {}
     void addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
-        FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id);
+        FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id, bool has_td=false);
     void addImuResidual(ceres::CostFunction * cost_function, FrameIdType frame_ida, FrameIdType frame_idb);
     void marginalize(std::set<FrameIdType> remove_frame_ids);
 };

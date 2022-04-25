@@ -33,6 +33,7 @@ public:
     double * getExtrinsicState(int i) const;
     double * getSpdBiasState(FrameIdType frame_id) const;
     double * getLandmarkState(LandmarkIdType landmark_id) const;
+    double * getTdState(int camera_id);
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;
     Swarm::Pose getExtrinsic(int i) const;
     std::vector<LandmarkPerId> availableLandmarkMeasurements() const;

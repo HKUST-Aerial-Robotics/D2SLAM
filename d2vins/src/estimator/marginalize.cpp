@@ -7,16 +7,28 @@ namespace D2VINS {
 MatrixXd toJacRes(const SparseMat & A, VectorXd & b);
 
 void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
-    FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id) {
-    auto * info = new LandmarkTwoFrameOneCamResInfo();
-    info->frame_ida = frame_ida;
-    info->frame_idb = frame_idb;
-    info->landmark_id = landmark_id;
-    info->camera_id = camera_id;
-    info->cost_function = cost_function;
-    info->loss_function = loss_function;
-    info->parameter_size = 3*POSE_SIZE + (params->landmark_param == D2VINSConfig::LM_INV_DEP ? INV_DEP_SIZE : POS_SIZE);
-    residual_info_list.push_back(info);
+    FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id, bool has_td) {
+    if (!has_td) {
+        auto * info = new LandmarkTwoFrameOneCamResInfo();
+        info->frame_ida = frame_ida;
+        info->frame_idb = frame_idb;
+        info->landmark_id = landmark_id;
+        info->camera_id = camera_id;
+        info->cost_function = cost_function;
+        info->loss_function = loss_function;
+        info->parameter_size = 3*POSE_SIZE + (params->landmark_param == D2VINSConfig::LM_INV_DEP ? INV_DEP_SIZE : POS_SIZE);
+        residual_info_list.push_back(info);
+    } else {
+        auto * info = new LandmarkTwoFrameOneCamResInfoTD();
+        info->frame_ida = frame_ida;
+        info->frame_idb = frame_idb;
+        info->landmark_id = landmark_id;
+        info->camera_id = camera_id;
+        info->cost_function = cost_function;
+        info->loss_function = loss_function;
+        info->parameter_size = 3*POSE_SIZE + (params->landmark_param == D2VINSConfig::LM_INV_DEP ? INV_DEP_SIZE : POS_SIZE) + 1;
+        residual_info_list.push_back(info);
+    }
 }
 
 void Marginalizer::addImuResidual(ceres::CostFunction * cost_function,  FrameIdType frame_ida, FrameIdType frame_idb) {
@@ -38,6 +50,11 @@ void Marginalizer::addFramePoseParams(FrameIdType frame_id) {
     }
     addParam(_ptr, POSE, frame_id, is_remove);
     addParam(_ptr_spd_bias, SPEED_BIAS, frame_id, is_remove);
+}
+
+void Marginalizer::addTdStateParam(int camera_id) {
+    auto _ptr = state->getTdState(camera_id);
+    addParam(_ptr, TD, camera_id, false);
 }
 
 void Marginalizer::addLandmarkStateParam(LandmarkIdType landmark_id) {
@@ -80,6 +97,8 @@ void Marginalizer::addParam(state_type * pointer, ParamsType type, FrameIdType _
         param.size = POSE_SIZE;
     } else if (type == EXTRINSIC) {
         param.size = POSE_SIZE;
+    } else if (type == TD) {
+        param.size = 1;
     } else {
         printf("Unknown param type\n");
         exit(1);
@@ -142,7 +161,15 @@ int Marginalizer::filterResiduals() {
                 addFramePoseParams(info->frame_idb);
                 addExtrinsicParam(info->camera_id);
                 addLandmarkStateParam(info->landmark_id);
-            } else {
+            } else if ((*it)->residual_type == ResidualType::LandmarkTwoFrameOneCamResidualTD) {
+                auto info = static_cast<LandmarkTwoFrameOneCamResInfoTD*>(*it);
+                addFramePoseParams(info->frame_ida);
+                addFramePoseParams(info->frame_idb);
+                addExtrinsicParam(info->camera_id);
+                addLandmarkStateParam(info->landmark_id);
+                addTdStateParam(info->camera_id);
+            }
+            else {
                 printf("Unknown residual type\n");
             }
             it++;
@@ -204,7 +231,7 @@ std::pair<int, int> Marginalizer::sortParams() {
         auto & _param = _params.at(params_list[i].pointer);
         _param.index = cul_param_size;
         cul_param_size += _param.size;
-        printf("Param %p type %d size %d index %d cul_param_size %d\n", params_list[i].pointer, _param.type, _param.size, _param.index, cul_param_size);
+        // printf("Param %p type %d size %d index %d cul_param_size %d\n", params_list[i].pointer, _param.type, _param.size, _param.index, cul_param_size);
         if (_param.is_remove) {
             remove_size += _param.size;
         }
@@ -273,6 +300,14 @@ void LandmarkTwoFrameOneCamResInfo::Evaluate(D2EstimatorState * state) {
     ((ResidualInfo*)this)->Evaluate(params);
 }
 
+void LandmarkTwoFrameOneCamResInfoTD::Evaluate(D2EstimatorState * state) {
+    std::vector<double*> params{state->getPoseState(frame_ida), 
+                    state->getPoseState(frame_idb), 
+                    state->getExtrinsicState(camera_id),
+                    state->getLandmarkState(landmark_id),
+                    state->getTdState(camera_id)};
+    ((ResidualInfo*)this)->Evaluate(params);
+}
 
 class MyLLT : public Eigen::SimplicialLLT<Eigen::SparseMatrix<double>, Eigen::Lower, Eigen::NaturalOrdering<int>> {
 public:
