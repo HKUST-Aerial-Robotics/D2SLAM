@@ -13,13 +13,31 @@ enum ResidualType {
     LandmarkTwoFrameOneCamResidualTD
 };
 
+enum ParamsType {
+    POSE,
+    SPEED_BIAS,
+    LANDMARK,
+    EXTRINSIC,
+    TD
+};
+
+struct ParamInfo {
+    double * pointer = nullptr;
+    int index = -1;
+    int size = 0;
+    int eff_size = 0; //This is size on tangent space.
+    bool is_remove = false;
+    ParamsType type;
+    FrameIdType id;
+};
+
 class ResidualInfo {
 public:
     int parameter_size;
     ResidualType residual_type;
     ceres::CostFunction * cost_function;
     ceres::LossFunction * loss_function;
-    std::vector<MatrixXd> jacobians; //Jacobian of each parameter blocks
+    std::vector<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> jacobians; //Jacobian of each parameter blocks
     VectorXd residuals;
     ResidualInfo(ResidualType type) : residual_type(type) {} 
     virtual void Evaluate(std::vector<state_type*>params);
@@ -98,23 +116,6 @@ public:
         params_list.push_back(make_pair(state->getSpdBiasState(frame_idb), FRAME_SPDBIAS_SIZE));
         return params_list;
     }
-};
-
-enum ParamsType {
-    POSE,
-    SPEED_BIAS,
-    LANDMARK,
-    EXTRINSIC,
-    TD
-};
-
-struct ParamInfo {
-    double * pointer = nullptr;
-    int index = -1;
-    int size = 0;
-    bool is_remove = false;
-    ParamsType type;
-    FrameIdType id;
 };
 
 class Marginalizer {

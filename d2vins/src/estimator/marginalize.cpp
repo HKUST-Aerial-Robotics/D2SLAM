@@ -133,7 +133,7 @@ VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_pa
                         printf("J0 %d\n", j0);
                         printf("J[%d, %d] = %f size %d, %d\n", i0 + i, j0 + j, J_blk(i, j), eff_residual_size, eff_param_size);
                         fflush(stdout);
-                        exit(0);
+                        exit(1);
                     }
                 }
             }
@@ -247,11 +247,10 @@ void ResidualInfo::Evaluate(std::vector<double*> params) {
     jacobians.resize(blk_sizes.size());
     for (int i = 0; i < static_cast<int>(blk_sizes.size()); i++) {
         jacobians[i].resize(cost_function->num_residuals(), blk_sizes[i]);
+        jacobians[i].setZero();
         raw_jacobians[i] = jacobians[i].data();
-        //dim += block_sizes[i] == 7 ? 6 : block_sizes[i];
     }
     cost_function->Evaluate(params.data(), residuals.data(), raw_jacobians);
-
     if (loss_function)
     {
         double residual_scaling_, alpha_sq_norm_;
@@ -283,7 +282,6 @@ void ResidualInfo::Evaluate(std::vector<double*> params) {
 
         residuals *= residual_scaling_;
     }
-
 }
 
 void ImuResInfo::Evaluate(D2EstimatorState * state) {
