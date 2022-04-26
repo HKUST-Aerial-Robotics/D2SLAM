@@ -5,6 +5,7 @@
 using namespace Eigen;
 namespace D2VINS {
 class Marginalizer;
+class PriorFactor;
 class D2EstimatorState {
 protected:
     std::vector<VINSFrame*> sld_win;
@@ -20,6 +21,7 @@ protected:
     void outlierRejection();
     void updatePoseIndices();
     Marginalizer * marginalizer = nullptr;
+    PriorFactor * prior_factor = nullptr;
     
 public:
     state_type td = 0.0;
@@ -34,6 +36,7 @@ public:
     double * getSpdBiasState(FrameIdType frame_id) const;
     double * getLandmarkState(LandmarkIdType landmark_id) const;
     double * getTdState(int camera_id);
+    PriorFactor * getPrior() const;
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;
     Swarm::Pose getExtrinsic(int i) const;
     std::vector<LandmarkPerId> availableLandmarkMeasurements() const;

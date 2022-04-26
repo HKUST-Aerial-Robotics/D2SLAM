@@ -27,6 +27,7 @@ protected:
     void setupImuFactors(ceres::Problem & problem);
     void setupLandmarkFactors(ceres::Problem & problem);
     void setStateProperties(ceres::Problem & problem);
+    void setupPriorFactor(ceres::Problem & problem);
     int frame_count = 0;
     D2Visualization visual;
     std::pair<bool, Swarm::Pose> initialFramePnP(const VisualImageDescArray & frame, 

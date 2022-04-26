@@ -5,7 +5,6 @@
 
 namespace D2VINS {
 using std::make_pair;
-typedef Eigen::SparseMatrix<state_type> SparseMat;
 enum ResidualType {
     NONE,
     IMUResidual,
@@ -200,6 +199,6 @@ public:
     void addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
         FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id, bool has_td=false);
     void addImuResidual(ceres::CostFunction * cost_function, FrameIdType frame_ida, FrameIdType frame_idb);
-    void marginalize(std::set<FrameIdType> remove_frame_ids);
+    PriorFactor * marginalize(std::set<FrameIdType> remove_frame_ids);
 };
 }

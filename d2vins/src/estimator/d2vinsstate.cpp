@@ -81,6 +81,11 @@ Swarm::Pose D2EstimatorState::getExtrinsic(int i) const {
     return extrinsic[i];
 }
 
+PriorFactor * D2EstimatorState::getPrior() const {
+    return prior_factor;
+}
+
+
 std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements() const {
     return lmanager.availableMeasurements();
 }

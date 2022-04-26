@@ -3,9 +3,6 @@
 #include "../factors/prior_factor.h"
 
 namespace D2VINS {
-
-MatrixXd toJacRes(const SparseMat & A, VectorXd & b);
-
 void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
     FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id, bool has_td) {
     if (!has_td) {
@@ -112,7 +109,7 @@ int Marginalizer::filterResiduals() {
     return eff_residual_size;
 }
 
-void Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
+PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
     TicToc tic;
     remove_frame_ids = _remove_frame_ids;
     //Clear previous states
@@ -141,9 +138,10 @@ void Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
     SparseMat A = H11 - H12 * H22_inv * SparseMatrix<double>(H12.transpose());
     VectorXd b = residual_vec.segment(0, keep_state_size) - H12 * H22_inv * residual_vec.segment(keep_state_size, remove_state_size);
     TicToc tic_j;
-    auto linearized_jac = toJacRes(A, b);
-    printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
+    std::vector<ParamInfo> keep_params_list(params_list.begin(), params_list.begin() + keep_state_size);
+    auto prior = new PriorFactor(keep_params_list, A, b);
     printf("[D2VINS::Marginalizer] time cost %.1fms\n", tic.toc());
+    return prior;
 }
 
 std::pair<int, int> Marginalizer::sortParams() {
@@ -236,33 +234,6 @@ void LandmarkTwoFrameOneCamResInfoTD::Evaluate(D2EstimatorState * state) {
                     state->getLandmarkState(landmark_id),
                     state->getTdState(camera_id)};
     ((ResidualInfo*)this)->Evaluate(params);
-}
-
-class MyLLT : public Eigen::SimplicialLLT<Eigen::SparseMatrix<double>, Eigen::Lower, Eigen::NaturalOrdering<int>> {
-public:
-    MatrixXd matrixLDense() const {
-        eigen_assert(Base::m_factorizationIsOk && "Simplicial LLT not factorized");
-        return MatrixXd(Base::m_matrix);
-    }
-    void solveLb(VectorXd & b) {
-      Traits::getL(Base::m_matrix).solveInPlace(b);
-    }
-};
-
-MatrixXd toJacRes(const SparseMat & A, VectorXd & b) {
-    // Ideally we should use sparse MyLLT for this, but it has some unknown bug. So we use a dense version.
-    // auto ret = A.toDense();
-    // MyLLT solver;
-    // solver.compute(A);
-    // assert(solver.info() == Eigen::Success && "LLT failed");
-    // auto L = solver.matrixLDense();
-    // printf("b rows %d cols %d L rows %d cols %d\n", b.rows(), b.cols(), L.rows(), L.cols());
-    // solver.solveLb(b);
-    // fflush(stdout);
-    auto Adense = A.toDense();
-    LLT<MatrixXd> llt(Adense);
-    llt.matrixL().solveInPlace(b);
-    return llt.matrixL();
 }
 
 }

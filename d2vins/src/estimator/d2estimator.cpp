@@ -3,6 +3,7 @@
 #include "unistd.h"
 #include "../factors/imu_factor.h"
 #include "../factors/depth_factor.h"
+#include "../factors/prior_factor.h"
 #include "../factors/projectionTwoFrameOneCamFactor.h"
 #include "../factors/projectionTwoFrameOneCamFactorNoTD.h"
 #include "../factors/pose_local_parameterization.h"
@@ -172,6 +173,7 @@ void D2Estimator::solve() {
     problem = new ceres::Problem();
     setupImuFactors(*problem);
     setupLandmarkFactors(*problem);
+    setupPriorFactor(*problem);
     setStateProperties(*problem);
 
     ceres::Solver::Summary summary;
@@ -285,6 +287,15 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
         }
     }
 }
+
+
+void D2Estimator::setupPriorFactor(ceres::Problem & problem) {
+    auto prior_factor = state.getPrior();
+    if (prior_factor != nullptr) {
+        problem.AddResidualBlock(prior_factor, nullptr, prior_factor->getKeepParamsPointers());
+    }
+}
+
 
 Swarm::Odometry D2Estimator::getImuPropagation() const {
     return last_prop_odom;

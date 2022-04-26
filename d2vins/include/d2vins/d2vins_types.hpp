@@ -15,6 +15,8 @@ using D2FrontEnd::VisualImageDescArray;
 namespace D2VINS {
 class IntegrationBase;
 
+typedef Eigen::SparseMatrix<state_type> SparseMat;
+
 struct VINSFrame {
     double stamp = 0;
     FrameIdType frame_id = -1;
