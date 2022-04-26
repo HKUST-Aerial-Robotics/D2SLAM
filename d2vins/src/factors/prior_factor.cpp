@@ -66,6 +66,20 @@ std::vector<state_type*> PriorFactor::getKeepParamsPointers() const {
     return pointers;
 }
 
+std::vector<ParamInfo> PriorFactor::getKeepParams() const {
+    return keep_params_list;
+}
+
+int PriorFactor::getParamSize() const {
+    int size = 0;
+    for (auto & info : keep_params_list)
+    {
+        size += info.size;
+    }
+    return size;
+}
+
+
 class MyLLT : public Eigen::SimplicialLLT<Eigen::SparseMatrix<double>, Eigen::Lower, Eigen::NaturalOrdering<int>> {
 public:
     MatrixXd matrixLDense() const {

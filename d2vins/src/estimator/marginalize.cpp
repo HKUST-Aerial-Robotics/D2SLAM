@@ -38,6 +38,14 @@ void Marginalizer::addImuResidual(ceres::CostFunction * cost_function,  FrameIdT
     residual_info_list.push_back(info);
 }
 
+void Marginalizer::addPrior(PriorFactor * cost_function) {
+    auto * info = new PriorResInfo(cost_function);
+    info->cost_function = cost_function;
+    info->loss_function = nullptr;
+    info->parameter_size = cost_function->getParamSize();
+    residual_info_list.push_back(info);
+}
+
 VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_param_size) {
     //Then evaluate all residuals
     //Setup Jacobian
@@ -234,6 +242,27 @@ void LandmarkTwoFrameOneCamResInfoTD::Evaluate(D2EstimatorState * state) {
                     state->getLandmarkState(landmark_id),
                     state->getTdState(camera_id)};
     ((ResidualInfo*)this)->Evaluate(params);
+}
+
+PriorResInfo::PriorResInfo(PriorFactor * _factor)
+    :ResidualInfo(PriorResidual) {
+    cost_function = _factor;
+    factor = _factor;
+}
+
+bool PriorResInfo::relavant(const std::set<FrameIdType> & frame_ids) const {
+    //Prior relavant to all frames.
+    return true;
+}
+
+
+void PriorResInfo::Evaluate(D2EstimatorState * state) {
+    std::vector<double*> params = factor->getKeepParamsPointers();
+    ((ResidualInfo*)this)->Evaluate(params);
+}
+
+std::vector<ParamInfo> PriorResInfo::paramsList(D2EstimatorState * state) const {
+    return factor->getKeepParams();
 }
 
 }

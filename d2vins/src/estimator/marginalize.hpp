@@ -4,12 +4,16 @@
 #include "d2vinsstate.hpp"
 
 namespace D2VINS {
+
+class PriorFactor;
 using std::make_pair;
+
 enum ResidualType {
     NONE,
     IMUResidual,
     LandmarkTwoFrameOneCamResidual,
-    LandmarkTwoFrameOneCamResidualTD
+    LandmarkTwoFrameOneCamResidualTD,
+    PriorResidual
 };
 
 enum ParamsType {
@@ -151,6 +155,15 @@ public:
     }
 };
 
+class PriorResInfo : public ResidualInfo {
+    PriorFactor * factor;
+    std::set<state_type*> params_set;
+public:
+    PriorResInfo(PriorFactor * _factor);
+    virtual void Evaluate(D2EstimatorState * state) override;
+    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override;
+    bool relavant(const std::set<FrameIdType> & frame_ids) const override;
+};
 
 class ImuResInfo : public ResidualInfo {
 public:
@@ -199,6 +212,7 @@ public:
     void addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
         FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id, bool has_td=false);
     void addImuResidual(ceres::CostFunction * cost_function, FrameIdType frame_ida, FrameIdType frame_idb);
+    void addPrior(PriorFactor * cost_function);
     PriorFactor * marginalize(std::set<FrameIdType> remove_frame_ids);
 };
 }

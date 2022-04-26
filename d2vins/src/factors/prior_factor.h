@@ -16,6 +16,7 @@ class PriorFactor : public ceres::CostFunction
     PriorFactor(std::vector<ParamInfo> _keep_params_list, const SparseMat & A, const VectorXd & b);
     virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const;
     virtual std::vector<state_type*> getKeepParamsPointers() const;
-    
+    virtual std::vector<ParamInfo> getKeepParams() const;
+    int getParamSize() const;
 };
 }
