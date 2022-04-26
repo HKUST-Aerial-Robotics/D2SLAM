@@ -8,10 +8,10 @@ MatrixXd toJacRes(const SparseMat & A, VectorXd & b);
 PriorFactor::PriorFactor(std::vector<ParamInfo> _keep_params_list, const SparseMat & A, const VectorXd & b): 
     keep_params_list(_keep_params_list)
 {
-    TicToc tic_j;
+    // TicToc tic_j;
     linearized_res = b;
     linearized_jac = toJacRes(A, linearized_res);
-    printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
+    // printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
     keep_param_size = keep_params_list.size();
 }
 

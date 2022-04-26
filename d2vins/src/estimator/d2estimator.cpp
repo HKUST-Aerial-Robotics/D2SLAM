@@ -288,14 +288,12 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     }
 }
 
-
 void D2Estimator::setupPriorFactor(ceres::Problem & problem) {
     auto prior_factor = state.getPrior();
     if (prior_factor != nullptr) {
         problem.AddResidualBlock(prior_factor, nullptr, prior_factor->getKeepParamsPointers());
     }
 }
-
 
 Swarm::Odometry D2Estimator::getImuPropagation() const {
     return last_prop_odom;

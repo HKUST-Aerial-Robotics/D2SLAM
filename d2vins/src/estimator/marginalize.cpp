@@ -255,7 +255,6 @@ bool PriorResInfo::relavant(const std::set<FrameIdType> & frame_ids) const {
     return true;
 }
 
-
 void PriorResInfo::Evaluate(D2EstimatorState * state) {
     std::vector<double*> params = factor->getKeepParamsPointers();
     ((ResidualInfo*)this)->Evaluate(params);
