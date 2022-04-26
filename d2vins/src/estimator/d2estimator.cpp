@@ -4,6 +4,7 @@
 #include "../factors/imu_factor.h"
 #include "../factors/depth_factor.h"
 #include "../factors/prior_factor.h"
+#include "../factors/projectionTwoFrameOneCamDepthFactor.h"
 #include "../factors/projectionTwoFrameOneCamFactor.h"
 #include "../factors/projectionTwoFrameOneCamFactorNoTD.h"
 #include "../factors/pose_local_parameterization.h"
@@ -13,6 +14,8 @@ namespace D2VINS {
 void D2Estimator::init(ros::NodeHandle & nh) {
     state.init(params->camera_extrinsics, params->td_initial);
     ProjectionTwoFrameOneCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
+    ProjectionTwoFrameOneCamDepthFactor::sqrt_info = params->focal_length / 1.5 * Matrix3d::Identity();
+    ProjectionTwoFrameOneCamDepthFactor::sqrt_info(2,2) = 5;
     visual.init(nh, this);
     Swarm::Pose ext = state.getExtrinsic(0);
     printf("[D2VINS::D2Estimator] extrinsic %s\n", ext.toStr().c_str());
@@ -161,7 +164,9 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
     }
 
     //Current no margarin, fix the first pose
-    problem.SetParameterBlockConstant(state.getPoseState(state.firstFrame().frame_id));
+    if (!state.getPrior()) {
+        problem.SetParameterBlockConstant(state.getPoseState(state.firstFrame().frame_id));
+    }
     // problem.SetParameterBlockConstant(state.getSpdBiasState(state.firstFrame().frame_id));
 }
 
@@ -237,15 +242,25 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
         auto & firstObs = lm.track[0];
         auto mea0 = firstObs.measurement();
         keyframe_measurements[state.getPoseIndex(firstObs.frame_id)] ++;
-        if (firstObs.depth_mea && params->fuse_dep && firstObs.depth < params->max_depth_to_fuse) {
+        if (firstObs.depth_mea && params->fuse_dep && 
+                firstObs.depth < params->max_depth_to_fuse &&
+                firstObs.depth > params->min_depth_to_fuse) {
             auto f_dep = OneFrameDepth::Create(firstObs.depth);
             problem.AddResidualBlock(f_dep, loss_function, state.getLandmarkState(lm_id));
         }
         for (auto i = 1; i < lm.track.size(); i++) {
             auto mea1 = lm.track[i].measurement();
             if (params->estimate_td) {
-                auto f_td = new ProjectionTwoFrameOneCamFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,
-                    firstObs.cur_td, lm.track[i].cur_td);
+                ceres::CostFunction * f_td = nullptr;
+                if (lm.track[i].depth_mea && params->fuse_dep && 
+                    lm.track[i].depth < params->max_depth_to_fuse && 
+                    lm.track[i].depth > params->min_depth_to_fuse) {
+                    f_td = new ProjectionTwoFrameOneCamDepthFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,
+                        firstObs.cur_td, lm.track[i].cur_td, lm.track[i].depth);
+                } else {
+                    f_td = new ProjectionTwoFrameOneCamFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,
+                        firstObs.cur_td, lm.track[i].cur_td);
+                }
                 problem.AddResidualBlock(f_td, loss_function,
                     state.getPoseState(firstObs.frame_id), 
                     state.getPoseState(lm.track[i].frame_id), 
@@ -256,7 +271,9 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
             } else {
                 printf("[D2VINS] Auto diff on landmarks, may has error on local param\n");
                 ceres::CostFunction * f_lm = nullptr;
-                if (lm.track[i].depth_mea && params->fuse_dep && lm.track[i].depth < params->max_depth_to_fuse) {
+                if (lm.track[i].depth_mea && params->fuse_dep &&                     
+                    lm.track[i].depth < params->max_depth_to_fuse && 
+                    lm.track[i].depth > params->min_depth_to_fuse) {
                     f_lm = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1, lm.track[i].depth);
                 } else {
                     f_lm = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1);
@@ -268,11 +285,6 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                     state.getLandmarkState(lm_id));
                 marginalizer->addLandmarkResidual(f_lm, loss_function,
                     firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_id);
-                // printf("[D2VINS::D2Estimator] Check landmark %d dep_init/mea %.2f %.2f frame %ld<->%ld\n", 
-                //     lm_id, 1/(*state.getLandmarkState(lm_id)), firstObs.depth, lm.track[0].frame_id, lm.track[i].frame_id);
-                // ProjectionTwoFrameOneCamFactorNoTD f_test(mea0, mea1, lm.track[i].depth);
-                // f_test.test(state.getPoseState(firstObs.frame_id), state.getPoseState(lm.track[i].frame_id), 
-                //     state.getExtrinsicState(firstObs.camera_id), state.getLandmarkState(lm_id));
             }
             keyframe_measurements[state.getPoseIndex(lm.track[i].frame_id)] ++;
         }

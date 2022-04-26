@@ -43,6 +43,7 @@ struct D2VINSConfig {
     bool debug_print_states = false;
     bool fuse_dep = true;
     double max_depth_to_fuse = 5.;
+    double min_depth_to_fuse = 0.3;
     double td_max_diff = 0.0025;
     double landmark_outlier_threshold = 10.0;
     int perform_outlier_rejection_num = 50;

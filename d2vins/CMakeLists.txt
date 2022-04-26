@@ -54,6 +54,7 @@ add_library(${PROJECT_NAME}_estimator
   src/estimator/d2vinsstate.cpp
   src/estimator/marginalize.cpp
   src/factors/projectionTwoFrameOneCamFactor.cpp
+  src/factors/projectionTwoFrameOneCamDepthFactor.cpp
   src/factors/prior_factor.cpp
   src/factors/pose_local_parameterization.cpp
 )
