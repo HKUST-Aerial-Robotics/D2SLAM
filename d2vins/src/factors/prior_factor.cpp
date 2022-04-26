@@ -8,10 +8,10 @@ MatrixXd toJacRes(const SparseMat & A, VectorXd & b);
 PriorFactor::PriorFactor(std::vector<ParamInfo> _keep_params_list, const SparseMat & A, const VectorXd & b): 
     keep_params_list(_keep_params_list)
 {
-    // TicToc tic_j;
+    TicToc tic_j;
     linearized_res = b;
     linearized_jac = toJacRes(A, linearized_res);
-    // printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
+    printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
     keep_param_blk_num = keep_params_list.size();
     keep_eff_param_dim = getEffParamsDim();
 
@@ -116,10 +116,21 @@ MatrixXd toJacRes(const SparseMat & A, VectorXd & b) {
     // printf("b rows %d cols %d L rows %d cols %d\n", b.rows(), b.cols(), L.rows(), L.cols());
     // solver.solveLb(b);
     // fflush(stdout);
-    auto Adense = A.toDense();
-    LLT<MatrixXd> llt(Adense);
-    llt.matrixL().solveInPlace(b);
-    return llt.matrixL();
+    // auto Adense = A.toDense();
+    // LLT<MatrixXd> llt(Adense);
+    // llt.matrixL().solveInPlace(b);
+    // return llt.matrixL();
+
+    const double eps = 1e-8;
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> saes2(A);
+    Eigen::VectorXd S = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array(), 0));
+    Eigen::VectorXd S_inv = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array().inverse(), 0));
+
+    Eigen::VectorXd S_sqrt = S.cwiseSqrt();
+    Eigen::VectorXd S_inv_sqrt = S_inv.cwiseSqrt();
+
+    b = S_inv_sqrt.asDiagonal() * saes2.eigenvectors().transpose() * b;
+    return S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
 }
 
 }

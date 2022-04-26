@@ -130,6 +130,7 @@ void D2Estimator::inputImage(VisualImageDescArray & _frame) {
         //Wait for IMU
         usleep(2000);
         printf("[D2VINS::D2Estimator] wait for imu...\n");
+        exit(0);
     }
 
     addFrame(_frame);
