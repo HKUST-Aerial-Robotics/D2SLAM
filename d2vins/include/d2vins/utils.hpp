@@ -85,6 +85,34 @@ Eigen::SparseMatrix<Derived> inverse(const Eigen::SparseMatrix<Derived> & A) {
 }
 
 template <typename Derived>
+SparseMatrix<Derived> schurComplement(const SparseMatrix<Derived> & H, Matrix<Derived, Dynamic, 1> & b, int keep_state_dim) {
+    //Sparse schur complement
+    int remove_state_dim = H.rows() - keep_state_dim;
+    SparseMatrix<Derived> H11 = H.block(0, 0, keep_state_dim, keep_state_dim);
+    SparseMatrix<Derived> H12 = H.block(0, keep_state_dim, keep_state_dim, remove_state_dim);
+    SparseMatrix<Derived> H22 = H.block(keep_state_dim, keep_state_dim, remove_state_dim, remove_state_dim);
+    SparseMatrix<Derived> H22_inv = inverse(H22);
+    SparseMatrix<Derived> A = H11 - H12 * H22_inv * SparseMatrix<Derived>(H12.transpose());
+    b = b.segment(0, keep_state_dim) - H12 * H22_inv * b.segment(keep_state_dim, remove_state_dim);
+    return A;
+}
+
+template <typename Derived>
+Matrix<Derived, Dynamic, Dynamic> schurComplement(const Matrix<Derived, Dynamic, Dynamic> & H, Matrix<Derived, Dynamic, 1> & b, int keep_state_dim) {
+    const double eps = 1e-8;
+    int remove_state_dim = H.rows() - keep_state_dim;
+    auto H11 = H.block(0, 0, keep_state_dim, keep_state_dim);
+    auto H12 = H.block(0, keep_state_dim, keep_state_dim, remove_state_dim);
+    auto H22 = H.block(keep_state_dim, keep_state_dim, remove_state_dim, remove_state_dim);
+
+    SelfAdjointEigenSolver<Matrix<Derived, Dynamic, Dynamic>> saes(H22);
+    Matrix<Derived, Dynamic, Dynamic> H22_inv = saes.eigenvectors() * Matrix<Derived, Dynamic, 1>((saes.eigenvalues().array() > eps).select(saes.eigenvalues().array().inverse(), 0)).asDiagonal() * saes.eigenvectors().transpose();
+    Matrix<Derived, Dynamic, Dynamic> A = H11 - H12 * H22_inv * H12.transpose();
+    b = b.segment(0, keep_state_dim) - H12 * H22_inv * b.segment(keep_state_dim, remove_state_dim);
+    return A;
+}
+
+template <typename Derived>
 static Eigen::Matrix<typename Derived::Scalar, 3, 4> jacTan2q(const Eigen::QuaternionBase<Derived> &q) {
     //Convert the quaternion from the tangent space to the real quaternion
     Eigen::Matrix<typename Derived::Scalar, 3, 4> ans;

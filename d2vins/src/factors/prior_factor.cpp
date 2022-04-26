@@ -4,22 +4,7 @@
 namespace D2VINS {
 
 MatrixXd toJacRes(const SparseMat & A, VectorXd & b);
-
-PriorFactor::PriorFactor(std::vector<ParamInfo> _keep_params_list, const SparseMat & A, const VectorXd & b): 
-    keep_params_list(_keep_params_list)
-{
-    TicToc tic_j;
-    linearized_res = b;
-    linearized_jac = toJacRes(A, linearized_res);
-    printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
-    keep_param_blk_num = keep_params_list.size();
-    keep_eff_param_dim = getEffParamsDim();
-
-    for (auto it : keep_params_list) {
-        mutable_parameter_block_sizes()->push_back(it.size);
-    }
-    set_num_residuals(keep_eff_param_dim);
-}
+MatrixXd toJacRes(const MatrixXd & A, VectorXd & b);
 
 bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
@@ -94,6 +79,16 @@ int PriorFactor::getEffParamsDim() const {
     }
 }
 
+void PriorFactor::initDims(const std::vector<ParamInfo> & _keep_params_list) {
+    keep_params_list = _keep_params_list;
+    keep_param_blk_num = keep_params_list.size();
+    keep_eff_param_dim = getEffParamsDim();
+    for (auto it : keep_params_list) {
+        mutable_parameter_block_sizes()->push_back(it.size);
+    }
+    set_num_residuals(keep_eff_param_dim);
+}
+
 
 class MyLLT : public Eigen::SimplicialLLT<Eigen::SparseMatrix<double>, Eigen::Lower, Eigen::NaturalOrdering<int>> {
 public:
@@ -105,6 +100,19 @@ public:
       Traits::getL(Base::m_matrix).solveInPlace(b);
     }
 };
+
+MatrixXd toJacRes(const MatrixXd & A, VectorXd & b) {
+    const double eps = 1e-8;
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> saes2(A);
+    Eigen::VectorXd S = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array(), 0));
+    Eigen::VectorXd S_inv = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array().inverse(), 0));
+
+    Eigen::VectorXd S_sqrt = S.cwiseSqrt();
+    Eigen::VectorXd S_inv_sqrt = S_inv.cwiseSqrt();
+
+    b = S_inv_sqrt.asDiagonal() * saes2.eigenvectors().transpose() * b;
+    return S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
+}
 
 MatrixXd toJacRes(const SparseMat & A, VectorXd & b) {
     // Ideally we should use sparse MyLLT for this, but it has some unknown bug. So we use a dense version.
@@ -120,7 +128,6 @@ MatrixXd toJacRes(const SparseMat & A, VectorXd & b) {
     // LLT<MatrixXd> llt(Adense);
     // llt.matrixL().solveInPlace(b);
     // return llt.matrixL();
-
     const double eps = 1e-8;
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> saes2(A);
     Eigen::VectorXd S = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array(), 0));

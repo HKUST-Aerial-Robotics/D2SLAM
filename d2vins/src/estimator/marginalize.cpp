@@ -132,22 +132,23 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     printf("[D2VINS::Marginalizer::marginalize] frame_id %ld total_eff_state_dim: %d remove param size %d eff_residual_size: %d keep_block_size %d \n", 
          *remove_frame_ids.begin(), total_eff_state_dim, remove_state_dim, eff_residual_size, keep_block_size);
     SparseMat J(eff_residual_size, total_eff_state_dim);
-    auto residual_vec = evaluate(J, eff_residual_size, total_eff_state_dim);
-    
+    auto b = evaluate(J, eff_residual_size, total_eff_state_dim);
     SparseMat H = SparseMatrix<double>(J.transpose())*J;
-    SparseMat H11 = H.block(0, 0, keep_state_dim, keep_state_dim);
-    SparseMat H12 = H.block(0, keep_state_dim, keep_state_dim, remove_state_dim);
-    SparseMat H22 = H.block(keep_state_dim, keep_state_dim, remove_state_dim, remove_state_dim);
-    SparseMat H22_inv = Utility::inverse(H22);
-    SparseMat A = H11 - H12 * H22_inv * SparseMatrix<double>(H12.transpose());
-    VectorXd b = residual_vec.segment(0, keep_state_dim) - H12 * H22_inv * residual_vec.segment(keep_state_dim, remove_state_dim);
-    TicToc tic_j;
+    
     std::vector<ParamInfo> keep_params_list(params_list.begin(), params_list.begin() + keep_block_size);
-    auto prior = new PriorFactor(keep_params_list, A, b);
-    // for (auto _param : keep_params_list) {
-    //     printf("Keep param %p type %d size %d index %d cul_param_size %d is remove %d\n",
-    //             _param.pointer, _param.type, _param.size, _param.index, total_eff_state_dim, _param.is_remove);
-    // }
+    //Compute the schur complement, by sparse LLT.
+    PriorFactor * prior = nullptr;
+    if (params->margin_sparse_solver) {
+        printf("[D2VINS::Marginalizer::marginalize] use sparse LLT solver\n");
+        auto A = Utility::schurComplement(H, b, keep_state_dim);
+        prior = new PriorFactor(keep_params_list, A, b);
+
+    } else {
+        printf("[D2VINS::Marginalizer::marginalize] use dense solver\n");
+        auto A = Utility::schurComplement(H.toDense(), b, keep_state_dim);
+        prior = new PriorFactor(keep_params_list, A, b);
+    }
+    
     printf("[D2VINS::Marginalizer] time cost %.1fms\n", tic.toc());
     return prior;
 }

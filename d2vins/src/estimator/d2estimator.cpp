@@ -89,7 +89,7 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
     }
     auto _imu = imubuf.periodIMU(state.lastFrame().stamp + state.td, _frame.stamp + state.td);
     assert(_imu.size() > 0 && "IMU buffer is empty");
-    if (fabs(_imu[_imu.size()-1].t - _frame.stamp - state.td) > params->td_max_diff && frame_count > 10) {
+    if (fabs(_imu[_imu.size()-1].t - _frame.stamp - state.td) > params->max_imu_time_err && frame_count > 10) {
         printf("\033[0;31m[D2VINS::D2Estimator] Too large time difference %.3f\n", _imu[_imu.size()-1].t - _frame.stamp - state.td);
         printf("\033[0;31m[D2VINS::D2Estimator] Prev frame  %.3f cur   %.3f td %.1fms\n", state.lastFrame().stamp + state.td, _frame.stamp + state.td, state.td*1000);
         printf("\033[0;31m[D2VINS::D2Estimator] Imu t_start %.3f t_end %.3f num %ld t_last %.3f\033[0m\n", _imu[0].t, _imu[_imu.size()-1].t, _imu.size(), imubuf[imubuf.size()-1].t);
@@ -232,12 +232,6 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     auto loss_function = new ceres::HuberLoss(1.0);    
     std::vector<int> keyframe_measurements(state.size(), 0);
     
-    if (params->estimate_td) {
-        printf("Manual diff on landmarks\n");
-    } else {
-        printf("Auto diff on landmarks\n");
-    }
-
     for (auto & lm : lms) {
         auto lm_id = lm.landmark_id;
         auto & firstObs = lm.track[0];

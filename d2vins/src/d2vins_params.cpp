@@ -28,7 +28,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     //Inputs
     camera_num = fsSettings["num_of_cam"];
     IMU_FREQ = fsSettings["imu_freq"];
-    td_max_diff = 1.5/IMU_FREQ;
+    max_imu_time_err = 1.5/IMU_FREQ;
 
     //Measurements
     acc_n = fsSettings["acc_n"];
@@ -62,6 +62,9 @@ void D2VINSConfig::init(const std::string & config_file) {
     //Outlier rejection
     perform_outlier_rejection_num = fsSettings["perform_outlier_rejection_num"];
     landmark_outlier_threshold = fsSettings["thres_outlier"];
+
+    //Marginalization
+    margin_sparse_solver = (int)fsSettings["margin_sparse_solver"];
     
     for (auto i = 0; i < camera_num; i ++) {
         char name[32] = {0};
