@@ -26,6 +26,7 @@ enum ParamsType {
 
 struct ParamInfo {
     double * pointer = nullptr;
+    double * data_copied = nullptr;
     int index = -1;
     int size = 0;
     int eff_size = 0; //This is size on tangent space.
@@ -45,6 +46,8 @@ protected:
         info.eff_size = POSE_EFF_SIZE;
         info.type = POSE;
         info.id = id;
+        info.data_copied = new state_type[info.size];
+        memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
         return info;
     }
 
@@ -54,8 +57,10 @@ protected:
         info.index = -1;
         info.size = POSE_SIZE;
         info.eff_size = POSE_EFF_SIZE;
-        info.type = POSE;
+        info.type = EXTRINSIC;
         info.id = camera_id;
+        info.data_copied = new state_type[info.size];
+        memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
         return info;
     }
 
@@ -72,6 +77,8 @@ protected:
         }
         info.type = LANDMARK;
         info.id = landmark_id;
+        info.data_copied = new state_type[info.size];
+        memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
         return info;
     }
 
@@ -83,6 +90,8 @@ protected:
         info.eff_size = FRAME_SPDBIAS_SIZE;
         info.type = SPEED_BIAS;
         info.id = id;
+        info.data_copied = new state_type[info.size];
+        memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
         return info;
     }
 
@@ -93,12 +102,13 @@ protected:
         info.size = TD_SIZE;
         info.eff_size = TD_SIZE;
         info.type = TD;
-        info.id = -1;
+        info.id = camera_id;
+        info.data_copied = new state_type[info.size];
+        memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
         return info;
     }
 
 public:
-    int parameter_size;
     ResidualType residual_type;
     ceres::CostFunction * cost_function;
     ceres::LossFunction * loss_function;
@@ -111,9 +121,6 @@ public:
     virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const = 0;
     int residualSize() const {
         return cost_function->num_residuals();
-    }
-    int paramSize() const {
-        return parameter_size;
     }
 };
 
@@ -197,16 +204,12 @@ protected:
     std::vector<ParamInfo> params_list; //[parameters... remove_params...] true if remove
     std::map<state_type*, ParamInfo> _params; // indx of parameters in params vector as sortd by params_list
 
-
-    // void addFramePoseParams(FrameIdType frame_id);
-    // void addLandmarkStateParam(LandmarkIdType frame_id);
-    // void addExtrinsicParam(int camera_id);
-    // void addTdStateParam(int camera_id);
-    // void addParam(state_type * param, ParamsType type, FrameIdType _id, bool is_remove);
-    std::pair<int, int> sortParams();
-    
+    void sortParams();
     VectorXd evaluate(SparseMat & J, int eff_residual_size, int eff_param_size);
     int filterResiduals();
+    int remove_state_dim = 0;
+    int total_eff_state_dim = 0;
+    int keep_block_size = 0;
 public:
     Marginalizer(D2EstimatorState * _state): state(_state) {}
     void addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,

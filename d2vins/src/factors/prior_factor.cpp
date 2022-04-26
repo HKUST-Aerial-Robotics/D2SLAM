@@ -12,19 +12,28 @@ PriorFactor::PriorFactor(std::vector<ParamInfo> _keep_params_list, const SparseM
     linearized_res = b;
     linearized_jac = toJacRes(A, linearized_res);
     // printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
-    keep_param_size = keep_params_list.size();
+    keep_param_blk_num = keep_params_list.size();
+    keep_eff_param_dim = getEffParamsDim();
+
+    for (auto it : keep_params_list) {
+        mutable_parameter_block_sizes()->push_back(it.size);
+    }
+    set_num_residuals(keep_eff_param_dim);
 }
 
 bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
-    Eigen::VectorXd dx(keep_param_size);
-    for (int i = 0; i < keep_param_size; i++)
+    // std::cout << "keep_eff_param_dim" << keep_eff_param_dim << std::endl;
+    Eigen::VectorXd dx(keep_eff_param_dim);
+    for (int i = 0; i < keep_param_blk_num; i++)
     {
         auto & info = keep_params_list[i];
-        int size = info.eff_size;
+        int size = info.size; //Use norminal size instead of tangent space size here.
         int idx = info.index;
+        // std::cout << "idx" << idx << "size" << size << std::endl;
+ 
         Eigen::VectorXd x = Eigen::Map<const Eigen::VectorXd>(parameters[i], size);
-        Eigen::VectorXd x0 = Eigen::Map<const Eigen::VectorXd>(info.pointer, size);
+        Eigen::VectorXd x0 = Eigen::Map<const Eigen::VectorXd>(info.data_copied, size);
         if (info.type != POSE && info.type != EXTRINSIC)
             dx.segment(idx, size) = x - x0;
         else
@@ -37,18 +46,18 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
             }
         }
     }
-    Eigen::Map<Eigen::VectorXd>(residuals, keep_param_size) = linearized_res + linearized_jac * dx;
+    Eigen::Map<Eigen::VectorXd>(residuals, keep_eff_param_dim) = linearized_res + linearized_jac * dx;
     if (jacobians)
     {
 
-        for (int i = 0; i < keep_param_size; i++)
+        for (int i = 0; i < keep_param_blk_num; i++)
         {
             if (jacobians[i])
             {
                 auto & info = keep_params_list[i];
-                int size = info.eff_size;
+                int size = info.size; //Use norminal size instead of tangent space size here.
                 int idx = info.index;
-                Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> jacobian(jacobians[i], keep_param_size, size);
+                Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> jacobian(jacobians[i], keep_eff_param_dim, size);
                 jacobian.setZero();
                 jacobian.leftCols(size) = linearized_jac.middleCols(idx, size);
             }
@@ -59,8 +68,10 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
 
 std::vector<state_type*> PriorFactor::getKeepParamsPointers() const {
     std::vector<state_type *> pointers;
+    // printf("prior blocks %d\n", keep_param_blk_num);
     for (auto & info : keep_params_list)
     {
+        // printf("Prior info type %d id %ld\n", info.type, info.id);
         pointers.push_back(info.pointer);
     }
     return pointers;
@@ -70,13 +81,17 @@ std::vector<ParamInfo> PriorFactor::getKeepParams() const {
     return keep_params_list;
 }
 
-int PriorFactor::getParamSize() const {
-    int size = 0;
-    for (auto & info : keep_params_list)
-    {
-        size += info.size;
+int PriorFactor::getEffParamsDim() const {
+    if (keep_eff_param_dim < 0) {
+        int size = 0;
+        for (auto & info : keep_params_list)
+        {
+            size += info.eff_size;
+        }
+        return size;
+    } else {
+        return keep_eff_param_dim;
     }
-    return size;
 }
 
 

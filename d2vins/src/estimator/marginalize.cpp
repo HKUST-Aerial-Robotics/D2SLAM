@@ -13,7 +13,6 @@ void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, cere
         info->camera_id = camera_id;
         info->cost_function = cost_function;
         info->loss_function = loss_function;
-        info->parameter_size = 3*POSE_SIZE + (params->landmark_param == D2VINSConfig::LM_INV_DEP ? INV_DEP_SIZE : POS_SIZE);
         residual_info_list.push_back(info);
     } else {
         auto * info = new LandmarkTwoFrameOneCamResInfoTD();
@@ -23,7 +22,6 @@ void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, cere
         info->camera_id = camera_id;
         info->cost_function = cost_function;
         info->loss_function = loss_function;
-        info->parameter_size = 3*POSE_SIZE + (params->landmark_param == D2VINSConfig::LM_INV_DEP ? INV_DEP_SIZE : POS_SIZE) + 1;
         residual_info_list.push_back(info);
     }
 }
@@ -34,7 +32,6 @@ void Marginalizer::addImuResidual(ceres::CostFunction * cost_function,  FrameIdT
     info->frame_idb = frame_idb;
     info->cost_function = cost_function;
     info->loss_function = nullptr;
-    info->parameter_size = 2*POSE_SIZE + 2*FRAME_SPDBIAS_SIZE;
     residual_info_list.push_back(info);
 }
 
@@ -42,7 +39,6 @@ void Marginalizer::addPrior(PriorFactor * cost_function) {
     auto * info = new PriorResInfo(cost_function);
     info->cost_function = cost_function;
     info->loss_function = nullptr;
-    info->parameter_size = cost_function->getParamSize();
     residual_info_list.push_back(info);
 }
 
@@ -100,9 +96,11 @@ int Marginalizer::filterResiduals() {
                 }
                 if (param.type == LANDMARK) {
                     FrameIdType base_frame_id = state->getLandmarkBaseFrame(param.id);
-                    bool is_remove = false;
+                    is_remove = false;
                     if (remove_frame_ids.find(base_frame_id) != remove_frame_ids.end()) {
                         is_remove = true;
+                    } else {
+                        printf("[D2VINS::Marginalizer::filterResiduals] landmark %d base frame %d not in remove_frame_ids %ld\n", param.id, base_frame_id, *remove_frame_ids.begin());
                     }
                 }
                 param.is_remove = is_remove;
@@ -127,33 +125,34 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
 
     auto eff_residual_size = filterResiduals();
     
-    auto ret = sortParams(); //sort the parameters
+    sortParams(); //sort the parameters
     
-    auto eff_param_size = ret.first;
-    auto remove_state_size = ret.second;
-    int keep_state_size = eff_param_size - remove_state_size;
+    int keep_state_dim = total_eff_state_dim - remove_state_dim;
 
-    printf("[D2VINS::Marginalizer::marginalize] frame_id %ld eff_param_size: %d remove param size %d eff_residual_size: %d \n", 
-         *remove_frame_ids.begin(), eff_param_size, remove_state_size, eff_residual_size);
-    SparseMat J(eff_residual_size, eff_param_size);
-    auto residual_vec = evaluate(J, eff_residual_size, eff_param_size);
+    printf("[D2VINS::Marginalizer::marginalize] frame_id %ld total_eff_state_dim: %d remove param size %d eff_residual_size: %d keep_block_size %d \n", 
+         *remove_frame_ids.begin(), total_eff_state_dim, remove_state_dim, eff_residual_size, keep_block_size);
+    SparseMat J(eff_residual_size, total_eff_state_dim);
+    auto residual_vec = evaluate(J, eff_residual_size, total_eff_state_dim);
     
     SparseMat H = SparseMatrix<double>(J.transpose())*J;
-    SparseMat H11 = H.block(0, 0, keep_state_size, keep_state_size);
-    SparseMat H12 = H.block(0, keep_state_size, keep_state_size, remove_state_size);
-    SparseMat H22 = H.block(keep_state_size, keep_state_size, remove_state_size, remove_state_size);
+    SparseMat H11 = H.block(0, 0, keep_state_dim, keep_state_dim);
+    SparseMat H12 = H.block(0, keep_state_dim, keep_state_dim, remove_state_dim);
+    SparseMat H22 = H.block(keep_state_dim, keep_state_dim, remove_state_dim, remove_state_dim);
     SparseMat H22_inv = Utility::inverse(H22);
     SparseMat A = H11 - H12 * H22_inv * SparseMatrix<double>(H12.transpose());
-    VectorXd b = residual_vec.segment(0, keep_state_size) - H12 * H22_inv * residual_vec.segment(keep_state_size, remove_state_size);
+    VectorXd b = residual_vec.segment(0, keep_state_dim) - H12 * H22_inv * residual_vec.segment(keep_state_dim, remove_state_dim);
     TicToc tic_j;
-    std::vector<ParamInfo> keep_params_list(params_list.begin(), params_list.begin() + keep_state_size);
+    std::vector<ParamInfo> keep_params_list(params_list.begin(), params_list.begin() + keep_block_size);
     auto prior = new PriorFactor(keep_params_list, A, b);
+    // for (auto _param : keep_params_list) {
+    //     printf("Keep param %p type %d size %d index %d cul_param_size %d is remove %d\n",
+    //             _param.pointer, _param.type, _param.size, _param.index, total_eff_state_dim, _param.is_remove);
+    // }
     printf("[D2VINS::Marginalizer] time cost %.1fms\n", tic.toc());
     return prior;
 }
 
-std::pair<int, int> Marginalizer::sortParams() {
-    int remove_size = 0;
+void Marginalizer::sortParams() {
     params_list.clear();
     for (auto it: _params) {
         params_list.push_back(it.second);
@@ -163,17 +162,22 @@ std::pair<int, int> Marginalizer::sortParams() {
         return a.is_remove < b.is_remove;
     });
 
-    int cul_param_size = 0; //here on tangent space
+    total_eff_state_dim = 0; //here on tangent space
+    remove_state_dim = 0;
+    keep_block_size = 0;
     for (unsigned i = 0; i < params_list.size(); i++) {
         auto & _param = _params.at(params_list[i].pointer);
-        _param.index = cul_param_size;
-        cul_param_size += _param.eff_size;
-        // printf("Param %p type %d size %d index %d cul_param_size %d\n", params_list[i].pointer, _param.type, _param.size, _param.index, cul_param_size);
+        _param.index = total_eff_state_dim;
+        total_eff_state_dim += _param.eff_size;
+        // printf("Param %p type %d size %d index %d cul_param_size %d is remove %d\n",
+        //         params_list[i].pointer, _param.type, _param.size, _param.index, total_eff_state_dim, _param.is_remove);
         if (_param.is_remove) {
-            remove_size += _param.eff_size;
+            remove_state_dim += _param.eff_size;
+        } else {
+            keep_block_size ++;
         }
+        params_list[i] = _param;
     }
-    return make_pair(cul_param_size, remove_size);
 }
 
 void ResidualInfo::Evaluate(std::vector<double*> params) {

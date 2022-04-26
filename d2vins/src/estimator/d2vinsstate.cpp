@@ -97,7 +97,7 @@ void D2EstimatorState::clearFrame() {
     } else if (sld_win.size() >= params->max_sld_win_size) {
         if (sld_win[sld_win.size() - 2]->is_keyframe) {
             std::set<FrameIdType> clear_frames{sld_win[0]->frame_id};
-            marginalizer->marginalize(clear_frames);
+            prior_factor = marginalizer->marginalize(clear_frames);
             popFrame(0);
         }
     }

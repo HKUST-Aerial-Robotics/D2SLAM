@@ -11,8 +11,8 @@
     <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640_rtx3080_fp16.trt" />
     <!-- <arg name="camera_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/left.yaml" /> -->
     <!-- <arg name="vins_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/realsense.yaml" /> -->
-    <arg name="camera_config_path" default="/home/xuhao/data/drone3-ri/Configs/SwarmConfig1/realsense/left.yaml" />
-    <arg name="vins_config_path" default="/home/xuhao/data/drone3-ri/Configs/SwarmConfig1/realsense/realsense_d2slam.yaml" />
+    <arg name="camera_config_path" default="/home/xuhao/data/drone3-ri/Configs/SwarmConfig2/realsense/left.yaml" />
+    <arg name="vins_config_path" default="/home/xuhao/data/drone3-ri/Configs/SwarmConfig2/realsense/realsense_d2slam.yaml" />
     <arg name="max_freq" default="1.0" />
     <arg name="superpoint_max_num" default="200" />
     <arg name="match_index_dist" default="50" />
@@ -36,7 +36,7 @@
             enable_sub_remote_img: false
             accept_min_3d_pts: 30
             recv_msg_duration: 0.5
-            superpoint_thres: 0.15
+            superpoint_thres: 0.1
             triangle_thres: 0.012
             #triangle_thres: 0.008
             min_direction_loop: 1
