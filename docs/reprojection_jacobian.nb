@@ -1,0 +1,113 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.1' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      3083,        105]
+NotebookOptionsPosition[      2470,         85]
+NotebookOutlinePosition[      2914,        103]
+CellTagsIndexPosition[      2871,        100]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell["Re-projection Jacobian without time difference", "Text",
+ CellChangeTimes->{{3.8600590251413345`*^9, 
+  3.8600590594801283`*^9}},ExpressionUUID->"377a248f-99e7-4247-9194-\
+fb20c0537c66"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{" ", 
+  RowBox[{"(*", 
+   RowBox[{"IMU", " ", "pose", " ", "of", " ", "frame", " ", "i"}], "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"<<", "Quaternions`"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+     SubscriptBox["P", "i"], "=", 
+     RowBox[{"(", GridBox[{
+        {
+         SubscriptBox["x", "i"]},
+        {
+         SubscriptBox["y", "i"]},
+        {
+         SubscriptBox["z", "i"]}
+       }], ")"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+     SubscriptBox["q", "i"], "=", 
+     RowBox[{"Quaternion", "[", 
+      RowBox[{
+       SubscriptBox["q", "iw"], ",", 
+       SubscriptBox["q", "ix"], ",", 
+       SubscriptBox["q", "iy"], ",", 
+       SubscriptBox["q", "iz"]}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+     SubscriptBox["P", "j"], "=", 
+     RowBox[{"(", GridBox[{
+        {
+         SubscriptBox["x", "j"]},
+        {
+         SubscriptBox["y", "j"]},
+        {
+         SubscriptBox["z", "j"]}
+       }], ")"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+     SubscriptBox["q", "j"], "=", 
+     RowBox[{"Quaternion", "[", 
+      RowBox[{
+       SubscriptBox["q", "jw"], ",", 
+       SubscriptBox["q", "jx"], ",", 
+       SubscriptBox["q", "jy"], ",", 
+       SubscriptBox["q", "jz"]}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]"}]}]], "Input",
+ CellChangeTimes->{{3.8600590621202555`*^9, 
+  3.8600592726702757`*^9}},ExpressionUUID->"7a3618c5-4ba8-4777-af04-\
+24aecc1e1645"],
+
+Cell[BoxData[
+ RowBox[{"Quaternion", "[", "]"}]], "Output",
+ CellChangeTimes->{3.860059193391715*^9},
+ CellLabel->"Out[3]=",ExpressionUUID->"438e4b72-e3bd-41ca-ba62-482828c6de64"]
+}, Open  ]]
+},
+WindowSize->{1187, 833},
+WindowMargins->{{561, Automatic}, {245, Automatic}},
+Magnification:>2. Inherited,
+FrontEndVersion->"12.1 for Microsoft Windows (64-bit) (2020\:5e744\:670815\
+\:65e5)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"31182cac-76bb-4799-a786-f97a860dfae4"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 192, 3, 68, "Text",ExpressionUUID->"377a248f-99e7-4247-9194-fb20c0537c66"],
+Cell[CellGroupData[{
+Cell[775, 27, 1497, 50, 457, "Input",ExpressionUUID->"7a3618c5-4ba8-4777-af04-24aecc1e1645"],
+Cell[2275, 79, 179, 3, 65, "Output",ExpressionUUID->"438e4b72-e3bd-41ca-ba62-482828c6de64"]
+}, Open  ]]
+}
+]
+*)
+

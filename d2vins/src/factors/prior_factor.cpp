@@ -1,5 +1,5 @@
 #include "prior_factor.h"
-#include "../estimator/marginalize.hpp"
+#include "../estimator/marginalization/marginalization.hpp"
 
 namespace D2VINS {
 
@@ -90,25 +90,27 @@ void PriorFactor::initDims(const std::vector<ParamInfo> & _keep_params_list) {
 }
 
 MatrixXd toJacRes(const MatrixXd & A, VectorXd & b) {
-    const double eps = 1e-8;
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> saes2(A);
-    Eigen::VectorXd S = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array(), 0));
-    Eigen::VectorXd S_inv = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array().inverse(), 0));
+    if (params->use_llt_for_decompose_A_b) {
+        LLT<MatrixXd> llt(A);
+        llt.matrixL().solveInPlace(b);
+        b = -b;
+        return llt.matrixU();
+    } else {
+        const double eps = 1e-8;
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> saes2(A);
+        Eigen::VectorXd S = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array(), 0));
+        Eigen::VectorXd S_inv = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array().inverse(), 0));
 
-    Eigen::VectorXd S_sqrt = S.cwiseSqrt();
-    Eigen::VectorXd S_inv_sqrt = S_inv.cwiseSqrt();
+        Eigen::VectorXd S_sqrt = S.cwiseSqrt();
+        Eigen::VectorXd S_inv_sqrt = S_inv.cwiseSqrt();
 
-    b = S_inv_sqrt.asDiagonal() * saes2.eigenvectors().transpose() * b;
-    return S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
+        b = S_inv_sqrt.asDiagonal() * saes2.eigenvectors().transpose() * b;
+        return S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
+    }
 }
 
 MatrixXd toJacRes(const SparseMat & A, VectorXd & b) {
     return toJacRes(A.toDense(), b);
-    // auto Adense = A.toDense();
-    // LLT<MatrixXd> llt(Adense);
-    // llt.matrixL().solveInPlace(b);
-    // b = -b;
-    // return llt.matrixU();
 }
 
 }

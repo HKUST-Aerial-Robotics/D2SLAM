@@ -5,12 +5,12 @@
 #include <swarm_msgs/Odometry.h>
 #include <ceres/ceres.h>
 #include "visualization.hpp"
-#include "marginalize.hpp"
 
 using namespace Eigen;
 using D2FrontEnd::VisualImageDescArray;
 
 namespace D2VINS {
+class Marginalizer;
 class D2Estimator {
 protected:
     //Internal states

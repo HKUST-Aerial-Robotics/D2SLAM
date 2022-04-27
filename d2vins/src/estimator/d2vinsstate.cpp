@@ -2,7 +2,7 @@
 #include <d2vins/d2vins_params.hpp>
 #include <d2vins/d2vins_types.hpp>
 #include "../factors/integration_base.h"
-#include "marginalize.hpp"
+#include "marginalization/marginalization.hpp"
 
 using namespace Eigen;
 namespace D2VINS {
@@ -52,7 +52,7 @@ int D2EstimatorState::getPoseIndex(FrameIdType frame_id) const {
 double * D2EstimatorState::getPoseState(FrameIdType frame_id) const {
     if (_frame_pose_state.find(frame_id) == _frame_pose_state.end()) {
         printf("\033[0;31m[D2VINS::D2EstimatorState] frame %ld not found\033[0m\n", frame_id);
-        exit(-1);
+        exit(1);
     }
     return _frame_pose_state.at(frame_id);
 }
@@ -91,13 +91,15 @@ std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements() con
 }
 
 void D2EstimatorState::clearFrame() {
-    if (sld_win.size() >= 2 && !sld_win[sld_win.size() - 1]->is_keyframe) {
-        //If last frame is not keyframe then remove it.
-        popFrame(sld_win.size() - 1);
-    } else if (sld_win.size() >= params->max_sld_win_size) {
-        if (sld_win[sld_win.size() - 2]->is_keyframe) {
+    if (sld_win.size() >= params->min_solve_frames) {
+        if (sld_win.size() >= 2 && (!sld_win[sld_win.size() - 1]->is_keyframe)) {
+            //If last frame is not keyframe then remove it.
+            popFrame(sld_win.size() - 1);
+        } else if (sld_win.size() >= params->max_sld_win_size) {
             std::set<FrameIdType> clear_frames{sld_win[0]->frame_id};
-            prior_factor = marginalizer->marginalize(clear_frames);
+            if (params->enable_marginalization) {
+                prior_factor = marginalizer->marginalize(clear_frames);
+            }
             popFrame(0);
         }
     }

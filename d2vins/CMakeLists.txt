@@ -52,7 +52,8 @@ add_library(${PROJECT_NAME}_estimator
   src/estimator/visualization.cpp
   src/estimator/landmark_manager.cpp
   src/estimator/d2vinsstate.cpp
-  src/estimator/marginalize.cpp
+  src/estimator/marginalization/marginalization.cpp
+  src/estimator/marginalization/marginalization_info.cpp
   src/factors/projectionTwoFrameOneCamFactor.cpp
   src/factors/projectionTwoFrameOneCamDepthFactor.cpp
   src/factors/prior_factor.cpp

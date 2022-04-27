@@ -41,6 +41,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     //Outputs
     fsSettings["output_path"] >> output_folder;
     debug_print_states = (int)fsSettings["debug_print_states"];
+    debug_print_solver_details = (int)fsSettings["debug_print_solver_details"];
 
     //Solver
     solver_time = fsSettings["max_solver_time"];
@@ -65,6 +66,8 @@ void D2VINSConfig::init(const std::string & config_file) {
 
     //Marginalization
     margin_sparse_solver = (int)fsSettings["margin_sparse_solver"];
+    enable_marginalization = (int)fsSettings["enable_marginalization"];
+    use_llt_for_decompose_A_b = (int)fsSettings["use_llt_for_decompose_A_b"];
     
     for (auto i = 0; i < camera_num; i ++) {
         char name[32] = {0};

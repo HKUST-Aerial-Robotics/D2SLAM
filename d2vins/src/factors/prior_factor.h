@@ -25,15 +25,18 @@ public:
         TicToc tic_j;
         linearized_res = b;
         linearized_jac = toJacRes(A, linearized_res);
-        if (linearized_jac.hasNaN()) {
-            printf("[D2VINS::PriorFactor] linearized_jac has NaN\n");
-            exit(1);
+
+        if (hasNan()) {
+            std::cout << "NaN found in Prior factor" << std::endl;
+            std::cout << "A max " << MatrixXd(A).maxCoeff() << std::endl;
+            std::cout << "b max " << b.maxCoeff() << std::endl;
+            std::cout << "linearized_jac max " << linearized_jac.maxCoeff() << std::endl;
+            std::cout << "linearized_res max " << linearized_res.maxCoeff() << std::endl;
         }
-        // printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
-        // std::cout << "A max " << MatrixXd(A).maxCoeff() << std::endl;
-        // std::cout << "b max " << b.maxCoeff() << std::endl;
-        // std::cout << "linearized_jac max " << linearized_jac.maxCoeff() << std::endl;
-        // std::cout << "linearized_res max " << linearized_res.maxCoeff() << std::endl;
+        // std::cout << "A\n" << A.block(0, 0, 7, 7) << std::endl;
+        // std::cout << "b " << b.segment(0, 7).transpose() << std::endl;
+        // std::cout << "linearized_jac\n" << linearized_jac.block(0, 0, 7, 7) << std::endl;
+        // std::cout << "linearized_res\n" << linearized_res.segment(0, 7).transpose() << std::endl;
         initDims(_keep_params_list);
     }
 
@@ -41,6 +44,20 @@ public:
     virtual std::vector<state_type *> getKeepParamsPointers() const;
     virtual std::vector<ParamInfo> getKeepParams() const;
     int getEffParamsDim() const;
+    bool hasNan() const {
+        if (std::isnan(linearized_jac.maxCoeff()) || std::isnan(linearized_res.minCoeff())) {
+            printf("\033[0;31m [D2VINS::PriorFactor] linearized_jac has NaN\033[0m\n");
+            std::cout << "linearized_jac\n" <<  linearized_jac << std::endl;
+            return true;
+        }
+        if (std::isnan(linearized_res.maxCoeff()) || std::isnan(linearized_res.minCoeff())) {
+            printf("\033[0;31m [D2VINS::PriorFactor] linearized_res has NaN\033[0m\n");
+            std::cout << "linearized_res\n" <<  linearized_res << std::endl;
+            return true;
+        }
+        return false;
+    }
+
 };
 
 }

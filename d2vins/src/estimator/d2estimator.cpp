@@ -9,6 +9,7 @@
 #include "../factors/projectionTwoFrameOneCamFactorNoTD.h"
 #include "../factors/pose_local_parameterization.h"
 #include <d2frontend/utils.h>
+#include "marginalization/marginalization.hpp"
 
 namespace D2VINS {
 void D2Estimator::init(ros::NodeHandle & nh) {
@@ -130,7 +131,6 @@ void D2Estimator::inputImage(VisualImageDescArray & _frame) {
         //Wait for IMU
         usleep(2000);
         printf("[D2VINS::D2Estimator] wait for imu...\n");
-        exit(0);
     }
 
     addFrame(_frame);
@@ -162,6 +162,10 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
             // problem.SetManifold(state.getExtrinsicState(i), pose_manifold);
             problem.SetParameterization(state.getExtrinsicState(i), pose_local_param);
         }
+    }
+
+    if (!params->estimate_td) {
+        problem.SetParameterBlockConstant(state.getTdState(0));
     }
 
     //Current no margarin, fix the first pose
@@ -252,42 +256,23 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
         }
         for (auto i = 1; i < lm.track.size(); i++) {
             auto mea1 = lm.track[i].measurement();
-            if (params->estimate_td) {
-                ceres::CostFunction * f_td = nullptr;
-                if (lm.track[i].depth_mea && params->fuse_dep && 
-                    lm.track[i].depth < params->max_depth_to_fuse && 
-                    lm.track[i].depth > params->min_depth_to_fuse) {
-                    f_td = new ProjectionTwoFrameOneCamDepthFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,
-                        firstObs.cur_td, lm.track[i].cur_td, lm.track[i].depth);
-                } else {
-                    f_td = new ProjectionTwoFrameOneCamFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,
-                        firstObs.cur_td, lm.track[i].cur_td);
-                }
-                problem.AddResidualBlock(f_td, loss_function,
-                    state.getPoseState(firstObs.frame_id), 
-                    state.getPoseState(lm.track[i].frame_id), 
-                    state.getExtrinsicState(firstObs.camera_id),
-                    state.getLandmarkState(lm_id), state.getTdState(lm.track[i].frame_id));
-                marginalizer->addLandmarkResidual(f_td, loss_function,
-                    firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_id, true);
+            ceres::CostFunction * f_td = nullptr;
+            if (lm.track[i].depth_mea && params->fuse_dep && 
+                lm.track[i].depth < params->max_depth_to_fuse && 
+                lm.track[i].depth > params->min_depth_to_fuse) {
+                f_td = new ProjectionTwoFrameOneCamDepthFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,
+                    firstObs.cur_td, lm.track[i].cur_td, lm.track[i].depth);
             } else {
-                printf("[D2VINS] Auto diff on landmarks, may has error on local param\n");
-                ceres::CostFunction * f_lm = nullptr;
-                if (lm.track[i].depth_mea && params->fuse_dep &&                     
-                    lm.track[i].depth < params->max_depth_to_fuse && 
-                    lm.track[i].depth > params->min_depth_to_fuse) {
-                    f_lm = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1, lm.track[i].depth);
-                } else {
-                    f_lm = ProjectionTwoFrameOneCamFactorNoTD::Create(mea0, mea1);
-                }
-                problem.AddResidualBlock(f_lm, loss_function,
-                    state.getPoseState(firstObs.frame_id), 
-                    state.getPoseState(lm.track[i].frame_id), 
-                    state.getExtrinsicState(firstObs.camera_id),
-                    state.getLandmarkState(lm_id));
-                marginalizer->addLandmarkResidual(f_lm, loss_function,
-                    firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_id);
+                f_td = new ProjectionTwoFrameOneCamFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,
+                    firstObs.cur_td, lm.track[i].cur_td);
             }
+            problem.AddResidualBlock(f_td, loss_function,
+                state.getPoseState(firstObs.frame_id), 
+                state.getPoseState(lm.track[i].frame_id), 
+                state.getExtrinsicState(firstObs.camera_id),
+                state.getLandmarkState(lm_id), state.getTdState(lm.track[i].frame_id));
+            marginalizer->addLandmarkResidual(f_td, loss_function,
+                firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_id, true);
             keyframe_measurements[state.getPoseIndex(lm.track[i].frame_id)] ++;
         }
         problem.SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);

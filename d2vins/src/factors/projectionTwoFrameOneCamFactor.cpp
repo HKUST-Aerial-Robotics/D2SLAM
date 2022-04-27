@@ -148,10 +148,6 @@ bool ProjectionTwoFrameOneCamFactor::Evaluate(double const *const *parameters, d
             jacobian_td = reduce * ric.transpose() * Rj.transpose() * Ri * ric * velocity_i / inv_dep_i * -1.0  +
                           sqrt_info * velocity_j.head(2);
 #endif
-            if (!jacobian_td.allFinite()) {
-                std::cout << "not finite!!!!" << std::endl;
-                exit(0);
-            }
         }
     }
     return true;
