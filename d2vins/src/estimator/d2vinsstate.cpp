@@ -101,6 +101,7 @@ void D2EstimatorState::clearFrame() {
             popFrame(0);
         }
     }
+    outlierRejection();
     updatePoseIndices();
 }
 
@@ -137,13 +138,7 @@ void D2EstimatorState::syncFromState() {
     for (size_t i = 0; i < extrinsic.size(); i ++ ) {
         extrinsic[i].from_vector(_camera_extrinsic_state[i]);
     }
-    // for (auto frame : sld_win) {
-    //     if (frame->pre_integrations != nullptr) {
-    //         frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
-    //     }
-    // }
     lmanager.syncState(extrinsic, frame_db);
-    // outlierRejection();
 }
 
 void D2EstimatorState::outlierRejection() {

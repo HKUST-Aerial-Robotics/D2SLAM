@@ -103,12 +103,12 @@ MatrixXd toJacRes(const MatrixXd & A, VectorXd & b) {
 }
 
 MatrixXd toJacRes(const SparseMat & A, VectorXd & b) {
-    // return toJacRes(A.toDense(), b);
-    auto Adense = A.toDense();
-    LLT<MatrixXd> llt(Adense);
-    llt.matrixL().solveInPlace(b);
-    b = -b;
-    return llt.matrixU();
+    return toJacRes(A.toDense(), b);
+    // auto Adense = A.toDense();
+    // LLT<MatrixXd> llt(Adense);
+    // llt.matrixL().solveInPlace(b);
+    // b = -b;
+    // return llt.matrixU();
 }
 
 }
