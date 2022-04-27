@@ -139,7 +139,7 @@ void D2LandmarkManager::syncState(const std::vector<Swarm::Pose> & extrinsic, co
     for (auto it : landmark_state) {
         auto lm_id = it.first;
         auto & lm = landmark_db.at(lm_id);
-        if (lm.track.size() > params->landmark_estimate_tracks) {
+        if (lm.track.size() >= params->landmark_estimate_tracks) {
             if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
                 auto inv_dep = *it.second;
                 auto lm_per_frame = lm.track[0];
@@ -187,7 +187,7 @@ std::vector<LandmarkPerId> D2LandmarkManager::getInitializedLandmarks() const {
     std::vector<LandmarkPerId> lm_per_frame_vec;
     for (auto it : landmark_db) {
         auto & lm = it.second;
-        if (lm.track.size() > params->landmark_estimate_tracks && lm.flag >= LandmarkFlag::INITIALIZED) {
+        if (lm.track.size() >= params->landmark_estimate_tracks && lm.flag >= LandmarkFlag::INITIALIZED) {
             lm_per_frame_vec.push_back(lm);
         }
     }
