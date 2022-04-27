@@ -129,8 +129,6 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     
     int keep_state_dim = total_eff_state_dim - remove_state_dim;
 
-    printf("[D2VINS::Marginalizer::marginalize] frame_id %ld total_eff_state_dim: %d remove param size %d eff_residual_size: %d keep_block_size %d \n", 
-         *remove_frame_ids.begin(), total_eff_state_dim, remove_state_dim, eff_residual_size, keep_block_size);
     SparseMat J(eff_residual_size, total_eff_state_dim);
     auto b = evaluate(J, eff_residual_size, total_eff_state_dim);
     SparseMat H = SparseMatrix<double>(J.transpose())*J;
@@ -148,8 +146,10 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
         auto A = Utility::schurComplement(H.toDense(), b, keep_state_dim);
         prior = new PriorFactor(keep_params_list, A, b);
     }
-    
-    printf("[D2VINS::Marginalizer] time cost %.1fms\n", tic.toc());
+    if (params->debug_print_marginal) {
+        printf("[D2VINS::Marginalizer::marginalize] time cost %.1fms frame_id %ld total_eff_state_dim: %d remove param size %d eff_residual_size: %d keep_block_size %d \n", 
+            tic.toc(), *remove_frame_ids.begin(), total_eff_state_dim, remove_state_dim, eff_residual_size, keep_block_size);
+    }
     return prior;
 }
 

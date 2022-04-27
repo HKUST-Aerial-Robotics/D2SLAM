@@ -27,13 +27,13 @@ public:
         linearized_jac = toJacRes(A, linearized_res);
         if (linearized_jac.hasNaN()) {
             printf("[D2VINS::PriorFactor] linearized_jac has NaN\n");
-            exit(0);
+            exit(1);
         }
-        printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
-        std::cout << "A max " << MatrixXd(A).maxCoeff() << std::endl;
-        std::cout << "b max " << b.maxCoeff() << std::endl;
-        std::cout << "linearized_jac max " << linearized_jac.maxCoeff() << std::endl;
-        std::cout << "linearized_res max " << linearized_res.maxCoeff() << std::endl;
+        // printf("[D2VINS::Marginalizer] linearized_jac time cost %.3fms\n", tic_j.toc());
+        // std::cout << "A max " << MatrixXd(A).maxCoeff() << std::endl;
+        // std::cout << "b max " << b.maxCoeff() << std::endl;
+        // std::cout << "linearized_jac max " << linearized_jac.maxCoeff() << std::endl;
+        // std::cout << "linearized_res max " << linearized_res.maxCoeff() << std::endl;
         initDims(_keep_params_list);
     }
 

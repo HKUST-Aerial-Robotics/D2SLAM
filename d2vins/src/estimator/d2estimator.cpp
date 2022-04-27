@@ -185,7 +185,6 @@ void D2Estimator::solve() {
     ceres::Solver::Summary summary;
     // params->options.?
     ceres::Solve(params->options, problem, &summary);
-    std::cout << summary.BriefReport() << std::endl;
     state.syncFromState();
     last_odom = state.lastFrame().odom;
 
@@ -197,8 +196,11 @@ void D2Estimator::solve() {
     sum_iteration += summary.num_successful_steps + summary.num_unsuccessful_steps;
     sum_cost += summary.final_cost;
 
-    printf("[D2VINS] average time %.3fms, average iteration %.3f, average cost %.3f\n", 
-        sum_time*1000/solve_count, sum_iteration/solve_count, sum_cost/solve_count);
+    if (params->debug_print_solver_details) {
+        std::cout << summary.BriefReport() << std::endl;
+        printf("[D2VINS] average time %.3fms, average iteration %.3f, average cost %.3f\n", 
+            sum_time*1000/solve_count, sum_iteration/solve_count, sum_cost/solve_count);
+    }
 
     printf("[D2VINS] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
         current_landmark_num, last_odom.toStr().c_str(), state.td*1000, summary.total_time_in_seconds*1000);
@@ -214,7 +216,7 @@ void D2Estimator::solve() {
 
     if (summary.termination_type == ceres::FAILURE)  {
         std::cout << summary.message << std::endl;
-        exit(0);
+        exit(1);
     }
 }
 
