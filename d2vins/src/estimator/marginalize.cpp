@@ -139,12 +139,12 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     //Compute the schur complement, by sparse LLT.
     PriorFactor * prior = nullptr;
     if (params->margin_sparse_solver) {
-        printf("[D2VINS::Marginalizer::marginalize] use sparse LLT solver\n");
+        // printf("[D2VINS::Marginalizer::marginalize] use sparse LLT solver\n");
         auto A = Utility::schurComplement(H, b, keep_state_dim);
         prior = new PriorFactor(keep_params_list, A, b);
 
     } else {
-        printf("[D2VINS::Marginalizer::marginalize] use dense solver\n");
+        // printf("[D2VINS::Marginalizer::marginalize] use dense solver\n");
         auto A = Utility::schurComplement(H.toDense(), b, keep_state_dim);
         prior = new PriorFactor(keep_params_list, A, b);
     }

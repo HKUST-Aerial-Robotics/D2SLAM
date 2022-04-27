@@ -5,23 +5,21 @@ namespace D2VINS {
 
 MatrixXd toJacRes(const SparseMat & A, VectorXd & b);
 MatrixXd toJacRes(const MatrixXd & A, VectorXd & b);
-
+bool first_evaluate = false;
 bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
     // std::cout << "keep_eff_param_dim" << keep_eff_param_dim << std::endl;
     Eigen::VectorXd dx(keep_eff_param_dim);
-    for (int i = 0; i < keep_param_blk_num; i++)
-    {
+
+    for (int i = 0; i < keep_param_blk_num; i++) {
         auto & info = keep_params_list[i];
         int size = info.size; //Use norminal size instead of tangent space size here.
         int idx = info.index;
-        // std::cout << "idx" << idx << "size" << size << std::endl;
- 
-        Eigen::VectorXd x = Eigen::Map<const Eigen::VectorXd>(parameters[i], size);
-        Eigen::VectorXd x0 = Eigen::Map<const Eigen::VectorXd>(info.data_copied, size);
-        if (info.type != POSE && info.type != EXTRINSIC)
+        Eigen::Map<const Eigen::VectorXd> x(parameters[i], size);
+        Eigen::Map<const Eigen::VectorXd> x0(info.data_copied, size);
+        if (info.type != POSE && info.type != EXTRINSIC) {
             dx.segment(idx, size) = x - x0;
-        else
+        } else
         {
             dx.segment<3>(idx + 0) = x.head<3>() - x0.head<3>();
             dx.segment<3>(idx + 3) = 2.0 * Utility::positify(Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5))).vec();
@@ -31,10 +29,10 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
             }
         }
     }
-    Eigen::Map<Eigen::VectorXd>(residuals, keep_eff_param_dim) = linearized_res + linearized_jac * dx;
-    if (jacobians)
-    {
-
+    Eigen::Map<Eigen::VectorXd> res(residuals, keep_eff_param_dim);
+    res = linearized_res + linearized_jac * dx;
+    
+    if (jacobians) {
         for (int i = 0; i < keep_param_blk_num; i++)
         {
             if (jacobians[i])
@@ -44,10 +42,11 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
                 int idx = info.index;
                 Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> jacobian(jacobians[i], keep_eff_param_dim, size);
                 jacobian.setZero();
-                jacobian.leftCols(size) = linearized_jac.middleCols(idx, size);
+                jacobian.leftCols(info.eff_size) = linearized_jac.middleCols(idx, info.eff_size);
             }
         }
     }
+    first_evaluate = false;
     return true;
 }
 
@@ -87,19 +86,8 @@ void PriorFactor::initDims(const std::vector<ParamInfo> & _keep_params_list) {
         mutable_parameter_block_sizes()->push_back(it.size);
     }
     set_num_residuals(keep_eff_param_dim);
+    first_evaluate = true;
 }
-
-
-class MyLLT : public Eigen::SimplicialLLT<Eigen::SparseMatrix<double>, Eigen::Lower, Eigen::NaturalOrdering<int>> {
-public:
-    MatrixXd matrixLDense() const {
-        eigen_assert(Base::m_factorizationIsOk && "Simplicial LLT not factorized");
-        return MatrixXd(Base::m_matrix);
-    }
-    void solveLb(VectorXd & b) {
-      Traits::getL(Base::m_matrix).solveInPlace(b);
-    }
-};
 
 MatrixXd toJacRes(const MatrixXd & A, VectorXd & b) {
     const double eps = 1e-8;
@@ -115,29 +103,12 @@ MatrixXd toJacRes(const MatrixXd & A, VectorXd & b) {
 }
 
 MatrixXd toJacRes(const SparseMat & A, VectorXd & b) {
-    // Ideally we should use sparse MyLLT for this, but it has some unknown bug. So we use a dense version.
-    // auto ret = A.toDense();
-    // MyLLT solver;
-    // solver.compute(A);
-    // assert(solver.info() == Eigen::Success && "LLT failed");
-    // auto L = solver.matrixLDense();
-    // printf("b rows %d cols %d L rows %d cols %d\n", b.rows(), b.cols(), L.rows(), L.cols());
-    // solver.solveLb(b);
-    // fflush(stdout);
-    // auto Adense = A.toDense();
-    // LLT<MatrixXd> llt(Adense);
-    // llt.matrixL().solveInPlace(b);
-    // return llt.matrixL();
-    const double eps = 1e-8;
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> saes2(A);
-    Eigen::VectorXd S = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array(), 0));
-    Eigen::VectorXd S_inv = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array().inverse(), 0));
-
-    Eigen::VectorXd S_sqrt = S.cwiseSqrt();
-    Eigen::VectorXd S_inv_sqrt = S_inv.cwiseSqrt();
-
-    b = S_inv_sqrt.asDiagonal() * saes2.eigenvectors().transpose() * b;
-    return S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
+    // return toJacRes(A.toDense(), b);
+    auto Adense = A.toDense();
+    LLT<MatrixXd> llt(Adense);
+    llt.matrixL().solveInPlace(b);
+    b = -b;
+    return llt.matrixU();
 }
 
 }

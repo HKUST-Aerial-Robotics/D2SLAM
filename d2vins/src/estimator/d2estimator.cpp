@@ -183,6 +183,7 @@ void D2Estimator::solve() {
     setStateProperties(*problem);
 
     ceres::Solver::Summary summary;
+    // params->options.?
     ceres::Solve(params->options, problem, &summary);
     std::cout << summary.BriefReport() << std::endl;
     state.syncFromState();
@@ -210,7 +211,11 @@ void D2Estimator::solve() {
     if (params->debug_print_states) {
         state.printSldWin();
     }
-    // exit(0);
+
+    if (summary.termination_type == ceres::FAILURE)  {
+        std::cout << summary.message << std::endl;
+        exit(0);
+    }
 }
 
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {
