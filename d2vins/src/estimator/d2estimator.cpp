@@ -15,7 +15,7 @@ void D2Estimator::init(ros::NodeHandle & nh) {
     state.init(params->camera_extrinsics, params->td_initial);
     ProjectionTwoFrameOneCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info = params->focal_length / 1.5 * Matrix3d::Identity();
-    ProjectionTwoFrameOneCamDepthFactor::sqrt_info(2,2) = 5;
+    ProjectionTwoFrameOneCamDepthFactor::sqrt_info(2,2) = params->depth_sqrt_inf;
     visual.init(nh, this);
     Swarm::Pose ext = state.getExtrinsic(0);
     printf("[D2VINS::D2Estimator] extrinsic %s\n", ext.toStr().c_str());

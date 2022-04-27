@@ -27,8 +27,8 @@ class ProjectionTwoFrameOneCamDepthFactor : public ceres::SizedCostFunction<3, 7
 
     Eigen::Vector3d pts_i, pts_j;
     Eigen::Vector3d velocity_i, velocity_j;
+    double inv_depth_j;
     double td_i, td_j;
-    double depth_j;
     Eigen::Matrix<double, 2, 3> tangent_base;
     static Eigen::Matrix3d sqrt_info;
     static double sum_t;

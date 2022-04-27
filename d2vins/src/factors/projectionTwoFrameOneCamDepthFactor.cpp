@@ -20,7 +20,7 @@ ProjectionTwoFrameOneCamDepthFactor::ProjectionTwoFrameOneCamDepthFactor(const E
                                        const Eigen::Vector3d &_velocity_i, const Eigen::Vector3d &_velocity_j,
                                        const double _td_i, const double _td_j, const double _depth_j) : 
                                        pts_i(_pts_i), pts_j(_pts_j), 
-                                       td_i(_td_i), td_j(_td_j), depth_j(_depth_j)
+                                       td_i(_td_i), td_j(_td_j), inv_depth_j(1/_depth_j)
 {
     velocity_i = _velocity_i;
     velocity_j = _velocity_j;
@@ -63,14 +63,14 @@ bool ProjectionTwoFrameOneCamDepthFactor::Evaluate(double const *const *paramete
     Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
     Eigen::Map<Eigen::Vector3d> residual(residuals);
 
-    double dep_j = pts_camera_j.z();
+    double est_inv_dep_j = 1/pts_camera_j.z();
 #ifdef UNIT_SPHERE_ERROR 
     residual.head<2>() =  tangent_base * (pts_camera_j.normalized() - pts_j_td.normalized());
 #else
-    residual.head<2>() = (pts_camera_j / dep_j).head<2>() - pts_j_td.head<2>();
+    residual.head<2>() = (pts_camera_j * est_inv_dep_j).head<2>() - pts_j_td.head<2>();
 #endif
 
-    residual.z() = (dep_j - depth_j);
+    residual.z() = (est_inv_dep_j - inv_depth_j);
     residual = sqrt_info * residual;
 
     if (jacobians)
@@ -91,9 +91,10 @@ bool ProjectionTwoFrameOneCamDepthFactor::Evaluate(double const *const *paramete
                      - x1 * x3 / pow(norm, 3),            - x2 * x3 / pow(norm, 3),            1.0 / norm - x3 * x3 / pow(norm, 3);
         reduce.topRows(2) = tangent_base * norm_jaco;
 #else
-        reduce << 1. / dep_j, 0, -pts_camera_j(0) / (dep_j * dep_j),
-            0, 1. / dep_j, -pts_camera_j(1) / (dep_j * dep_j),
-            0, 0, 1. ;
+        auto est_inv_dep_j_sqr = est_inv_dep_j * est_inv_dep_j;
+        reduce << 1. * est_inv_dep_j, 0, -pts_camera_j(0) * est_inv_dep_j_sqr,
+            0, 1. * est_inv_dep_j, -pts_camera_j(1) * est_inv_dep_j_sqr,
+            0, 0, -est_inv_dep_j_sqr;
 #endif
         reduce = sqrt_info * reduce;
 
