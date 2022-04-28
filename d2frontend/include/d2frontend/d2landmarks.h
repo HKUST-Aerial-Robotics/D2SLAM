@@ -15,6 +15,11 @@ enum LandmarkFlag {
     OUTLIER=3
 };
 
+enum LandmarkSolverFlag {
+    UNSOLVED = 0,
+    SOLVED = 1
+};
+
 struct LandmarkPerFrame {
     FrameIdType frame_id = -1;
     LandmarkIdType landmark_id = -1;
@@ -116,7 +121,8 @@ struct LandmarkPerId {
     int drone_id = -1;
     std::vector<LandmarkPerFrame> track;
     Eigen::Vector3d position;  //Note thiswill be modified by estimator.
-    LandmarkFlag flag;
+    LandmarkFlag flag = UNINITIALIZED;
+    LandmarkSolverFlag solver_flag = UNSOLVED; //If 1, is solved
     LandmarkPerId() {}
     LandmarkPerId(const LandmarkPerFrame & Landmark):
         landmark_id(Landmark.landmark_id),

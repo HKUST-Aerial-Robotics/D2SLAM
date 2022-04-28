@@ -10,6 +10,7 @@ using D2FrontEnd::LandmarkPerFrame;
 using D2FrontEnd::FrameIdType;
 using D2FrontEnd::LandmarkIdType;
 using D2FrontEnd::LandmarkFlag;
+using D2FrontEnd::LandmarkSolverFlag;
 using D2FrontEnd::VisualImageDescArray;
 
 namespace D2VINS {

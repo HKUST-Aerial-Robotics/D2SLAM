@@ -243,11 +243,12 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     auto loss_function = new ceres::HuberLoss(1.0);    
     std::vector<int> keyframe_measurements(state.size(), 0);
     
-    for (auto & lm : lms) {
+    for (auto lm : lms) {
         auto lm_id = lm.landmark_id;
-        auto & firstObs = lm.track[0];
+        auto firstObs = lm.track[0];
         auto mea0 = firstObs.measurement();
         keyframe_measurements[state.getPoseIndex(firstObs.frame_id)] ++;
+        state.getLandmarkbyId(lm_id).solver_flag = LandmarkSolverFlag::SOLVED;
         if (firstObs.depth_mea && params->fuse_dep && 
                 firstObs.depth < params->max_depth_to_fuse &&
                 firstObs.depth > params->min_depth_to_fuse) {

@@ -54,7 +54,10 @@ void D2VINSConfig::init(const std::string & config_file) {
     estimate_extrinsic = (int)fsSettings["estimate_extrinsic"];
     fuse_dep = (int) fsSettings["fuse_dep"];
     max_depth_to_fuse = fsSettings["max_depth_to_fuse"];
+
+    //Initialiazation
     init_method = (InitialMethod) (int)fsSettings["init_method"];
+    depth_estimate_baseline = fsSettings["depth_estimate_baseline"];
 
     //Sliding window
     max_sld_win_size = fsSettings["max_sld_win_size"];

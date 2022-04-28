@@ -46,6 +46,8 @@ struct D2VINSConfig {
     int pnp_iteratives = 100;
     int init_imu_num = 10;
     InitialMethod init_method = INIT_POSE_PNP;
+    double depth_estimate_baseline = 0.05;
+    double tri_max_err = 0.1;
     
     //Estimation
     bool estimate_td = false;
@@ -55,6 +57,7 @@ struct D2VINSConfig {
         LM_INV_DEP,
         LM_POS
     } landmark_param = LM_INV_DEP;
+
     //Fuse depth
     bool fuse_dep = true;
     double min_inv_dep = 1e-1; //10 meter away

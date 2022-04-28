@@ -1,6 +1,9 @@
 #include "landmark_manager.hpp"
 
 namespace D2VINS {
+
+double triangulatePoint3DPts(std::vector<Swarm::Pose> poses, std::vector<Vector3d> &points, Vector3d &point_3d);
+
 void D2LandmarkManager::addKeyframe(const VisualImageDescArray & images, double td) {
     for (auto & image : images.images) {
         for (auto lm : image.landmarks) {
@@ -20,8 +23,6 @@ void D2LandmarkManager::addKeyframe(const VisualImageDescArray & images, double 
             }
         }
     }
-    // printf("[D2VINS::D2LandmarkManager] addKeyframe current kf %ld, landmarks %ld\n", 
-        // related_landmarks.size(), landmark_state.size());
 }
 
 std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements() const {
@@ -45,45 +46,86 @@ FrameIdType D2LandmarkManager::getLandmarkBaseFrame(LandmarkIdType landmark_id) 
     return landmark_db.at(landmark_id).track[0].frame_id;
 }
 
+void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const std::map<FrameIdType, VINSFrame*> & frame_db, const std::vector<Swarm::Pose> & extrinsic) {
+    // printf("[D2VINS::D2LandmarkManager] Try initial landmark %ld dep %d tracks %ld\n", lm_id, 
+    //     lm.track[0].depth_mea && lm.track[0].depth > params->min_depth_to_fuse && lm.track[0].depth < params->max_depth_to_fuse,
+    //     lm.track.size());
+    auto lm_first = lm.track[0];
+    auto lm_id = lm.landmark_id;
+    auto pt2d_n = lm_first.pt2d_norm;
+    auto firstFrame = *frame_db.at(lm_first.frame_id);
+
+    if (lm.track[0].depth_mea && lm.track[0].depth > params->min_depth_to_fuse && lm.track[0].depth < params->max_depth_to_fuse) {
+        //Use depth to initial
+        auto ext = extrinsic.at(lm_first.camera_id);
+        Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
+        pos = pos* lm_first.depth;
+        pos = firstFrame.odom.pose()*ext*pos;
+        lm.position = pos;
+        if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
+            *landmark_state[lm_id] = 1/lm_first.depth;
+            if (params->debug_print_states) {
+                printf("[D2VINS::D2LandmarkManager] Initialize landmark %ld by depth measurement position %.3f %.3f %.3f inv_dep %.3f\n",
+                    lm_id, pos.x(), pos.y(), pos.z(), 1/lm_first.depth);
+            }
+        } else {
+            memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
+        }
+        lm.flag = LandmarkFlag::INITIALIZED;
+    } else if (lm.track.size() >= params->landmark_estimate_tracks) {
+        //Initialize by motion.
+        std::vector<Swarm::Pose> poses;
+        std::vector<Vector3d> points;
+        Eigen::Vector3d _min = firstFrame.odom.pose().pos();
+        Eigen::Vector3d _max = firstFrame.odom.pose().pos();
+        for (auto & it: lm.track) {
+            auto & frame = *frame_db.at(it.frame_id);
+            auto ext = extrinsic.at(it.camera_id);
+            poses.push_back(frame.odom.pose()*ext);
+            points.push_back(Vector3d(it.pt2d_norm.x(), it.pt2d_norm.y(), 1.0));
+            _min = _min.cwiseMin((frame.odom.pose()*ext).pos());
+            _max = _max.cwiseMax((frame.odom.pose()*ext).pos());
+        }
+        if ((_max - _min).norm() > params->depth_estimate_baseline) {
+            //Initialize by triangulation
+            Vector3d point_3d(0., 0., 0.);
+            if (triangulatePoint3DPts(poses, points, point_3d) < params->tri_max_err) {
+                lm.position = point_3d;
+                if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
+                    auto ext = extrinsic.at(lm_first.camera_id);
+                    auto ptcam = (firstFrame.odom.pose()*ext).inverse()*point_3d;
+                    auto inv_dep = 1/ptcam.z();
+                    if (inv_dep > params->min_inv_dep) {
+                        lm.flag = LandmarkFlag::INITIALIZED;
+                        if (params->debug_print_states) {
+                            printf("[D2VINS::D2LandmarkManager] Initialize landmark %ld tracks %ld baseline %.2f by triangulation position %.3f %.3f %.3f inv_dep %.3f\n",
+                                lm_id, lm.track.size(), (_max - _min).norm(), point_3d.x(), point_3d.y(), point_3d.z(), inv_dep);
+                        }
+                        *landmark_state[lm_id] = inv_dep;
+                    }
+                } else {
+                    lm.flag = LandmarkFlag::INITIALIZED;
+                    memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
+                }
+            }
+        }
+    }
+}
+
 void D2LandmarkManager::initialLandmarks(const std::map<FrameIdType, VINSFrame*> & frame_db, const std::vector<Swarm::Pose> & extrinsic) {
     for (auto & it: landmark_db) {
         auto & lm = it.second;
         auto lm_id = it.first;
-        auto lm_per_frame = landmark_db.at(lm_id).track[0];
-        const auto & firstFrame = *frame_db.at(lm_per_frame.frame_id);
-        auto pt2d_n = lm_per_frame.pt2d_norm;
-        auto ext = extrinsic[lm_per_frame.camera_id];
+        //Set to unsolved
+        lm.solver_flag = LandmarkSolverFlag::UNSOLVED;
         if (lm.flag == LandmarkFlag::UNINITIALIZED) {
-            if (lm.track[0].depth_mea) {
-                //Use depth to initial
-                Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
-                pos = pos* lm_per_frame.depth;
-                pos = firstFrame.odom.pose()*ext*pos;
-                lm.position = pos;
-                if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-                    *landmark_state[lm_id] = 1/lm_per_frame.depth;
-                } else {
-                    memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
-                }
-                lm.flag = LandmarkFlag::INITIALIZED;
-            } else if (lm.track.size() >= params->landmark_estimate_tracks) {
-                // //Initialize by motion.
-                Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
-                pos = pos * 10; //Initial to 10 meter away... TODO: Initial with motion
-                pos = firstFrame.odom.pose()*ext*pos;
-                lm.position = pos; 
-                lm.flag = LandmarkFlag::INITIALIZED;
-                if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-                    *landmark_state[lm_id] = 0.1;
-                    // printf("[D2VINS::D2LandmarkManager] initialLandmarks (UNINITIALIZED) LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f\n",
-                        // lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z());
-                } else {
-                    memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
-                }
-            }
+            initialLandmarkState(lm, frame_db, extrinsic);
         } else if(lm.flag == LandmarkFlag::ESTIMATED) {
             //Extracting depth from estimated pos
             if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
+                auto lm_per_frame = landmark_db.at(lm_id).track[0];
+                const auto & firstFrame = *frame_db.at(lm_per_frame.frame_id);
+                auto ext = extrinsic[lm_per_frame.camera_id];
                 Vector3d pos_cam = (firstFrame.odom.pose()*ext).inverse()*lm.position;
                 *landmark_state[lm_id] = 1/pos_cam.z();
             } else {
@@ -139,7 +181,7 @@ void D2LandmarkManager::syncState(const std::vector<Swarm::Pose> & extrinsic, co
     for (auto it : landmark_state) {
         auto lm_id = it.first;
         auto & lm = landmark_db.at(lm_id);
-        if (lm.track.size() >= params->landmark_estimate_tracks) {
+        if (lm.solver_flag == LandmarkSolverFlag::SOLVED) {
             if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
                 auto inv_dep = *it.second;
                 auto lm_per_frame = lm.track[0];
@@ -202,4 +244,31 @@ bool D2LandmarkManager::hasLandmark(LandmarkIdType landmark_id) const {
     return landmark_db.find(landmark_id) != landmark_db.end();
 }
 
+double triangulatePoint3DPts(std::vector<Swarm::Pose> poses, std::vector<Vector3d> &points, Vector3d &point_3d) {
+    MatrixXd design_matrix(poses.size()*2, 4);
+    assert(poses.size() > 0 && poses.size() == points.size() && "We at least have 2 poses and number of pts and poses must equal");
+    for (unsigned int i = 0; i < poses.size(); i ++) {
+        double p0x = points[i][0];
+        double p0y = points[i][1];
+        double p0z = points[i][2];
+        Eigen::Matrix<double, 3, 4> pose;
+        auto R0 = poses[i].att().toRotationMatrix();
+        auto t0 = poses[i].pos();
+        pose.leftCols<3>() = R0.transpose();
+        pose.rightCols<1>() = -R0.transpose() * t0;
+        design_matrix.row(i*2) = p0x * pose.row(2) - p0z*pose.row(0);
+        design_matrix.row(i*2+1) = p0y * pose.row(2) - p0z*pose.row(1);
+    }
+    Vector4d triangulated_point;
+    triangulated_point =
+              design_matrix.jacobiSvd(Eigen::ComputeFullV).matrixV().rightCols<1>();
+    point_3d(0) = triangulated_point(0) / triangulated_point(3);
+    point_3d(1) = triangulated_point(1) / triangulated_point(3);
+    point_3d(2) = triangulated_point(2) / triangulated_point(3);
+
+    MatrixXd pts(4, 1);
+    pts << point_3d.x(), point_3d.y(), point_3d.z(), 1;
+    MatrixXd errs = design_matrix*pts;
+    return errs.norm()/ errs.rows(); 
+}
 }

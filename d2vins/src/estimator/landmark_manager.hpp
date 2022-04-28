@@ -14,6 +14,7 @@ public:
     std::vector<LandmarkPerId> availableMeasurements() const;
     double * getLandmarkState(LandmarkIdType landmark_id) const;
     void initialLandmarks(const std::map<FrameIdType, VINSFrame*> & frame_db, const std::vector<Swarm::Pose> & extrinsic);
+    void initialLandmarkState(LandmarkPerId & lm, const std::map<FrameIdType, VINSFrame*> & frame_db, const std::vector<Swarm::Pose> & extrinsic);
     void syncState(const std::vector<Swarm::Pose> & extrinsic, const std::map<FrameIdType, VINSFrame*> & frame_db);
     void popFrame(FrameIdType frame_id);
     std::vector<LandmarkPerId> getInitializedLandmarks() const;
