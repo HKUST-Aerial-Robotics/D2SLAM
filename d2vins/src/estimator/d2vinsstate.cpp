@@ -92,7 +92,7 @@ std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements() con
 
 void D2EstimatorState::clearFrame() {
     if (sld_win.size() >= params->min_solve_frames) {
-        if (sld_win.size() >= 2 && (!sld_win[sld_win.size() - 1]->is_keyframe)) {
+        if (!sld_win[sld_win.size() - 1]->is_keyframe) {
             //If last frame is not keyframe then remove it.
             popFrame(sld_win.size() - 1);
         } else if (sld_win.size() >= params->max_sld_win_size) {

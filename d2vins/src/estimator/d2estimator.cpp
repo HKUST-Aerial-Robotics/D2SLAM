@@ -134,7 +134,7 @@ void D2Estimator::inputImage(VisualImageDescArray & _frame) {
     }
 
     addFrame(_frame);
-    if (state.size() > params->min_solve_frames) {
+    if (state.size() >= params->min_solve_frames) {
         solve();
     } else {
         //Presolve only for initialization.
@@ -169,10 +169,9 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
     }
 
     //Current no margarin, fix the first pose
-    if (!state.getPrior()) {
+    if (!state.getPrior() || params->always_fixed_first_pose) {
         problem.SetParameterBlockConstant(state.getPoseState(state.firstFrame().frame_id));
     }
-    // problem.SetParameterBlockConstant(state.getSpdBiasState(state.firstFrame().frame_id));
 }
 
 void D2Estimator::solve() {

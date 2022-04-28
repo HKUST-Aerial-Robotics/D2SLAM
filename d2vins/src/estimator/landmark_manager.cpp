@@ -194,8 +194,9 @@ void D2LandmarkManager::syncState(const std::vector<Swarm::Pose> & extrinsic, co
                 lm.position = pos;
                 lm.flag = LandmarkFlag::ESTIMATED;
                 if (params->debug_print_states) {
-                    printf("[D2VINS::D2LandmarkManager] update LM %d inv_dep/dep %.2f/%.2f mea %d %.2f pos %.2f %.2f %.2f\n",
-                        lm_id, inv_dep, 1./inv_dep, lm_per_frame.depth_mea, lm_per_frame.depth, pos.x(), pos.y(), pos.z());
+                    printf("[D2VINS::D2LandmarkManager] update LM %d inv_dep/dep %.2f/%.2f mea %d %.2f pos %.2f %.2f %.2f baseFrame %ld pose %s extrinsic %s\n",
+                        lm_id, inv_dep, 1./inv_dep, lm_per_frame.depth_mea, lm_per_frame.depth, pos.x(), pos.y(), pos.z(),
+                            lm_per_frame.frame_id, firstFrame.odom.pose().toStr().c_str(), ext.toStr().c_str());
                 }
             } else {
                 lm.position.x() = it.second[0];

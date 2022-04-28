@@ -57,6 +57,7 @@ struct D2VINSConfig {
         LM_INV_DEP,
         LM_POS
     } landmark_param = LM_INV_DEP;
+    bool always_fixed_first_pose = false;
 
     //Fuse depth
     bool fuse_dep = true;
