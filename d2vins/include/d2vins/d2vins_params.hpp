@@ -82,8 +82,7 @@ struct D2VINSConfig {
     //Debug
     bool debug_print_states = false;
     std::string output_folder;
-    bool debug_print_solver_details = false;
-    bool debug_print_marginal = false;
+    bool enable_perf_output = false;
 
     bool verbose = true;
 

@@ -145,7 +145,7 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
         auto A = Utility::schurComplement(H.toDense(), b, keep_state_dim);
         prior = new PriorFactor(keep_params_list, A, b);
     }
-    if (params->debug_print_marginal) {
+    if (params->enable_perf_output) {
         printf("[D2VINS::Marginalizer::marginalize] time cost %.1fms frame_id %ld total_eff_state_dim: %d remove param size %d eff_residual_size: %d keep_block_size %d \n", 
             tic.toc(), *remove_frame_ids.begin(), total_eff_state_dim, remove_state_dim, eff_residual_size, keep_block_size);
     }

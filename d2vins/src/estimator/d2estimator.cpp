@@ -200,7 +200,7 @@ void D2Estimator::solve() {
     sum_iteration += summary.num_successful_steps + summary.num_unsuccessful_steps;
     sum_cost += summary.final_cost;
 
-    if (params->debug_print_solver_details) {
+    if (params->enable_perf_output) {
         std::cout << summary.BriefReport() << std::endl;
         printf("[D2VINS] average time %.3fms, average iteration %.3f, average cost %.3f\n", 
             sum_time*1000/solve_count, sum_iteration/solve_count, sum_cost/solve_count);
