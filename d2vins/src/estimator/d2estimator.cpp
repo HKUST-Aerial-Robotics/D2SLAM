@@ -269,10 +269,10 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
             problem.AddResidualBlock(f_td, loss_function,
                 state.getPoseState(firstObs.frame_id), 
                 state.getPoseState(lm.track[i].frame_id), 
-                state.getExtrinsicState(firstObs.camera_id),
+                state.getExtrinsicState(firstObs.camera_index),
                 state.getLandmarkState(lm_id), state.getTdState(lm.track[i].frame_id));
             marginalizer->addLandmarkResidual(f_td, loss_function,
-                firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_id, true);
+                firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_index, true);
             keyframe_measurements[state.getPoseIndex(lm.track[i].frame_id)] ++;
         }
         problem.SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);

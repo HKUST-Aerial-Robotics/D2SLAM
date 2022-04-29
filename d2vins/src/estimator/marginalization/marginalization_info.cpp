@@ -56,7 +56,7 @@ void ImuResInfo::Evaluate(D2EstimatorState * state) {
 void LandmarkTwoFrameOneCamResInfo::Evaluate(D2EstimatorState * state) {
     std::vector<double*> params{state->getPoseState(frame_ida), 
                     state->getPoseState(frame_idb), 
-                    state->getExtrinsicState(camera_id),
+                    state->getExtrinsicState(camera_index),
                     state->getLandmarkState(landmark_id)};
     ((ResidualInfo*)this)->Evaluate(params);
 }
@@ -64,9 +64,9 @@ void LandmarkTwoFrameOneCamResInfo::Evaluate(D2EstimatorState * state) {
 void LandmarkTwoFrameOneCamResInfoTD::Evaluate(D2EstimatorState * state) {
     std::vector<double*> params{state->getPoseState(frame_ida), 
                     state->getPoseState(frame_idb), 
-                    state->getExtrinsicState(camera_id),
+                    state->getExtrinsicState(camera_index),
                     state->getLandmarkState(landmark_id),
-                    state->getTdState(camera_id)};
+                    state->getTdState(camera_index)};
     ((ResidualInfo*)this)->Evaluate(params);
 }
 

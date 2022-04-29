@@ -63,7 +63,7 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des) {
     img_desc_header.image_desc_size = img_des.image_desc_size;
     img_desc_header.image_desc = img_des.image_desc;
     img_desc_header.feature_num = feature_num;
-    img_desc_header.direction = img_des.direction;
+    img_desc_header.camera_index = img_des.camera_index;
 
     byte_sent += img_desc_header.getEncodedSize();
     lcm.publish("VIOKF_HEADER", &img_desc_header);
@@ -148,7 +148,7 @@ void LoopNet::imageDescCallback(const ImageDescriptor_t & image){
         frame_desc.image_num = 4;
         frame_desc.timestamp = image.timestamp;
         for (size_t i = 0; i < frame_desc.image_num; i ++) {
-            if (i != image.direction) {
+            if (i != image.camera_index) {
                 auto img_desc = generate_null_img_desc();           
                 frame_desc.images.push_back(img_desc);
             } else {
@@ -166,8 +166,8 @@ void LoopNet::imageDescCallback(const ImageDescriptor_t & image){
         active_receving_frames.insert(frame_hash);
     } else {
         auto & frame_desc = received_frames[frame_hash];
-        ROS_INFO("Adding image to frame %d from drone_id %d direction %d", frame_hash, frame_desc.drone_id, image.direction);
-        frame_desc.images[image.direction] = image;
+        ROS_INFO("Adding image to frame %d from drone_id %d camera_index %d", frame_hash, frame_desc.drone_id, image.camera_index);
+        frame_desc.images[image.camera_index] = image;
     }
 }
 
@@ -214,7 +214,7 @@ void LoopNet::onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
     tmp.frame_id = msg->frame_id;
     tmp.msg_id = msg->msg_id;
     tmp.prevent_adding_db = msg->prevent_adding_db;
-    tmp.direction = msg->direction;
+    tmp.camera_index = msg->camera_index;
     tmp.landmark_descriptor_size = 0;
 
     recv_lock.unlock();

@@ -57,7 +57,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const std::map<
 
     if (lm.track[0].depth_mea && lm.track[0].depth > params->min_depth_to_fuse && lm.track[0].depth < params->max_depth_to_fuse) {
         //Use depth to initial
-        auto ext = extrinsic.at(lm_first.camera_id);
+        auto ext = extrinsic.at(lm_first.camera_index);
         Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
         pos = pos* lm_first.depth;
         pos = firstFrame.odom.pose()*ext*pos;
@@ -80,7 +80,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const std::map<
         Eigen::Vector3d _max = firstFrame.odom.pose().pos();
         for (auto & it: lm.track) {
             auto & frame = *frame_db.at(it.frame_id);
-            auto ext = extrinsic.at(it.camera_id);
+            auto ext = extrinsic.at(it.camera_index);
             poses.push_back(frame.odom.pose()*ext);
             points.push_back(Vector3d(it.pt2d_norm.x(), it.pt2d_norm.y(), 1.0));
             _min = _min.cwiseMin((frame.odom.pose()*ext).pos());
@@ -92,7 +92,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const std::map<
             if (triangulatePoint3DPts(poses, points, point_3d) < params->tri_max_err) {
                 lm.position = point_3d;
                 if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-                    auto ext = extrinsic.at(lm_first.camera_id);
+                    auto ext = extrinsic.at(lm_first.camera_index);
                     auto ptcam = (firstFrame.odom.pose()*ext).inverse()*point_3d;
                     auto inv_dep = 1/ptcam.z();
                     if (inv_dep > params->min_inv_dep) {
@@ -125,7 +125,7 @@ void D2LandmarkManager::initialLandmarks(const std::map<FrameIdType, VINSFrame*>
             if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
                 auto lm_per_frame = landmark_db.at(lm_id).track[0];
                 const auto & firstFrame = *frame_db.at(lm_per_frame.frame_id);
-                auto ext = extrinsic[lm_per_frame.camera_id];
+                auto ext = extrinsic[lm_per_frame.camera_index];
                 Vector3d pos_cam = (firstFrame.odom.pose()*ext).inverse()*lm.position;
                 *landmark_state[lm_id] = 1/pos_cam.z();
             } else {
@@ -150,7 +150,7 @@ void D2LandmarkManager::outlierRejection(const std::map<FrameIdType, VINSFrame*>
             total_count ++;
             for (int i = 1; i < lm.track.size(); i ++) {
                 auto pose = frame_db.at(lm.track[i].frame_id)->odom.pose();
-                auto ext = extrinsic[lm.track[i].camera_id];
+                auto ext = extrinsic[lm.track[i].camera_index];
                 auto pt2d_n = lm.track[i].pt2d_norm;
                 Vector3d pos_cam = (pose*ext).inverse()*lm.position;
                 pos_cam = pos_cam/pos_cam.z();
@@ -186,7 +186,7 @@ void D2LandmarkManager::syncState(const std::vector<Swarm::Pose> & extrinsic, co
                 auto inv_dep = *it.second;
                 auto lm_per_frame = lm.track[0];
                 const auto & firstFrame = *frame_db.at(lm_per_frame.frame_id);
-                auto ext = extrinsic[lm_per_frame.camera_id];
+                auto ext = extrinsic[lm_per_frame.camera_index];
                 auto pt2d_n = lm_per_frame.pt2d_norm;
                 Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
                 pos = pos / inv_dep;

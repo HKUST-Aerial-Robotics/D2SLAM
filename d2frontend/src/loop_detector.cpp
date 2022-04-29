@@ -100,21 +100,21 @@ void LoopDetector::onImageRecv(const VisualImageDescArray & flatten_desc, std::v
 
             ROS_INFO("[SWARM_LOOP] Querying image from database size %d init_mode %d nonkeyframe %d", databaseSize(), init_mode, flatten_desc.prevent_adding_db);
             
-            int direction = 1;
-            int direction_old = -1;
-            VisualImageDescArray & _old_fisheye_img = queryDescArrayFromFatabase(flatten_desc, init_mode, flatten_desc.prevent_adding_db, direction, direction_old);
+            int camera_index = 1;
+            int camera_index_old = -1;
+            VisualImageDescArray & _old_fisheye_img = queryDescArrayFromFatabase(flatten_desc, init_mode, flatten_desc.prevent_adding_db, camera_index, camera_index_old);
             auto stop = high_resolution_clock::now(); 
 
-            if (direction_old >= 0 ) {
+            if (camera_index_old >= 0 ) {
                 swarm_msgs::LoopEdge ret;
 
                 if (_old_fisheye_img.drone_id == self_id) {
-                    success = computeLoop(flatten_desc, _old_fisheye_img, direction, direction_old, imgs, 
+                    success = computeLoop(flatten_desc, _old_fisheye_img, camera_index, camera_index_old, imgs, 
                         msgid2cvimgs[_old_fisheye_img.frame_id], ret, init_mode);
                 } else {
                     //We grab remote drone from database
                     if (flatten_desc.drone_id == self_id) {
-                        success = computeLoop(_old_fisheye_img, flatten_desc, direction_old, direction, 
+                        success = computeLoop(_old_fisheye_img, flatten_desc, camera_index_old, camera_index, 
                             msgid2cvimgs[_old_fisheye_img.frame_id],  imgs, ret, init_mode);
                     } else {
                         ROS_WARN("[SWARM_LOOP] Will not compute loop, drone id is %d(self %d)", flatten_desc.drone_id, self_id);
@@ -245,45 +245,45 @@ int LoopDetector::queryFromDatabase(const VisualImageDesc & img_desc, faiss::Ind
 }
 
 
-VisualImageDescArray & LoopDetector::queryDescArrayFromFatabase(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & direction_new, int & direction_old) {
+VisualImageDescArray & LoopDetector::queryDescArrayFromFatabase(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & camera_index_new, int & camera_index_old) {
     double best_distance = -1;
     int best_image_id = -1;
-    //Strict use direction 1 now
-    direction_new = 0;
+    //Strict use camera_index 1 now
+    camera_index_new = 0;
     if (loop_cam->getCameraConfiguration() == CameraConfig::STEREO_FISHEYE) {
-        direction_new = 1;
+        camera_index_new = 1;
     } else if (
         loop_cam->getCameraConfiguration() == CameraConfig::STEREO_PINHOLE ||
         loop_cam->getCameraConfiguration() == CameraConfig::PINHOLE_DEPTH
     ) {
-        direction_new = 0;
+        camera_index_new = 0;
     } else {
         ROS_ERROR("[SWARM_LOOP] Camera configuration %d not support yet in queryDescArrayFromFatabase", loop_cam->getCameraConfiguration());
         exit(-1);
     }
 
-    if (new_img_desc.images[direction_new].landmarkNum() > 0) {
+    if (new_img_desc.images[camera_index_new].landmarkNum() > 0) {
         double distance = -1;
-        int id = queryFromDatabase(new_img_desc.images.at(direction_new), init_mode, nonkeyframe, distance);
+        int id = queryFromDatabase(new_img_desc.images.at(camera_index_new), init_mode, nonkeyframe, distance);
         if (id != -1 && distance > best_distance) {
             best_image_id = id;
         }
 
-        // ROS_INFO("queryFromDatabase(new_img_desc.images.at(direction_new) return %d best_image_id %d distance %f/%f", 
+        // ROS_INFO("queryFromDatabase(new_img_desc.images.at(camera_index_new) return %d best_image_id %d distance %f/%f", 
             // id, best_image_id, distance, best_distance);
 
 
         if (best_image_id != -1) {
             int frame_id = imgid2fisheye[best_image_id];
-            direction_old = imgid2dir[best_image_id];
+            camera_index_old = imgid2dir[best_image_id];
             VisualImageDescArray & ret = keyframe_database[frame_id];
-            ROS_INFO("[SWARM_LOOP] Database return image %d fisheye frame from drone %d with direction %d dist %f", 
-                best_image_id, ret.drone_id, direction_old, distance);
+            ROS_INFO("[SWARM_LOOP] Database return image %d fisheye frame from drone %d with camera_index %d dist %f", 
+                best_image_id, ret.drone_id, camera_index_old, distance);
             return ret;
         }
     }
 
-    direction_old = -1;
+    camera_index_old = -1;
     VisualImageDescArray ret;
     ret.frame_id = -1;
     return ret;
@@ -500,9 +500,9 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDescArray & new_fr
                 _old_3d,
                 _old_idx
             );
-            ROS_INFO("[SWARM_LOOP] computeCorrespondFeatures on direction %d:%d gives %d common features", dir_old, dir_new, _new_3d.size());
+            ROS_INFO("[SWARM_LOOP] computeCorrespondFeatures on camera_index %d:%d gives %d common features", dir_old, dir_new, _new_3d.size());
         } else {
-            ROS_INFO("[SWARM_LOOP]  computeCorrespondFeatures on direction %d:%d failed: no such image");
+            ROS_INFO("[SWARM_LOOP]  computeCorrespondFeatures on camera_index %d:%d failed: no such image");
         }
 
         if ( _new_3d.size() >= _config.MIN_MATCH_PRE_DIR ) {

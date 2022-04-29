@@ -106,7 +106,7 @@ protected:
 
     int addToDatabase(const VisualImageDescArray & new_fisheye_desc);
     int addToDatabase(const VisualImageDesc & new_img_desc);
-    VisualImageDescArray & queryDescArrayFromFatabase(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & direction_new, int & direction_old);
+    VisualImageDescArray & queryDescArrayFromFatabase(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & camera_index_new, int & camera_index_old);
     int queryFromDatabase(const VisualImageDesc & new_img_desc, bool init_mode, bool nonkeyframe, double & distance);
     int queryFromDatabase(const VisualImageDesc & new_img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & distance);
 

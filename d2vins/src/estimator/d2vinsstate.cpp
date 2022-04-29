@@ -57,7 +57,7 @@ double * D2EstimatorState::getPoseState(FrameIdType frame_id) const {
     return _frame_pose_state.at(frame_id);
 }
 
-double * D2EstimatorState::getTdState(int camera_id) {
+double * D2EstimatorState::getTdState(int camera_index) {
     return &td;
 }
 

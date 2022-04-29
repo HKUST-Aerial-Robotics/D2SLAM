@@ -23,6 +23,7 @@ enum LandmarkSolverFlag {
 struct LandmarkPerFrame {
     FrameIdType frame_id = -1;
     LandmarkIdType landmark_id = -1;
+    int camera_index = 0;
     int camera_id = 0;
     int drone_id = -1;
     LandmarkFlag flag = UNINITIALIZED;
@@ -44,7 +45,7 @@ struct LandmarkPerFrame {
     LandmarkPerFrame(const Landmark_t & Landmark):
         frame_id(Landmark.frame_id),
         landmark_id(Landmark.landmark_id),
-        camera_id(Landmark.camera_id),
+        camera_index(Landmark.camera_index),
         drone_id(Landmark.drone_id),
         flag((LandmarkFlag) Landmark.flag),
         pt2d(Landmark.pt2d.x, Landmark.pt2d.y),
@@ -57,7 +58,7 @@ struct LandmarkPerFrame {
     LandmarkPerFrame(const swarm_msgs::Landmark & Landmark):
         frame_id(Landmark.frame_id),
         landmark_id(Landmark.landmark_id),
-        camera_id(Landmark.camera_id),
+        camera_index(Landmark.camera_index),
         drone_id(Landmark.drone_id),
         flag((LandmarkFlag) Landmark.flag),
         pt2d(Landmark.pt2d.x, Landmark.pt2d.y),
@@ -71,7 +72,7 @@ struct LandmarkPerFrame {
         Landmark_t ret;
         ret.frame_id = frame_id;
         ret.landmark_id = landmark_id;
-        ret.camera_id = camera_id;
+        ret.camera_index = camera_index;
         ret.drone_id = drone_id;
         ret.flag = flag;
         ret.depth = depth;
@@ -92,7 +93,7 @@ struct LandmarkPerFrame {
         swarm_msgs::Landmark ret;
         ret.frame_id = frame_id;
         ret.landmark_id = landmark_id;
-        ret.camera_id = camera_id;
+        ret.camera_index = camera_index;
         ret.drone_id = drone_id;
         ret.flag = flag;
         ret.depth = depth;
@@ -120,6 +121,7 @@ struct LandmarkPerId {
     int landmark_id = -1;
     int drone_id = -1;
     std::vector<LandmarkPerFrame> track;
+    std::vector<LandmarkPerFrame> track_r; // tracks of right camera of that point
     Eigen::Vector3d position;  //Note thiswill be modified by estimator.
     LandmarkFlag flag = UNINITIALIZED;
     LandmarkSolverFlag solver_flag = UNSOLVED; //If 1, is solved
@@ -144,7 +146,13 @@ struct LandmarkPerId {
     }
 
     void add(const LandmarkPerFrame & Landmark) {
-        track.emplace_back(Landmark);
+        //Simpified.
+        //Need to adopt for omni.
+        if (Landmark.camera_index == 0) {
+            track.emplace_back(Landmark);
+        } else {
+            track_r.emplace_back(Landmark);
+        }
     }
 };
 

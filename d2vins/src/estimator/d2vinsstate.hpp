@@ -35,7 +35,7 @@ public:
     double * getExtrinsicState(int i) const;
     double * getSpdBiasState(FrameIdType frame_id) const;
     double * getLandmarkState(LandmarkIdType landmark_id) const;
-    double * getTdState(int camera_id);
+    double * getTdState(int camera_index);
     PriorFactor * getPrior() const;
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;
     Swarm::Pose getExtrinsic(int i) const;

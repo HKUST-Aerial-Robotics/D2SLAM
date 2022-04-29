@@ -40,11 +40,12 @@ struct LoopCamConfig
     int height; 
     int self_id = 0;
     bool OUTPUT_RAW_SUPERPOINT_DESC;
-    bool LOWER_CAM_AS_MAIN;
+    bool right_cam_as_main = false;
     double DEPTH_NEAR_THRES;
     double TRIANGLE_THRES;
     int ACCEPT_MIN_3D_PTS;
     double DEPTH_FAR_THRES;
+    bool stereo_as_depth_cam = false;
 };
 
 class LoopCam {
@@ -63,6 +64,7 @@ class LoopCam {
 #endif
 
     bool send_img;
+
 public:
 
     bool show = false;
@@ -70,9 +72,9 @@ public:
     // LoopDetector * loop_detector = nullptr;
     LoopCam(LoopCamConfig config, ros::NodeHandle & nh);
     
-    VisualImageDesc extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, bool superpoint_mode=false);
-    VisualImageDesc generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
-    VisualImageDesc generateGrayDepthImageDescriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat &_show);
+    VisualImageDesc extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, int index, int camera_id, bool superpoint_mode=false);
+    std::vector<VisualImageDesc> generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int i, cv::Mat &_show);
+    VisualImageDesc generateGrayDepthImageDescriptor(const StereoFrame & msg, cv::Mat & img, int i, cv::Mat &_show);
     VisualImageDescArray processStereoframe(const StereoFrame & msg, std::vector<cv::Mat> & imgs);
 
     void encodeImage(const cv::Mat & _img, VisualImageDesc & _img_desc);
@@ -83,5 +85,6 @@ public:
     CameraConfig getCameraConfiguration() const {
         return camera_configuration;
     }
+
 };
 }

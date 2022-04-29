@@ -4,13 +4,13 @@
 
 namespace D2VINS {
 void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
-    FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id, bool has_td) {
+    FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_index, bool has_td) {
     if (!has_td) {
         auto * info = new LandmarkTwoFrameOneCamResInfo();
         info->frame_ida = frame_ida;
         info->frame_idb = frame_idb;
         info->landmark_id = landmark_id;
-        info->camera_id = camera_id;
+        info->camera_index = camera_index;
         info->cost_function = cost_function;
         info->loss_function = loss_function;
         residual_info_list.push_back(info);
@@ -19,7 +19,7 @@ void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, cere
         info->frame_ida = frame_ida;
         info->frame_idb = frame_idb;
         info->landmark_id = landmark_id;
-        info->camera_id = camera_id;
+        info->camera_index = camera_index;
         info->cost_function = cost_function;
         info->loss_function = loss_function;
         residual_info_list.push_back(info);

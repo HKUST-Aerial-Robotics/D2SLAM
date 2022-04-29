@@ -28,6 +28,7 @@ struct TrackReport {
     int long_track_num = 0.0;
     int unmatched_num = 0.0;
     double ft_time = 0.0;
+    int stereo_point_num = 0;
 
     void compose(const TrackReport & report) {
         sum_parallex += report.sum_parallex;
@@ -69,9 +70,12 @@ public:
 
     bool track(VisualImageDescArray & frames);
     TrackReport track(VisualImageDesc & frame);
+    TrackReport track(VisualImageDesc & left_frame, VisualImageDesc & right_frame);
     void processKeyframe(VisualImageDescArray & frames);
     bool isKeyframe(const TrackReport & reports);
-    void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report);
+    void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
+    void draw(VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const;
+    cv::Mat drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
     void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
         std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
         std::vector<int> & ids_down_to_up) const;

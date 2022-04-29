@@ -165,8 +165,6 @@ void matchLocalFeatures(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point
     pts_down = std::vector<cv::Point2f>(_pts_down);
 }
 
-
-
 VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::vector<cv::Mat> &imgs) {
     VisualImageDescArray visual_array;
     visual_array.stamp = msg.stamp.toSec();
@@ -181,10 +179,24 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
     for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
         if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             visual_array.images.push_back(generateGrayDepthImageDescriptor(msg, imgs[i], i, tmp));
-            visual_array.images[i].camera_id = i;
         } else {
-            visual_array.images.push_back(generateStereoImageDescriptor(msg, imgs[i], i, tmp));
-            visual_array.images[i].camera_id = i;
+            int camera_index_num = 2;
+            if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
+                camera_index_num = 5;
+            }
+            int camera_index_l = i *camera_index_num;
+            int camera_index_r = i *camera_index_num + 1;
+            auto _imgs = generateStereoImageDescriptor(msg, imgs[i], i, tmp);
+            if (_config.stereo_as_depth_cam) {
+                if (_config.right_cam_as_main) {
+                    visual_array.images.push_back(_imgs[1]);
+                } else {
+                    visual_array.images.push_back(_imgs[0]);
+                }
+            } else {
+                visual_array.images.push_back(_imgs[0]);
+                visual_array.images.push_back(_imgs[1]);
+            }
         }
 
         if (_show.cols == 0) {
@@ -216,8 +228,9 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
     return visual_array;
 }
 
-VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat & _show)
+VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, cv::Mat & _show)
 {
+    printf("generateGrayDepthImageDescriptor\n");
     if (vcam_id > msg.left_images.size()) {
         ROS_WARN("Flatten images too few");
         VisualImageDesc ides;
@@ -225,7 +238,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
         return ides;
     }
     
-    VisualImageDesc vframe = extractorImgDescDeepnet(msg.stamp, msg.left_images[vcam_id], _config.LOWER_CAM_AS_MAIN);
+    VisualImageDesc vframe = extractorImgDescDeepnet(msg.stamp, msg.left_images[vcam_id], msg.left_camera_indices[vcam_id], msg.left_camera_ids[vcam_id], false);
 
     if (vframe.image_desc.size() == 0)
     {
@@ -321,16 +334,17 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
     return vframe;
 }
 
-VisualImageDesc LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, const int & vcam_id, cv::Mat & _show)
+std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, cv::Mat & _show)
 {
     if (vcam_id > msg.left_images.size()) {
         ROS_WARN("Flatten images too few");
-        VisualImageDesc ides;
-        return ides;
+        return std::vector<VisualImageDesc>();
     }
     
-    auto vframe0 = extractorImgDescDeepnet(msg.stamp, msg.left_images[vcam_id], _config.LOWER_CAM_AS_MAIN);
-    auto vframe1 = extractorImgDescDeepnet(msg.stamp, msg.right_images[vcam_id], !_config.LOWER_CAM_AS_MAIN);
+    auto vframe0 = extractorImgDescDeepnet(msg.stamp, msg.left_images[vcam_id], msg.left_camera_indices[vcam_id], 
+        msg.left_camera_ids[vcam_id], _config.right_cam_as_main);
+    auto vframe1 = extractorImgDescDeepnet(msg.stamp, msg.right_images[vcam_id], msg.right_camera_indices[vcam_id], 
+        msg.right_camera_ids[vcam_id], !_config.right_cam_as_main);
 
     if (vframe0.image_desc.size() == 0 && vframe1.image_desc.size() == 0)
     {
@@ -364,7 +378,7 @@ VisualImageDesc LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, 
     if (vframe0.landmarkNum() > _config.ACCEPT_MIN_3D_PTS) {
         matchLocalFeatures(pts_up, pts_down, vframe0.landmark_descriptor, vframe1.landmark_descriptor, ids_up, ids_down);
     } else {
-        return vframe0;
+        return std::vector<VisualImageDesc>{vframe0, vframe1};
     }
     
     // ides.landmarks_2d.clear();
@@ -379,59 +393,50 @@ VisualImageDesc LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, 
 
     int count_3d = 0;
 
-    for (unsigned int i = 0; i < pts_up.size(); i++)
-    {
-        auto pt_up = pts_up[i];
-        auto pt_down = pts_down[i];
+    if (_config.stereo_as_depth_cam) {
+        for (unsigned int i = 0; i < pts_up.size(); i++)
+        {
+            auto pt_up = pts_up[i];
+            auto pt_down = pts_down[i];
 
-        Eigen::Vector3d pt_up3d, pt_down3d;
-        cam->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
-        cam->liftProjective(Eigen::Vector2d(pt_down.x, pt_down.y), pt_down3d);
+            Eigen::Vector3d pt_up3d, pt_down3d;
+            cam->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
+            cam->liftProjective(Eigen::Vector2d(pt_down.x, pt_down.y), pt_down3d);
 
-        Eigen::Vector2d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z());
-        Eigen::Vector2d pt_down_norm(pt_down3d.x()/pt_down3d.z(), pt_down3d.y()/pt_down3d.z());
+            Eigen::Vector2d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z());
+            Eigen::Vector2d pt_down_norm(pt_down3d.x()/pt_down3d.z(), pt_down3d.y()/pt_down3d.z());
 
-        Eigen::Vector3d point_3d;
-        double err = triangulatePoint(pose_up.att(), pose_up.pos(), pose_down.att(), pose_down.pos(),
-                        pt_up_norm, pt_down_norm, point_3d);
+            Eigen::Vector3d point_3d;
+            double err = triangulatePoint(pose_up.att(), pose_up.pos(), pose_down.att(), pose_down.pos(),
+                            pt_up_norm, pt_down_norm, point_3d);
 
-        auto pt_cam = pose_up.att().inverse() * (point_3d - pose_up.pos());
+            auto pt_cam = pose_up.att().inverse() * (point_3d - pose_up.pos());
 
-        if (err > TRIANGLE_THRES || pt_cam.z() < 0) {
-            continue;
+            if (err > TRIANGLE_THRES || pt_cam.z() < 0) {
+                continue;
+            }
+
+            int idx = ids_up[i];
+            int idx_down = ids_down[i];
+            // ides.landmarks_2d.push_back(pt2d);
+            // ides.landmarks_2d_norm.push_back(pt2d_norm);
+            vframe0.landmarks[idx].pt3d = point_3d;
+            vframe0.landmarks[idx].depth_mea = true;
+            vframe0.landmarks[idx].depth = pt_cam.z();
+            vframe0.landmarks[idx].flag = LandmarkFlag::UNINITIALIZED; 
+            //TODO:Set depth!!!
+
+            auto pt_cam2 = pose_down.att().inverse() * (point_3d - pose_down.pos());
+            vframe1.landmarks[idx_down].pt3d = point_3d;
+            vframe0.landmarks[idx].depth_mea = true;
+            vframe0.landmarks[idx].depth = pt_cam2.z();
+            vframe1.landmarks[idx_down].flag = LandmarkFlag::UNINITIALIZED;
+            count_3d ++;
         }
-
-        int idx = ids_up[i];
-        int idx_down = ids_down[i];
-        // ides.landmarks_2d.push_back(pt2d);
-        // ides.landmarks_2d_norm.push_back(pt2d_norm);
-        vframe0.landmarks[idx].pt3d = point_3d;
-        vframe0.landmarks[idx].flag = LandmarkFlag::UNINITIALIZED; 
-        //TODO:Set depth!!!
-
-        vframe1.landmarks[idx_down].pt3d = point_3d;
-        vframe1.landmarks[idx_down].flag = LandmarkFlag::UNINITIALIZED;
-        count_3d ++;
-        assert("Set depth before use" && false);
-        // std::cout << "Insert" << FEATURE_DESC_SIZE * ids[i] << "to" << FEATURE_DESC_SIZE * (ids[i] + 1)  << std::endl;
-
-        // desc_new.insert(desc_new.end(), ides.feature_descriptor.begin() + FEATURE_DESC_SIZE * ids[i], ides.feature_descriptor.begin() + FEATURE_DESC_SIZE * (ids[i] + 1) );
-
-        // std::cout << "PT UP" << pt_up << "PT DOWN" << pt_down << std::endl;
-
-        // std::cout << "PT UP NORM" << pt_up_norm.transpose() << "PT DOWN NORM" << pt_down_norm.transpose() << std::endl;
-
     }
 
-    // ROS_INFO("Image 2d kpts: %ld 3d : %d", ides.landmarks_2d.size(), count_3d);
-
-    // ides.feature_descriptor.clear();
-    // ides.feature_descriptor = std::vector<float>(desc_new);
-    // ides.feature_descriptor_size = ides.feature_descriptor.size();
-    // ides.landmark_num = ides.landmarks_2d.size();
-
     if (send_img) {
-        if (_config.LOWER_CAM_AS_MAIN) {
+        if (_config.right_cam_as_main) {
             encodeImage(image_right, vframe1);
         } else {
             encodeImage(image_left, vframe0);
@@ -472,9 +477,6 @@ VisualImageDesc LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, 
                 auto pt_cam = pose_up.att().inverse() * (point3d - pose_up.pos());
                 cv::circle(_show, pt, 3, cv::Scalar(0, 255, 0), 1);
                 cv::arrowedLine(_show, pts_up[i], pts_down[i], cv::Scalar(255, 255, 0), 1);
-
-                // sprintf(title, "[%3.1f,%3.1f,%3.1f]", pt_cam.x(), pt_cam.y(), pt_cam.z());
-                // cv::putText(_show, title, pt + cv::Point2f(0, 5), cv::FONT_HERSHEY_SIMPLEX, 0.3, cv::Scalar(255, 255, 0), 1);
             }
         }
 
@@ -483,25 +485,23 @@ VisualImageDesc LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, 
         cv::putText(_show, text, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
     }
 
-    if (_config.LOWER_CAM_AS_MAIN) {
-        if (params->debug_image) {
-            vframe1.raw_image = msg.left_images[vcam_id];
-        }
-        return vframe1;
-    } else {
-        if (params->debug_image) {
-            vframe0.raw_image = msg.left_images[vcam_id];
-        }
-        return vframe0;
+    if (params->debug_image) {
+        vframe1.raw_image = msg.right_images[vcam_id];
+        vframe0.raw_image = msg.left_images[vcam_id];
     }
+    std::vector<VisualImageDesc> ret{vframe0, vframe1};
+    return ret;
 }
 
-VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, bool superpoint_mode)
+VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, int camera_index, 
+        int camera_id, bool superpoint_mode)
 {
     auto start = high_resolution_clock::now();
 
     VisualImageDesc vframe;
     vframe.stamp = stamp.toSec();
+    vframe.camera_index = camera_index;
+    vframe.camera_id = camera_id;
 
     if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
         cv::Mat roi = img(cv::Rect(0, img.rows*3/4, img.cols, img.rows/4));
@@ -524,6 +524,8 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, b
         LandmarkPerFrame lm;
         lm.pt2d = pt_up;
         lm.pt2d_norm = pt_up_norm;
+        lm.camera_index = camera_index;
+        lm.camera_id = camera_id;
         vframe.landmarks.emplace_back(lm);
 
         if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {

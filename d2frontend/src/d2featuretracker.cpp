@@ -14,9 +14,15 @@ bool D2FeatureTracker::track(VisualImageDescArray & frames) {
         processKeyframe(frames);
         return true;
     } else {
-        for (auto & frame : frames.images) {
-            report.compose(track(frame));
+        if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
+            report.compose(track(frames.images[0]));
+            report.compose(track(frames.images[0], frames.images[1]));
+        } else {
+            for (auto & frame : frames.images) {
+                report.compose(track(frame));
+            }
         }
+        
         if (isKeyframe(report)) {
             iskeyframe = true;
             processKeyframe(frames);
@@ -26,8 +32,11 @@ bool D2FeatureTracker::track(VisualImageDescArray & frames) {
     report.ft_time = tic.toc();
 
     if (params->debug_image) {
-        for (auto & frame : frames.images) {
-            draw(frame, iskeyframe, report);
+        if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
+        } else {
+            for (auto & frame : frames.images) {
+                draw(frame, iskeyframe, report);
+            }
         }
     }
 
@@ -35,7 +44,7 @@ bool D2FeatureTracker::track(VisualImageDescArray & frames) {
 }
 
 TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
-    auto & previous = current_keyframe.images[frame.camera_id];
+    auto & previous = current_keyframe.images[frame.camera_index];
     auto prev_pts = previous.landmarks2D();
     auto cur_pts = frame.landmarks2D();
     std::vector<int> ids_down_to_up;
@@ -51,11 +60,6 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
             cur_lm.landmark_id = landmark_id;
             cur_lm.velocity = Vector3d(cur_lm.pt2d_norm.x() - prev_lm.pt2d_norm.x(), cur_lm.pt2d_norm.y() - prev_lm.pt2d_norm.y(), 0.);
             cur_lm.velocity /= (frame.stamp - current_keyframe.stamp);
-            // printf("frame_count %d landmark_id %d prev pt %.2f %.2f cur pt %.2f %.2f vel %.2f %.2f\n", 
-            //         frame_count,
-            //         landmark_id,
-            //         prev_lm.pt2d_norm.x(), prev_lm.pt2d_norm.y(), cur_lm.pt2d_norm.x(), cur_lm.pt2d_norm.y(), 
-            //         cur_lm.velocity.x(), cur_lm.velocity.y());
             report.sum_parallex += (prev_lm.pt2d_norm - cur_lm.pt2d_norm).norm();
             report.parallex_num ++;
             if (lmanager->at(landmark_id).track.size() >= _config.long_track_frames) {
@@ -66,6 +70,27 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
         }
     }
     // printf("sum_parallex %f num %d mean %.2f\n", report.sum_parallex, report.parallex_num, report.meanParallex());
+    return report;
+}
+
+TrackReport D2FeatureTracker::track(VisualImageDesc & left_frame, VisualImageDesc & right_frame) {
+    auto prev_pts = left_frame.landmarks2D();
+    auto cur_pts = right_frame.landmarks2D();
+    std::vector<int> ids_down_to_up;
+    TrackReport report;
+    matchLocalFeatures(prev_pts, cur_pts, left_frame.landmark_descriptor, right_frame.landmark_descriptor, ids_down_to_up);
+    for (size_t i = 0; i < ids_down_to_up.size(); i++) { 
+        if (ids_down_to_up[i] >= 0) {
+            assert(ids_down_to_up[i] < left_frame.landmarkNum() && "too large");
+            auto prev_index = ids_down_to_up[i];
+            auto landmark_id = left_frame.landmarks[prev_index].landmark_id;
+            auto &cur_lm = right_frame.landmarks[i];
+            auto &prev_lm = left_frame.landmarks[prev_index];
+            cur_lm.landmark_id = landmark_id;
+            cur_lm.velocity = left_frame.landmarks[prev_index].velocity;
+            report.stereo_point_num ++;
+        }
+    }
     return report;
 }
 
@@ -104,8 +129,6 @@ void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
         for (unsigned int i = 0; i < frame.landmarkNum(); i++) {
             if (frame.landmarks[i].landmark_id < 0) {
                 auto _id = lmanager->addLandmark(frame.landmarks[i]);
-                // printf("addLM frame_count %d landmark_id %d cur pt %.2f %.2f\n", 
-                //     frame_count, _id, frame.landmarks[i].pt2d_norm.x(), frame.landmarks[i].pt2d_norm.y());
                 frame.landmarks[i].setLandmarkId(_id);
             } else {
                 lmanager->updateLandmark(frame.landmarks[i]);
@@ -115,8 +138,7 @@ void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
     current_keyframe = frames;
 }
 
-
-void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) {
+cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const {
     // ROS_INFO("Drawing ... %d", keyframe_count);
     cv::Mat img = frame.raw_image;
     auto cur_pts = frame.landmarks2D();
@@ -129,25 +151,6 @@ void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const Tra
         //Not solving
         //Just New point yellow
         cv::Scalar color = cv::Scalar(0, 255, 255);
-        // if (pts_status.find(ids[j]) != pts_status.end()) {
-        //     int status = pts_status[ids[j]];
-        //     if (status < 0) {
-        //         //Removed points
-        //         color = cv::Scalar(0, 0, 0);
-        //     }
-        //     if (status == 1) {
-        //         //Good pt; But not used for solving; Blue 
-        //         color = cv::Scalar(255, 0, 0);
-        //     }
-        //     if (status == 2) {
-        //         //Bad pt; Red
-        //         color = cv::Scalar(0, 0, 255);
-        //     }
-        //     if (status == 3) {
-        //         //Good pt for solving; Green
-        //         color = cv::Scalar(0, 255, 0);
-        //     }
-        // }
 
         cv::circle(img, cur_pts[j], 1, color, 2);
         auto _id = frame.landmarks[j].landmark_id;
@@ -173,12 +176,32 @@ void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const Tra
         color = cv::Scalar(0, 0, 255);
     }
     sprintf(buf, "KF/FRAME %d/%d @CAM %d ISKF: %d", keyframe_count, frame_count, 
-        frame.camera_id, is_keyframe);
+        frame.camera_index, is_keyframe);
     cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
     sprintf(buf, "TRACK %.1fms NUM %d LONG %d Parallex %.1f\%/%.1f",
         report.ft_time, report.parallex_num, report.long_track_num, report.meanParallex()*100, _config.parallex_thres*100);
     cv::putText(img, buf, cv::Point2f(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
 
+    return img;
+}
+
+void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const {
+    cv::Mat img = drawToImage(frame, is_keyframe, report);
+    char buf[64] = {0};
+    sprintf(buf, "featureTracker @ Drone %d", params->self_id);
+    cv::imshow(buf, img);
+    cv::waitKey(1);
+    if (_config.write_to_file) {
+        sprintf(buf, "%s/featureTracker%06d.jpg", _config.output_folder.c_str(), frame_count);
+        cv::imwrite(buf, img);
+    }
+}
+
+void D2FeatureTracker::draw(VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const {
+    cv::Mat img = drawToImage(lframe, is_keyframe, report);
+    cv::Mat img_r = drawToImage(rframe, is_keyframe, report);
+    cv::vconcat(img, img_r, img);
+    char buf[64] = {0};
     sprintf(buf, "featureTracker @ Drone %d", params->self_id);
     cv::imshow(buf, img);
     cv::waitKey(1);

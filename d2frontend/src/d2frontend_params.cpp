@@ -43,7 +43,7 @@ namespace D2FrontEnd {
         nh.param<std::string>("netvlad_model_path", loopcamconfig->netvlad_model, "");
         nh.param<std::string>("camera_config_path", loopcamconfig->camera_config_path, 
             "/home/xuhao/swarm_ws/src/VINS-Fusion-gpu/config/vi_car/cam0_mei.yaml");
-        nh.param<bool>("lower_cam_as_main", loopcamconfig->LOWER_CAM_AS_MAIN, false);
+        nh.param<bool>("lower_cam_as_main", loopcamconfig->right_cam_as_main, false);
         nh.param<int>("width", loopcamconfig->width, 400);
         nh.param<int>("height", loopcamconfig->height, 208);       
         nh.param<std::string>("vins_config_path",vins_config_path, "");

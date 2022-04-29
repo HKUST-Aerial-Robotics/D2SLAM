@@ -6,7 +6,7 @@
 
 namespace D2FrontEnd {
 
-inline int generate_keyframe_id(ros::Time stamp, int self_id) {
+inline int generateKeyframeId(ros::Time stamp, int self_id) {
     static int keyframe_count = 0;
     int t_ms = 0;//stamp.toSec()*1000;
     return (t_ms%100000)*10000 + self_id*1000000 + keyframe_count++;
@@ -18,6 +18,10 @@ struct StereoFrame {
     std::vector<cv::Mat> left_images, right_images, depth_images;
     Swarm::Pose pose_drone;
     std::vector<Swarm::Pose> left_extrisincs, right_extrisincs;
+    std::vector<int> left_camera_indices;
+    std::vector<int> right_camera_indices;
+    std::vector<int> left_camera_ids;
+    std::vector<int> right_camera_ids;
 
     StereoFrame():stamp(0) {
 
@@ -25,24 +29,29 @@ struct StereoFrame {
 
     StereoFrame(ros::Time _stamp, cv::Mat _left_image, cv::Mat _right_image, 
         Swarm::Pose _left_extrinsic, Swarm::Pose _right_extrinsic, int self_id):
-        stamp(_stamp)
+        stamp(_stamp),
+        left_images{_left_image},
+        right_images{_right_image},
+        left_extrisincs{_left_extrinsic},
+        right_extrisincs{_right_extrinsic},
+        left_camera_indices{0},
+        right_camera_indices{1},
+        left_camera_ids{self_id*10000},
+        right_camera_ids{self_id*10000 + 1}
     {
-        left_images.push_back(_left_image);
-        right_images.push_back(_right_image);
-        left_extrisincs.push_back(_left_extrinsic);
-        right_extrisincs.push_back(_right_extrinsic);
-        keyframe_id = generate_keyframe_id(_stamp, self_id);
-
+        keyframe_id = generateKeyframeId(_stamp, self_id);
     }
 
     StereoFrame(ros::Time _stamp, cv::Mat _left_image, cv::Mat _dep_image, 
         Swarm::Pose _left_extrinsic, int self_id):
-        stamp(_stamp)
+        stamp(_stamp),
+        left_images{_left_image},
+        depth_images{_dep_image},
+        left_extrisincs{_left_extrinsic},
+        left_camera_indices{0},
+        left_camera_ids{self_id*10000}
     {
-        left_images.push_back(_left_image);
-        depth_images.push_back(_dep_image);
-        left_extrisincs.push_back(_left_extrinsic);
-        keyframe_id = generate_keyframe_id(_stamp, self_id);
+        keyframe_id = generateKeyframeId(_stamp, self_id);
     }
 
     // StereoFrame(vins::FlattenImages vins_flatten, int self_id):
@@ -68,7 +77,11 @@ struct VisualImageDesc {
     cv::Mat raw_image;
     int drone_id = 0;
     FrameIdType frame_id = 0; 
-    int camera_id = 0; //camera id in stereo_frame
+    //The index of view; In stereo. 0 left 1 right + 2 * camera_index are different camera
+    //In stereo_fisheye; if use depth on side, top 0 left-back 1-4 down 5
+    //If use stereo on side,(top-left-front-right-back) (down-left-front-right-back) 0-10 then.
+    int camera_index = 0;
+    int camera_id = 0; //unique id of camera
     Swarm::Pose extrinsic; //Camera extrinsic
     Swarm::Pose pose_drone; //IMU propagated pose
     std::vector<LandmarkPerFrame> landmarks;
@@ -119,7 +132,8 @@ struct VisualImageDesc {
         img_desc.image_height = image_height;
         img_desc.image = image;
         img_desc.prevent_adding_db = prevent_adding_db;
-        img_desc.direction = camera_id;
+        img_desc.camera_index = camera_index;
+        img_desc.camera_id = camera_id;
         return img_desc;
     }
 
@@ -145,7 +159,8 @@ struct VisualImageDesc {
         img_desc.image_size = image.size();
         
         img_desc.prevent_adding_db = prevent_adding_db;
-        img_desc.direction = camera_id;
+        img_desc.camera_index = camera_index;
+        img_desc.camera_id = camera_id;
         return img_desc;
     }
 
@@ -158,8 +173,10 @@ struct VisualImageDesc {
         landmark_descriptor = desc.landmark_descriptor;
         image_desc = desc.image_desc;
         image = desc.image;
-        camera_id = desc.direction;
+        camera_index = desc.camera_index;
         prevent_adding_db = desc.prevent_adding_db;
+        camera_index = desc.camera_index;
+        camera_id = desc.camera_id;
         for (auto landmark: desc.landmarks) {
             landmarks.emplace_back(landmark);
         }
@@ -174,8 +191,10 @@ struct VisualImageDesc {
         landmark_descriptor = desc.landmark_descriptor;
         image_desc = desc.image_desc;
         image = desc.image;
-        camera_id = desc.direction;
+        camera_index = desc.camera_index;
         prevent_adding_db = desc.prevent_adding_db;
+        camera_index = desc.camera_index;
+        camera_id = desc.camera_id;
         for (auto landmark: desc.landmarks) {
             landmarks.emplace_back(landmark);
         }
