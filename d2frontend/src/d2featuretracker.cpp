@@ -33,6 +33,7 @@ bool D2FeatureTracker::track(VisualImageDescArray & frames) {
 
     if (params->debug_image) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
+            draw(frames.images[0], frames.images[1], iskeyframe, report);
         } else {
             for (auto & frame : frames.images) {
                 draw(frame, iskeyframe, report);
@@ -128,6 +129,10 @@ void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
     for (auto & frame: frames.images) {
         for (unsigned int i = 0; i < frame.landmarkNum(); i++) {
             if (frame.landmarks[i].landmark_id < 0) {
+                if (params->camera_configuration == CameraConfig::STEREO_PINHOLE && frame.camera_index == 1) {
+                    //We do not create new landmark for right camera
+                    continue;
+                }
                 auto _id = lmanager->addLandmark(frame.landmarks[i]);
                 frame.landmarks[i].setLandmarkId(_id);
             } else {
@@ -138,7 +143,7 @@ void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
     current_keyframe = frames;
 }
 
-cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const {
+cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right) const {
     // ROS_INFO("Drawing ... %d", keyframe_count);
     cv::Mat img = frame.raw_image;
     auto cur_pts = frame.landmarks2D();
@@ -146,6 +151,7 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
         cv::cvtColor(img, img, cv::COLOR_GRAY2BGR);
     }
     char buf[64] = {0};
+    int stereo_num = 0;
     for (size_t j = 0; j < cur_pts.size(); j++) {
         //Not tri
         //Not solving
@@ -157,7 +163,7 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
         if (_id >= 0) {
             cv::Point2f prev;
             auto & pts2d = lmanager->at(_id).track;
-            if (!is_keyframe || pts2d.size() < 2) {
+            if (!is_keyframe || pts2d.size() < 2 || is_right) {
                 prev = pts2d.back().pt2d;
             } else {
                 int index = pts2d.size()-2;
@@ -169,18 +175,24 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
         if (_config.show_feature_id && frame.landmarks[j].landmark_id >= 0) {
             sprintf(buf, "%d", frame.landmarks[j].landmark_id%MAX_FEATURE_NUM);
             cv::putText(img, buf, cur_pts[j] - cv::Point2f(5, 0), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1);
+            stereo_num++;
         }
     }
     cv::Scalar color = cv::Scalar(255, 0, 0);
     if (is_keyframe) {
         color = cv::Scalar(0, 0, 255);
     }
-    sprintf(buf, "KF/FRAME %d/%d @CAM %d ISKF: %d", keyframe_count, frame_count, 
-        frame.camera_index, is_keyframe);
-    cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
-    sprintf(buf, "TRACK %.1fms NUM %d LONG %d Parallex %.1f\%/%.1f",
-        report.ft_time, report.parallex_num, report.long_track_num, report.meanParallex()*100, _config.parallex_thres*100);
-    cv::putText(img, buf, cv::Point2f(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+    if (is_right) {
+        sprintf(buf, "Stereo points: %d", stereo_num);
+        cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+    } else {
+        sprintf(buf, "KF/FRAME %d/%d @CAM %d ISKF: %d", keyframe_count, frame_count, 
+            frame.camera_index, is_keyframe);
+        cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+        sprintf(buf, "TRACK %.1fms NUM %d LONG %d Parallex %.1f\%/%.1f",
+            report.ft_time, report.parallex_num, report.long_track_num, report.meanParallex()*100, _config.parallex_thres*100);
+        cv::putText(img, buf, cv::Point2f(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+    }
 
     return img;
 }
@@ -199,8 +211,8 @@ void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const Tra
 
 void D2FeatureTracker::draw(VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const {
     cv::Mat img = drawToImage(lframe, is_keyframe, report);
-    cv::Mat img_r = drawToImage(rframe, is_keyframe, report);
-    cv::vconcat(img, img_r, img);
+    cv::Mat img_r = drawToImage(rframe, is_keyframe, report, true);
+    cv::hconcat(img, img_r, img);
     char buf[64] = {0};
     sprintf(buf, "featureTracker @ Drone %d", params->self_id);
     cv::imshow(buf, img);

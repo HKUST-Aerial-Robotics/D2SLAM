@@ -75,7 +75,7 @@ public:
     bool isKeyframe(const TrackReport & reports);
     void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
     void draw(VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const;
-    cv::Mat drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
+    cv::Mat drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right=false) const;
     void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
         std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
         std::vector<int> & ids_down_to_up) const;

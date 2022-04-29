@@ -28,7 +28,7 @@ struct LandmarkPerFrame {
     int drone_id = -1;
     LandmarkFlag flag = UNINITIALIZED;
     cv::Point2f pt2d;
-    Eigen::Vector2d pt2d_norm;
+    Eigen::Vector3d pt2d_norm; //[x, y, 1]
     Eigen::Vector3d pt3d;  //Note this is initialized by frontend and will not be modified by estimator.
     Eigen::Vector3d velocity;
     double depth = -1;
@@ -39,7 +39,7 @@ struct LandmarkPerFrame {
         landmark_id = id;
     }
 
-    LandmarkPerFrame(): pt2d_norm(0., 0.), pt3d(0., 0., 0.), velocity(0., 0., 0.)
+    LandmarkPerFrame(): pt2d_norm(0., 0., 0.), pt3d(0., 0., 0.), velocity(0., 0., 0.)
     {}
 
     LandmarkPerFrame(const Landmark_t & Landmark):
@@ -49,7 +49,7 @@ struct LandmarkPerFrame {
         drone_id(Landmark.drone_id),
         flag((LandmarkFlag) Landmark.flag),
         pt2d(Landmark.pt2d.x, Landmark.pt2d.y),
-        pt2d_norm(Landmark.pt2d_norm.x, Landmark.pt2d_norm.y),
+        pt2d_norm(Landmark.pt2d_norm.x, Landmark.pt2d_norm.y, Landmark.pt2d_norm.z),
         pt3d(Landmark.pt3d.x, Landmark.pt3d.y, Landmark.pt3d.z),
         velocity(Landmark.velocity.x, Landmark.velocity.y, Landmark.velocity.z),
         depth(Landmark.depth)
@@ -62,7 +62,7 @@ struct LandmarkPerFrame {
         drone_id(Landmark.drone_id),
         flag((LandmarkFlag) Landmark.flag),
         pt2d(Landmark.pt2d.x, Landmark.pt2d.y),
-        pt2d_norm(Landmark.pt2d_norm.x, Landmark.pt2d_norm.y),
+        pt2d_norm(Landmark.pt2d_norm.x, Landmark.pt2d_norm.y, Landmark.pt2d_norm.z),
         pt3d(Landmark.pt3d.x, Landmark.pt3d.y, Landmark.pt3d.z),
         velocity(Landmark.velocity.x, Landmark.velocity.y, Landmark.velocity.z),
         depth(Landmark.depth)
@@ -83,6 +83,7 @@ struct LandmarkPerFrame {
         ret.velocity.z = velocity.z();
         ret.pt2d_norm.x = pt2d_norm.x();
         ret.pt2d_norm.y = pt2d_norm.y();
+        ret.pt2d_norm.z = pt2d_norm.z();
         ret.pt3d.x = pt3d.x();
         ret.pt3d.y = pt3d.y();
         ret.pt3d.z = pt3d.z();
@@ -105,6 +106,7 @@ struct LandmarkPerFrame {
         ret.velocity.z = velocity.z();
         ret.pt2d_norm.x = pt2d_norm.x();
         ret.pt2d_norm.y = pt2d_norm.y();
+        ret.pt2d_norm.z = pt2d_norm.z();
         ret.pt2d_norm.z = 0.0;
         ret.pt3d.x = pt3d.x();
         ret.pt3d.y = pt3d.y();
@@ -113,7 +115,7 @@ struct LandmarkPerFrame {
     }
 
     Vector3d measurement() {
-        return Vector3d(pt2d_norm.x(), pt2d_norm.y(), 1.0);
+        return Vector3d(pt2d_norm.x(), pt2d_norm.y(), pt2d_norm.z());
     }
 };
 

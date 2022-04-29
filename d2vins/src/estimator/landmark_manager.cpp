@@ -155,7 +155,7 @@ void D2LandmarkManager::outlierRejection(const std::map<FrameIdType, VINSFrame*>
                 Vector3d pos_cam = (pose*ext).inverse()*lm.position;
                 pos_cam = pos_cam/pos_cam.z();
                 //Compute reprojection error
-                Vector2d reproj_error = pt2d_n - pos_cam.head<2>();
+                Vector3d reproj_error = pt2d_n - pos_cam;
                 // printf("[D2VINS::D2LandmarkManager] outlierRejection LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f reproj_error %.2f %.2f\n",
                     // lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z(), reproj_error.x(), reproj_error.y());
                 err_sum += reproj_error.norm();

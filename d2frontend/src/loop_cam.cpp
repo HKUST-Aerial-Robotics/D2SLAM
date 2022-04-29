@@ -520,7 +520,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         auto pt_up = landmarks_2d[i];
         Eigen::Vector3d pt_up3d;
         cam->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
-        Eigen::Vector2d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z());
+        Eigen::Vector3d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z(), 1.0);
         LandmarkPerFrame lm;
         lm.pt2d = pt_up;
         lm.pt2d_norm = pt_up_norm;
