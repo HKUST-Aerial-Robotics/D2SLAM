@@ -44,7 +44,7 @@ endif()
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES loop_cnn
+  LIBRARIES loop_cnn libd2frontend
   CATKIN_DEPENDS std_msgs cv_bridge roscpp rosmsg rospy swarm_msgs swarmcomm_msgs
   #DEPENDS system_lib
 )
@@ -174,4 +174,15 @@ target_link_libraries(${PROJECT_NAME}_spy
   lcm
   dw
   libd2frontend
+)
+
+install(TARGETS libd2frontend
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+)
+
+install(
+  DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
