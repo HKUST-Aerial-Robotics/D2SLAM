@@ -157,8 +157,6 @@ void matchLocalFeatures(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point
         }
     }
 
-    printf("%ld matches...\n", _matches.size());
-
     std::vector<uint8_t> status;
 
     pts_up = std::vector<cv::Point2f>(_pts_up);
