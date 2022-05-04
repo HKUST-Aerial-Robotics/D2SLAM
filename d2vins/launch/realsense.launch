@@ -9,10 +9,8 @@
     <arg name="vins"     default="false"/>
     <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_rtx3080_480x640_fp16.trt"/>
     <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640_rtx3080_fp16.trt" />
-    <!-- <arg name="camera_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/left.yaml" /> -->
-    <!-- <arg name="vins_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/realsense.yaml" /> -->
-    <arg name="camera_config_path" default="/home/xuhao/data/drone3-ri/Configs/SwarmConfig1/realsense/left.yaml" />
-    <arg name="vins_config_path" default="/home/xuhao/data/drone3-ri/Configs/SwarmConfig1/realsense/realsense_d2slam.yaml" />
+    <arg name="camera_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/left.yaml" />
+    <arg name="vins_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/realsense_d2slam.yaml" />
     <arg name="max_freq" default="1.0" />
     <arg name="superpoint_max_num" default="200" />
     <arg name="match_index_dist" default="50" />
@@ -82,4 +80,5 @@
         <param name="enable_loop" value="$(arg enable_loop)" type="bool" />
         <remap from="~imu" to="/dji_sdk_1/dji_sdk/imu" />
     </node>
+    <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2slam.rviz" />
 </launch>
