@@ -128,17 +128,24 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     sortParams(); //sort the parameters
     
     int keep_state_dim = total_eff_state_dim - remove_state_dim;
-
+    TicToc tt;
     SparseMat J(eff_residual_size, total_eff_state_dim);
     auto b = evaluate(J, eff_residual_size, total_eff_state_dim);
     SparseMat H = SparseMatrix<double>(J.transpose())*J;
+    if (params->enable_perf_output) {
+        printf("[D2VINS::Marginalizer::marginalize] JtJ cost %.1fms\n", tt.toc());
+    }
     
     std::vector<ParamInfo> keep_params_list(params_list.begin(), params_list.begin() + keep_block_size);
     //Compute the schur complement, by sparse LLT.
     PriorFactor * prior = nullptr;
     if (params->margin_sparse_solver) {
         // printf("[D2VINS::Marginalizer::marginalize] use sparse LLT solver\n");
+        tt.tic();
         auto A = Utility::schurComplement(H, b, keep_state_dim);
+        if (params->enable_perf_output) {
+            printf("[D2VINS::Marginalizer::marginalize] schurComplement cost %.1fms\n", tt.toc());
+        }
         prior = new PriorFactor(keep_params_list, A, b);
     } else {
         // printf("[D2VINS::Marginalizer::marginalize] use dense solver\n");
