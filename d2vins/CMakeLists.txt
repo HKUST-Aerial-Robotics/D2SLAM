@@ -24,6 +24,8 @@ catkin_package(
 
 find_package(Eigen3 REQUIRED)
 find_package(Ceres REQUIRED)
+set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch")
+find_package(Torch REQUIRED)
 
 ## Your package locations should be listed before other locations
 include_directories(

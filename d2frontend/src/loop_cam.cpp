@@ -228,7 +228,6 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
 
 VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, cv::Mat & _show)
 {
-    printf("generateGrayDepthImageDescriptor\n");
     if (vcam_id > msg.left_images.size()) {
         ROS_WARN("Flatten images too few");
         VisualImageDesc ides;
