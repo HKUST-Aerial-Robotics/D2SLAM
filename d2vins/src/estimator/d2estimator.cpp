@@ -162,7 +162,7 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
     }
 
     for (int i = 0; i < params->camera_num; i ++) {
-        if (!params->estimate_extrinsic) {
+        if (!params->estimate_extrinsic || state.size() < params->max_sld_win_size) {
             problem.SetParameterBlockConstant(state.getExtrinsicState(i));
         } else {
             // problem.SetManifold(state.getExtrinsicState(i), pose_manifold);
@@ -174,7 +174,6 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
         problem.SetParameterBlockConstant(state.getTdState(0));
     }
 
-    //Current no margarin, fix the first pose
     if (!state.getPrior() || params->always_fixed_first_pose) {
         problem.SetParameterBlockConstant(state.getPoseState(state.firstFrame().frame_id));
     }
@@ -238,6 +237,10 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
         problem.AddResidualBlock(imu_factor, nullptr, 
             state.getPoseState(frame_a.frame_id), state.getSpdBiasState(frame_a.frame_id), 
             state.getPoseState(frame_b.frame_id), state.getSpdBiasState(frame_b.frame_id));
+        if (params->always_fixed_first_pose) {
+            //At this time we fix the first pose and ignore the margin of this imu factor to achieve better numerical stability
+            continue;
+        }
         marginalizer->addImuResidual(imu_factor, frame_a.frame_id, frame_b.frame_id);
     }
 }
