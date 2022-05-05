@@ -2,7 +2,13 @@
 #include "../../factors/prior_factor.h"
 
 namespace D2VINS {
-void ResidualInfo::Evaluate(std::vector<double*> params) {
+void ResidualInfo::Evaluate(D2EstimatorState * state) {
+    auto param_infos = paramsList(state);
+    std::vector<state_type*> params;
+    for (auto info : param_infos) {
+        params.push_back(info.pointer);
+    }
+
     //This function is from VINS.
     residuals.resize(cost_function->num_residuals());
     std::vector<int> blk_sizes = cost_function->parameter_block_sizes();
@@ -47,47 +53,6 @@ void ResidualInfo::Evaluate(std::vector<double*> params) {
     }
 }
 
-void ImuResInfo::Evaluate(D2EstimatorState * state) {
-    std::vector<double*> params{state->getPoseState(frame_ida), state->getSpdBiasState(frame_ida), 
-        state->getPoseState(frame_idb), state->getSpdBiasState(frame_idb)};
-    ((ResidualInfo*)this)->Evaluate(params);
-}
-
-void LandmarkTwoFrameOneCamResInfo::Evaluate(D2EstimatorState * state) {
-    std::vector<double*> params{state->getPoseState(frame_ida), 
-                    state->getPoseState(frame_idb), 
-                    state->getExtrinsicState(camera_index),
-                    state->getLandmarkState(landmark_id)};
-    ((ResidualInfo*)this)->Evaluate(params);
-}
-
-void LandmarkTwoFrameOneCamResInfoTD::Evaluate(D2EstimatorState * state) {
-    std::vector<double*> params{state->getPoseState(frame_ida), 
-                    state->getPoseState(frame_idb), 
-                    state->getExtrinsicState(camera_index),
-                    state->getLandmarkState(landmark_id),
-                    state->getTdState(camera_index)};
-    ((ResidualInfo*)this)->Evaluate(params);
-}
-
-void LandmarkTwoFrameTwoCamResInfoTD::Evaluate(D2EstimatorState * state) {
-    std::vector<double*> params{state->getPoseState(frame_ida), 
-                    state->getPoseState(frame_idb), 
-                    state->getExtrinsicState(camera_index_a),
-                    state->getExtrinsicState(camera_index_b),
-                    state->getLandmarkState(landmark_id),
-                    state->getTdState(camera_index_a)};
-    ((ResidualInfo*)this)->Evaluate(params);
-}
-
-void LandmarkOneFrameTwoCamResInfoTD::Evaluate(D2EstimatorState * state) {
-    std::vector<double*> params{state->getExtrinsicState(camera_index_a),
-                    state->getExtrinsicState(camera_index_b),
-                    state->getLandmarkState(landmark_id),
-                    state->getTdState(camera_index_a)};
-    ((ResidualInfo*)this)->Evaluate(params);
-}
-
 PriorResInfo::PriorResInfo(PriorFactor * _factor)
     :ResidualInfo(PriorResidual) {
     cost_function = _factor;
@@ -97,11 +62,6 @@ PriorResInfo::PriorResInfo(PriorFactor * _factor)
 bool PriorResInfo::relavant(const std::set<FrameIdType> & frame_ids) const {
     //Prior relavant to all frames.
     return true;
-}
-
-void PriorResInfo::Evaluate(D2EstimatorState * state) {
-    std::vector<double*> params = factor->getKeepParamsPointers();
-    ((ResidualInfo*)this)->Evaluate(params);
 }
 
 std::vector<ParamInfo> PriorResInfo::paramsList(D2EstimatorState * state) const {
