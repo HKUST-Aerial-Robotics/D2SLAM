@@ -26,9 +26,9 @@ void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, cere
     }
 }
 
-void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+void Marginalizer::addLandmarkResidualOneFrameTwoCam(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
         FrameIdType frame_ida, LandmarkIdType landmark_id, int camera_index_a, int camera_index_b) {
-    auto * info =new LandmarkOneFrameTwoCamResInfoTD();
+    auto * info = new LandmarkOneFrameTwoCamResInfoTD();
     info->frame_ida = frame_ida;
     info->landmark_id = landmark_id;
     info->camera_index_a = camera_index_a;
@@ -36,10 +36,11 @@ void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, cere
     info->cost_function = cost_function;
     info->loss_function = loss_function;
     residual_info_list.push_back(info);
-}   
-void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+}
+
+void Marginalizer::addLandmarkResidualTwoFrameTwoCam(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
         FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_index_a, int camera_index_b) {
-    auto * info =new LandmarkTwoFrameTwoCamResInfoTD();
+    auto * info = new LandmarkTwoFrameTwoCamResInfoTD();
     info->frame_ida = frame_ida;
     info->frame_idb = frame_idb;
     info->landmark_id = landmark_id;
@@ -86,6 +87,17 @@ VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_pa
             auto j0 = _params.at(params[param_blk_i].pointer).index;
             auto param_size = params[param_blk_i].size;
             auto blk_eff_param_size = params[param_blk_i].eff_size;
+            if (std::isnan(J_blk.maxCoeff()) || std::isnan(J_blk.minCoeff())) {
+                printf("\033[0;31m[D2VINS::Marginalizer] Residual type %d param_blk %d jacobians is nan\033[0m:\n",
+                    info->residual_type, param_blk_i);
+                std::cout << J_blk << std::endl;
+            }
+            if (std::isnan(info->residuals.maxCoeff()) || std::isnan(info->residuals.minCoeff())) {
+                printf("\033[0;31m[D2VINS::Marginalizer] Residual type %d param_blk %d residuals is nan\033[0m\n", 
+                    info->residual_type, param_blk_i);
+                std::cout << info->residuals.transpose() << std::endl;
+            }
+
             for (auto i = 0; i < residual_size; i ++) {
                 for (auto j = 0; j < blk_eff_param_size; j ++) {
                     //We only copy the eff param part, that is: on tangent space.

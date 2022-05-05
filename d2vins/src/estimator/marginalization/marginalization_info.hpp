@@ -6,13 +6,13 @@
 namespace D2VINS {
 class PriorFactor;
 enum ResidualType {
-    NONE,
-    IMUResidual,
-    LandmarkTwoFrameOneCamResidual,
-    LandmarkTwoFrameOneCamResidualTD,
-    LandmarkTwoFrameTwoCamResidualTD,
-    LandmarkOneFrameTwoCamResidualTD,
-    PriorResidual
+    NONE, // 0
+    IMUResidual, // 1
+    LandmarkTwoFrameOneCamResidual, // 2
+    LandmarkTwoFrameOneCamResidualTD, // 3
+    LandmarkTwoFrameTwoCamResidualTD, // 4
+    LandmarkOneFrameTwoCamResidualTD, // 5
+    PriorResidual // 6
 };
 
 enum ParamsType {

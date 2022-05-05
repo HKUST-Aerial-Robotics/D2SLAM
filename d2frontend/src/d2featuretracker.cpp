@@ -88,7 +88,8 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & left_frame, VisualImageDes
             auto &cur_lm = right_frame.landmarks[i];
             auto &prev_lm = left_frame.landmarks[prev_index];
             cur_lm.landmark_id = landmark_id;
-            cur_lm.velocity = left_frame.landmarks[prev_index].velocity;
+            // cur_lm.velocity = left_frame.landmarks[prev_index].velocity;
+            cur_lm.velocity.setZero();
             report.stereo_point_num ++;
         }
     }

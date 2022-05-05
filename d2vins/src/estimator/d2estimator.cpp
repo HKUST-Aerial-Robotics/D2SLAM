@@ -117,7 +117,7 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
     bool is_keyframe = _frame.is_keyframe; //Is keyframe is done in frontend
     state.addFrame(_frame, frame, is_keyframe);
 
-    if (params->verbose) {
+    if (params->verbose || params->debug_print_states) {
         printf("[D2VINS::D2Estimator] Initialize VINSFrame with %d: %s\n", 
             params->init_method, frame.toStr().c_str());
     }
@@ -291,7 +291,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                     state.getExtrinsicState(firstObs.camera_index),
                     state.getExtrinsicState(l_fm.camera_index),
                     state.getLandmarkState(lm_id), state.getTdState(l_fm.camera_id));
-                marginalizer->addLandmarkResidual(f_td, loss_function,
+                marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, loss_function,
                     firstObs.frame_id, lm_id, firstObs.camera_index, l_fm.camera_index);
             } else {
                 // printf("[D2VINS] Stereo landmark %d frame %d<->%d camera %d<->%d\n", 
@@ -304,7 +304,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                     state.getExtrinsicState(firstObs.camera_index),
                     state.getExtrinsicState(l_fm.camera_index),
                     state.getLandmarkState(lm_id), state.getTdState(l_fm.camera_id));
-                marginalizer->addLandmarkResidual(f_td, loss_function,
+                marginalizer->addLandmarkResidualTwoFrameTwoCam(f_td, loss_function,
                     firstObs.frame_id, l_fm.frame_id, lm_id, firstObs.camera_index, l_fm.camera_index);
             }
         }

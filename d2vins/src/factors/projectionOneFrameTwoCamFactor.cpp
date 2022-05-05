@@ -122,17 +122,19 @@ bool ProjectionOneFrameTwoCamFactor::Evaluate(double const *const *parameters, d
         if (jacobians[2])
         {
             Eigen::Map<Eigen::Vector2d> jacobian_feature(jacobians[2]);
-#ifdef UNIT_SPHERE_ERROR
             jacobian_feature = reduce * ric2.transpose() * ric * pts_i_td * -1.0 / (inv_dep_i * inv_dep_i);
-#else
-            jacobian_feature = reduce * ric2.transpose() * ric * pts_i * -1.0 / (inv_dep_i * inv_dep_i);
-#endif
         }
         if (jacobians[3])
         {
+#ifdef UNIT_SPHERE_ERROR
             Eigen::Map<Eigen::Vector2d> jacobian_td(jacobians[3]);
             jacobian_td = reduce * (ric2.transpose() * ric * velocity_i / inv_dep_i * -1.0)  +
                        sqrt_info * tangent_base * velocity_j;
+#else
+            Eigen::Map<Eigen::Vector2d> jacobian_td(jacobians[3]);
+            jacobian_td = reduce * ric2.transpose() * ric * velocity_i / inv_dep_i * -1.0  +
+                          sqrt_info * velocity_j.head(2);
+#endif
         }
     }
     return true;

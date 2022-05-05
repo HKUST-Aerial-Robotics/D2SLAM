@@ -76,9 +76,17 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const std::map<
         //Initialize by motion.
         std::vector<Swarm::Pose> poses;
         std::vector<Vector3d> points;
-        Eigen::Vector3d _min = firstFrame.odom.pose().pos();
-        Eigen::Vector3d _max = firstFrame.odom.pose().pos();
+        Eigen::Vector3d _min = (firstFrame.odom.pose()*extrinsic.at(lm.track[0].camera_index)).pos();
+        Eigen::Vector3d _max = (firstFrame.odom.pose()*extrinsic.at(lm.track[0].camera_index)).pos();
         for (auto & it: lm.track) {
+            auto & frame = *frame_db.at(it.frame_id);
+            auto ext = extrinsic.at(it.camera_index);
+            poses.push_back(frame.odom.pose()*ext);
+            points.push_back(Vector3d(it.pt2d_norm.x(), it.pt2d_norm.y(), 1.0));
+            _min = _min.cwiseMin((frame.odom.pose()*ext).pos());
+            _max = _max.cwiseMax((frame.odom.pose()*ext).pos());
+        }
+        for (auto & it: lm.track_r) {
             auto & frame = *frame_db.at(it.frame_id);
             auto ext = extrinsic.at(it.camera_index);
             poses.push_back(frame.odom.pose()*ext);
