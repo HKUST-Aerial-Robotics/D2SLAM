@@ -70,6 +70,24 @@ void LandmarkTwoFrameOneCamResInfoTD::Evaluate(D2EstimatorState * state) {
     ((ResidualInfo*)this)->Evaluate(params);
 }
 
+void LandmarkTwoFrameTwoCamResInfoTD::Evaluate(D2EstimatorState * state) {
+    std::vector<double*> params{state->getPoseState(frame_ida), 
+                    state->getPoseState(frame_idb), 
+                    state->getExtrinsicState(camera_index_a),
+                    state->getExtrinsicState(camera_index_b),
+                    state->getLandmarkState(landmark_id),
+                    state->getTdState(camera_index_a)};
+    ((ResidualInfo*)this)->Evaluate(params);
+}
+
+void LandmarkOneFrameTwoCamResInfoTD::Evaluate(D2EstimatorState * state) {
+    std::vector<double*> params{state->getExtrinsicState(camera_index_a),
+                    state->getExtrinsicState(camera_index_b),
+                    state->getLandmarkState(landmark_id),
+                    state->getTdState(camera_index_a)};
+    ((ResidualInfo*)this)->Evaluate(params);
+}
+
 PriorResInfo::PriorResInfo(PriorFactor * _factor)
     :ResidualInfo(PriorResidual) {
     cost_function = _factor;

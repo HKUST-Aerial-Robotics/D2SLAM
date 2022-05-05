@@ -1,8 +1,8 @@
 /*******************************************************
  * Copyright (C) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
- *
+ * 
  * This file is part of VINS.
- *
+ * 
  * Licensed under the GNU General Public License v3.0;
  * you may not use this file except in compliance with the License.
  *
@@ -16,12 +16,12 @@
 #include <Eigen/Dense>
 
 namespace D2VINS {
-class ProjectionTwoFrameOneCamFactor : public ceres::SizedCostFunction<2, 7, 7, 7, 1, 1>
+class ProjectionOneFrameTwoCamFactor : public ceres::SizedCostFunction<2, 7, 7, 1, 1>
 {
-public:
-    ProjectionTwoFrameOneCamFactor(const Eigen::Vector3d &_pts_i, const Eigen::Vector3d &_pts_j,
-                                    const Eigen::Vector3d &_velocity_i, const Eigen::Vector3d &_velocity_j,
-                                    const double _td_i, const double _td_j);
+  public:
+    ProjectionOneFrameTwoCamFactor(const Eigen::Vector3d &_pts_i, const Eigen::Vector3d &_pts_j,
+    				   			   const Eigen::Vector3d &_velocity_i, const Eigen::Vector3d &_velocity_j,
+    	   			   			   const double _td_i, const double _td_j);
     virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const;
     void check(double **parameters);
 
@@ -32,5 +32,4 @@ public:
     static Eigen::Matrix2d sqrt_info;
     static double sum_t;
 };
-
 }

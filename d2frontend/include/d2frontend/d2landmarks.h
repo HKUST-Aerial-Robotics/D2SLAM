@@ -134,13 +134,19 @@ struct LandmarkPerId {
         position(Landmark.pt3d),
         flag(Landmark.flag)
     {
-        track.emplace_back(Landmark);
+        add(Landmark);
     }
 
     size_t popFrame(FrameIdType frame_id) {
-        for (size_t i = track.size() - 1; i >= 0; i--) {
+        for (int i = 0; i < track.size(); i ++ ) {
             if (track[i].frame_id == frame_id) {
                 track.erase(track.begin() + i);
+                break;
+            }
+        }
+        for (int i = 0; i < track_r.size(); i ++ ) {
+            if (track_r[i].frame_id == frame_id) {
+                track_r.erase(track_r.begin() + i);
                 break;
             }
         }

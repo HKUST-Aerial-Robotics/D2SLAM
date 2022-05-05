@@ -27,6 +27,10 @@ public:
     Marginalizer(D2EstimatorState * _state): state(_state) {}
     void addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
         FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_index, bool has_td=false);
+    void addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+        FrameIdType frame_ida, LandmarkIdType landmark_id, int camera_index_a, int camera_index_b);
+    void addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+        FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_index_a, int camera_index_b);
     void addImuResidual(ceres::CostFunction * cost_function, FrameIdType frame_ida, FrameIdType frame_idb);
     void addPrior(PriorFactor * cost_function);
     PriorFactor * marginalize(std::set<FrameIdType> remove_frame_ids);
