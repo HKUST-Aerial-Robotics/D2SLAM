@@ -17,6 +17,8 @@ namespace D2VINS {
 void D2Estimator::init(ros::NodeHandle & nh) {
     state.init(params->camera_extrinsics, params->td_initial);
     ProjectionTwoFrameOneCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
+    ProjectionOneFrameTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
+    ProjectionTwoFrameTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info = params->focal_length / 1.5 * Matrix3d::Identity();
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info(2,2) = params->depth_sqrt_inf;
     visual.init(nh, this);
@@ -287,15 +289,16 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                 //     lm_id, firstObs.frame_id, firstObs.camera_index, l_fm.camera_index);
                 auto f_td = new ProjectionOneFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                     l_fm.velocity, firstObs.cur_td, l_fm.cur_td);
-                problem.AddResidualBlock(f_td, loss_function,
+                problem.AddResidualBlock(f_td, nullptr,
                     state.getExtrinsicState(firstObs.camera_index),
                     state.getExtrinsicState(l_fm.camera_index),
                     state.getLandmarkState(lm_id), state.getTdState(l_fm.camera_id));
-                marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, loss_function,
+                marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, nullptr,
                     firstObs.frame_id, lm_id, firstObs.camera_index, l_fm.camera_index);
             } else {
-                // printf("[D2VINS] Stereo landmark %d frame %d<->%d camera %d<->%d\n", 
-                //     lm_id, firstObs.frame_id, l_fm.frame_id, firstObs.camera_index, l_fm.camera_index);
+                // printf("[D2VINS] Stereo landmark %d frame %d<->%d camera %d<->%d mea0 %.2f %.2f mea1 %.2f %.2f\n", 
+                //     lm_id, firstObs.frame_id, l_fm.frame_id, firstObs.camera_index, l_fm.camera_index, 
+                //     mea0.x(), mea0.y(), mea1.x(), mea1.y());
                 auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                     l_fm.velocity, firstObs.cur_td, l_fm.cur_td);
                 problem.AddResidualBlock(f_td, loss_function,

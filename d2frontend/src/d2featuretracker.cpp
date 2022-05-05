@@ -172,11 +172,12 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
             }
             cv::arrowedLine(img, prev, cur_pts[j], cv::Scalar(0, 255, 0), 1, 8, 0, 0.2);
         }
-
+        if (frame.landmarks[j].landmark_id >= 0) {
+            stereo_num++;
+        }
         if (_config.show_feature_id && frame.landmarks[j].landmark_id >= 0) {
             sprintf(buf, "%d", frame.landmarks[j].landmark_id%MAX_FEATURE_NUM);
             cv::putText(img, buf, cur_pts[j] - cv::Point2f(5, 0), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1);
-            stereo_num++;
         }
     }
     cv::Scalar color = cv::Scalar(255, 0, 0);
