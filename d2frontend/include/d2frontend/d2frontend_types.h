@@ -6,10 +6,14 @@
 
 namespace D2FrontEnd {
 
-inline int generateKeyframeId(ros::Time stamp, int self_id) {
+inline FrameIdType generateKeyframeId(ros::Time stamp, int self_id) {
     static int keyframe_count = 0;
     int t_ms = 0;//stamp.toSec()*1000;
     return (t_ms%100000)*10000 + self_id*1000000 + keyframe_count++;
+}
+
+inline CamIdType generateCameraId(int self_id, int index) {
+    return self_id*1000 + index;
 }
 
 struct StereoFrame {
@@ -20,8 +24,8 @@ struct StereoFrame {
     std::vector<Swarm::Pose> left_extrisincs, right_extrisincs;
     std::vector<int> left_camera_indices;
     std::vector<int> right_camera_indices;
-    std::vector<int> left_camera_ids;
-    std::vector<int> right_camera_ids;
+    std::vector<CamIdType> left_camera_ids;
+    std::vector<CamIdType> right_camera_ids;
 
     StereoFrame():stamp(0) {
 
@@ -36,8 +40,8 @@ struct StereoFrame {
         right_extrisincs{_right_extrinsic},
         left_camera_indices{0},
         right_camera_indices{1},
-        left_camera_ids{self_id*10000},
-        right_camera_ids{self_id*10000 + 1}
+        left_camera_ids{generateCameraId(self_id, 0)},
+        right_camera_ids{generateCameraId(self_id, 1)}
     {
         keyframe_id = generateKeyframeId(_stamp, self_id);
     }
@@ -81,7 +85,7 @@ struct VisualImageDesc {
     //In stereo_fisheye; if use depth on side, top 0 left-back 1-4 down 5
     //If use stereo on side,(top-left-front-right-back) (down-left-front-right-back) 0-10 then.
     int camera_index = 0;
-    int camera_id = 0; //unique id of camera
+    CamIdType camera_id = 0; //unique id of camera
     Swarm::Pose extrinsic; //Camera extrinsic
     Swarm::Pose pose_drone; //IMU propagated pose
     std::vector<LandmarkPerFrame> landmarks;

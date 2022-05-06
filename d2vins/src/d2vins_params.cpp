@@ -56,6 +56,9 @@ void D2VINSConfig::init(const std::string & config_file) {
     max_depth_to_fuse = fsSettings["max_depth_to_fuse"];
     always_fixed_first_pose = (int) fsSettings["always_fixed_first_pose"];
 
+    //Multi-drone
+    self_id = fsSettings["self_id"];
+
     //Initialiazation
     init_method = (InitialMethod) (int)fsSettings["init_method"];
     depth_estimate_baseline = fsSettings["depth_estimate_baseline"];

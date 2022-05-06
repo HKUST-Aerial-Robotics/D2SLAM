@@ -8,6 +8,7 @@
 using D2FrontEnd::LandmarkPerId;
 using D2FrontEnd::LandmarkPerFrame;
 using D2FrontEnd::FrameIdType;
+using D2FrontEnd::CamIdType;
 using D2FrontEnd::LandmarkIdType;
 using D2FrontEnd::LandmarkFlag;
 using D2FrontEnd::LandmarkSolverFlag;

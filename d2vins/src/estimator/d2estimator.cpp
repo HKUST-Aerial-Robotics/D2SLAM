@@ -22,9 +22,10 @@ void D2Estimator::init(ros::NodeHandle & nh) {
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info = params->focal_length / 1.5 * Matrix3d::Identity();
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info(2,2) = params->depth_sqrt_inf;
     visual.init(nh, this);
-    for (int i = 0; i < params->camera_num; i++) {
-        Swarm::Pose ext = state.getExtrinsic(i);
-        printf("[D2VINS::D2Estimator] extrinsic %d: %s\n", i, ext.toStr().c_str());
+    printf("[D2Estimator::init] init done estimator on drone %d\n", params->self_id);
+    for (auto cam_id : state.getAvailableCameraIds()) {
+        Swarm::Pose ext = state.getExtrinsic(cam_id);
+        printf("[D2VINS::D2Estimator] extrinsic %d: %s\n", cam_id, ext.toStr().c_str());
     }
 }
 
@@ -161,12 +162,12 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
         problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
     }
 
-    for (int i = 0; i < params->camera_num; i ++) {
+    for (auto cam_id: used_camera_sets) {
         if (!params->estimate_extrinsic || state.size() < params->max_sld_win_size) {
-            problem.SetParameterBlockConstant(state.getExtrinsicState(i));
+            problem.SetParameterBlockConstant(state.getExtrinsicState(cam_id));
         } else {
-            // problem.SetManifold(state.getExtrinsicState(i), pose_manifold);
-            problem.SetParameterization(state.getExtrinsicState(i), pose_local_param);
+            // problem.SetManifold(state.getExtrinsicState(cam_id), pose_manifold);
+            problem.SetParameterization(state.getExtrinsicState(cam_id), pose_local_param);
         }
     }
 
@@ -184,6 +185,7 @@ void D2Estimator::solve() {
     state.setMarginalizer(marginalizer);
     solve_count ++;
     state.preSolve();
+    used_camera_sets.clear();
     problem = new ceres::Problem();
     setupImuFactors(*problem);
     setupLandmarkFactors(*problem);
@@ -278,41 +280,43 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
             problem.AddResidualBlock(f_td, loss_function,
                 state.getPoseState(firstObs.frame_id), 
                 state.getPoseState(lm.track[i].frame_id), 
-                state.getExtrinsicState(firstObs.camera_index),
+                state.getExtrinsicState(firstObs.camera_id),
                 state.getLandmarkState(lm_id), state.getTdState(lm.track[i].camera_id));
             marginalizer->addLandmarkResidual(f_td, loss_function,
-                firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_index, true);
+                firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_id, true);
             keyframe_measurements[state.getPoseIndex(lm.track[i].frame_id)] ++;
+            used_camera_sets.insert(firstObs.camera_id);
         }
 
         for (auto l_fm : lm.track_r) {
             auto mea1 = l_fm.measurement();
             if (l_fm.frame_id == firstObs.frame_id) {
                 // printf("[D2VINS] Stereo landmark %d is in the same frame %d camera %d<->%d\n",
-                //     lm_id, firstObs.frame_id, firstObs.camera_index, l_fm.camera_index);
+                //     lm_id, firstObs.frame_id, firstObs.camera_id, l_fm.camera_id);
                 auto f_td = new ProjectionOneFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                     l_fm.velocity, firstObs.cur_td, l_fm.cur_td);
                 problem.AddResidualBlock(f_td, nullptr,
-                    state.getExtrinsicState(firstObs.camera_index),
-                    state.getExtrinsicState(l_fm.camera_index),
+                    state.getExtrinsicState(firstObs.camera_id),
+                    state.getExtrinsicState(l_fm.camera_id),
                     state.getLandmarkState(lm_id), state.getTdState(l_fm.camera_id));
                 marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, nullptr,
-                    firstObs.frame_id, lm_id, firstObs.camera_index, l_fm.camera_index);
+                    firstObs.frame_id, lm_id, firstObs.camera_id, l_fm.camera_id);
             } else {
                 // printf("[D2VINS] Stereo landmark %d frame %d<->%d camera %d<->%d mea0 %.2f %.2f mea1 %.2f %.2f\n", 
-                //     lm_id, firstObs.frame_id, l_fm.frame_id, firstObs.camera_index, l_fm.camera_index, 
+                //     lm_id, firstObs.frame_id, l_fm.frame_id, firstObs.camera_id, l_fm.camera_id, 
                 //     mea0.x(), mea0.y(), mea1.x(), mea1.y());
                 auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                     l_fm.velocity, firstObs.cur_td, l_fm.cur_td);
                 problem.AddResidualBlock(f_td, loss_function,
                     state.getPoseState(firstObs.frame_id), 
                     state.getPoseState(l_fm.frame_id), 
-                    state.getExtrinsicState(firstObs.camera_index),
-                    state.getExtrinsicState(l_fm.camera_index),
+                    state.getExtrinsicState(firstObs.camera_id),
+                    state.getExtrinsicState(l_fm.camera_id),
                     state.getLandmarkState(lm_id), state.getTdState(l_fm.camera_id));
                 marginalizer->addLandmarkResidualTwoFrameTwoCam(f_td, loss_function,
-                    firstObs.frame_id, l_fm.frame_id, lm_id, firstObs.camera_index, l_fm.camera_index);
+                    firstObs.frame_id, l_fm.frame_id, lm_id, firstObs.camera_id, l_fm.camera_id);
             }
+            used_camera_sets.insert(l_fm.camera_id);
         }
         problem.SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
     }

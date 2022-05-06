@@ -50,14 +50,14 @@ protected:
         return info;
     }
 
-    ParamInfo paramInfoExtrinsic(D2EstimatorState * state, int camera_index) const {
+    ParamInfo paramInfoExtrinsic(D2EstimatorState * state, int camera_id) const {
         ParamInfo info;
-        info.pointer = state->getExtrinsicState(camera_index);
+        info.pointer = state->getExtrinsicState(camera_id);
         info.index = -1;
         info.size = POSE_SIZE;
         info.eff_size = POSE_EFF_SIZE;
         info.type = EXTRINSIC;
-        info.id = camera_index;
+        info.id = camera_id;
         info.data_copied = new state_type[info.size];
         memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
         return info;
@@ -94,14 +94,14 @@ protected:
         return info;
     }
 
-    ParamInfo paramInfoTd(D2EstimatorState * state, int camera_index) const {
+    ParamInfo paramInfoTd(D2EstimatorState * state, int camera_id) const {
         ParamInfo info;
-        info.pointer = state->getTdState(camera_index);
+        info.pointer = state->getTdState(camera_id);
         info.index = -1;
         info.size = TD_SIZE;
         info.eff_size = TD_SIZE;
         info.type = TD;
-        info.id = camera_index;
+        info.id = camera_id;
         info.data_copied = new state_type[info.size];
         memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
         return info;
@@ -127,7 +127,7 @@ public:
     FrameIdType frame_ida;
     FrameIdType frame_idb;
     LandmarkIdType landmark_id;
-    int camera_index;
+    int camera_id;
     LandmarkTwoFrameOneCamResInfo():ResidualInfo(ResidualType::LandmarkTwoFrameOneCamResidual) {}
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
@@ -136,7 +136,7 @@ public:
         std::vector<ParamInfo> params_list;
         params_list.push_back(paramInfoFramePose(state, frame_ida));
         params_list.push_back(paramInfoFramePose(state, frame_idb));
-        params_list.push_back(paramInfoExtrinsic(state, camera_index));
+        params_list.push_back(paramInfoExtrinsic(state, camera_id));
         params_list.push_back(paramInfoLandmark(state, landmark_id));
         return params_list;
     }
@@ -151,9 +151,9 @@ public:
         std::vector<ParamInfo> params_list;
         params_list.push_back(paramInfoFramePose(state, frame_ida));
         params_list.push_back(paramInfoFramePose(state, frame_idb));
-        params_list.push_back(paramInfoExtrinsic(state, camera_index));
+        params_list.push_back(paramInfoExtrinsic(state, camera_id));
         params_list.push_back(paramInfoLandmark(state, landmark_id));
-        params_list.push_back(paramInfoTd(state, camera_index));
+        params_list.push_back(paramInfoTd(state, camera_id));
         return params_list;
     }
 };
@@ -163,8 +163,8 @@ public:
     FrameIdType frame_ida;
     FrameIdType frame_idb;
     LandmarkIdType landmark_id;
-    int camera_index_a;
-    int camera_index_b;
+    int camera_id_a;
+    int camera_id_b;
     LandmarkTwoFrameTwoCamResInfoTD():ResidualInfo(ResidualType::LandmarkTwoFrameTwoCamResidualTD) {}
     // virtual void Evaluate(D2EstimatorState * state) override;
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
@@ -174,10 +174,10 @@ public:
         std::vector<ParamInfo> params_list;
         params_list.push_back(paramInfoFramePose(state, frame_ida));
         params_list.push_back(paramInfoFramePose(state, frame_idb));
-        params_list.push_back(paramInfoExtrinsic(state, camera_index_a));
-        params_list.push_back(paramInfoExtrinsic(state, camera_index_b));
+        params_list.push_back(paramInfoExtrinsic(state, camera_id_a));
+        params_list.push_back(paramInfoExtrinsic(state, camera_id_b));
         params_list.push_back(paramInfoLandmark(state, landmark_id));
-        params_list.push_back(paramInfoTd(state, camera_index_a));
+        params_list.push_back(paramInfoTd(state, camera_id_a));
         return params_list;
     }
 };
@@ -186,18 +186,18 @@ class LandmarkOneFrameTwoCamResInfoTD : public ResidualInfo {
 public:
     FrameIdType frame_ida;
     LandmarkIdType landmark_id;
-    int camera_index_a;
-    int camera_index_b;
+    int camera_id_a;
+    int camera_id_b;
     LandmarkOneFrameTwoCamResInfoTD():ResidualInfo(ResidualType::LandmarkOneFrameTwoCamResidualTD) {}
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         return frame_id.find(frame_ida) != frame_id.end();
     }
     virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
         std::vector<ParamInfo> params_list;
-        params_list.push_back(paramInfoExtrinsic(state, camera_index_a));
-        params_list.push_back(paramInfoExtrinsic(state, camera_index_b));
+        params_list.push_back(paramInfoExtrinsic(state, camera_id_a));
+        params_list.push_back(paramInfoExtrinsic(state, camera_id_b));
         params_list.push_back(paramInfoLandmark(state, landmark_id));
-        params_list.push_back(paramInfoTd(state, camera_index_a));
+        params_list.push_back(paramInfoTd(state, camera_id_a));
         return params_list;
     }
 };

@@ -80,6 +80,9 @@ struct D2VINSConfig {
     int min_measurements_per_keyframe = 10;
     double max_imu_time_err = 0.0025;
 
+    //Multi-drone
+    int self_id = 0;
+
     //Debug
     bool debug_print_states = false;
     std::string output_folder;

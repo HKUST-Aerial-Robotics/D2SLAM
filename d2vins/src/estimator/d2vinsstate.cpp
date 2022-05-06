@@ -5,6 +5,7 @@
 #include "marginalization/marginalization.hpp"
 
 using namespace Eigen;
+using D2FrontEnd::generateCameraId;
 namespace D2VINS {
 
 void D2EstimatorState::popFrame(int index) {
@@ -24,11 +25,13 @@ void D2EstimatorState::popFrame(int index) {
 }
 
 void D2EstimatorState::init(std::vector<Swarm::Pose> _extrinsic, double _td) {
-    extrinsic = _extrinsic;
-    for (auto & pose : extrinsic) {
+    for (int i = 0; i < _extrinsic.size(); i ++) {
+        auto pose = _extrinsic[i];
+        int cam_id = generateCameraId(params->self_id, i);
         auto _p = new state_type[POSE_SIZE];
         pose.to_vector(_p);
-        _camera_extrinsic_state.push_back(_p);
+        _camera_extrinsic_state[cam_id] = _p;
+        extrinsic[cam_id] = pose;
     }
     td = _td;
 }
@@ -40,6 +43,11 @@ size_t D2EstimatorState::size() const {
 VINSFrame & D2EstimatorState::getFrame(int index) {
     return *sld_win[index];
 }
+
+const VINSFrame & D2EstimatorState::getFramebyId(int frame_id) const {
+    return *frame_db.at(frame_id);
+}
+
 
 VINSFrame & D2EstimatorState::firstFrame() {
     return *sld_win[0];
@@ -61,8 +69,8 @@ double * D2EstimatorState::getTdState(int camera_index) {
     return &td;
 }
 
-double * D2EstimatorState::getExtrinsicState(int i) const {
-    return _camera_extrinsic_state[i];
+double * D2EstimatorState::getExtrinsicState(int cam_id) const {
+    return _camera_extrinsic_state.at(cam_id);
 }
 
 double * D2EstimatorState::getSpdBiasState(FrameIdType frame_id) const {
@@ -77,14 +85,22 @@ FrameIdType D2EstimatorState::getLandmarkBaseFrame(LandmarkIdType landmark_id) c
     return lmanager.getLandmarkBaseFrame(landmark_id);
 }
 
-Swarm::Pose D2EstimatorState::getExtrinsic(int i) const {
-    return extrinsic[i];
+Swarm::Pose D2EstimatorState::getExtrinsic(CamIdType cam_id) const {
+    return extrinsic.at(cam_id);
 }
 
 PriorFactor * D2EstimatorState::getPrior() const {
     return prior_factor;
 }
 
+std::set<CamIdType> D2EstimatorState::getAvailableCameraIds() const {
+    //Return all camera ids
+    std::set<CamIdType> ids;
+    for (auto &it : _camera_extrinsic_state) {
+        ids.insert(it.first);
+    }
+    return ids;
+}
 
 std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements() const {
     return lmanager.availableMeasurements();
@@ -137,15 +153,16 @@ void D2EstimatorState::syncFromState() {
         auto frame_id = it.first;
         frame_db.at(frame_id)->fromVector(it.second, _frame_spd_Bias_state.at(frame_id));
     }
-    for (size_t i = 0; i < extrinsic.size(); i ++ ) {
-        extrinsic[i].from_vector(_camera_extrinsic_state[i]);
+    for (auto it : _camera_extrinsic_state) {
+        auto cam_id = it.first;
+        extrinsic.at(cam_id).from_vector(_camera_extrinsic_state.at(cam_id));
     }
-    lmanager.syncState(extrinsic, frame_db);
+    lmanager.syncState(this);
 }
 
 void D2EstimatorState::outlierRejection() {
     //Perform outlier rejection of landmarks
-    lmanager.outlierRejection(frame_db, extrinsic);
+    lmanager.outlierRejection(this);
 }
 
 void D2EstimatorState::preSolve() {
@@ -154,7 +171,7 @@ void D2EstimatorState::preSolve() {
             frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
         }
     }
-    lmanager.initialLandmarks(frame_db, extrinsic);
+    lmanager.initialLandmarks(this);
 }
 
 VINSFrame D2EstimatorState::lastFrame() const {

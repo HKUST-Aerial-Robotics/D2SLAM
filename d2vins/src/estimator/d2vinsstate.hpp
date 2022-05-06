@@ -11,11 +11,11 @@ protected:
     std::vector<VINSFrame*> sld_win;
     std::map<FrameIdType, VINSFrame*> frame_db;
     std::map<FrameIdType, int> frame_indices;
-    std::vector<Swarm::Pose> extrinsic; //extrinsic of cameras
     D2LandmarkManager lmanager;
     std::map<FrameIdType, state_type*> _frame_pose_state;
     std::map<FrameIdType, state_type*> _frame_spd_Bias_state;
-    std::vector<state_type*> _camera_extrinsic_state;
+    std::map<CamIdType, state_type*> _camera_extrinsic_state;
+    std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
 
     void popFrame(int index);
     void outlierRejection();
@@ -38,7 +38,8 @@ public:
     double * getTdState(int camera_index);
     PriorFactor * getPrior() const;
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;
-    Swarm::Pose getExtrinsic(int i) const;
+    Swarm::Pose getExtrinsic(CamIdType cam_id) const;
+    std::set<CamIdType> getAvailableCameraIds() const;
     std::vector<LandmarkPerId> availableLandmarkMeasurements() const;
     std::vector<LandmarkPerId> getInitializedLandmarks() const;
     LandmarkPerId & getLandmarkbyId(LandmarkIdType id);
@@ -50,6 +51,7 @@ public:
 
     //Frame access    
     VINSFrame & getFrame(int index);
+    const VINSFrame & getFramebyId(int frame_id) const;
     VINSFrame & firstFrame();
     VINSFrame lastFrame() const;
     

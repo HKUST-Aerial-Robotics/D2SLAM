@@ -35,6 +35,7 @@ protected:
     int solve_count = 0;
     int current_landmark_num = 0;
     ceres::Problem * problem = nullptr;
+    std::set<int> used_camera_sets;
 public:
     D2Estimator() {}
     void inputImu(IMUData data);
