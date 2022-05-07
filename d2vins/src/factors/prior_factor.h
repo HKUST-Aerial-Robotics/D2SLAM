@@ -8,8 +8,8 @@ namespace D2VINS
 {
 struct ParamInfo;
 
-MatrixXd toJacRes(const SparseMat &A, VectorXd &b);
-MatrixXd toJacRes(const MatrixXd &A, VectorXd &b);
+std::pair<MatrixXd, VectorXd> toJacRes(const SparseMat & A, const VectorXd & b);
+std::pair<MatrixXd, VectorXd> toJacRes(const MatrixXd & A, const VectorXd & b);
 
 class PriorFactor : public ceres::CostFunction {
     std::vector<ParamInfo> keep_params_list;
@@ -23,8 +23,9 @@ public:
     template <typename MatrixType>
     PriorFactor(const std::vector<ParamInfo> & _keep_params_list, const MatrixType &A, const VectorXd &b) {
         TicToc tic_j;
-        linearized_res = b;
-        linearized_jac = toJacRes(A, linearized_res);
+        auto ret = toJacRes(A, b);
+        linearized_jac = ret.first;
+        linearized_res = ret.second;
 
         if (hasNan()) {
             std::cout << "NaN found in Prior factor" << std::endl;

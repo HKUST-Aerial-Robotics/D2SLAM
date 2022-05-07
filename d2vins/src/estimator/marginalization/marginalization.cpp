@@ -218,7 +218,7 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     SparseMat J(eff_residual_size, total_eff_state_dim);
     auto b = evaluate(J, eff_residual_size, total_eff_state_dim);
     SparseMat H = SparseMatrix<double>(J.transpose())*J;
-    VectorXd g = J.transpose()*b;
+    VectorXd g = -J.transpose()*b;
     // covarianceEstimation(H);
     if (params->enable_perf_output) {
         printf("[D2VINS::Marginalizer::marginalize] JtJ cost %.1fms\n", tt.toc());

@@ -3,8 +3,6 @@
 
 namespace D2VINS {
 
-MatrixXd toJacRes(const SparseMat & A, VectorXd & b);
-MatrixXd toJacRes(const MatrixXd & A, VectorXd & b);
 bool first_evaluate = false;
 bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
@@ -84,12 +82,12 @@ void PriorFactor::initDims(const std::vector<ParamInfo> & _keep_params_list) {
     first_evaluate = true;
 }
 
-MatrixXd toJacRes(const MatrixXd & A, VectorXd & b) {
+std::pair<MatrixXd, VectorXd> toJacRes(const MatrixXd & A, const VectorXd & b) {
     if (params->use_llt_for_decompose_A_b) {
         LLT<MatrixXd> llt(A);
-        llt.matrixL().solveInPlace(b);
-        b = -b;
-        return llt.matrixU();
+        VectorXd e0 = -b;
+        llt.matrixL().solveInPlace(e0);
+        return std::make_pair(llt.matrixU(), e0);
     } else {
         const double eps = 1e-8;
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> saes2(A);
@@ -99,12 +97,13 @@ MatrixXd toJacRes(const MatrixXd & A, VectorXd & b) {
         Eigen::VectorXd S_sqrt = S.cwiseSqrt();
         Eigen::VectorXd S_inv_sqrt = S_inv.cwiseSqrt();
 
-        b = S_inv_sqrt.asDiagonal() * saes2.eigenvectors().transpose() * b;
-        return S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
+        VectorXd e0 = S_inv_sqrt.asDiagonal() * saes2.eigenvectors().transpose() * -b;
+        MatrixXd Jac = S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
+        return std::make_pair(Jac, e0);
     }
 }
 
-MatrixXd toJacRes(const SparseMat & A, VectorXd & b) {
+std::pair<MatrixXd, VectorXd> toJacRes(const SparseMat & A, const VectorXd & b) {
     return toJacRes(A.toDense(), b);
 }
 
