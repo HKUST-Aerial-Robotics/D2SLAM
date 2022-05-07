@@ -43,6 +43,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     fsSettings["output_path"] >> output_folder;
     debug_print_states = (int)fsSettings["debug_print_states"];
     enable_perf_output = (int)fsSettings["enable_perf_output"];
+    debug_print_sldwin = (int)fsSettings["debug_print_sldwin"];
 
     //Solver
     solver_time = fsSettings["max_solver_time"];
@@ -54,6 +55,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     estimate_extrinsic = (int)fsSettings["estimate_extrinsic"];
     fuse_dep = (int) fsSettings["fuse_dep"];
     max_depth_to_fuse = fsSettings["max_depth_to_fuse"];
+    min_depth_to_fuse = fsSettings["min_depth_to_fuse"];
     always_fixed_first_pose = (int) fsSettings["always_fixed_first_pose"];
 
     //Multi-drone

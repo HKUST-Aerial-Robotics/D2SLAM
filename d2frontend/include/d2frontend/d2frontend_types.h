@@ -53,7 +53,7 @@ struct StereoFrame {
         depth_images{_dep_image},
         left_extrisincs{_left_extrinsic},
         left_camera_indices{0},
-        left_camera_ids{self_id*10000}
+        left_camera_ids{generateCameraId(self_id, 0)}
     {
         keyframe_id = generateKeyframeId(_stamp, self_id);
     }

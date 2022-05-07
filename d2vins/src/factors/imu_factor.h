@@ -21,6 +21,7 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
     bool check = false;
     Eigen::Matrix<double, 15, 15> sqrt_info;
   public:
+    bool debug = false;
     IMUFactor() = delete;
     IMUFactor(IntegrationBase* _pre_integration):pre_integration(_pre_integration)
     {
@@ -124,6 +125,12 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
 
                 jacobian_pose_i.block<3, 3>(O_V, O_R) = Utility::skewSymmetric(Qi.inverse() * (Gravity * sum_dt + Vj - Vi));
 
+                if (debug) {
+                    std::cout << "jacobian_pose_i: " << std::endl;
+                    std::cout << jacobian_pose_i << std::endl;
+                    std::cout << "sqrt_info" << std::endl;
+                    std::cout << sqrt_info << std::endl;
+                }
                 jacobian_pose_i = sqrt_info * jacobian_pose_i;
 
                 if (jacobian_pose_i.maxCoeff() > 1e8 || jacobian_pose_i.minCoeff() < -1e8)

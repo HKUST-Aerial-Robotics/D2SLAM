@@ -19,6 +19,7 @@ protected:
 
     void sortParams();
     VectorXd evaluate(SparseMat & J, int eff_residual_size, int eff_param_size);
+    void covarianceEstimation(const SparseMat & H);
     int filterResiduals();
     int remove_state_dim = 0;
     int total_eff_state_dim = 0;

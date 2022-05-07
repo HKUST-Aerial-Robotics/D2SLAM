@@ -1,6 +1,8 @@
 #include "marginalization.hpp"
 #include <d2vins/utils.hpp>
 #include "../../factors/prior_factor.h"
+#include "../../factors/imu_factor.h"
+#include "../../factors/projectionTwoFrameOneCamFactor.h"
 
 namespace D2VINS {
 void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
@@ -98,17 +100,41 @@ VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_pa
                 std::cout << info->residuals.transpose() << std::endl;
             }
 
+            // Debug print jacobians
+            // if (info->residual_type == ResidualType::IMUResidual) {
+            //     auto * info_imu = dynamic_cast<ImuResInfo *>(info);
+            //     auto cost = static_cast<IMUFactor*>(info_imu->cost_function);
+            //     auto pre_integration = cost->pre_integration;
+            //     // cost->debug = true;
+            //     // info->Evaluate(state);
+            //     printf("[D2VINS::Marginalizer] Residual type %d param_blk %d frame_ids %ld<->%ld\n", 
+            //         info->residual_type, param_blk_i, info_imu->frame_ida, info_imu->frame_idb);
+            //     printf("Residuals: ");
+            //     std::cout << info->residuals.transpose() << std::endl;
+            //     printf("Jacobians: \n");
+            //     std::cout << J_blk << std::endl;
+            // } 
+            // else if (info->residual_type == ResidualType::LandmarkTwoFrameOneCamResidualTD) {
+            //     auto * info_imu = dynamic_cast< LandmarkTwoFrameOneCamResInfoTD *>(info);
+            //     printf("[D2VINS::Marginalizer] Residual type %d param_blk %d frame_ids %ld<->%ld\n", 
+            //         info->residual_type, param_blk_i, info_imu->frame_ida, info_imu->frame_idb);
+            //     printf("Residuals: ");
+            //     std::cout << info->residuals.transpose() << std::endl;
+            //     printf("Jacobians: \n");
+            //     std::cout << J_blk << std::endl;
+            // }
+
             for (auto i = 0; i < residual_size; i ++) {
                 for (auto j = 0; j < blk_eff_param_size; j ++) {
                     //We only copy the eff param part, that is: on tangent space.
                     triplet_list.push_back(Eigen::Triplet<state_type>(i0 + i, j0 + j, J_blk(i, j)));
-                    // printf("J[%d, %d] = %f\n", i0 + i, j0 + j, J_blk(i, j));
                     if (i0 + i >= eff_residual_size || j0 + j >= eff_param_size) {
                         printf("J0 %d\n", j0);
                         printf("J[%d, %d] = %f size %d, %d\n", i0 + i, j0 + j, J_blk(i, j), eff_residual_size, eff_param_size);
                         fflush(stdout);
                         exit(1);
                     }
+                    
                 }
             }
         }
@@ -151,6 +177,30 @@ int Marginalizer::filterResiduals() {
     return eff_residual_size;
 }
 
+void Marginalizer::covarianceEstimation(const SparseMat & H) {
+    //This covariance estimation is for debug only. It does not estimate the real covariance in marginalization. 
+    //To make it estimate real cov, we need to use full jacobian instead part of the problem.
+    auto cov = Utility::inverse(H);
+    printf("covarianceEstimation\n");
+    for (auto param: params_list) {
+        if (param.type == POSE) {
+            //Print pose covariance
+            printf("[D2VINS::Marginalizer::covarianceEstimation] pose %d covariance:\n", param.id);
+            std::cout << cov.block(param.index, param.index, POSE_EFF_SIZE, POSE_EFF_SIZE) << std::endl;
+        }
+        if (param.type == EXTRINSIC) {
+            //Print extrinsic covariance
+            printf("[D2VINS::Marginalizer::covarianceEstimation] extrinsic %d covariance:\n", param.id);
+            std::cout << cov.block(param.index, param.index, POSE_EFF_SIZE, POSE_EFF_SIZE) << std::endl;
+        }
+        if (param.type == SPEED_BIAS) {
+            //Print speed bias covariance
+            printf("[D2VINS::Marginalizer::covarianceEstimation] speed bias %d covariance:\n", param.id);
+            std::cout << cov.block(param.index, param.index, FRAME_SPDBIAS_SIZE, FRAME_SPDBIAS_SIZE) << std::endl;
+        }
+    }
+}
+
 PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
     TicToc tic;
     remove_frame_ids = _remove_frame_ids;
@@ -168,6 +218,8 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     SparseMat J(eff_residual_size, total_eff_state_dim);
     auto b = evaluate(J, eff_residual_size, total_eff_state_dim);
     SparseMat H = SparseMatrix<double>(J.transpose())*J;
+    VectorXd g = J.transpose()*b;
+    // covarianceEstimation(H);
     if (params->enable_perf_output) {
         printf("[D2VINS::Marginalizer::marginalize] JtJ cost %.1fms\n", tt.toc());
     }
@@ -178,15 +230,15 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     if (params->margin_sparse_solver) {
         // printf("[D2VINS::Marginalizer::marginalize] use sparse LLT solver\n");
         tt.tic();
-        auto A = Utility::schurComplement(H, b, keep_state_dim);
+        auto Ab = Utility::schurComplement(H, g, keep_state_dim);
         if (params->enable_perf_output) {
             printf("[D2VINS::Marginalizer::marginalize] schurComplement cost %.1fms\n", tt.toc());
         }
-        prior = new PriorFactor(keep_params_list, A, b);
+        prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
     } else {
         // printf("[D2VINS::Marginalizer::marginalize] use dense solver\n");
-        auto A = Utility::schurComplement(H.toDense(), b, keep_state_dim);
-        prior = new PriorFactor(keep_params_list, A, b);
+        auto Ab = Utility::schurComplement(H.toDense(), g, keep_state_dim);
+        prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
     }
     if (params->enable_perf_output) {
         printf("[D2VINS::Marginalizer::marginalize] time cost %.1fms frame_id %ld total_eff_state_dim: %d remove param size %d eff_residual_size: %d keep_block_size %d \n", 

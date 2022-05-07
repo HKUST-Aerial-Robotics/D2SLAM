@@ -220,7 +220,7 @@ void D2Estimator::solve() {
     last_prop_odom = _imu.propagation(state.lastFrame());
     visual.postSolve();
 
-    if (params->debug_print_states) {
+    if (params->debug_print_states || params->debug_print_sldwin) {
         state.printSldWin();
     }
 

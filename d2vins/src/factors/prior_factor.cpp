@@ -19,8 +19,7 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
         Eigen::Map<const Eigen::VectorXd> x0(info.data_copied, size);
         if (info.type != POSE && info.type != EXTRINSIC) {
             dx.segment(idx, size) = x - x0;
-        } else
-        {
+        } else {
             dx.segment<3>(idx + 0) = x.head<3>() - x0.head<3>();
             dx.segment<3>(idx + 3) = 2.0 * Utility::positify(Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5))).vec();
             if (!((Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5))).w() >= 0))
@@ -33,10 +32,8 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
     res = linearized_res + linearized_jac * dx;
     
     if (jacobians) {
-        for (int i = 0; i < keep_param_blk_num; i++)
-        {
-            if (jacobians[i])
-            {
+        for (int i = 0; i < keep_param_blk_num; i++) {
+            if (jacobians[i]) {
                 auto & info = keep_params_list[i];
                 int size = info.size; //Use norminal size instead of tangent space size here.
                 int idx = info.index;
@@ -53,8 +50,7 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
 std::vector<state_type*> PriorFactor::getKeepParamsPointers() const {
     std::vector<state_type *> pointers;
     // printf("prior blocks %d\n", keep_param_blk_num);
-    for (auto & info : keep_params_list)
-    {
+    for (auto & info : keep_params_list) {
         // printf("Prior info type %d id %ld\n", info.type, info.id);
         pointers.push_back(info.pointer);
     }
@@ -68,8 +64,7 @@ std::vector<ParamInfo> PriorFactor::getKeepParams() const {
 int PriorFactor::getEffParamsDim() const {
     if (keep_eff_param_dim < 0) {
         int size = 0;
-        for (auto & info : keep_params_list)
-        {
+        for (auto & info : keep_params_list) {
             size += info.eff_size;
         }
         return size;

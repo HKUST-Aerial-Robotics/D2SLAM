@@ -2,6 +2,7 @@
 #include "factors/integration_base.h"
 
 namespace D2VINS {
+double t0 = 0;
 VINSFrame::VINSFrame(const D2FrontEnd::VisualImageDescArray & frame, const IMUBuffer & buf, const VINSFrame & prev_frame):
     stamp(frame.stamp),
     frame_id(frame.frame_id),
@@ -10,16 +11,25 @@ VINSFrame::VINSFrame(const D2FrontEnd::VisualImageDescArray & frame, const IMUBu
     odom(frame.stamp), Ba(prev_frame.Ba), Bg(prev_frame.Bg),
     prev_frame_id(prev_frame.frame_id) {
     pre_integrations = new IntegrationBase(buf, Ba, Bg);
+    if (t0 == 0) {
+        t0 = stamp;
+    }
 }
 
 VINSFrame::VINSFrame(const D2FrontEnd::VisualImageDescArray & frame, const Vector3d & _Ba, const Vector3d & _Bg):
     stamp(frame.stamp),
     frame_id(frame.frame_id),
-    odom(frame.stamp), Ba(_Ba), Bg(_Bg) {}
+    drone_id(frame.drone_id),
+    is_keyframe(true),
+    odom(frame.stamp), Ba(_Ba), Bg(_Bg) {
+        if (t0 == 0) {
+            t0 = stamp;
+        }
+    }
 
 std::string VINSFrame::toStr() {
-    char buf[256] = {0};
-    char buf_imu[128] = {0};
+    char buf[1024] = {0};
+    char buf_imu[1024] = {0};
     if (pre_integrations != nullptr) {
     sprintf(buf_imu, "size %ld sumdt %.1fms dP %3.2f %.2f %3.2f dQ %3.2f %3.2f %3.2f %3.2f dV %3.2f %3.2f %3.2f", 
         pre_integrations->acc_buf.size(), pre_integrations->sum_dt*1000,
@@ -27,7 +37,8 @@ std::string VINSFrame::toStr() {
         pre_integrations->delta_q.w(), pre_integrations->delta_q.x(), pre_integrations->delta_q.y(), pre_integrations->delta_q.z(),
         pre_integrations->delta_v.x(), pre_integrations->delta_v.y(), pre_integrations->delta_v.z());
     }
-    sprintf(buf, "VINSFrame %ld@%d Odom: %s\nBa %.2f %.2f %.2f Bg %.2f %.2f %.2f pre_integrations %s\n", frame_id, drone_id, odom.toStr().c_str(),
+    sprintf(buf, "VINSFrame %ld@%d stamp: %.3fs Odom: %s\nBa %.4f %.4f %.4f Bg %.4f %.4f %.4f pre_integrations %s\n", 
+        frame_id, drone_id, stamp-t0, odom.toStr().c_str(),
         Ba(0), Ba(1), Ba(2), Bg(0), Bg(1), Bg(2), buf_imu);
     return std::string(buf);
 }

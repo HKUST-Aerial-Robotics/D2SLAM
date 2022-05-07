@@ -85,6 +85,7 @@ struct D2VINSConfig {
 
     //Debug
     bool debug_print_states = false;
+    bool debug_print_sldwin = false;
     std::string output_folder;
     bool enable_perf_output = false;
 
