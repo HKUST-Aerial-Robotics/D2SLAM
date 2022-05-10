@@ -34,10 +34,6 @@ public:
             // std::cout << "linearized_jac max " << linearized_jac.maxCoeff() << std::endl;
             // std::cout << "linearized_res max " << linearized_res.maxCoeff() << std::endl;
         }
-        // std::cout << "A\n" << A.block(0, 0, 7, 7) << std::endl;
-        // std::cout << "b " << b.segment(0, 7).transpose() << std::endl;
-        // std::cout << "linearized_jac\n" << linearized_jac.block(0, 0, 7, 7) << std::endl;
-        // std::cout << "linearized_res\n" << linearized_res.segment(0, 7).transpose() << std::endl;
         initDims(_keep_params_list);
     }
 

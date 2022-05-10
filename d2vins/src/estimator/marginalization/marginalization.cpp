@@ -100,30 +100,6 @@ VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_pa
                 std::cout << info->residuals.transpose() << std::endl;
             }
 
-            // Debug print jacobians
-            // if (info->residual_type == ResidualType::IMUResidual) {
-            //     auto * info_imu = dynamic_cast<ImuResInfo *>(info);
-            //     auto cost = static_cast<IMUFactor*>(info_imu->cost_function);
-            //     auto pre_integration = cost->pre_integration;
-            //     // cost->debug = true;
-            //     // info->Evaluate(state);
-            //     printf("[D2VINS::Marginalizer] Residual type %d param_blk %d frame_ids %ld<->%ld\n", 
-            //         info->residual_type, param_blk_i, info_imu->frame_ida, info_imu->frame_idb);
-            //     printf("Residuals: ");
-            //     std::cout << info->residuals.transpose() << std::endl;
-            //     printf("Jacobians: \n");
-            //     std::cout << J_blk << std::endl;
-            // } 
-            // else if (info->residual_type == ResidualType::LandmarkTwoFrameOneCamResidualTD) {
-            //     auto * info_imu = dynamic_cast< LandmarkTwoFrameOneCamResInfoTD *>(info);
-            //     printf("[D2VINS::Marginalizer] Residual type %d param_blk %d frame_ids %ld<->%ld\n", 
-            //         info->residual_type, param_blk_i, info_imu->frame_ida, info_imu->frame_idb);
-            //     printf("Residuals: ");
-            //     std::cout << info->residuals.transpose() << std::endl;
-            //     printf("Jacobians: \n");
-            //     std::cout << J_blk << std::endl;
-            // }
-
             for (auto i = 0; i < residual_size; i ++) {
                 for (auto j = 0; j < blk_eff_param_size; j ++) {
                     //We only copy the eff param part, that is: on tangent space.
@@ -178,7 +154,7 @@ int Marginalizer::filterResiduals() {
 }
 
 void Marginalizer::covarianceEstimation(const SparseMat & H) {
-    //This covariance estimation is for debug only. It does not estimate the real covariance in marginalization. 
+    //This covariance estimation is for debug only. It does not estimate the real covariance in marginalization module. 
     //To make it estimate real cov, we need to use full jacobian instead part of the problem.
     auto cov = Utility::inverse(H);
     printf("covarianceEstimation\n");
@@ -219,6 +195,7 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     auto b = evaluate(J, eff_residual_size, total_eff_state_dim);
     SparseMat H = SparseMatrix<double>(J.transpose())*J;
     VectorXd g = -J.transpose()*b;
+    // Utility::writeMatrixtoFile("/home/xuhao/output/H.txt", MatrixXd(H));
     // covarianceEstimation(H);
     if (params->enable_perf_output) {
         printf("[D2VINS::Marginalizer::marginalize] JtJ cost %.1fms\n", tt.toc());
@@ -241,8 +218,8 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
         prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
     }
     if (params->enable_perf_output) {
-        printf("[D2VINS::Marginalizer::marginalize] time cost %.1fms frame_id %ld total_eff_state_dim: %d remove param size %d eff_residual_size: %d keep_block_size %d \n", 
-            tic.toc(), *remove_frame_ids.begin(), total_eff_state_dim, remove_state_dim, eff_residual_size, keep_block_size);
+        printf("[D2VINS::Marginalizer::marginalize] time cost %.1fms frame_id %ld total_eff_state_dim: %d keep_size %d remove size %d eff_residual_size: %d keep_block_size %d \n", 
+            tic.toc(), *remove_frame_ids.begin(), total_eff_state_dim, keep_state_dim, remove_state_dim, eff_residual_size, keep_block_size);
     }
     if (prior->hasNan()) {
         return nullptr;

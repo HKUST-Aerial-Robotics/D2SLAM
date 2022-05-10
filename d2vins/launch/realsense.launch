@@ -9,8 +9,8 @@
     <arg name="vins"     default="false"/>
     <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_rtx3080_480x640_fp16.trt"/>
     <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640_rtx3080_fp16.trt" />
-    <arg name="camera_config_path" default="/home/xuhao/data/drone3-ri/Configs/SwarmConfig1/realsense/left.yaml" />
-    <arg name="vins_config_path" default="/home/xuhao/data/drone3-ri/Configs/SwarmConfig1/realsense/realsense_d2slam.yaml" />
+    <arg name="camera_config_path" default="/home/xuhao/data/taichislam/realsense/left.yaml" />
+    <arg name="vins_config_path" default="/home/xuhao/data/taichislam/realsense/realsense_d2slam.yaml" />
     <arg name="max_freq" default="1.0" />
     <arg name="superpoint_max_num" default="200" />
     <arg name="match_index_dist" default="50" />
@@ -47,7 +47,7 @@
             # STEREO_FISHEYE = 1,
             # PINHOLE_DEPTH = 2,
             # FOURCORNER_FISHEYE = 3
-            camera_configuration: 0
+            camera_configuration: 2
             width: 640
             height: 480
             output_raw_superpoint_desc: false

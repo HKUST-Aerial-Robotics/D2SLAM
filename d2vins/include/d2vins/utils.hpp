@@ -2,6 +2,7 @@
 
 #include <Eigen/Eigen>
 #include <swarm_msgs/Pose.h>
+#include <fstream>
 
 using namespace Eigen;
 
@@ -74,7 +75,7 @@ static Eigen::Matrix<typename Derived::Scalar, 4, 4> Qright(const Eigen::Quatern
 }
 
 template <typename Derived>
-Eigen::SparseMatrix<Derived> inverse(const Eigen::SparseMatrix<Derived> & A) {
+static Eigen::SparseMatrix<Derived> inverse(const Eigen::SparseMatrix<Derived> & A) {
     Eigen::SparseMatrix<Derived> I(A.rows(), A.cols());
     I.setIdentity();
     Eigen::SimplicialLLT<Eigen::SparseMatrix<Derived>> solver;
@@ -85,7 +86,7 @@ Eigen::SparseMatrix<Derived> inverse(const Eigen::SparseMatrix<Derived> & A) {
 }
 
 template <typename Derived>
-std::pair<SparseMatrix<Derived>, Matrix<Derived, Dynamic, 1>> schurComplement(const SparseMatrix<Derived> & H, const Matrix<Derived, Dynamic, 1> & b, int keep_state_dim) {
+static std::pair<SparseMatrix<Derived>, Matrix<Derived, Dynamic, 1>> schurComplement(const SparseMatrix<Derived> & H, const Matrix<Derived, Dynamic, 1> & b, int keep_state_dim) {
     //Sparse schur complement
     int remove_state_dim = H.rows() - keep_state_dim;
     auto H11 = H.block(0, 0, keep_state_dim, keep_state_dim);
@@ -98,7 +99,7 @@ std::pair<SparseMatrix<Derived>, Matrix<Derived, Dynamic, 1>> schurComplement(co
 }
 
 template <typename Derived>
-std::pair<Matrix<Derived, Dynamic, Dynamic>, Matrix<Derived, Dynamic, 1>> schurComplement(const Matrix<Derived, Dynamic, Dynamic> & H, const Matrix<Derived, Dynamic, 1> & b, int keep_state_dim) {
+static std::pair<Matrix<Derived, Dynamic, Dynamic>, Matrix<Derived, Dynamic, 1>> schurComplement(const Matrix<Derived, Dynamic, Dynamic> & H, const Matrix<Derived, Dynamic, 1> & b, int keep_state_dim) {
     const double eps = 1e-8;
     int remove_state_dim = H.rows() - keep_state_dim;
     auto H11 = H.block(0, 0, keep_state_dim, keep_state_dim);
@@ -120,6 +121,15 @@ static Eigen::Matrix<typename Derived::Scalar, 3, 4> jacTan2q(const Eigen::Quate
         q.z(), q.w(), -q.x(), -q.y(),
         -q.y(), q.x(), q.w(), -q.z();
     return ans;
+}
+
+template <typename Derived>
+static void writeMatrixtoFile(const std::string & path, const MatrixBase<Derived> & matrix) {
+    const static IOFormat CSVFormat(FullPrecision, DontAlignCols, ", ", "\n");
+    std::fstream f;
+    f.open(path, std::ios::out);
+    f << matrix.format(CSVFormat) << std::endl;
+    f.close();
 }
 
 }
