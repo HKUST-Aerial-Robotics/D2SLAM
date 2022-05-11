@@ -111,10 +111,20 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
                                 lm_id, lm.track.size(), (_max - _min).norm(), point_3d.x(), point_3d.y(), point_3d.z(), inv_dep);
                         }
                         *landmark_state[lm_id] = inv_dep;
+                    } else {
+                        if (params->debug_print_states) {
+                            printf("\033[0;31m [D2VINS::D2LandmarkManager] Initialize failed too far away: landmark %ld tracks %ld baseline %.2f by triangulation position %.3f %.3f %.3f inv_dep %.3f \033[0m\n",
+                                lm_id, lm.track.size(), (_max - _min).norm(), point_3d.x(), point_3d.y(), point_3d.z(), inv_dep);
+                        }
                     }
                 } else {
                     lm.flag = LandmarkFlag::INITIALIZED;
                     memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
+                }
+            } else {
+                if (params->debug_print_states) {
+                    printf("\033[0;31m [D2VINS::D2LandmarkManager] Initialize failed too large triangle error: landmark %ld tracks %ld baseline %.2f by triangulation position %.3f %.3f %.3f\033[0m\n",
+                        lm_id, lm.track.size(), (_max - _min).norm(), point_3d.x(), point_3d.y(), point_3d.z());
                 }
             }
         }
@@ -122,6 +132,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
 }
 
 void D2LandmarkManager::initialLandmarks(const D2EstimatorState * state) {
+    int inited_count = 0;
     for (auto & it: landmark_db) {
         auto & lm = it.second;
         auto lm_id = it.first;
@@ -129,8 +140,10 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState * state) {
         lm.solver_flag = LandmarkSolverFlag::UNSOLVED;
         if (lm.flag == LandmarkFlag::UNINITIALIZED) {
             initialLandmarkState(lm, state);
+            inited_count += 1;
         } else if(lm.flag == LandmarkFlag::ESTIMATED) {
             //Extracting depth from estimated pos
+            inited_count += 1;
             if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
                 auto lm_per_frame = landmark_db.at(lm_id).track[0];
                 const auto & firstFrame = state->getFramebyId(lm_per_frame.frame_id);
@@ -141,6 +154,11 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState * state) {
                 memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
             }
         }
+    }
+
+    if (params->debug_print_states) {
+        printf("[D2VINS::D2LandmarkManager] Total %d initialized %d avail %d landmarks\n", 
+            landmark_db.size(), inited_count, availableMeasurements().size());
     }
 }
 
