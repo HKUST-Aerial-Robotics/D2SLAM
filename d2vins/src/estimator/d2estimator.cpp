@@ -228,10 +228,6 @@ void D2Estimator::solve() {
         std::cout << summary.message << std::endl;
         exit(1);
     }
-
-    // if (state.getPrior() != nullptr) {
-    //     exit(0);
-    // }
 }
 
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {

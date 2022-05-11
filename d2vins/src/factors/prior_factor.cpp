@@ -3,8 +3,18 @@
 #include <iostream>
 
 namespace D2VINS {
+bool PriorFactor::hasNan() const {
+    if (std::isnan(linearized_jac.maxCoeff()) || std::isnan(linearized_res.minCoeff())) {
+        printf("\033[0;31m [D2VINS::PriorFactor] linearized_jac has NaN\033[0m\n");
+        return true;
+    }
+    if (std::isnan(linearized_res.maxCoeff()) || std::isnan(linearized_res.minCoeff())) {
+        printf("\033[0;31m [D2VINS::PriorFactor] linearized_res has NaN\033[0m\n");
+        return true;
+    }
+    return false;
+}
 
-bool first_evaluate = false;
 bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
     // std::cout << "keep_eff_param_dim" << keep_eff_param_dim << std::endl;
@@ -18,10 +28,6 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
         Eigen::Map<const Eigen::VectorXd> x0(info.data_copied, size);
         if (info.type != POSE && info.type != EXTRINSIC) {
             dx.segment(idx, size) = x - x0;
-            // printf("Param type %d index %d dx: ", info.type, idx);
-            // std::cout << dx.segment(idx, size).transpose();
-            // printf(" b: ");
-            // std::cout << linearized_res.segment(idx, size).transpose() << std::endl;
         } else {
             dx.segment<3>(idx + 0) = x.head<3>() - x0.head<3>();
             dx.segment<3>(idx + 3) = 2.0 * Utility::positify(Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5))).vec();
@@ -29,9 +35,6 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
             {
                 dx.segment<3>(idx + 3) = 2.0 * -Utility::positify(Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5))).vec();
             }
-            // printf("Param type %d index %d dx %f %f %f dq  %f %f %f b %f %f %f %f %f %f\n", 
-            //     info.type, idx, dx(idx + 0), dx(idx + 1), dx(idx + 2), dx(idx + 3), dx(idx + 4), dx(idx + 5),
-            //     linearized_res(idx + 0), linearized_res(idx + 1), linearized_res(idx + 2), linearized_res(idx + 3), linearized_res(idx + 4), linearized_res(idx + 5));
         }
     }
     Eigen::Map<Eigen::VectorXd> res(residuals, keep_eff_param_dim);
@@ -49,7 +52,6 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
             }
         }
     }
-    first_evaluate = false;
     return true;
 }
 
@@ -87,7 +89,6 @@ void PriorFactor::initDims(const std::vector<ParamInfo> & _keep_params_list) {
         mutable_parameter_block_sizes()->push_back(it.size);
     }
     set_num_residuals(keep_eff_param_dim);
-    first_evaluate = true;
 }
 
 std::pair<MatrixXd, VectorXd> toJacRes(const MatrixXd & A_, const VectorXd & b) {
@@ -102,8 +103,7 @@ std::pair<MatrixXd, VectorXd> toJacRes(const MatrixXd & A_, const VectorXd & b) 
 
     VectorXd e0 = S_inv_sqrt.asDiagonal() * saes2.eigenvectors().transpose() * b;
     MatrixXd J_ = S_sqrt.asDiagonal() * saes2.eigenvectors().transpose();
-
-    //Use pre-conditioned from OKVINS https://github.com/ethz-asl/okvis/blob/master/okvis_ceres/src/MarginalizationError.cpp
+    // Use pre-conditioned from OKVINS https://github.com/ethz-asl/okvis/blob/master/okvis_ceres/src/MarginalizationError.cpp
     // VectorXd  p = (A.diagonal().array() > eps).select(A.diagonal().cwiseSqrt(),1.0e-3);
     // VectorXd  p_inv = p.cwiseInverse();
     // SelfAdjointEigenSolver<Eigen::MatrixXd> saes(p_inv.asDiagonal() * A  * p_inv.asDiagonal() );

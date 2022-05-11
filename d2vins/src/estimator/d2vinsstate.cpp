@@ -171,11 +171,6 @@ void D2EstimatorState::outlierRejection() {
 }
 
 void D2EstimatorState::preSolve() {
-    // for (auto frame : sld_win) {
-    //     if (frame->pre_integrations != nullptr) {
-    //         frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
-    //     }
-    // }
     lmanager.initialLandmarks(this);
 }
 
