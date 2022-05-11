@@ -61,12 +61,12 @@ namespace D2FrontEnd {
         //Feature tracker.
         ftconfig->show_feature_id = (int) fsSettings["show_track_id"];
         ftconfig->long_track_frames = fsSettings["landmark_estimate_tracks"];
+        ftconfig->check_homography = (int) fsSettings["check_homography"];
         nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
         nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);
         nh.param<double>("parallex_thres", ftconfig->parallex_thres, 10.0/460.0);
         nh.param<int>("min_keyframe_num", ftconfig->min_keyframe_num, 2);
-        nh.param<bool>("check_homography", ftconfig->check_homography, true);
         nh.param<double>("ransacReprojThreshold", ftconfig->ransacReprojThreshold, 10.0);
 
         //Loop detector

@@ -48,8 +48,6 @@
             pos_covariance_per_meter: 0.01
             yaw_covariance_per_meter: 0.003
             enable_network: false
-            show_feature_id: false
-            check_homography: false
             ransacReprojThreshold: 10.0
         </rosparam>
         <param name="pca_comp_path" value="$(find d2frontend)/models/components_.csv" type="string" />
