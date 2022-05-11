@@ -149,6 +149,9 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
     cv::Mat img = frame.raw_image;
     auto cur_pts = frame.landmarks2D();
     if (img.channels() == 1) {
+        if (img.type() == CV_16U) {
+            img.convertTo(img, CV_8U, 1/255.);
+        }
         cv::cvtColor(img, img, cv::COLOR_GRAY2BGR);
     }
     char buf[64] = {0};

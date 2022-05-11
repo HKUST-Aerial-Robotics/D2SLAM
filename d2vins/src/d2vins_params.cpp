@@ -30,6 +30,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     IMU_FREQ = fsSettings["imu_freq"];
     max_imu_time_err = 1.5/IMU_FREQ;
     frame_step = fsSettings["frame_step"];
+    imu_topic = (std::string) fsSettings["imu_topic"];
 
     //Measurements
     acc_n = fsSettings["acc_n"];

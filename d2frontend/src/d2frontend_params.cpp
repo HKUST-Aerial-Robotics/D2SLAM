@@ -120,7 +120,6 @@ namespace D2FrontEnd {
             std::string camera_calib_path = (std::string) fsSettings[param_name];
             camera_calib_path = configPath + "/" + camera_calib_path;
 
-
             sprintf(param_name, "body_T_cam%d", i);
             cv::Mat cv_T;
             fsSettings[param_name] >> cv_T;
@@ -132,6 +131,9 @@ namespace D2FrontEnd {
             comp_image_topics.emplace_back(comp_topic);
             loopcamconfig->camera_config_paths.emplace_back(camera_calib_path);
             extrinsics.emplace_back(pose);
+
+            ROS_INFO("[SWARM_LOOP] Camera %d: topic: %s, comp_topic: %s, calib: %s, T: %s", 
+                i, topic.c_str(), comp_topic.c_str(), camera_calib_path.c_str(), pose.toStr().c_str());
         }
 
         depth_topics.emplace_back((std::string) fsSettings["depth_topic"]);

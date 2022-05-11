@@ -38,6 +38,8 @@ struct LoopCamConfig
     std::string netvlad_model;
     int width;
     int height; 
+    int netvlad_width = 320;
+    int netvlad_height = 240;
     int self_id = 0;
     bool OUTPUT_RAW_SUPERPOINT_DESC;
     bool right_cam_as_main = false;

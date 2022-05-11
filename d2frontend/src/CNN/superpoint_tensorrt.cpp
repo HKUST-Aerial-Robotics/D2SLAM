@@ -104,7 +104,7 @@ SuperPointTensorRT::SuperPointTensorRT(std::string engine_path,
     m_InputSize = height*width;
     m_OutputTensors.push_back(outputTensorSemi);
     m_OutputTensors.push_back(outputTensorDesc);
-    std::cout << "Trying to init TRT engine of SuperPointTensorRT: " << engine_path << std::endl;
+    std::cout << "Trying to init TRT engine of SuperPointTensorRT: " << engine_path << " size " << _width << " " << _height << std::endl;
     init(engine_path);
 
     pca_comp_T = load_csv_mat_eigen(_pca_comp).transpose();
@@ -120,11 +120,18 @@ void SuperPointTensorRT::inference(const cv::Mat & input, std::vector<cv::Point2
     keypoints.clear();
     local_descriptors.clear();
     assert(input.rows == height && input.cols == width && "Input image must have same size with network");
-    if (input.rows != height || input.cols != width) {
-        cv::resize(input, _input, cv::Size(width, height));
-        _input.convertTo(_input, CV_32F, 1/255.0);
+    if (input.channels() == 3) {
+        cv::cvtColor(input, _input, cv::COLOR_BGR2GRAY);
     } else {
-        input.convertTo(_input, CV_32F, 1/255.0);
+        _input = input;
+    }
+    if (_input.rows != height || _input.cols != width) {
+        cv::resize(_input, _input, cv::Size(width, height));
+    } 
+    if (_input.type() == CV_8U){
+        _input.convertTo(_input, CV_32F, 1/255.0);
+    } else if (_input.type() == CV_16U) {
+        _input.convertTo(_input, CV_32F, 1/65535.0);
     }
     doInference(_input);
     if (enable_perf) {
@@ -133,8 +140,6 @@ void SuperPointTensorRT::inference(const cv::Mat & input, std::vector<cv::Point2
 
     TicToc tic1;
     auto options = torch::TensorOptions().dtype(torch::kFloat32);
-    
-    
     
     auto mProb = at::from_blob(m_OutputTensors[0].hostBuffer, {1, 1, height, width}, options);
     auto mDesc = at::from_blob(m_OutputTensors[1].hostBuffer, {1, SP_DESC_RAW_LEN, height/8, width/8}, options);

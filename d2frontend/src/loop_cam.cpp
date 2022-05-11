@@ -22,7 +22,7 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
         config.pca_mean, config.width, config.height, 
         config.superpoint_thres, 
         config.superpoint_max_num), 
-    netvlad_net(config.netvlad_model, config.width, config.height), 
+        netvlad_net(config.netvlad_model, config.netvlad_width, config.netvlad_height), 
 #endif
     _config(config)
 {

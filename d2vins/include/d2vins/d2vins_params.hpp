@@ -20,13 +20,16 @@ typedef double state_type;
 extern Vector3d Gravity;
 
 struct D2VINSConfig {
+    //Inputs
+    std::string imu_topic;
+
     //Sensor config
     double acc_n = 0.1;
     double gyr_n = 0.05;
     double acc_w = 0.002;
     double gyr_w = 0.0004;
     double focal_length = 460.0;
-    
+
     //Sensor frequency
     double IMU_FREQ = 400.0;
     int camera_num = 1; // number of cameras;

@@ -16,7 +16,7 @@ cv_bridge::CvImageConstPtr getImageFromMsg(const sensor_msgs::Image &img_msg)
     if (img_msg.encoding == "8UC1" || img_msg.encoding == "mono8")
     {
         ptr = cv_bridge::toCvCopy(img_msg, "8UC1");
-    } else if (img_msg.encoding == "16UC1") {
+    } else if (img_msg.encoding == "16UC1" || img_msg.encoding == "mono16") {
         ptr = cv_bridge::toCvCopy(img_msg, "16UC1");
     } else {
         ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::BGR8);        
@@ -31,7 +31,7 @@ cv_bridge::CvImageConstPtr getImageFromMsg(const sensor_msgs::ImageConstPtr &img
     if (img_msg->encoding == "8UC1" || img_msg->encoding == "mono8")
     {
         ptr = cv_bridge::toCvCopy(img_msg, "8UC1");
-    } else if (img_msg->encoding == "16UC1") {
+    } else if (img_msg->encoding == "16UC1" || img_msg->encoding == "mono16") {
         ptr = cv_bridge::toCvCopy(img_msg, "16UC1");
     } else {
         ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::BGR8);        
