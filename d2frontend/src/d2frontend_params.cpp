@@ -9,14 +9,20 @@ namespace D2FrontEnd {
     D2FrontendParams * params;
     D2FrontendParams::D2FrontendParams(ros::NodeHandle & nh)
     {
+        //Read VINS params.
+        nh.param<std::string>("vins_config_path",vins_config_path, "");
+        cv::FileStorage fsSettings;
+        fsSettings.open(vins_config_path.c_str(), cv::FileStorage::READ);
+        int pn = vins_config_path.find_last_of('/');
+        std::string configPath = vins_config_path.substr(0, pn);
+
         loopcamconfig = new LoopCamConfig;
         loopdetectorconfig = new LoopDetectorConfig;
         ftconfig = new D2FTConfig;
 
         //Basic confi
         nh.param<int>("self_id", self_id, -1);
-        int _camconfig;
-        nh.param<int>("camera_configuration", _camconfig, 1);
+        int _camconfig = fsSettings["camera_configuration"];
         camera_configuration = (CameraConfig) _camconfig;
         nh.param<double>("max_freq", max_freq, 1.0);
         nh.param<double>("nonkeyframe_waitsec", ACCEPT_NONKEYFRAME_WAITSEC, 5.0);
@@ -35,30 +41,27 @@ namespace D2FrontEnd {
         nh.param<std::string>("output_path", OUTPUT_PATH, "");
 
         //Loopcam configs
+        loopcamconfig->width = (int) fsSettings["image_width"];
+        loopcamconfig->height = (int) fsSettings["image_height"];
+        loopcamconfig->superpoint_max_num = (int) fsSettings["max_cnt"];
+        loopcamconfig->DEPTH_FAR_THRES = fsSettings["depth_far_thres"];
+        loopcamconfig->DEPTH_NEAR_THRES = fsSettings["depth_near_thres"];
         nh.param<double>("superpoint_thres", loopcamconfig->superpoint_thres, 0.012);
-        nh.param<int>("superpoint_max_num", loopcamconfig->superpoint_max_num, 200);
         nh.param<std::string>("pca_comp_path",loopcamconfig->pca_comp, "");
         nh.param<std::string>("pca_mean_path",loopcamconfig->pca_mean, "");
         nh.param<std::string>("superpoint_model_path", loopcamconfig->superpoint_model, "");
         nh.param<std::string>("netvlad_model_path", loopcamconfig->netvlad_model, "");
-        nh.param<std::string>("camera_config_path", loopcamconfig->camera_config_path, 
-            "/home/xuhao/swarm_ws/src/VINS-Fusion-gpu/config/vi_car/cam0_mei.yaml");
         nh.param<bool>("lower_cam_as_main", loopcamconfig->right_cam_as_main, false);
-        nh.param<int>("width", loopcamconfig->width, 400);
-        nh.param<int>("height", loopcamconfig->height, 208);       
-        nh.param<std::string>("vins_config_path",vins_config_path, "");
         nh.param<double>("triangle_thres", loopcamconfig->TRIANGLE_THRES, 0.006);
-        nh.param<double>("depth_far_thres", loopcamconfig->DEPTH_FAR_THRES, 10.0);
-        nh.param<double>("depth_near_thres", loopcamconfig->DEPTH_NEAR_THRES, 0.3);
         nh.param<bool>("output_raw_superpoint_desc", loopcamconfig->OUTPUT_RAW_SUPERPOINT_DESC, false);
         nh.param<int>("accept_min_3d_pts", loopcamconfig->ACCEPT_MIN_3D_PTS, 50);
         loopcamconfig->camera_configuration = camera_configuration;
         loopcamconfig->self_id = self_id;
 
         //Feature tracker.
-        nh.param<bool>("show_feature_id", ftconfig->show_feature_id, true);
+        ftconfig->show_feature_id = (int) fsSettings["show_track_id"];
+        ftconfig->long_track_frames = fsSettings["landmark_estimate_tracks"];
         nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
-        nh.param<int>("long_track_frames", ftconfig->long_track_frames, 4);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
         nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);
         nh.param<double>("parallex_thres", ftconfig->parallex_thres, 10.0/460.0);
@@ -90,41 +93,49 @@ namespace D2FrontEnd {
         nh.param<double>("recv_msg_duration", recv_msg_duration, 0.5);
         nh.param<bool>("enable_network", enable_network, true);
 
-
-        //Read VINS params.
-        cv::FileStorage fsSettings;
-        fsSettings.open(vins_config_path.c_str(), cv::FileStorage::READ);
-
         if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
             loopdetectorconfig->MAX_DIRS = 1;
         } else if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
             loopdetectorconfig->MAX_DIRS = 4;
         } else if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             loopdetectorconfig->MAX_DIRS = 1;
-            fsSettings["depth_topic"] >> DEPTH_TOPIC;
         } else {
             loopdetectorconfig->MAX_DIRS = 0;
             ROS_ERROR("[SWARM_LOOP] Camera configuration %d not implement yet.", camera_configuration);
             exit(-1);
         }
 
-        fsSettings["image0_topic"] >> IMAGE0_TOPIC;
-        fsSettings["image1_topic"] >> IMAGE1_TOPIC;
+        //Camera configurations from VINS config.
+        int camera_num = fsSettings["num_of_cam"];
+        for (auto i = 0; i < camera_num; i++) {
+            std::string index = std::to_string(i);
+            char param_name[64] = {0};
+            sprintf(param_name, "image%d_topic", i);
+            std::string topic = (std::string)  fsSettings[param_name];
 
-        fsSettings["compressed_image0_topic"] >> COMP_IMAGE0_TOPIC;
-        fsSettings["compressed_image1_topic"] >> COMP_IMAGE1_TOPIC;
+            sprintf(param_name, "compressed_image%d_topic", i);
+            std::string comp_topic = (std::string) fsSettings[param_name];
 
-        cv::Mat cv_T;
-        fsSettings["body_T_cam0"] >> cv_T;
-        Eigen::Matrix4d T;
-        cv::cv2eigen(cv_T, T);
-        left_extrinsic = toROSPose(Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3)));
+            sprintf(param_name, "cam%d_calib", i);
+            std::string camera_calib_path = (std::string) fsSettings[param_name];
+            camera_calib_path = configPath + "/" + camera_calib_path;
 
-        fsSettings["body_T_cam1"] >> cv_T;
-        cv::cv2eigen(cv_T, T);
 
-        fsSettings["is_compressed_images"] >> is_comp_images;
+            sprintf(param_name, "body_T_cam%d", i);
+            cv::Mat cv_T;
+            fsSettings[param_name] >> cv_T;
+            Eigen::Matrix4d T;
+            cv::cv2eigen(cv_T, T);
+            Swarm::Pose pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
+            
+            image_topics.emplace_back(topic);
+            comp_image_topics.emplace_back(comp_topic);
+            loopcamconfig->camera_config_paths.emplace_back(camera_calib_path);
+            extrinsics.emplace_back(pose);
+        }
 
-        right_extrinsic = toROSPose(Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3)));
+        depth_topics.emplace_back((std::string) fsSettings["depth_topic"]);
+        is_comp_images = (int) fsSettings["is_compressed_images"];
+
     }
 }

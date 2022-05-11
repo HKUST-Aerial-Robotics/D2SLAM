@@ -27,9 +27,15 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     _config(config)
 {
     camodocal::CameraFactory cam_factory;
-    ROS_INFO("Read camera from %s", config.camera_config_path.c_str());
-    cam = cam_factory.generateCameraFromYamlFile(config.camera_config_path);
-
+    for (auto & cam_calib_path : config.camera_config_paths) {
+        ROS_INFO("Read camera from %s", cam_calib_path.c_str());
+        auto cam = cam_factory.generateCameraFromYamlFile(cam_calib_path);
+        if (cam) {
+            cams.push_back(cam);
+        } else {
+            ROS_ERROR("Failed to read camera from %s", cam_calib_path.c_str());
+        }
+    }
 #ifndef USE_TENSORRT
     hfnet_client = nh.serviceClient<HFNetSrv>("/swarm_loop/hfnet");
     superpoint_client = nh.serviceClient<HFNetSrv>("/swarm_loop/superpoint");
@@ -37,11 +43,6 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     hfnet_client.waitForExistence();
     superpoint_client.waitForExistence();
 #endif
-    camodocal::PinholeCamera* _cam = (camodocal::PinholeCamera*)cam.get();
-    Eigen::Matrix3d _cameraMatrix;
-    _cameraMatrix << _cam->getParameters().fx(), 0, _cam->getParameters().cx(),
-                    0, _cam->getParameters().fy(), _cam->getParameters().cy(), 0, 0, 1;
-    cv::eigen2cv(_cameraMatrix, cameraMatrix);
     printf("Deepnet ready\n");
     if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
         fsp.open(params->OUTPUT_PATH+"superpoint.csv", std::fstream::app);
@@ -282,7 +283,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
         auto dep = msg.depth_images[vcam_id].at<unsigned short>(pt_up)/1000.0;
         if (dep > _config.DEPTH_NEAR_THRES && dep < _config.DEPTH_FAR_THRES) {
             Eigen::Vector3d pt_up3d, pt_down3d;
-            cam->liftProjective(Vector2d(pt_up.x, pt_up.y), pt_up3d);
+            cams.at(vcam_id)->liftProjective(Vector2d(pt_up.x, pt_up.y), pt_up3d);
 
             Eigen::Vector3d _pt3d(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z(), 1);
             _pt3d = pose_cam * (_pt3d*dep);
@@ -333,6 +334,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
 
 std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, cv::Mat & _show)
 {
+    //This function currently only support stereo image with same intrinsics, e.g. realsense.
     if (vcam_id > msg.left_images.size()) {
         ROS_WARN("Flatten images too few");
         return std::vector<VisualImageDesc>();
@@ -397,8 +399,9 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
             auto pt_down = pts_down[i];
 
             Eigen::Vector3d pt_up3d, pt_down3d;
-            cam->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
-            cam->liftProjective(Eigen::Vector2d(pt_down.x, pt_down.y), pt_down3d);
+            //TODO: This may not work for stereo fisheye. Pending to update.
+            cams.at(vcam_id)->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
+            cams.at(vcam_id)->liftProjective(Eigen::Vector2d(pt_down.x, pt_down.y), pt_down3d);
 
             Eigen::Vector2d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z());
             Eigen::Vector2d pt_down_norm(pt_down3d.x()/pt_down3d.z(), pt_down3d.y()/pt_down3d.z());
@@ -421,7 +424,6 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
             vframe0.landmarks[idx].depth_mea = true;
             vframe0.landmarks[idx].depth = pt_cam.z();
             vframe0.landmarks[idx].flag = LandmarkFlag::UNINITIALIZED; 
-            //TODO:Set depth!!!
 
             auto pt_cam2 = pose_down.att().inverse() * (point_3d - pose_down.pos());
             vframe1.landmarks[idx_down].pt3d = point_3d;
@@ -516,7 +518,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
     {
         auto pt_up = landmarks_2d[i];
         Eigen::Vector3d pt_up3d;
-        cam->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
+        cams.at(camera_index)->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
         Eigen::Vector3d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z(), 1.0);
         LandmarkPerFrame lm;
         lm.pt2d = pt_up;

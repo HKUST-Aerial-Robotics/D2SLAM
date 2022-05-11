@@ -29,7 +29,7 @@ struct LoopCamConfig
 {
     /* data */
     CameraConfig camera_configuration;
-    std::string camera_config_path;
+    std::vector<std::string> camera_config_paths;
     std::string superpoint_model;
     std::string pca_comp;
     std::string pca_mean;
@@ -79,8 +79,7 @@ public:
 
     void encodeImage(const cv::Mat & _img, VisualImageDesc & _img_desc);
     
-    camodocal::CameraPtr cam;
-    cv::Mat cameraMatrix;
+    std::vector<camodocal::CameraPtr> cams;
 
     CameraConfig getCameraConfiguration() const {
         return camera_configuration;

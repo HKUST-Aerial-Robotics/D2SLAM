@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 #include <ros/ros.h>
-#include <geometry_msgs/Pose.h>
+#include <swarm_msgs/Pose.h>
 
 #define ACCEPT_LOOP_YAW (30) //ACCEPT MAX Yaw 
 #define MAX_LOOP_DIS 5.0 //ACCEPT MAX DISTANCE, 2.0 for indoor flying
@@ -83,18 +83,17 @@ struct D2FrontendParams {
     bool enable_loop = true;
     bool enable_network = true;
 
-    //Topics
-    std::string IMAGE0_TOPIC, IMAGE1_TOPIC, COMP_IMAGE0_TOPIC, COMP_IMAGE1_TOPIC, DEPTH_TOPIC;
-
     bool is_comp_images;
+    std::vector<std::string> image_topics, comp_image_topics, depth_topics;
 
-    geometry_msgs::Pose left_extrinsic, right_extrinsic;
+    //Extrinsics
+    std::vector<Swarm::Pose> extrinsics;
 
     LoopCamConfig * loopcamconfig;
     LoopDetectorConfig * loopdetectorconfig;
     D2FTConfig * ftconfig;
 
 };
-
 extern D2FrontendParams * params;
+
 }

@@ -62,28 +62,28 @@ StereoFrame D2Frontend::findImagesRaw(const nav_msgs::Odometry & odometry) {
 void D2Frontend::stereoImagesCallback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right) {
     auto _l = getImageFromMsg(left);
     auto _r = getImageFromMsg(right);
-    StereoFrame sframe(_l->header.stamp, _l->image, _r->image, params->left_extrinsic, params->right_extrinsic, params->self_id);
+    StereoFrame sframe(_l->header.stamp, _l->image, _r->image, params->extrinsics[0], params->extrinsics[1], params->self_id);
     processStereoframe(sframe);
 }
 
 void D2Frontend::compStereoImagesCallback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::CompressedImageConstPtr right) {
     auto _l = getImageFromMsg(left, cv::IMREAD_GRAYSCALE);
     auto _r = getImageFromMsg(right, cv::IMREAD_GRAYSCALE);
-    StereoFrame sframe(left->header.stamp, _l, _r, params->left_extrinsic, params->right_extrinsic, params->self_id);
+    StereoFrame sframe(left->header.stamp, _l, _r, params->extrinsics[0], params->extrinsics[1], params->self_id);
     processStereoframe(sframe);
 }
 
 void D2Frontend::compDepthImagesCallback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::ImageConstPtr depth) {
     auto _l = getImageFromMsg(left, cv::IMREAD_GRAYSCALE);
     auto _d = getImageFromMsg(depth);
-    StereoFrame sframe(left->header.stamp, _l, _d->image, params->left_extrinsic, params->self_id);
+    StereoFrame sframe(left->header.stamp, _l, _d->image, params->extrinsics[0], params->self_id);
     processStereoframe(sframe);
 }
 
 void D2Frontend::depthImagesCallback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr depth) {
     auto _l = getImageFromMsg(left);
     auto _d = getImageFromMsg(depth);
-    StereoFrame sframe(left->header.stamp, _l->image, _d->image, params->left_extrinsic, params->self_id);
+    StereoFrame sframe(left->header.stamp, _l->image, _d->image, params->extrinsics[0], params->self_id);
     processStereoframe(sframe);
 }
 
@@ -224,29 +224,29 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     } else if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
         //Subscribe stereo pinhole, probrably is 
         if (params->is_comp_images) {
-            ROS_INFO("[D2Frontend] Input: compressed images %s and %s", params->COMP_IMAGE0_TOPIC.c_str(), params->COMP_IMAGE1_TOPIC.c_str());
-            comp_image_sub_l = new message_filters::Subscriber<sensor_msgs::CompressedImage> (nh, params->COMP_IMAGE0_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
-            comp_image_sub_r = new message_filters::Subscriber<sensor_msgs::CompressedImage> (nh, params->COMP_IMAGE1_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
+            ROS_INFO("[D2Frontend] Input: compressed images %s and %s", params->comp_image_topics[0].c_str(), params->comp_image_topics[1].c_str());
+            comp_image_sub_l = new message_filters::Subscriber<sensor_msgs::CompressedImage> (nh, params->comp_image_topics[0], 1000, ros::TransportHints().tcpNoDelay(true));
+            comp_image_sub_r = new message_filters::Subscriber<sensor_msgs::CompressedImage> (nh, params->comp_image_topics[1], 1000, ros::TransportHints().tcpNoDelay(true));
             comp_sync = new message_filters::TimeSynchronizer<sensor_msgs::CompressedImage, sensor_msgs::CompressedImage> (*comp_image_sub_l, *comp_image_sub_r, 1000);
             comp_sync->registerCallback(boost::bind(&D2Frontend::compStereoImagesCallback, this, _1, _2));
         } else {
-            ROS_INFO("[D2Frontend] Input: raw images %s and %s", params->IMAGE0_TOPIC.c_str(), params->IMAGE1_TOPIC.c_str());
-            image_sub_l = new message_filters::Subscriber<sensor_msgs::Image> (nh, params->IMAGE0_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
-            image_sub_r = new message_filters::Subscriber<sensor_msgs::Image> (nh, params->IMAGE1_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
+            ROS_INFO("[D2Frontend] Input: raw images %s and %s", params->image_topics[0].c_str(), params->image_topics[1].c_str());
+            image_sub_l = new message_filters::Subscriber<sensor_msgs::Image> (nh, params->image_topics[0], 1000, ros::TransportHints().tcpNoDelay(true));
+            image_sub_r = new message_filters::Subscriber<sensor_msgs::Image> (nh, params->image_topics[1], 1000, ros::TransportHints().tcpNoDelay(true));
             sync = new message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> (*image_sub_l, *image_sub_r, 1000);
             sync->registerCallback(boost::bind(&D2Frontend::stereoImagesCallback, this, _1, _2));
         }
     } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         if (params->is_comp_images) {
-            ROS_INFO("[D2Frontend] Input: compressed images %s and depth %s", params->COMP_IMAGE0_TOPIC.c_str(), params->DEPTH_TOPIC.c_str());
-            comp_image_sub_l = new message_filters::Subscriber<sensor_msgs::CompressedImage> (nh, params->COMP_IMAGE0_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
-            image_sub_r = new message_filters::Subscriber<sensor_msgs::Image> (nh, params->DEPTH_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
+            ROS_INFO("[D2Frontend] Input: compressed images %s and depth %s", params->comp_image_topics[0].c_str(), params->depth_topics[0].c_str());
+            comp_image_sub_l = new message_filters::Subscriber<sensor_msgs::CompressedImage> (nh, params->comp_image_topics[0], 1000, ros::TransportHints().tcpNoDelay(true));
+            image_sub_r = new message_filters::Subscriber<sensor_msgs::Image> (nh, params->depth_topics[0], 1000, ros::TransportHints().tcpNoDelay(true));
             comp_depth_sync = new message_filters::TimeSynchronizer<sensor_msgs::CompressedImage, sensor_msgs::Image> (*comp_image_sub_l, *image_sub_r, 1000);
             comp_depth_sync->registerCallback(boost::bind(&D2Frontend::compDepthImagesCallback, this, _1, _2));
         } else {
-            ROS_INFO("[D2Frontend] Input: raw images %s and depth %s", params->IMAGE0_TOPIC.c_str(), params->DEPTH_TOPIC.c_str());
-            image_sub_l = new message_filters::Subscriber<sensor_msgs::Image> (nh, params->IMAGE0_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
-            image_sub_r = new message_filters::Subscriber<sensor_msgs::Image> (nh, params->DEPTH_TOPIC, 1000, ros::TransportHints().tcpNoDelay(true));
+            ROS_INFO("[D2Frontend] Input: raw images %s and depth %s", params->image_topics[0].c_str(), params->depth_topics[0].c_str());
+            image_sub_l = new message_filters::Subscriber<sensor_msgs::Image> (nh, params->image_topics[0], 1000, ros::TransportHints().tcpNoDelay(true));
+            image_sub_r = new message_filters::Subscriber<sensor_msgs::Image> (nh, params->depth_topics[0], 1000, ros::TransportHints().tcpNoDelay(true));
             sync = new message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> (*image_sub_l, *image_sub_r, 1000);
             sync->registerCallback(boost::bind(&D2Frontend::depthImagesCallback, this, _1, _2));
         }
