@@ -28,6 +28,8 @@ public:
     Marginalizer(D2EstimatorState * _state): state(_state) {}
     void addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
         FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id, bool has_td=false);
+    void addDepthResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+        FrameIdType frame_ida, LandmarkIdType landmark_id);
     void addLandmarkResidualOneFrameTwoCam(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
         FrameIdType frame_ida, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b);
     void addLandmarkResidualTwoFrameTwoCam(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,

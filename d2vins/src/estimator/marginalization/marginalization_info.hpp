@@ -12,7 +12,8 @@ enum ResidualType {
     LandmarkTwoFrameOneCamResidualTD, // 3
     LandmarkTwoFrameTwoCamResidualTD, // 4
     LandmarkOneFrameTwoCamResidualTD, // 5
-    PriorResidual // 6
+    PriorResidual, // 6
+    DepthResidual // 7
 };
 
 enum ParamsType {
@@ -216,6 +217,20 @@ public:
         params_list.push_back(paramInfoSpeedBias(state, frame_ida));
         params_list.push_back(paramInfoFramePose(state, frame_idb));
         params_list.push_back(paramInfoSpeedBias(state, frame_idb));
+        return params_list;
+    }
+};
+
+class DepthResInfo : public ResidualInfo {
+public:
+    FrameIdType base_frame_id;
+    LandmarkIdType landmark_id;
+    DepthResInfo():ResidualInfo(ResidualType::DepthResidual) {}
+    bool relavant(const std::set<FrameIdType> & frame_id) const override {
+        return frame_id.find(base_frame_id) != frame_id.end();
+    }
+    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
+        std::vector<ParamInfo> params_list{paramInfoLandmark(state, landmark_id)};
         return params_list;
     }
 };

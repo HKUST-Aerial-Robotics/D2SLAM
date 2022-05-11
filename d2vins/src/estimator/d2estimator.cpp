@@ -198,7 +198,7 @@ void D2Estimator::solve() {
     state.syncFromState();
     last_odom = state.lastFrame().odom;
 
-    // std::cout << summary.FullReport() << std::endl;
+    //Now do some statistics
     static double sum_time = 0;
     static double sum_iteration = 0;
     static double sum_cost = 0;
@@ -228,13 +228,17 @@ void D2Estimator::solve() {
         std::cout << summary.message << std::endl;
         exit(1);
     }
+
+    // if (state.getPrior() != nullptr) {
+    //     exit(0);
+    // }
 }
 
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {
     for (size_t i = 0; i < state.size() - 1; i ++ ) {
         auto & frame_a = state.getFrame(i);
         auto & frame_b = state.getFrame(i + 1);
-        auto pre_integrations = frame_b.pre_integrations; //Prev to cuurent
+        auto pre_integrations = frame_b.pre_integrations; //Prev to current
         IMUFactor* imu_factor = new IMUFactor(pre_integrations);
         problem.AddResidualBlock(imu_factor, nullptr, 
             state.getPoseState(frame_a.frame_id), state.getSpdBiasState(frame_a.frame_id), 
@@ -264,6 +268,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                 firstObs.depth > params->min_depth_to_fuse) {
             auto f_dep = OneFrameDepth::Create(firstObs.depth);
             problem.AddResidualBlock(f_dep, loss_function, state.getLandmarkState(lm_id));
+            marginalizer->addDepthResidual(f_dep, loss_function, firstObs.frame_id, lm_id);
         }
         for (auto i = 1; i < lm.track.size(); i++) {
             auto mea1 = lm.track[i].measurement();
@@ -291,20 +296,15 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
         for (auto l_fm : lm.track_r) {
             auto mea1 = l_fm.measurement();
             if (l_fm.frame_id == firstObs.frame_id) {
-                // printf("[D2VINS] Stereo landmark %d is in the same frame %d camera %d<->%d\n",
-                //     lm_id, firstObs.frame_id, firstObs.camera_id, l_fm.camera_id);
                 auto f_td = new ProjectionOneFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                     l_fm.velocity, firstObs.cur_td, l_fm.cur_td);
                 problem.AddResidualBlock(f_td, nullptr,
                     state.getExtrinsicState(firstObs.camera_id),
                     state.getExtrinsicState(l_fm.camera_id),
                     state.getLandmarkState(lm_id), state.getTdState(l_fm.camera_id));
-                marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, nullptr,
+                marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, loss_function,
                     firstObs.frame_id, lm_id, firstObs.camera_id, l_fm.camera_id);
             } else {
-                // printf("[D2VINS] Stereo landmark %d frame %d<->%d camera %d<->%d mea0 %.2f %.2f mea1 %.2f %.2f\n", 
-                //     lm_id, firstObs.frame_id, l_fm.frame_id, firstObs.camera_id, l_fm.camera_id, 
-                //     mea0.x(), mea0.y(), mea1.x(), mea1.y());
                 auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                     l_fm.velocity, firstObs.cur_td, l_fm.cur_td);
                 problem.AddResidualBlock(f_td, loss_function,
@@ -334,6 +334,7 @@ void D2Estimator::setupPriorFactor(ceres::Problem & problem) {
     auto prior_factor = state.getPrior();
     if (prior_factor != nullptr) {
         problem.AddResidualBlock(prior_factor, nullptr, prior_factor->getKeepParamsPointers());
+        marginalizer->addPrior(prior_factor);
     }
 }
 

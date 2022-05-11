@@ -77,7 +77,6 @@ void D2VINSConfig::init(const std::string & config_file) {
     //Marginalization
     margin_sparse_solver = (int)fsSettings["margin_sparse_solver"];
     enable_marginalization = (int)fsSettings["enable_marginalization"];
-    use_llt_for_decompose_A_b = (int)fsSettings["use_llt_for_decompose_A_b"];
     
     for (auto i = 0; i < camera_num; i ++) {
         char name[32] = {0};
@@ -89,15 +88,14 @@ void D2VINSConfig::init(const std::string & config_file) {
         camera_extrinsics.push_back(Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3)));
     }
 
-    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
-    options.num_threads = 1;
-    options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;// ceres::DOGLEG;
-    options.max_solver_time_in_seconds = solver_time;
-    // options.linear_solver_type = ceres::DENSE_SCHUR;
+    // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
     // options.num_threads = 1;
-    // options.trust_region_strategy_type = ceres::DOGLEG;
+    // options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;// ceres::DOGLEG;
     // options.max_solver_time_in_seconds = solver_time;
-
+    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.num_threads = 1;
+    options.trust_region_strategy_type = ceres::DOGLEG;
+    options.max_solver_time_in_seconds = solver_time;
 }
 
 }

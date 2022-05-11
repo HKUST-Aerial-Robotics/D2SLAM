@@ -158,6 +158,11 @@ void D2EstimatorState::syncFromState() {
         extrinsic.at(cam_id).from_vector(_camera_extrinsic_state.at(cam_id));
     }
     lmanager.syncState(this);
+    for (auto frame : sld_win) {
+        if (frame->pre_integrations != nullptr) {
+            frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
+        }
+    }
 }
 
 void D2EstimatorState::outlierRejection() {
@@ -166,11 +171,11 @@ void D2EstimatorState::outlierRejection() {
 }
 
 void D2EstimatorState::preSolve() {
-    for (auto frame : sld_win) {
-        if (frame->pre_integrations != nullptr) {
-            frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
-        }
-    }
+    // for (auto frame : sld_win) {
+    //     if (frame->pre_integrations != nullptr) {
+    //         frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
+    //     }
+    // }
     lmanager.initialLandmarks(this);
 }
 

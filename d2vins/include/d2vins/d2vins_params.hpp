@@ -74,7 +74,6 @@ struct D2VINSConfig {
     //Margin config
     bool margin_sparse_solver = true;
     bool enable_marginalization = true;
-    bool use_llt_for_decompose_A_b = false; //After schur complement, use LLT to decompose A and b.
 
     //Safety
     int min_measurements_per_keyframe = 10;
@@ -88,6 +87,7 @@ struct D2VINSConfig {
     bool debug_print_sldwin = false;
     std::string output_folder;
     bool enable_perf_output = false;
+    bool debug_write_margin_matrix = true;
 
     bool verbose = true;
 

@@ -28,6 +28,16 @@ void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, cere
     }
 }
 
+void Marginalizer::addDepthResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+        FrameIdType frame_ida, LandmarkIdType landmark_id) {
+    auto * info = new DepthResInfo();
+    info->base_frame_id = frame_ida;
+    info->landmark_id = landmark_id;
+    info->cost_function = cost_function;
+    info->loss_function = loss_function;
+    residual_info_list.push_back(info);
+}
+
 void Marginalizer::addLandmarkResidualOneFrameTwoCam(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
         FrameIdType frame_ida, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b) {
     auto * info = new LandmarkOneFrameTwoCamResInfoTD();
@@ -126,23 +136,25 @@ int Marginalizer::filterResiduals() {
         if ((*it)->relavant(remove_frame_ids)) {
             eff_residual_size += (*it)->residualSize();
             auto param_list = (*it)->paramsList(state);
-            for (auto param : param_list) {
-                //Check if param should be remove
-                bool is_remove = false;
-                if ((param.type == POSE || param.type == SPEED_BIAS) && remove_frame_ids.find(param.id) != remove_frame_ids.end()) {
-                    is_remove = true;
-                }
-                if (param.type == LANDMARK) {
-                    FrameIdType base_frame_id = state->getLandmarkBaseFrame(param.id);
-                    is_remove = false;
-                    if (remove_frame_ids.find(base_frame_id) != remove_frame_ids.end()) {
-                        is_remove = true;
-                    } else {
-                        printf("[D2VINS::Marginalizer::filterResiduals] landmark %d base frame %d not in remove_frame_ids %ld\n", param.id, base_frame_id, *remove_frame_ids.begin());
+            for (auto param_ : param_list) {
+                if (_params.find(param_.pointer) == _params.end()) {
+                    _params[param_.pointer] = param_;
+                    //Check if param should be remove
+                    bool is_remove = false;
+                    auto & param = _params[param_.pointer];
+                    if ((param.type == POSE || param.type == SPEED_BIAS) && remove_frame_ids.find(param.id) != remove_frame_ids.end()) {
+                        param.is_remove = true;
+                    }
+                    if (param.type == LANDMARK) {
+                        FrameIdType base_frame_id = state->getLandmarkBaseFrame(param.id);
+                        param.is_remove = false;
+                        if (remove_frame_ids.find(base_frame_id) != remove_frame_ids.end()) {
+                            param.is_remove = true;
+                        } else {
+                            printf("[D2VINS::Marginalizer::filterResiduals] landmark %d base frame %d not in remove_frame_ids %ld\n", param.id, base_frame_id, *remove_frame_ids.begin());
+                        }
                     }
                 }
-                param.is_remove = is_remove;
-                _params[param.pointer] = param;
             }
             it++;
         } else {
@@ -194,9 +206,7 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     SparseMat J(eff_residual_size, total_eff_state_dim);
     auto b = evaluate(J, eff_residual_size, total_eff_state_dim);
     SparseMat H = SparseMatrix<double>(J.transpose())*J;
-    VectorXd g = -J.transpose()*b;
-    // Utility::writeMatrixtoFile("/home/xuhao/output/H.txt", MatrixXd(H));
-    // covarianceEstimation(H);
+    VectorXd g = J.transpose()*b; //Ignore -b here and also in prior_factor.cpp toJacRes to reduce compuation
     if (params->enable_perf_output) {
         printf("[D2VINS::Marginalizer::marginalize] JtJ cost %.1fms\n", tt.toc());
     }
@@ -217,10 +227,17 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
         auto Ab = Utility::schurComplement(H.toDense(), g, keep_state_dim);
         prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
     }
+
     if (params->enable_perf_output) {
         printf("[D2VINS::Marginalizer::marginalize] time cost %.1fms frame_id %ld total_eff_state_dim: %d keep_size %d remove size %d eff_residual_size: %d keep_block_size %d \n", 
             tic.toc(), *remove_frame_ids.begin(), total_eff_state_dim, keep_state_dim, remove_state_dim, eff_residual_size, keep_block_size);
     }
+
+    if (params->debug_write_margin_matrix) {
+        Utility::writeMatrixtoFile("/home/xuhao/output/H.txt", MatrixXd(H));
+        Utility::writeMatrixtoFile("/home/xuhao/output/g.txt", MatrixXd(g));
+    }
+
     if (prior->hasNan()) {
         return nullptr;
     }
