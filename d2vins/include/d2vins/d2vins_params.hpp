@@ -4,6 +4,7 @@
 #include <swarm_msgs/Pose.h>
 #include <ceres/ceres.h>
 
+#define UNIT_SPHERE_ERROR
 using namespace Eigen;
 
 #define POSE_SIZE 7
@@ -12,7 +13,6 @@ using namespace Eigen;
 #define TD_SIZE 1
 #define INV_DEP_SIZE 1
 #define POS_SIZE 3
-
 
 namespace D2VINS {
 

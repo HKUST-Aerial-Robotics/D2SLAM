@@ -8,7 +8,7 @@
 #include "../factors/projectionTwoFrameOneCamFactor.h"
 #include "../factors/projectionOneFrameTwoCamFactor.h"
 #include "../factors/projectionTwoFrameTwoCamFactor.h"
-#include "../factors/projectionTwoFrameOneCamFactorNoTD.h"
+// #include "../factors/projectionTwoFrameOneCamFactorNoTD.h"
 #include "../factors/pose_local_parameterization.h"
 #include <d2frontend/utils.h>
 #include "marginalization/marginalization.hpp"
@@ -68,7 +68,7 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
             auto & est_lm = state.getLandmarkbyId(lm_id);
             if (est_lm.flag >= LandmarkFlag::INITIALIZED) {
                 pts3d.push_back(cv::Point3f(est_lm.position.x(), est_lm.position.y(), est_lm.position.z()));
-                pts2d.push_back(cv::Point2f(lm.pt2d_norm.x(), lm.pt2d_norm.y()));
+                pts2d.push_back(cv::Point2f(lm.pt3d_norm.x(), lm.pt3d_norm.y()));
             }
         }
     }

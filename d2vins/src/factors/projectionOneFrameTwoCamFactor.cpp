@@ -11,6 +11,7 @@
 
 #include "projectionOneFrameTwoCamFactor.h"
 #include <d2vins/utils.hpp>
+#include <d2vins/d2vins_params.hpp>
 
 namespace D2VINS {
 Eigen::Matrix2d ProjectionOneFrameTwoCamFactor::sqrt_info;
@@ -91,9 +92,10 @@ bool ProjectionOneFrameTwoCamFactor::Evaluate(double const *const *parameters, d
         x1 = pts_camera_j(0);
         x2 = pts_camera_j(1);
         x3 = pts_camera_j(2);
-        norm_jaco << 1.0 / norm - x1 * x1 / pow(norm, 3), - x1 * x2 / pow(norm, 3),            - x1 * x3 / pow(norm, 3),
-                     - x1 * x2 / pow(norm, 3),            1.0 / norm - x2 * x2 / pow(norm, 3), - x2 * x3 / pow(norm, 3),
-                     - x1 * x3 / pow(norm, 3),            - x2 * x3 / pow(norm, 3),            1.0 / norm - x3 * x3 / pow(norm, 3);
+        double norm_3 = pow(norm, 3);
+        norm_jaco << 1.0 / norm - x1 * x1 / norm_3, - x1 * x2 / norm_3,            - x1 * x3 / norm_3,
+                     - x1 * x2 / norm_3,            1.0 / norm - x2 * x2 / norm_3, - x2 * x3 / norm_3,
+                     - x1 * x3 / norm_3,            - x2 * x3 / norm_3,            1.0 / norm - x3 * x3 / norm_3;
         reduce = tangent_base * norm_jaco;
 #else
         reduce << 1. / dep_j, 0, -pts_camera_j(0) / (dep_j * dep_j),

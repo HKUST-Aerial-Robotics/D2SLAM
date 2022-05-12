@@ -579,10 +579,10 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & new_img_des
             old_idx.push_back(old_id);
 
             new_3d.push_back(toCV(_now_lms[now_id].pt3d));
-            Vector2d pt2d = _now_lms[now_id].pt2d_norm.head<2>();
+            Vector2d pt2d = _now_lms[now_id].pt3d_norm.head<2>();
             new_norm_2d.push_back(toCV(pt2d));
 
-            Vector2d pt2d_old = _now_lms[now_id].pt2d_norm.head<2>();
+            Vector2d pt2d_old = _now_lms[now_id].pt3d_norm.head<2>();
             old_3d.push_back(toCV(_old_lms[old_id].pt3d));
             old_norm_2d.push_back(toCV(pt2d_old));
         }

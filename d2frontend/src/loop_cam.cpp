@@ -285,12 +285,15 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
             Eigen::Vector3d pt_up3d, pt_down3d;
             cams.at(vcam_id)->liftProjective(Vector2d(pt_up.x, pt_up.y), pt_up3d);
 
-            Eigen::Vector3d _pt3d(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z(), 1);
-            _pt3d = pose_cam * (_pt3d*dep);
+            Eigen::Vector3d pt2d_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z(), 1);
+            auto pt3dcam = pt2d_norm*dep;
+            Eigen::Vector3d pt3d = pose_cam * pt3dcam;
+            // printf("landmark raw depth %f pt3dcam %f %f %f pt2d_norm %f %f distance %f\n", dep, 
+            //     pt3dcam.x(), pt3dcam.y(), pt3dcam.z(), pt2d_norm.x(), pt2d_norm.y(), pt3dcam.norm());
 
-            vframe.landmarks[i].pt3d = _pt3d;
+            vframe.landmarks[i].pt3d = pt3d;
             vframe.landmarks[i].flag = LandmarkFlag::UNINITIALIZED;
-            vframe.landmarks[i].depth = dep;
+            vframe.landmarks[i].depth = pt3dcam.norm();
             vframe.landmarks[i].depth_mea = true;
             count_3d ++;
         }
@@ -411,23 +414,23 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
 
             auto pt_cam = pose_up.att().inverse() * (point_3d - pose_up.pos());
 
-            if (err > TRIANGLE_THRES || pt_cam.z() < 0) {
+            if (err > TRIANGLE_THRES) {
                 continue;
             }
 
             int idx = ids_up[i];
             int idx_down = ids_down[i];
             // ides.landmarks_2d.push_back(pt2d);
-            // ides.landmarks_2d_norm.push_back(pt2d_norm);
+            // ides.landmarks_2d_norm.push_back(pt3d_norm);
             vframe0.landmarks[idx].pt3d = point_3d;
             vframe0.landmarks[idx].depth_mea = true;
-            vframe0.landmarks[idx].depth = pt_cam.z();
+            vframe0.landmarks[idx].depth = pt_cam.norm();
             vframe0.landmarks[idx].flag = LandmarkFlag::UNINITIALIZED; 
 
             auto pt_cam2 = pose_down.att().inverse() * (point_3d - pose_down.pos());
             vframe1.landmarks[idx_down].pt3d = point_3d;
             vframe0.landmarks[idx].depth_mea = true;
-            vframe0.landmarks[idx].depth = pt_cam2.z();
+            vframe0.landmarks[idx].depth = pt_cam2.norm();
             vframe1.landmarks[idx_down].flag = LandmarkFlag::UNINITIALIZED;
             count_3d ++;
         }
@@ -518,10 +521,10 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         auto pt_up = landmarks_2d[i];
         Eigen::Vector3d pt_up3d;
         cams.at(camera_index)->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
-        Eigen::Vector3d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z(), 1.0);
         LandmarkPerFrame lm;
         lm.pt2d = pt_up;
-        lm.pt2d_norm = pt_up_norm;
+        pt_up3d.normalize();
+        lm.pt3d_norm = pt_up3d;
         lm.camera_index = camera_index;
         lm.camera_id = camera_id;
         vframe.landmarks.emplace_back(lm);

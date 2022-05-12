@@ -53,14 +53,14 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
     //     lm.track.size());
     auto lm_first = lm.track[0];
     auto lm_id = lm.landmark_id;
-    auto pt2d_n = lm_first.pt2d_norm;
+    auto pt3d_n = lm_first.pt3d_norm;
     auto firstFrame = state->getFramebyId(lm.track[0].frame_id);
 
     if (lm.track[0].depth_mea && lm.track[0].depth > params->min_depth_to_fuse && lm.track[0].depth < params->max_depth_to_fuse) {
         //Use depth to initial
         auto ext = state->getExtrinsic(lm_first.camera_id);
-        Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
-        pos = pos* lm_first.depth;
+        //Note in depth mode, pt3d = (u, v, w), depth is distance since we use unitsphere
+        Vector3d pos = pt3d_n * lm_first.depth;
         pos = firstFrame.odom.pose()*ext*pos;
         lm.position = pos;
         if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
@@ -84,7 +84,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
             auto & frame = state->getFramebyId(it.frame_id);
             auto ext = state->getExtrinsic(it.camera_id);
             poses.push_back(frame.odom.pose()*ext);
-            points.push_back(Vector3d(it.pt2d_norm.x(), it.pt2d_norm.y(), 1.0));
+            points.push_back(it.pt3d_norm);
             _min = _min.cwiseMin((frame.odom.pose()*ext).pos());
             _max = _max.cwiseMax((frame.odom.pose()*ext).pos());
         }
@@ -92,7 +92,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
             auto & frame = state->getFramebyId(it.frame_id);
             auto ext = state->getExtrinsic(it.camera_id);
             poses.push_back(frame.odom.pose()*ext);
-            points.push_back(Vector3d(it.pt2d_norm.x(), it.pt2d_norm.y(), 1.0));
+            points.push_back(it.pt3d_norm);
             _min = _min.cwiseMin((frame.odom.pose()*ext).pos());
             _max = _max.cwiseMax((frame.odom.pose()*ext).pos());
         }
@@ -103,7 +103,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
                 lm.position = point_3d;
                 if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
                     auto ptcam = (firstFrame.odom.pose()*ext_base).inverse()*point_3d;
-                    auto inv_dep = 1/ptcam.z();
+                    auto inv_dep = 1/ptcam.norm();
                     if (inv_dep > params->min_inv_dep) {
                         lm.flag = LandmarkFlag::INITIALIZED;
                         if (params->debug_print_states) {
@@ -149,7 +149,7 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState * state) {
                 const auto & firstFrame = state->getFramebyId(lm_per_frame.frame_id);
                 auto ext = state->getExtrinsic(lm_per_frame.camera_id);
                 Vector3d pos_cam = (firstFrame.odom.pose()*ext).inverse()*lm.position;
-                *landmark_state[lm_id] = 1/pos_cam.z();
+                *landmark_state[lm_id] = 1.0/pos_cam.norm();
             } else {
                 memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
             }
@@ -178,11 +178,11 @@ void D2LandmarkManager::outlierRejection(const D2EstimatorState * state) {
             for (int i = 1; i < lm.track.size(); i ++) {
                 auto pose = state->getFramebyId(lm.track[i].frame_id).odom.pose();
                 auto ext = state->getExtrinsic(lm.track[i].camera_id);
-                auto pt2d_n = lm.track[i].pt2d_norm;
+                auto pt3d_n = lm.track[i].pt3d_norm;
                 Vector3d pos_cam = (pose*ext).inverse()*lm.position;
-                pos_cam = pos_cam/pos_cam.z();
+                pos_cam.normalize();
                 //Compute reprojection error
-                Vector3d reproj_error = pt2d_n - pos_cam;
+                Vector3d reproj_error = pt3d_n - pos_cam;
                 // printf("[D2VINS::D2LandmarkManager] outlierRejection LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f reproj_error %.2f %.2f\n",
                     // lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z(), reproj_error.x(), reproj_error.y());
                 err_sum += reproj_error.norm();
@@ -214,9 +214,8 @@ void D2LandmarkManager::syncState(const D2EstimatorState * state) {
                 auto lm_per_frame = lm.track[0];
                 const auto & firstFrame = state->getFramebyId(lm_per_frame.frame_id);
                 auto ext = state->getExtrinsic(lm_per_frame.camera_id);
-                auto pt2d_n = lm_per_frame.pt2d_norm;
-                Vector3d pos(pt2d_n.x(), pt2d_n.y(), 1.0);
-                pos = pos / inv_dep;
+                auto pt3d_n = lm_per_frame.pt3d_norm;
+                Vector3d pos = pt3d_n / inv_dep;
                 pos = firstFrame.odom.pose()*ext*pos;
                 lm.position = pos;
                 lm.flag = LandmarkFlag::ESTIMATED;

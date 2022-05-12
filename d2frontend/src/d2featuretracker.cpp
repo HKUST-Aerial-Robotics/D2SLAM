@@ -59,10 +59,16 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
             auto &cur_lm = frame.landmarks[i];
             auto &prev_lm = previous.landmarks[prev_index];
             cur_lm.landmark_id = landmark_id;
-            cur_lm.velocity = Vector3d(cur_lm.pt2d_norm.x() - prev_lm.pt2d_norm.x(), cur_lm.pt2d_norm.y() - prev_lm.pt2d_norm.y(), 0.);
+            cur_lm.velocity = cur_lm.pt3d_norm - prev_lm.pt3d_norm;
             cur_lm.velocity /= (frame.stamp - current_keyframe.stamp);
-            report.sum_parallex += (prev_lm.pt2d_norm - cur_lm.pt2d_norm).norm();
+            report.sum_parallex += (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm();
             report.parallex_num ++;
+            // printf("[D2FeatureTracker] landmark %d, prev_pt %f %f, cur_pt %f %f norm prev_pt %f %f, cur_pt %f %f parallex %f\%\n", 
+            //     landmark_id, 
+            //     prev_lm.pt2d.x, prev_lm.pt2d.y,
+            //     cur_lm.pt2d.x, cur_lm.pt2d.y,
+            //     prev_lm.pt3d_norm.x(), prev_lm.pt3d_norm.y(), cur_lm.pt3d_norm.x(), cur_lm.pt3d_norm.y(), 
+            //     (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm()*100);
             if (lmanager->at(landmark_id).track.size() >= _config.long_track_frames) {
                 report.long_track_num ++;
             } else {
@@ -99,6 +105,10 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & left_frame, VisualImageDes
 
 bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
     int prev_num = current_keyframe.landmarkNum();
+    if (report.meanParallex() > 0.5) {
+        printf("[D2FeatureTracker] unexcepted mean parallex %f\n", report.meanParallex());
+        exit(0);
+    }
     if (keyframe_count < _config.min_keyframe_num || 
         report.long_track_num < _config.long_track_thres ||
         prev_num < _config.last_track_thres ||
