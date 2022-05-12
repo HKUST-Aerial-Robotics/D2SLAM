@@ -73,7 +73,7 @@ public:
     LoopCam(LoopCamConfig config, ros::NodeHandle & nh);
     
     VisualImageDesc extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, int index, int camera_id, bool superpoint_mode=false);
-    std::vector<VisualImageDesc> generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int i, cv::Mat &_show);
+    std::vector<VisualImageDesc> generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int i, int cam_l, int cam_r, cv::Mat &_show);
     VisualImageDesc generateGrayDepthImageDescriptor(const StereoFrame & msg, cv::Mat & img, int i, cv::Mat &_show);
     VisualImageDescArray processStereoframe(const StereoFrame & msg, std::vector<cv::Mat> & imgs);
 

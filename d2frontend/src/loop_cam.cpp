@@ -185,7 +185,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
             }
             int camera_index_l = i *camera_index_num;
             int camera_index_r = i *camera_index_num + 1;
-            auto _imgs = generateStereoImageDescriptor(msg, imgs[i], i, tmp);
+            auto _imgs = generateStereoImageDescriptor(msg, imgs[i], i, camera_index_l, camera_index_r, tmp);
             if (_config.stereo_as_depth_cam) {
                 if (_config.right_cam_as_main) {
                     visual_array.images.push_back(_imgs[1]);
@@ -332,14 +332,9 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
     return vframe;
 }
 
-std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, cv::Mat & _show)
+std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, int cam_l, int cam_r, cv::Mat & _show)
 {
-    //This function currently only support stereo image with same intrinsics, e.g. realsense.
-    if (vcam_id > msg.left_images.size()) {
-        ROS_WARN("Flatten images too few");
-        return std::vector<VisualImageDesc>();
-    }
-    
+    //This function currently only support pinhole-like stereo camera.
     auto vframe0 = extractorImgDescDeepnet(msg.stamp, msg.left_images[vcam_id], msg.left_camera_indices[vcam_id], 
         msg.left_camera_ids[vcam_id], _config.right_cam_as_main);
     auto vframe1 = extractorImgDescDeepnet(msg.stamp, msg.right_images[vcam_id], msg.right_camera_indices[vcam_id], 
@@ -360,12 +355,16 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
     vframe0.extrinsic = msg.left_extrisincs[vcam_id];
     vframe0.pose_drone = msg.pose_drone;
     vframe0.frame_id = msg.keyframe_id;
+    vframe0.camera_index = cam_l;
+    vframe0.camera_id = msg.left_camera_ids[vcam_id];
 
     vframe1.stamp = msg.stamp.toSec();
     vframe1.drone_id = self_id; // -1 is self drone;
     vframe1.extrinsic = msg.right_extrisincs[vcam_id];
     vframe1.pose_drone = msg.pose_drone;
     vframe1.frame_id = msg.keyframe_id;
+    vframe1.camera_index = cam_r;
+    vframe1.camera_id = msg.right_camera_ids[vcam_id];
 
     auto image_left = msg.left_images[vcam_id];
     auto image_right = msg.right_images[vcam_id];
@@ -400,8 +399,8 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
 
             Eigen::Vector3d pt_up3d, pt_down3d;
             //TODO: This may not work for stereo fisheye. Pending to update.
-            cams.at(vcam_id)->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
-            cams.at(vcam_id)->liftProjective(Eigen::Vector2d(pt_down.x, pt_down.y), pt_down3d);
+            cams.at(cam_l)->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
+            cams.at(cam_r)->liftProjective(Eigen::Vector2d(pt_down.x, pt_down.y), pt_down3d);
 
             Eigen::Vector2d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z());
             Eigen::Vector2d pt_down_norm(pt_down3d.x()/pt_down3d.z(), pt_down3d.y()/pt_down3d.z());
