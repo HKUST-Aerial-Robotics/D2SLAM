@@ -24,6 +24,7 @@ enum LandmarkSolverFlag {
 struct LandmarkPerFrame {
     FrameIdType frame_id = -1;
     LandmarkIdType landmark_id = -1;
+    double stamp = 0.0;
     int camera_index = 0;
     int camera_id = 0;
     int drone_id = -1;
@@ -46,6 +47,7 @@ struct LandmarkPerFrame {
     LandmarkPerFrame(const Landmark_t & Landmark):
         frame_id(Landmark.frame_id),
         landmark_id(Landmark.landmark_id),
+        stamp(toROSTime(Landmark.timestamp).toSec()),
         camera_index(Landmark.camera_index),
         drone_id(Landmark.drone_id),
         flag((LandmarkFlag) Landmark.flag),
@@ -59,6 +61,7 @@ struct LandmarkPerFrame {
     LandmarkPerFrame(const swarm_msgs::Landmark & Landmark):
         frame_id(Landmark.frame_id),
         landmark_id(Landmark.landmark_id),
+        stamp(Landmark.header.stamp.toSec()),
         camera_index(Landmark.camera_index),
         drone_id(Landmark.drone_id),
         flag((LandmarkFlag) Landmark.flag),
@@ -73,6 +76,7 @@ struct LandmarkPerFrame {
         Landmark_t ret;
         ret.frame_id = frame_id;
         ret.landmark_id = landmark_id;
+        ret.timestamp = toLCMTime(ros::Time(stamp));
         ret.camera_index = camera_index;
         ret.drone_id = drone_id;
         ret.flag = flag;
@@ -93,6 +97,7 @@ struct LandmarkPerFrame {
 
     swarm_msgs::Landmark toROS() {
         swarm_msgs::Landmark ret;
+        ret.header.stamp = ros::Time(stamp);
         ret.frame_id = frame_id;
         ret.landmark_id = landmark_id;
         ret.camera_index = camera_index;

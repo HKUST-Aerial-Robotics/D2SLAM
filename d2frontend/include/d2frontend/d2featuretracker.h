@@ -19,6 +19,7 @@ struct D2FTConfig {
     bool write_to_file = false;
     bool check_homography = false;
     double ransacReprojThreshold = 10;
+    double max_pts_velocity_time=0.3;
     std::string output_folder = "/root/output/";
 };
 
@@ -49,6 +50,9 @@ protected:
 public:
     virtual int addLandmark(const LandmarkPerFrame & lm);
     virtual void updateLandmark(const LandmarkPerFrame & lm);
+    bool hasLandmark(const LandmarkIdType & id) const {
+        return landmark_db.find(id) != landmark_db.end();
+    }
     LandmarkPerId & at(int i) {
         return landmark_db.at(i);
     }

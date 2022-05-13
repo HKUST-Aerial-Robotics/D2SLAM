@@ -171,7 +171,7 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
         }
     }
 
-    if (!params->estimate_td) {
+    if (!params->estimate_td || state.size() < params->max_sld_win_size) {
         problem.SetParameterBlockConstant(state.getTdState(0));
     }
 

@@ -21,11 +21,9 @@ ProjectionTwoFrameOneCamDepthFactor::ProjectionTwoFrameOneCamDepthFactor(const E
                                        const Eigen::Vector3d &_velocity_i, const Eigen::Vector3d &_velocity_j,
                                        const double _td_i, const double _td_j, const double _depth_j) : 
                                        pts_i(_pts_i), pts_j(_pts_j), 
-                                       td_i(_td_i), td_j(_td_j), inv_depth_j(1/_depth_j)
+                                       td_i(_td_i), td_j(_td_j), inv_depth_j(1/_depth_j),
+                                        velocity_i(_velocity_i), velocity_j(_velocity_j)
 {
-    velocity_i = _velocity_i;
-    velocity_j = _velocity_j;
-
 #ifdef UNIT_SPHERE_ERROR
     Eigen::Vector3d b1, b2;
     Eigen::Vector3d a = pts_j.normalized();
@@ -93,6 +91,15 @@ bool ProjectionTwoFrameOneCamDepthFactor::Evaluate(double const *const *paramete
                      - x1 * x3 / norm_3,            - x2 * x3 / norm_3,            1.0 / norm - x3 * x3 / norm_3;
         reduce.topRows(2) = tangent_base * norm_jaco;
         reduce.bottomRows(1) = Vector3d(-x1/norm_3, -x2/norm_3, -x3/norm_3).transpose();
+
+        Matrix3d reduce_j_td;
+        x1 = pts_j_td(0);
+        x2 = pts_j_td(1);
+        x3 = pts_j_td(2);
+        norm_3 = pow(pts_j_td.norm(), 3);
+        reduce_j_td << 1.0 / norm - x1 * x1 / norm_3, - x1 * x2 / norm_3,            - x1 * x3 / norm_3,
+            - x1 * x2 / norm_3,            1.0 / norm - x2 * x2 / norm_3, - x2 * x3 / norm_3,
+            - x1 * x3 / norm_3,            - x2 * x3 / norm_3,            1.0 / norm - x3 * x3 / norm_3;
 #else
         auto est_inv_dep_j_sqr = est_inv_dep_j * est_inv_dep_j;
         reduce << 1. * est_inv_dep_j, 0, -pts_camera_j(0) * est_inv_dep_j_sqr,
@@ -145,7 +152,7 @@ bool ProjectionTwoFrameOneCamDepthFactor::Evaluate(double const *const *paramete
             Eigen::Map<Eigen::Vector3d> jacobian_td(jacobians[4]);
 #ifdef UNIT_SPHERE_ERROR
             Eigen::Vector3d jac_td_j(0., 0., 0.);
-            jac_td_j.head<2>() = sqrt_info.block<2, 2>(0, 0) * tangent_base * velocity_j;
+            jac_td_j.head<2>() = sqrt_info.block<2, 2>(0, 0) * tangent_base * reduce_j_td* velocity_j;
             jacobian_td = reduce * ric.transpose() * Rj.transpose() * Ri * ric * velocity_i / inv_dep_i * -1.0
                  + jac_td_j;
 #else

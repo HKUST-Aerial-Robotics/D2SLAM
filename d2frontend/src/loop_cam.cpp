@@ -527,6 +527,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         lm.pt3d_norm = pt_up3d;
         lm.camera_index = camera_index;
         lm.camera_id = camera_id;
+        lm.stamp = vframe.stamp;
         vframe.landmarks.emplace_back(lm);
 
         if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {

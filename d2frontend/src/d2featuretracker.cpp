@@ -95,7 +95,14 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & left_frame, VisualImageDes
             auto &prev_lm = left_frame.landmarks[prev_index];
             cur_lm.landmark_id = landmark_id;
             // cur_lm.velocity = left_frame.landmarks[prev_index].velocity;
-            cur_lm.velocity.setZero();
+            cur_lm.velocity = cur_lm.velocity;
+            if (lmanager->hasLandmark(landmark_id) && lmanager->at(landmark_id).track_r.size() > 0) {
+                auto last_right = lmanager->at(landmark_id).track_r.back();
+                if (left_frame.stamp - last_right.stamp < _config.max_pts_velocity_time) {
+                    cur_lm.velocity = last_right.pt3d_norm - cur_lm.pt3d_norm;
+                    cur_lm.velocity /= (last_right.stamp - left_frame.stamp);
+                }
+            }
             report.stereo_point_num ++;
         }
     }

@@ -21,14 +21,9 @@ ProjectionOneFrameTwoCamFactor::ProjectionOneFrameTwoCamFactor(const Eigen::Vect
                                                                const Eigen::Vector3d &_velocity_i, const Eigen::Vector3d &_velocity_j,
                                                                const double _td_i, const double _td_j) : 
                                                                pts_i(_pts_i), pts_j(_pts_j), 
-                                                               td_i(_td_i), td_j(_td_j)
+                                                               td_i(_td_i), td_j(_td_j),
+                                                                velocity_i(_velocity_i), velocity_j(_velocity_j)
 {
-    velocity_i.x() = _velocity_i.x();
-    velocity_i.y() = _velocity_i.y();
-    velocity_i.z() = _velocity_i.z();
-    velocity_j.x() = _velocity_j.x();
-    velocity_j.y() = _velocity_j.y();
-    velocity_j.z() = _velocity_j.z();
 #ifdef UNIT_SPHERE_ERROR
     Eigen::Vector3d b1, b2;
     Eigen::Vector3d a = pts_j.normalized();
@@ -97,6 +92,14 @@ bool ProjectionOneFrameTwoCamFactor::Evaluate(double const *const *parameters, d
                      - x1 * x2 / norm_3,            1.0 / norm - x2 * x2 / norm_3, - x2 * x3 / norm_3,
                      - x1 * x3 / norm_3,            - x2 * x3 / norm_3,            1.0 / norm - x3 * x3 / norm_3;
         reduce = tangent_base * norm_jaco;
+        Matrix3d reduce_j_td;
+        x1 = pts_j_td(0);
+        x2 = pts_j_td(1);
+        x3 = pts_j_td(2);
+        norm_3 = pow(pts_j_td.norm(), 3);
+        reduce_j_td << 1.0 / norm - x1 * x1 / norm_3, - x1 * x2 / norm_3,            - x1 * x3 / norm_3,
+            - x1 * x2 / norm_3,            1.0 / norm - x2 * x2 / norm_3, - x2 * x3 / norm_3,
+            - x1 * x3 / norm_3,            - x2 * x3 / norm_3,            1.0 / norm - x3 * x3 / norm_3;
 #else
         reduce << 1. / dep_j, 0, -pts_camera_j(0) / (dep_j * dep_j),
             0, 1. / dep_j, -pts_camera_j(1) / (dep_j * dep_j);
@@ -131,7 +134,7 @@ bool ProjectionOneFrameTwoCamFactor::Evaluate(double const *const *parameters, d
 #ifdef UNIT_SPHERE_ERROR
             Eigen::Map<Eigen::Vector2d> jacobian_td(jacobians[3]);
             jacobian_td = reduce * (ric2.transpose() * ric * velocity_i / inv_dep_i * -1.0)  +
-                       sqrt_info * tangent_base * velocity_j;
+                       sqrt_info * tangent_base * reduce_j_td * velocity_j;
 #else
             Eigen::Map<Eigen::Vector2d> jacobian_td(jacobians[3]);
             jacobian_td = reduce * ric2.transpose() * ric * velocity_i / inv_dep_i * -1.0  +
