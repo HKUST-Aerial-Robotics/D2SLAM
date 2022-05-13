@@ -48,14 +48,13 @@ FrameIdType D2LandmarkManager::getLandmarkBaseFrame(LandmarkIdType landmark_id) 
 }
 
 void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2EstimatorState * state) {
-    // printf("[D2VINS::D2LandmarkManager] Try initial landmark %ld dep %d tracks %ld\n", lm_id, 
-    //     lm.track[0].depth_mea && lm.track[0].depth > params->min_depth_to_fuse && lm.track[0].depth < params->max_depth_to_fuse,
-    //     lm.track.size());
     auto lm_first = lm.track[0];
     auto lm_id = lm.landmark_id;
     auto pt3d_n = lm_first.pt3d_norm;
     auto firstFrame = state->getFramebyId(lm.track[0].frame_id);
-
+    // printf("[D2VINS::D2LandmarkManager] Try initial landmark %ld dep %d tracks %ld\n", lm_id, 
+    //     lm.track[0].depth_mea && lm.track[0].depth > params->min_depth_to_fuse && lm.track[0].depth < params->max_depth_to_fuse,
+    //     lm.track.size());
     if (lm.track[0].depth_mea && lm.track[0].depth > params->min_depth_to_fuse && lm.track[0].depth < params->max_depth_to_fuse) {
         //Use depth to initial
         auto ext = state->getExtrinsic(lm_first.camera_id);
@@ -106,12 +105,14 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
                     auto inv_dep = 1/ptcam.norm();
                     if (inv_dep > params->min_inv_dep) {
                         lm.flag = LandmarkFlag::INITIALIZED;
+                        *landmark_state[lm_id] = inv_dep;
                         if (params->debug_print_states) {
                             printf("[D2VINS::D2LandmarkManager] Initialize landmark %ld tracks %ld baseline %.2f by triangulation position %.3f %.3f %.3f inv_dep %.3f\n",
                                 lm_id, lm.track.size(), (_max - _min).norm(), point_3d.x(), point_3d.y(), point_3d.z(), inv_dep);
                         }
-                        *landmark_state[lm_id] = inv_dep;
                     } else {
+                        lm.flag = LandmarkFlag::INITIALIZED;
+                        *landmark_state[lm_id] = params->min_inv_dep;
                         if (params->debug_print_states) {
                             printf("\033[0;31m [D2VINS::D2LandmarkManager] Initialize failed too far away: landmark %ld tracks %ld baseline %.2f by triangulation position %.3f %.3f %.3f inv_dep %.3f \033[0m\n",
                                 lm_id, lm.track.size(), (_max - _min).norm(), point_3d.x(), point_3d.y(), point_3d.z(), inv_dep);
@@ -126,6 +127,11 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
                     printf("\033[0;31m [D2VINS::D2LandmarkManager] Initialize failed too large triangle error: landmark %ld tracks %ld baseline %.2f by triangulation position %.3f %.3f %.3f\033[0m\n",
                         lm_id, lm.track.size(), (_max - _min).norm(), point_3d.x(), point_3d.y(), point_3d.z());
                 }
+            }
+        } else  { 
+            if (params->debug_print_states) {
+                printf("\033[0;31m [D2VINS::D2LandmarkManager] Initialize failed too short baseline: landmark %ld tracks %ld baseline %.2f\033[0m\n",
+                    lm_id, lm.track.size(), (_max - _min).norm());
             }
         }
     }

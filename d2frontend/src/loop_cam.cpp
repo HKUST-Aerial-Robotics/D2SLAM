@@ -183,9 +183,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
             if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
                 camera_index_num = 5;
             }
-            int camera_index_l = i *camera_index_num;
-            int camera_index_r = i *camera_index_num + 1;
-            auto _imgs = generateStereoImageDescriptor(msg, imgs[i], i, camera_index_l, camera_index_r, tmp);
+            auto _imgs = generateStereoImageDescriptor(msg, imgs[i], i, tmp);
             if (_config.stereo_as_depth_cam) {
                 if (_config.right_cam_as_main) {
                     visual_array.images.push_back(_imgs[1]);
@@ -248,8 +246,6 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
     auto start = high_resolution_clock::now();
     // std::cout << "Downsample and encode Cost " << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 << "ms" << std::endl;
 
-    vframe.stamp = msg.stamp.toSec();
-    vframe.drone_id = self_id; // -1 is self drone;
     vframe.extrinsic = msg.left_extrisincs[vcam_id];
     vframe.pose_drone = msg.pose_drone;
     vframe.frame_id = msg.keyframe_id;
@@ -335,7 +331,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
     return vframe;
 }
 
-std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, int cam_l, int cam_r, cv::Mat & _show)
+std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, cv::Mat & _show)
 {
     //This function currently only support pinhole-like stereo camera.
     auto vframe0 = extractorImgDescDeepnet(msg.stamp, msg.left_images[vcam_id], msg.left_camera_indices[vcam_id], 
@@ -353,21 +349,13 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
     auto start = high_resolution_clock::now();
     // std::cout << "Downsample and encode Cost " << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 << "ms" << std::endl;
 
-    vframe0.stamp = msg.stamp.toSec();
-    vframe0.drone_id = self_id; // -1 is self drone;
     vframe0.extrinsic = msg.left_extrisincs[vcam_id];
     vframe0.pose_drone = msg.pose_drone;
     vframe0.frame_id = msg.keyframe_id;
-    vframe0.camera_index = cam_l;
-    vframe0.camera_id = msg.left_camera_ids[vcam_id];
 
-    vframe1.stamp = msg.stamp.toSec();
-    vframe1.drone_id = self_id; // -1 is self drone;
     vframe1.extrinsic = msg.right_extrisincs[vcam_id];
     vframe1.pose_drone = msg.pose_drone;
     vframe1.frame_id = msg.keyframe_id;
-    vframe1.camera_index = cam_r;
-    vframe1.camera_id = msg.right_camera_ids[vcam_id];
 
     auto image_left = msg.left_images[vcam_id];
     auto image_right = msg.right_images[vcam_id];
@@ -376,34 +364,22 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
     auto pts_down = vframe1.landmarks2D();
     std::vector<int> ids_up, ids_down;
 
-    if (vframe0.landmarkNum() > _config.ACCEPT_MIN_3D_PTS) {
-        matchLocalFeatures(pts_up, pts_down, vframe0.landmark_descriptor, vframe1.landmark_descriptor, ids_up, ids_down);
-    } else {
-        return std::vector<VisualImageDesc>{vframe0, vframe1};
-    }
-    
-    // ides.landmarks_2d.clear();
-    // ides.landmarks_2d_norm.clear();
-    // ides.landmarks_3d.clear();
-    
-    Swarm::Pose pose_drone(msg.pose_drone);
-    Swarm::Pose pose_up = pose_drone * Swarm::Pose(msg.left_extrisincs[vcam_id]);
-    Swarm::Pose pose_down = pose_drone * Swarm::Pose(msg.right_extrisincs[vcam_id]);
-
-    std::vector<float> desc_new;
-
     int count_3d = 0;
-
     if (_config.stereo_as_depth_cam) {
-        for (unsigned int i = 0; i < pts_up.size(); i++)
-        {
+        if (vframe0.landmarkNum() > _config.ACCEPT_MIN_3D_PTS) {
+            matchLocalFeatures(pts_up, pts_down, vframe0.landmark_descriptor, vframe1.landmark_descriptor, ids_up, ids_down);
+        }
+        Swarm::Pose pose_drone(msg.pose_drone);
+        Swarm::Pose pose_up = pose_drone * Swarm::Pose(msg.left_extrisincs[vcam_id]);
+        Swarm::Pose pose_down = pose_drone * Swarm::Pose(msg.right_extrisincs[vcam_id]);
+        for (unsigned int i = 0; i < pts_up.size(); i++) {
             auto pt_up = pts_up[i];
             auto pt_down = pts_down[i];
 
             Eigen::Vector3d pt_up3d, pt_down3d;
             //TODO: This may not work for stereo fisheye. Pending to update.
-            cams.at(cam_l)->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
-            cams.at(cam_r)->liftProjective(Eigen::Vector2d(pt_down.x, pt_down.y), pt_down3d);
+            cams.at(msg.left_camera_indices[vcam_id])->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
+            cams.at(msg.right_camera_indices[vcam_id])->liftProjective(Eigen::Vector2d(pt_down.x, pt_down.y), pt_down3d);
 
             Eigen::Vector2d pt_up_norm(pt_up3d.x()/pt_up3d.z(), pt_up3d.y()/pt_up3d.z());
             Eigen::Vector2d pt_down_norm(pt_down3d.x()/pt_down3d.z(), pt_down3d.y()/pt_down3d.z());
@@ -420,8 +396,6 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
 
             int idx = ids_up[i];
             int idx_down = ids_down[i];
-            // ides.landmarks_2d.push_back(pt2d);
-            // ides.landmarks_2d_norm.push_back(pt3d_norm);
             vframe0.landmarks[idx].pt3d = point_3d;
             vframe0.landmarks[idx].depth_mea = true;
             vframe0.landmarks[idx].depth = pt_cam.norm();
@@ -468,16 +442,16 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
         }
 
         cv::vconcat(img_up, img_down, _show);
-        for (unsigned int i = 0; i < pts_up.size(); i++)
-        {
-            int idx = ids_up[i];
-            if (vframe0.landmarks[idx].flag) {
-                char title[100] = {0};
-                auto pt = pts_up[i];
-                auto point3d = vframe0.landmarks[idx].pt3d;
-                auto pt_cam = pose_up.att().inverse() * (point3d - pose_up.pos());
-                cv::circle(_show, pt, 3, cv::Scalar(0, 255, 0), 1);
-                cv::arrowedLine(_show, pts_up[i], pts_down[i], cv::Scalar(255, 255, 0), 1);
+        if (_config.stereo_as_depth_cam) {
+            for (unsigned int i = 0; i < pts_up.size(); i++)
+            {
+                int idx = ids_up[i];
+                if (vframe0.landmarks[idx].flag) {
+                    char title[100] = {0};
+                    auto pt = pts_up[i];
+                    cv::circle(_show, pt, 3, cv::Scalar(0, 255, 0), 1);
+                    cv::arrowedLine(_show, pts_up[i], pts_down[i], cv::Scalar(255, 255, 0), 1);
+                }
             }
         }
 
@@ -503,6 +477,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
     vframe.stamp = stamp.toSec();
     vframe.camera_index = camera_index;
     vframe.camera_id = camera_id;
+    vframe.drone_id = self_id;
 
     if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
         cv::Mat roi = img(cv::Rect(0, img.rows*3/4, img.cols, img.rows/4));

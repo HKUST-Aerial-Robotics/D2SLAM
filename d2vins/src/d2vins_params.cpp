@@ -65,7 +65,8 @@ void D2VINSConfig::init(const std::string & config_file) {
     //Initialiazation
     init_method = (InitialMethod) (int)fsSettings["init_method"];
     depth_estimate_baseline = fsSettings["depth_estimate_baseline"];
-
+    tri_max_err = fsSettings["tri_max_err"];
+    
     //Sliding window
     max_sld_win_size = fsSettings["max_sld_win_size"];
     landmark_estimate_tracks = fsSettings["landmark_estimate_tracks"];
