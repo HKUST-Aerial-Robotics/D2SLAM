@@ -127,6 +127,8 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
 }
 
 void D2Estimator::inputImage(VisualImageDescArray & _frame) {
+    //We MUST make sure this function is running by only one thread.
+    //It is not thread safe.
     if(!initFirstPoseFlag) {
         printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imubuf.size());
         initFirstPoseFlag = tryinitFirstPose(_frame);

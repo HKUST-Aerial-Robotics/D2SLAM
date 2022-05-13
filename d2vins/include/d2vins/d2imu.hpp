@@ -2,6 +2,7 @@
 #include "sensor_msgs/Imu.h"
 #include "swarm_msgs/Pose.h"
 #include <swarm_msgs/Odometry.h>
+#include <mutex>
 
 namespace D2VINS {
 
@@ -20,14 +21,21 @@ struct IMUData {
     {}
 };
 
-class IMUBuffer
-{
+class IMUBuffer {
 protected:
     size_t searchClosest(double t) const;
     //Search [i0, i1)
     size_t searchClosest(double t, int i0, int i1) const;
     IMUBuffer slice(int i0, int i1) const;
+
+    typedef std::lock_guard<std::recursive_mutex> Guard;
+    mutable std::recursive_mutex buf_lock;
+
 public:
+    IMUBuffer(const IMUBuffer & _buf)
+        : buf(_buf.buf), t_last(_buf.t_last) {}
+    IMUBuffer() {}
+
     std::vector<IMUData> buf;
 
     double t_last = 0.0;

@@ -3,6 +3,7 @@
 
 namespace D2VINS {
 size_t IMUBuffer::searchClosest(double t) const {
+    const Guard lock(buf_lock);
     if (buf.size() == 1) {
         return 0;
     }
@@ -10,12 +11,7 @@ size_t IMUBuffer::searchClosest(double t) const {
 }
 
 size_t IMUBuffer::searchClosest(double t, int i0, int i1) const {
-    // if (i1 <= buf.size() -1 ) {
-    //     printf("search closest %.4f %d %d t0 %.4f  dt %.1fms t1-1 %.4f dt %.1fms t1 %.4f dt %.1fms \n", t, i0, i1, 
-    //         buf[i0].t, (buf[i0].t-t)*1000, buf[i1-1].t, (buf[i1-1].t-t)*1000, buf[i1].t, (buf[i1].t-t)*1000);
-    // } else {
-    //     printf("search closest %.4f %d %d t0 %.4f t1-1 %.4f\n", t, i0, i1, buf[i0].t, buf[i1-1].t);
-    // }
+    const Guard lock(buf_lock);
     if (i1 - i0 == 1) {
         return i0;
     }
@@ -37,6 +33,7 @@ size_t IMUBuffer::searchClosest(double t, int i0, int i1) const {
 }
 
 IMUBuffer IMUBuffer::slice(int i0, int i1) const {
+    const Guard lock(buf_lock);
     IMUBuffer ret;
     ret.buf = std::vector<IMUData>(buf.begin() + i0, buf.begin() + i1 + 1);
     ret.t_last = buf.back().t;
@@ -44,11 +41,14 @@ IMUBuffer IMUBuffer::slice(int i0, int i1) const {
 }
 
 void IMUBuffer::add(const IMUData & data) {
+    const Guard lock(buf_lock);
     buf.emplace_back(data);
     t_last = data.t;
+    buf_lock.unlock();
 }
 
 Vector3d IMUBuffer::mean_acc() const {
+    const Guard lock(buf_lock);
     Vector3d acc_sum(0, 0, 0);
     for (auto & data : buf) {
         acc_sum += data.acc;
@@ -57,6 +57,7 @@ Vector3d IMUBuffer::mean_acc() const {
 }
 
 Vector3d IMUBuffer::mean_gyro() const {
+    const Guard lock(buf_lock);
     Vector3d gyro_sum(0, 0, 0);
     for (auto & data : buf) {
         gyro_sum += data.gyro;
@@ -65,6 +66,7 @@ Vector3d IMUBuffer::mean_gyro() const {
 }
 
 size_t IMUBuffer::size() const {
+    const Guard lock(buf_lock);
     return buf.size();
 }
 
@@ -73,6 +75,7 @@ bool IMUBuffer::available(double t) const {
 }
 
 IMUBuffer IMUBuffer::pop(double t) {
+    const Guard lock(buf_lock);
     auto i0 = searchClosest(t);
     IMUBuffer ret;
     if (i0 > 0) {
@@ -84,6 +87,7 @@ IMUBuffer IMUBuffer::pop(double t) {
 }
 
 IMUBuffer IMUBuffer::back(double t) const {
+    const Guard lock(buf_lock);
     auto i0 = searchClosest(t);
     IMUBuffer ret;
     ret.buf = std::vector<IMUData>(buf.begin() + i0, buf.end());
@@ -92,6 +96,7 @@ IMUBuffer IMUBuffer::back(double t) const {
 }
 
 IMUBuffer IMUBuffer::periodIMU(double t0, double t1) const {
+    const Guard lock(buf_lock);
     auto i0 = searchClosest(t0);
     auto i1 = searchClosest(t1);
     return slice(i0, i1);
@@ -102,6 +107,7 @@ Swarm::Odometry IMUBuffer::propagation(const VINSFrame & baseframe) const {
 }
 
 Swarm::Odometry IMUBuffer::propagation(const Swarm::Odometry & prev_odom, const Vector3d & Ba, const Vector3d & Bg) const {
+    const Guard lock(buf_lock);
     if(buf.size() == 0) {
         return prev_odom;
     }
