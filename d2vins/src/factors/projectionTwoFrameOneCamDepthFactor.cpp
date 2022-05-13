@@ -92,7 +92,7 @@ bool ProjectionTwoFrameOneCamDepthFactor::Evaluate(double const *const *paramete
                      - x1 * x2 / norm_3,            1.0 / norm - x2 * x2 / norm_3, - x2 * x3 / norm_3,
                      - x1 * x3 / norm_3,            - x2 * x3 / norm_3,            1.0 / norm - x3 * x3 / norm_3;
         reduce.topRows(2) = tangent_base * norm_jaco;
-        reduce.bottomRows(1) << -x1/norm_3, -x2/norm_3, -x3/norm_3;
+        reduce.bottomRows(1) = Vector3d(-x1/norm_3, -x2/norm_3, -x3/norm_3).transpose();
 #else
         auto est_inv_dep_j_sqr = est_inv_dep_j * est_inv_dep_j;
         reduce << 1. * est_inv_dep_j, 0, -pts_camera_j(0) * est_inv_dep_j_sqr,
@@ -146,7 +146,6 @@ bool ProjectionTwoFrameOneCamDepthFactor::Evaluate(double const *const *paramete
 #ifdef UNIT_SPHERE_ERROR
             Eigen::Vector3d jac_td_j(0., 0., 0.);
             jac_td_j.head<2>() = sqrt_info.block<2, 2>(0, 0) * tangent_base * velocity_j;
-            //TODO FIX this
             jacobian_td = reduce * ric.transpose() * Rj.transpose() * Ri * ric * velocity_i / inv_dep_i * -1.0
                  + jac_td_j;
 #else

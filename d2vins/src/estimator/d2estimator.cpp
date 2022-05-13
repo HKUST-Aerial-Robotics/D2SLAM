@@ -269,7 +269,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
         for (auto i = 1; i < lm.track.size(); i++) {
             auto mea1 = lm.track[i].measurement();
             ceres::CostFunction * f_td = nullptr;
-            if (lm.track[i].depth_mea && params->fuse_dep && 
+            if (lm.track[i].depth_mea && params->fuse_dep &&
                 lm.track[i].depth < params->max_depth_to_fuse && 
                 lm.track[i].depth > params->min_depth_to_fuse) {
                 f_td = new ProjectionTwoFrameOneCamDepthFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,

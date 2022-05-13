@@ -50,7 +50,7 @@ Panels:
         - /VINS-PCL1
         - /VINS-Path1
       Splitter Ratio: 0.5
-    Tree Height: 578
+    Tree Height: 305
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -266,8 +266,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 2.9720466136932373
-        Min Value: 0.021190794184803963
+        Max Value: 2.740084171295166
+        Min Value: -0.13672876358032227
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -341,7 +341,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 11.397703170776367
+      Distance: 16.877796173095703
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -349,17 +349,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.1396421194076538
-        Y: -1.6677933931350708
-        Z: 0.044648487120866776
+        X: -0.6108980178833008
+        Y: -3.6336922645568848
+        Z: 0.04464753344655037
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.824798047542572
+      Pitch: 1.1647984981536865
       Target Frame: world
-      Yaw: 2.72654390335083
+      Yaw: 2.9915390014648438
     Saved: ~
 Window Geometry:
   Displays:
@@ -377,5 +377,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1806
-  X: 86
-  Y: 238
+  X: 1362
+  Y: 171
