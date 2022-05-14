@@ -63,6 +63,8 @@ struct D2FrontendParams {
     int height;
     double max_freq = 1.0;
     double recv_msg_duration = 0.5;
+    double feature_min_dist = 20;
+    int total_feature_num = 150;
 
     bool debug_image = false;
     double min_movement_keyframe = 0.3;
@@ -79,6 +81,7 @@ struct D2FrontendParams {
     bool enable_pub_local_frame;
     bool enable_sub_remote_frame;
     bool send_whole_img_desc;
+    bool enable_perf_output = false;
 
     bool enable_loop = true;
     bool enable_network = true;

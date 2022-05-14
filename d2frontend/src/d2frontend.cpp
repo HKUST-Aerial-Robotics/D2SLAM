@@ -133,10 +133,6 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     static int count = 0;
     // ROS_INFO("[D2Frontend::processStereoframe] %d", count ++);
     auto vframearry = loop_cam->processStereoframe(stereoframe, debug_imgs);
-    if (vframearry.landmarkNum() == 0) {
-        ROS_WARN("[SWARM_LOOP] Null img desc, CNN no ready");
-        return;
-    }
     bool is_keyframe = feature_tracker->track(vframearry);
     vframearry.prevent_adding_db = !is_keyframe;
     vframearry.is_keyframe = is_keyframe;
@@ -194,6 +190,7 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     loop_net = new LoopNet(params->_lcm_uri, params->send_img, params->send_whole_img_desc, params->recv_msg_duration);
     loop_cam = new LoopCam(*(params->loopcamconfig), nh);
     feature_tracker = new D2FeatureTracker(*(params->ftconfig));
+    feature_tracker->cams = loop_cam->cams;
         
     loop_cam->show = params->debug_image; 
     loop_detector = new LoopDetector(params->self_id, *(params->loopdetectorconfig));

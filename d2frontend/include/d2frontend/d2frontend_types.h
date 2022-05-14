@@ -79,6 +79,7 @@ struct VisualImageDesc {
     //This stands for single image
     double stamp;
     cv::Mat raw_image;
+    cv::Mat raw_depth_image;
     int drone_id = 0;
     FrameIdType frame_id = 0; 
     //The index of view; In stereo. 0 left 1 right + 2 * camera_index are different camera

@@ -8,6 +8,7 @@
 #include <opencv2/core/eigen.hpp>
 #include <camodocal/camera_models/Camera.h>
 #include <camodocal/camera_models/PinholeCamera.h>
+#include <d2frontend/d2featuretracker.h>
 
 using namespace std::chrono;
 
@@ -249,16 +250,14 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
     vframe.extrinsic = msg.left_extrisincs[vcam_id];
     vframe.pose_drone = msg.pose_drone;
     vframe.frame_id = msg.keyframe_id;
-    if (params->debug_image) {
+    if (params->debug_image || params->ftconfig->enable_lk_optical_flow) {
         vframe.raw_image = msg.left_images[vcam_id];
+        vframe.raw_depth_image = msg.depth_images[vcam_id];
     }
 
     auto image_left = msg.left_images[vcam_id];
-
     auto pts_up = vframe.landmarks2D();
-
     std::vector<int> ids_up, ids_down;
-
     if (vframe.landmarkNum() < _config.ACCEPT_MIN_3D_PTS) {
         return vframe;
     }
@@ -272,7 +271,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
     for (unsigned int i = 0; i < pts_up.size(); i++)
     {
         cv::Point2f pt_up = pts_up[i];
-        if (pt_up.x < 0 || pt_up.x > 640 || pt_up.y < 0 || pt_up.y > 480) {
+        if (pt_up.x < 0 || pt_up.x >= params->width || pt_up.y < 0 || pt_up.y >= params->height) {
             continue;
         }
         
@@ -485,7 +484,11 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
     }
 #ifdef USE_TENSORRT
     std::vector<cv::Point2f> landmarks_2d;
-    superpoint_net.inference(img, landmarks_2d, vframe.landmark_descriptor);
+    if (_config.superpoint_max_num > 0) {
+        //We only inference when superpoint max num > 0
+        //otherwise, d2vins only uses LK optical flow feature.
+        superpoint_net.inference(img, landmarks_2d, vframe.landmark_descriptor);
+    }
 
     if (!superpoint_mode) {
         vframe.image_desc = netvlad_net.inference(img);

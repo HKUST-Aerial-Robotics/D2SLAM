@@ -39,11 +39,13 @@ namespace D2FrontEnd {
         nh.param<bool>("enable_pub_local_frame", enable_pub_local_frame, false);
         nh.param<bool>("enable_sub_remote_frame", enable_sub_remote_frame, false);
         nh.param<std::string>("output_path", OUTPUT_PATH, "");
+        enable_perf_output = (int) fsSettings["enable_perf_output"];
 
         //Loopcam configs
         loopcamconfig->width = (int) fsSettings["image_width"];
         loopcamconfig->height = (int) fsSettings["image_height"];
-        loopcamconfig->superpoint_max_num = (int) fsSettings["max_cnt"];
+        loopcamconfig->superpoint_max_num = (int) fsSettings["max_superpoint_cnt"];
+        total_feature_num = (int) fsSettings["max_cnt"];
         loopcamconfig->DEPTH_FAR_THRES = fsSettings["depth_far_thres"];
         loopcamconfig->DEPTH_NEAR_THRES = fsSettings["depth_near_thres"];
         nh.param<double>("superpoint_thres", loopcamconfig->superpoint_thres, 0.012);
@@ -62,6 +64,7 @@ namespace D2FrontEnd {
         ftconfig->show_feature_id = (int) fsSettings["show_track_id"];
         ftconfig->long_track_frames = fsSettings["landmark_estimate_tracks"];
         ftconfig->check_homography = (int) fsSettings["check_homography"];
+        ftconfig->enable_lk_optical_flow = (int) fsSettings["enable_lk_optical_flow"];
         nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
         nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);

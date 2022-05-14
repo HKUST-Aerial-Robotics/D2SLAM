@@ -18,6 +18,7 @@ struct D2FTConfig {
     int min_keyframe_num = 2;
     bool write_to_file = false;
     bool check_homography = false;
+    bool enable_lk_optical_flow = true;
     double ransacReprojThreshold = 10;
     double max_pts_velocity_time=0.3;
     std::string output_folder = "/root/output/";
@@ -58,6 +59,13 @@ public:
     }
 };
 
+struct LKImageInfo {
+    FrameIdType frame_id;
+    std::vector<cv::Point2f> lk_pts;
+    std::vector<LandmarkIdType> lk_ids;
+    cv::Mat image;
+};
+
 class D2FeatureTracker {
     D2FTConfig _config;
     VisualImageDescArray current_keyframe;
@@ -65,6 +73,8 @@ class D2FeatureTracker {
     int keyframe_count = 0;
     int frame_count = 0;
     bool inited = false;
+    std::map<int, LKImageInfo> prev_lk_info; //frame.camera_index->image
+    LandmarkPerFrame createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id = -1);
 public:
     D2FeatureTracker(D2FTConfig config):
         _config(config)
@@ -74,16 +84,23 @@ public:
 
     bool track(VisualImageDescArray & frames);
     TrackReport track(VisualImageDesc & frame);
-    TrackReport track(VisualImageDesc & left_frame, VisualImageDesc & right_frame);
+    TrackReport trackLK(VisualImageDesc & frame);
+    TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame);
+    TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame);
     void processKeyframe(VisualImageDescArray & frames);
     bool isKeyframe(const TrackReport & reports);
     void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
     void draw(VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const;
     cv::Mat drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right=false) const;
-    void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
-        std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
-        std::vector<int> & ids_down_to_up) const;
+    
+    std::vector<camodocal::CameraPtr> cams;
 };
 
+void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
+        const std::vector<float> & _desc_up, const std::vector<float> & _desc_down, 
+        std::vector<int> & ids_down_to_up);
+void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts);
+std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
+                        std::vector<LandmarkIdType> & ids);
 
 } 

@@ -21,13 +21,19 @@ enum LandmarkSolverFlag {
     SOLVED = 1
 };
 
+enum LandmarkType {
+    SuperPointLandmark, //Landmark track by superpoint
+    FlowLandmark // Landmark track by lk optical flow
+};
+
 struct LandmarkPerFrame {
     FrameIdType frame_id = -1;
     LandmarkIdType landmark_id = -1;
+    LandmarkType type = LandmarkType::SuperPointLandmark;
     double stamp = 0.0;
     int camera_index = 0;
     int camera_id = 0;
-    int drone_id = -1;
+    int drone_id = -1; //-1 is intra landmark
     LandmarkFlag flag = UNINITIALIZED;
     cv::Point2f pt2d;
     Eigen::Vector3d pt3d_norm; //[x, y, 1]
@@ -39,6 +45,22 @@ struct LandmarkPerFrame {
 
     void setLandmarkId(LandmarkIdType id) {
         landmark_id = id;
+    }
+
+    static LandmarkPerFrame createLandmarkPerFrame(LandmarkIdType landmark_id, FrameIdType frame_id, double stamp, 
+            LandmarkType type, int drone_id, int camera_index, int camera_id, cv::Point2f pt2d, Eigen::Vector3d pt3d_norm)
+    {
+        LandmarkPerFrame lm;
+        lm.landmark_id = landmark_id;
+        lm.frame_id = frame_id;
+        lm.type = type;
+        lm.camera_index = camera_index;
+        lm.camera_id = camera_id;
+        lm.drone_id = drone_id;
+        lm.stamp = stamp;
+        lm.pt2d = pt2d;
+        lm.pt3d_norm = pt3d_norm;
+        return lm;
     }
 
     LandmarkPerFrame(): pt3d_norm(0., 0., 0.), pt3d(0., 0., 0.), velocity(0., 0., 0.)

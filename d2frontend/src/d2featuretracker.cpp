@@ -1,7 +1,11 @@
 #include <d2frontend/d2featuretracker.h>
+#include <camodocal/camera_models/Camera.h>
 
 namespace D2FrontEnd {
 #define MIN_HOMOGRAPHY 6
+#define PYR_LEVEL 3
+#define WIN_SIZE cv::Size(21, 21)
+
 bool D2FeatureTracker::track(VisualImageDescArray & frames) {
     bool iskeyframe = false;
     frame_count ++;
@@ -12,21 +16,20 @@ bool D2FeatureTracker::track(VisualImageDescArray & frames) {
         inited = true;
         ROS_INFO("[D2FeatureTracker] receive first, will init kf\n");
         processKeyframe(frames);
-        return true;
+    }
+
+    if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
+        report.compose(track(frames.images[0]));
+        report.compose(track(frames.images[0], frames.images[1]));
     } else {
-        if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
-            report.compose(track(frames.images[0]));
-            report.compose(track(frames.images[0], frames.images[1]));
-        } else {
-            for (auto & frame : frames.images) {
-                report.compose(track(frame));
-            }
+        for (auto & frame : frames.images) {
+            report.compose(track(frame));
         }
-        
-        if (isKeyframe(report)) {
-            iskeyframe = true;
-            processKeyframe(frames);
-        }
+    }
+    
+    if (isKeyframe(report)) {
+        iskeyframe = true;
+        processKeyframe(frames);
     }
 
     report.ft_time = tic.toc();
@@ -45,42 +48,108 @@ bool D2FeatureTracker::track(VisualImageDescArray & frames) {
 }
 
 TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
-    auto & previous = current_keyframe.images[frame.camera_index];
-    auto prev_pts = previous.landmarks2D();
-    auto cur_pts = frame.landmarks2D();
-    std::vector<int> ids_down_to_up;
     TrackReport report;
-    matchLocalFeatures(prev_pts, cur_pts, previous.landmark_descriptor, frame.landmark_descriptor, ids_down_to_up);
-    for (size_t i = 0; i < ids_down_to_up.size(); i++) { 
-        if (ids_down_to_up[i] >= 0) {
-            assert(ids_down_to_up[i] < previous.landmarkNum() && "too large");
-            auto prev_index = ids_down_to_up[i];
-            auto landmark_id = previous.landmarks[prev_index].landmark_id;
-            auto &cur_lm = frame.landmarks[i];
-            auto &prev_lm = previous.landmarks[prev_index];
-            cur_lm.landmark_id = landmark_id;
-            cur_lm.velocity = cur_lm.pt3d_norm - prev_lm.pt3d_norm;
-            cur_lm.velocity /= (frame.stamp - current_keyframe.stamp);
-            report.sum_parallex += (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm();
-            report.parallex_num ++;
-            // printf("[D2FeatureTracker] landmark %d, prev_pt %f %f, cur_pt %f %f norm prev_pt %f %f, cur_pt %f %f parallex %f\%\n", 
-            //     landmark_id, 
-            //     prev_lm.pt2d.x, prev_lm.pt2d.y,
-            //     cur_lm.pt2d.x, cur_lm.pt2d.y,
-            //     prev_lm.pt3d_norm.x(), prev_lm.pt3d_norm.y(), cur_lm.pt3d_norm.x(), cur_lm.pt3d_norm.y(), 
-            //     (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm()*100);
-            if (lmanager->at(landmark_id).track.size() >= _config.long_track_frames) {
-                report.long_track_num ++;
-            } else {
-                report.unmatched_num ++;
+    if (current_keyframe.images.size() > 0 && current_keyframe.frame_id != frame.frame_id) {
+        //Then current keyframe has been assigned, feature tracker by LK.
+        auto & previous = current_keyframe.images[frame.camera_index];
+        auto prev_pts = previous.landmarks2D();
+        auto cur_pts = frame.landmarks2D();
+        std::vector<int> ids_down_to_up;
+        matchLocalFeatures(prev_pts, cur_pts, previous.landmark_descriptor, frame.landmark_descriptor, ids_down_to_up);
+        for (size_t i = 0; i < ids_down_to_up.size(); i++) { 
+            if (ids_down_to_up[i] >= 0) {
+                assert(ids_down_to_up[i] < previous.landmarkNum() && "too large");
+                auto prev_index = ids_down_to_up[i];
+                auto landmark_id = previous.landmarks[prev_index].landmark_id;
+                auto &cur_lm = frame.landmarks[i];
+                auto &prev_lm = previous.landmarks[prev_index];
+                cur_lm.landmark_id = landmark_id;
+                cur_lm.velocity = cur_lm.pt3d_norm - prev_lm.pt3d_norm;
+                cur_lm.velocity /= (frame.stamp - current_keyframe.stamp);
+                report.sum_parallex += (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm();
+                report.parallex_num ++;
+                // printf("[D2FeatureTracker] landmark %d, prev_pt %f %f, cur_pt %f %f norm prev_pt %f %f, cur_pt %f %f parallex %f\%\n", 
+                //     landmark_id, 
+                //     prev_lm.pt2d.x, prev_lm.pt2d.y,
+                //     cur_lm.pt2d.x, cur_lm.pt2d.y,
+                //     prev_lm.pt3d_norm.x(), prev_lm.pt3d_norm.y(), cur_lm.pt3d_norm.x(), cur_lm.pt3d_norm.y(), 
+                //     (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm()*100);
+                if (lmanager->at(landmark_id).track.size() >= _config.long_track_frames) {
+                    report.long_track_num ++;
+                } else {
+                    report.unmatched_num ++;
+                }
             }
         }
     }
-    // printf("sum_parallex %f num %d mean %.2f\n", report.sum_parallex, report.parallex_num, report.meanParallex());
+    if (_config.enable_lk_optical_flow) {
+        //Enable LK optical flow feature tracker also.
+        //This is for the case that the superpoint features is not tracked well.
+        report.compose(trackLK(frame));
+    }
     return report;
 }
 
-TrackReport D2FeatureTracker::track(VisualImageDesc & left_frame, VisualImageDesc & right_frame) {
+TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
+    //Track LK points
+    TrackReport report;
+    if (prev_lk_info.find(frame.camera_index) == prev_lk_info.end()) {
+        prev_lk_info[frame.camera_index] = LKImageInfo();
+    }
+    auto cur_lk_pts = prev_lk_info[frame.camera_index].lk_pts;
+    auto cur_lk_ids = prev_lk_info[frame.camera_index].lk_ids;
+    if (!cur_lk_ids.empty())
+        cur_lk_pts = opticalflowTrack(frame.raw_image, prev_lk_info[frame.camera_index].image, cur_lk_pts, cur_lk_ids);
+    std::vector<cv::Point2f> n_pts;
+    auto cur_all_pts = frame.landmarks2D();
+    cur_all_pts.insert(cur_all_pts.end(), cur_lk_pts.begin(), cur_lk_pts.end());
+    detectPoints(frame.raw_image, n_pts, cur_all_pts, params->total_feature_num);
+    report.unmatched_num += n_pts.size();
+    for (int i = 0; i < cur_lk_pts.size(); i++) {
+        auto lm = createLKLandmark(frame, cur_lk_pts[i], cur_lk_ids[i]);
+        auto track = lmanager->at(cur_lk_ids[i]).track;
+        LandmarkPerFrame prev_lm = track.back();
+        if (lm.frame_id != prev_lm.frame_id) {
+            lm.velocity = lm.pt3d_norm - prev_lm.pt3d_norm;
+            lm.velocity /= (lm.stamp - prev_lm.stamp);
+        }
+        lmanager->updateLandmark(lm);
+        frame.landmarks.emplace_back(lm);
+        if (lmanager->at(cur_lk_ids[i]).track.size() >= _config.long_track_frames) {
+            report.long_track_num ++;
+        }
+        //When computing parallex, we go to last keyframe
+        bool find_in_keyframe = false;
+        for (auto & lm_per_frame : track) {
+            if (lm_per_frame.frame_id == current_keyframe.frame_id) {
+                prev_lm = lm_per_frame;
+                find_in_keyframe = true;
+                break;
+            }
+        }
+        if (!find_in_keyframe) {
+            continue;
+        }
+        
+        report.sum_parallex += (lm.pt3d_norm - prev_lm.pt3d_norm).norm();
+        report.parallex_num ++;
+    }
+    for (auto & pt : n_pts) {
+        auto lm = createLKLandmark(frame, pt);
+        auto _id = lmanager->addLandmark(lm);
+        lm.landmark_id = _id;
+        frame.landmarks.emplace_back(lm);
+        cur_lk_pts.emplace_back(pt);
+        cur_lk_ids.emplace_back(_id);
+    }
+    prev_lk_info[frame.camera_index].lk_pts = cur_lk_pts;
+    prev_lk_info[frame.camera_index].lk_ids = cur_lk_ids;
+    prev_lk_info[frame.camera_index].image  = frame.raw_image.clone();
+    prev_lk_info[frame.camera_index].frame_id = frame.frame_id;
+    return report;
+}
+
+TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame) {
     auto prev_pts = left_frame.landmarks2D();
     auto cur_pts = right_frame.landmarks2D();
     std::vector<int> ids_down_to_up;
@@ -106,9 +175,35 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & left_frame, VisualImageDes
             report.stereo_point_num ++;
         }
     }
+    trackLK(left_frame, right_frame);
     return report;
 }
 
+TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, VisualImageDesc & right_frame) {
+    //Track LK points
+    //This function MUST run after track(...)
+    TrackReport report;
+    auto cur_lk_pts = prev_lk_info[left_frame.camera_index].lk_pts;
+    auto cur_lk_ids = prev_lk_info[left_frame.camera_index].lk_ids;
+    assert(left_frame.frame_id == prev_lk_info[left_frame.camera_index].frame_id);
+    if (!cur_lk_ids.empty())
+        cur_lk_pts = opticalflowTrack(right_frame.raw_image, left_frame.raw_image, cur_lk_pts, cur_lk_ids);
+    for (int i = 0; i < cur_lk_pts.size(); i++) {
+        auto lm = createLKLandmark(right_frame, cur_lk_pts[i], cur_lk_ids[i]);
+        lmanager->updateLandmark(lm);
+        right_frame.landmarks.emplace_back(lm);
+        auto lm_per_id = lmanager->at(cur_lk_ids[i]);
+        if (lm_per_id.track_r.size() > 0) {
+            auto prev_lm = lm_per_id.track_r.back();
+            if (lm.frame_id != prev_lm.frame_id) {
+                lm.velocity = lm.pt3d_norm - prev_lm.pt3d_norm;
+                lm.velocity /= (lm.stamp - prev_lm.stamp);
+            }
+        }
+    }
+    report.stereo_point_num = cur_lk_pts.size();
+    return report;
+}
 
 bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
     int prev_num = current_keyframe.landmarkNum();
@@ -124,6 +219,24 @@ bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
             return true;
     }
     return false;
+}
+
+LandmarkPerFrame D2FeatureTracker::createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id) {
+    Vector3d pt3d_norm;
+    cams.at(frame.camera_index)->liftProjective(Eigen::Vector2d(pt.x, pt.y), pt3d_norm);
+    pt3d_norm.normalize();
+    LandmarkPerFrame lm = LandmarkPerFrame::createLandmarkPerFrame(landmark_id, frame.frame_id, frame.stamp, 
+        LandmarkType::FlowLandmark, params->self_id, frame.camera_index, frame.camera_id, pt, pt3d_norm);
+    if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+        //Add depth information
+        auto dep = frame.raw_depth_image.at<unsigned short>(pt)/1000.0;
+        if (dep > params->loopcamconfig->DEPTH_NEAR_THRES && dep < params->loopcamconfig->DEPTH_FAR_THRES) {
+            auto pt3dcam = pt3d_norm*dep;
+            lm.depth = pt3dcam.norm();
+            lm.depth_mea = true;
+        }
+    }
+    return lm;
 }
 
 int LandmarkManager::addLandmark(const LandmarkPerFrame & lm) {
@@ -184,6 +297,8 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
         if (_id >= 0) {
             cv::Point2f prev;
             auto & pts2d = lmanager->at(_id).track;
+            if (pts2d.size() == 0) 
+                continue;
             if (!is_keyframe || pts2d.size() < 2 || is_right) {
                 prev = pts2d.back().pt2d;
             } else {
@@ -245,12 +360,12 @@ void D2FeatureTracker::draw(VisualImageDesc & lframe, VisualImageDesc & rframe, 
     }
 }
 
-void D2FeatureTracker::matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
-        std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
-        std::vector<int> & ids_down_to_up) const {
+void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
+        const std::vector<float> & _desc_up, const std::vector<float> & _desc_down, 
+        std::vector<int> & ids_down_to_up) {
     // printf("matchLocalFeatures %ld %ld: ", pts_up.size(), pts_down.size());
-    const cv::Mat desc_up( _desc_up.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_up.data());
-    const cv::Mat desc_down( _desc_down.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_down.data());
+    const cv::Mat desc_up(_desc_up.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(_desc_up.data()));
+    const cv::Mat desc_down(_desc_down.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(_desc_down.data()));
 
     cv::BFMatcher bfmatcher(cv::NORM_L2, true);
     std::vector<cv::DMatch> _matches;
@@ -271,11 +386,11 @@ void D2FeatureTracker::matchLocalFeatures(const std::vector<cv::Point2f> & pts_u
     }
 
     std::vector<unsigned char> mask;
-    if (_config.check_homography) {
+    if (params->ftconfig->check_homography) {
         if (up_2d.size() < MIN_HOMOGRAPHY) {
             return;
         }
-        cv::findHomography(up_2d, down_2d, cv::RANSAC, _config.ransacReprojThreshold, mask);
+        cv::findHomography(up_2d, down_2d, cv::RANSAC, params->ftconfig->ransacReprojThreshold, mask);
         reduceVector(ids_up, mask);
         reduceVector(ids_down, mask);
     }
@@ -284,5 +399,92 @@ void D2FeatureTracker::matchLocalFeatures(const std::vector<cv::Point2f> & pts_u
     }
     // printf("%ld/%ld matches...\n", ids_up.size(), _matches.size());
 }
+
+void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts) {
+    int lack_up_top_pts = require_pts - static_cast<int>(cur_pts.size());
+    cv::Mat mask;
+    if (params->enable_perf_output) {
+        ROS_INFO("Lost %d pts; Require %d will detect %d", lack_up_top_pts, require_pts, lack_up_top_pts > require_pts/4);
+    }
+    if (lack_up_top_pts > require_pts/4) {
+        cv::Mat d_prevPts;
+        cv::goodFeaturesToTrack(img, d_prevPts, lack_up_top_pts, 0.01, params->feature_min_dist, mask);
+        std::vector<cv::Point2f> n_pts_tmp;
+        // std::cout << "d_prevPts size: "<< d_prevPts.size()<<std::endl;
+        if(!d_prevPts.empty()) {
+            n_pts_tmp = cv::Mat_<cv::Point2f>(cv::Mat(d_prevPts));
+        }
+        else {
+            n_pts_tmp.clear();
+        }
+        n_pts.clear();
+        std::vector<cv::Point2f> all_pts = cur_pts;
+        for (auto & pt : n_pts_tmp) {
+            bool has_nearby = false;
+            for (auto &pt_j: all_pts) {
+                if (cv::norm(pt-pt_j) < params->feature_min_dist) {
+                    has_nearby = true;
+                    break;
+                }
+            }
+            if (!has_nearby) {
+                n_pts.push_back(pt);
+                all_pts.push_back(pt);
+            }
+        }
+    }
+    else {
+        n_pts.clear();
+    }
+}  
+
+bool inBorder(const cv::Point2f &pt, cv::Size shape)
+{
+    const int BORDER_SIZE = 1;
+    int img_x = cvRound(pt.x);
+    int img_y = cvRound(pt.y);
+    return BORDER_SIZE <= img_x && img_x < shape.width - BORDER_SIZE && BORDER_SIZE <= img_y && img_y < shape.height - BORDER_SIZE;
+}
+
+std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, std::vector<LandmarkIdType> & ids) {
+    if (prev_pts.size() == 0) {
+        return std::vector<cv::Point2f>();
+    }
+    TicToc tic;
+    std::vector<uchar> status;
+
+    if (prev_pts.size() == 0) {
+        return std::vector<cv::Point2f>();
+    }
+
+    // vector<cv::Point2f> cur_pts = get_predict_pts(ids, prev_pts, prediction_points);
+    std::vector<cv::Point2f> cur_pts = prev_pts;
+
+    std::vector<float> err;
+    cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, WIN_SIZE, PYR_LEVEL);
+    std::vector<cv::Point2f> reverse_pts;
+    std::vector<uchar> reverse_status;
+    cv::calcOpticalFlowPyrLK(cur_img, prev_img, cur_pts, reverse_pts, reverse_status, err, WIN_SIZE, PYR_LEVEL);
+
+    for(size_t i = 0; i < status.size(); i++)
+    {
+        if(status[i] && reverse_status[i] && cv::norm(prev_pts[i] - reverse_pts[i]) <= 0.5)
+        {
+            status[i] = 1;
+        }
+        else
+            status[i] = 0;
+    }
+
+    for (int i = 0; i < int(cur_pts.size()); i++){
+        if (status[i] && !inBorder(cur_pts[i], cur_img.size())) {
+            status[i] = 0;
+        }
+    }   
+    reduceVector(prev_pts, status);
+    reduceVector(cur_pts, status);
+    reduceVector(ids, status);
+    return cur_pts;
+} 
 
 }
