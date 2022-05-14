@@ -9,30 +9,32 @@ cv::Mat getImageFromMsg(const sensor_msgs::CompressedImageConstPtr &img_msg, int
     return cv::imdecode(img_msg->data, flag);
 }
 
-cv_bridge::CvImageConstPtr getImageFromMsg(const sensor_msgs::Image &img_msg)
+cv_bridge::CvImagePtr getImageFromMsg(const sensor_msgs::Image &img_msg)
 {
-    cv_bridge::CvImageConstPtr ptr;
+    cv_bridge::CvImagePtr ptr;
     // std::cout << img_msg->encoding << std::endl;
     if (img_msg.encoding == "8UC1" || img_msg.encoding == "mono8")
     {
         ptr = cv_bridge::toCvCopy(img_msg, "8UC1");
     } else if (img_msg.encoding == "16UC1" || img_msg.encoding == "mono16") {
         ptr = cv_bridge::toCvCopy(img_msg, "16UC1");
+        ptr->image.convertTo(ptr->image, CV_8UC1, 1.0/256.0);
     } else {
         ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::BGR8);        
     }
     return ptr;
 }
 
-cv_bridge::CvImageConstPtr getImageFromMsg(const sensor_msgs::ImageConstPtr &img_msg)
+cv_bridge::CvImagePtr getImageFromMsg(const sensor_msgs::ImageConstPtr &img_msg)
 {
-    cv_bridge::CvImageConstPtr ptr;
+    cv_bridge::CvImagePtr ptr;
     // std::cout << img_msg->encoding << std::endl;
     if (img_msg->encoding == "8UC1" || img_msg->encoding == "mono8")
     {
         ptr = cv_bridge::toCvCopy(img_msg, "8UC1");
     } else if (img_msg->encoding == "16UC1" || img_msg->encoding == "mono16") {
         ptr = cv_bridge::toCvCopy(img_msg, "16UC1");
+        ptr->image.convertTo(ptr->image, CV_8UC1, 1.0/256.0);
     } else {
         ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::BGR8);        
     }

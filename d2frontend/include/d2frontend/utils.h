@@ -7,8 +7,8 @@
 #include <chrono> 
 
 namespace D2FrontEnd {
-cv_bridge::CvImageConstPtr getImageFromMsg(const sensor_msgs::Image &img_msg);
-cv_bridge::CvImageConstPtr getImageFromMsg(const sensor_msgs::ImageConstPtr &img_msg);
+cv_bridge::CvImagePtr getImageFromMsg(const sensor_msgs::Image &img_msg);
+cv_bridge::CvImagePtr getImageFromMsg(const sensor_msgs::ImageConstPtr &img_msg);
 cv::Mat getImageFromMsg(const sensor_msgs::CompressedImageConstPtr &img_msg, int flag);
 
 template<typename T, typename B>
