@@ -175,7 +175,9 @@ TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualIm
             report.stereo_point_num ++;
         }
     }
-    trackLK(left_frame, right_frame);
+    if (_config.enable_lk_optical_flow) {
+        trackLK(left_frame, right_frame);
+    }
     return report;
 }
 
@@ -236,6 +238,7 @@ LandmarkPerFrame D2FeatureTracker::createLKLandmark(const VisualImageDesc & fram
             lm.depth_mea = true;
         }
     }
+    lm.color = extractColor(frame.raw_image, pt);
     return lm;
 }
 

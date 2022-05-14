@@ -79,4 +79,16 @@ Swarm::Pose PnPRestoCamPose(cv::Mat rvec, cv::Mat tvec) {
 
     return Swarm::Pose(R_w_c_old, T_w_c_old);
 }
+
+cv::Vec3b extractColor(const cv::Mat &img, cv::Point2f p) {
+    cv::Vec3b color;
+    if (img.channels() == 3) {
+        color = img.at<cv::Vec3b>(p);
+    } else {
+        auto grayscale = img.at<uchar>(p);
+        color = cv::Vec3b(grayscale, grayscale, grayscale);
+    }
+    return color;
+}
+
 }

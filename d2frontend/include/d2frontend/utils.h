@@ -26,6 +26,7 @@ Swarm::Pose AffineRestoCamPose(Eigen::Matrix4d affine);
 
 void PnPInitialFromCamPose(const Swarm::Pose &p, cv::Mat & rvec, cv::Mat & tvec);
 Swarm::Pose PnPRestoCamPose(cv::Mat rvec, cv::Mat tvec);
+cv::Vec3b extractColor(const cv::Mat &img, cv::Point2f p);
 
 class TicToc
 {

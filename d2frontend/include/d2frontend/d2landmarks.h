@@ -42,6 +42,7 @@ struct LandmarkPerFrame {
     double depth = -1;
     double cur_td = 0.0;
     bool depth_mea = false;
+    cv::Vec3b color;
 
     void setLandmarkId(LandmarkIdType id) {
         landmark_id = id;
@@ -155,12 +156,15 @@ struct LandmarkPerId {
     Eigen::Vector3d position;  //Note thiswill be modified by estimator.
     LandmarkFlag flag = UNINITIALIZED;
     LandmarkSolverFlag solver_flag = UNSOLVED; //If 1, is solved
-    LandmarkPerId() {}
+    cv::Vec3b color;
+    LandmarkPerId():
+        color(0, 0, 0) {}
     LandmarkPerId(const LandmarkPerFrame & Landmark):
         landmark_id(Landmark.landmark_id),
         drone_id(Landmark.drone_id),
         position(Landmark.pt3d),
-        flag(Landmark.flag)
+        flag(Landmark.flag),
+        color(Landmark.color)
     {
         add(Landmark);
     }

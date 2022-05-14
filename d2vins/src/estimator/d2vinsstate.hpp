@@ -17,7 +17,7 @@ protected:
     std::map<CamIdType, state_type*> _camera_extrinsic_state;
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
 
-    void popFrame(int index);
+    std::vector<LandmarkPerId> popFrame(int index);
     void outlierRejection();
     void updatePoseIndices();
     Marginalizer * marginalizer = nullptr;
@@ -46,7 +46,7 @@ public:
     bool hasLandmark(LandmarkIdType id) const;
 
     //Frame operations
-    void clearFrame();
+    std::vector<LandmarkPerId> clearFrame();
     void addFrame(const VisualImageDescArray & images, const VINSFrame & _frame, bool is_keyframe);
 
     //Frame access    

@@ -36,6 +36,7 @@ protected:
     int current_landmark_num = 0;
     ceres::Problem * problem = nullptr;
     std::set<int> used_camera_sets;
+    std::vector<LandmarkPerId> margined_landmarks;
 public:
     D2Estimator() {}
     void inputImu(IMUData data);
@@ -44,5 +45,6 @@ public:
     Swarm::Odometry getOdometry() const;
     void init(ros::NodeHandle & nh);
     D2EstimatorState & getState();
+    std::vector<LandmarkPerId> getMarginedLandmarks() const;
 };
 }

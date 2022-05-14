@@ -5,10 +5,11 @@
 
 namespace D2VINS {
 
-sensor_msgs::PointCloud toPointCloud(const std::vector<D2FrontEnd::LandmarkPerId> landmarks);
+sensor_msgs::PointCloud toPointCloud(const std::vector<D2FrontEnd::LandmarkPerId> landmarks, bool use_raw_color = false);
 
 void D2Visualization::init(ros::NodeHandle & nh, D2Estimator * estimator) {
     pcl_pub = nh.advertise<sensor_msgs::PointCloud>("point_cloud", 1000);
+    margined_pcl = nh.advertise<sensor_msgs::PointCloud>("margined_cloud", 1000);
     odom_pub = nh.advertise<nav_msgs::Odometry>("odometry", 1000);
     imu_prop_pub = nh.advertise<nav_msgs::Odometry>("imu_propagation", 1000);
     path_pub = nh.advertise<nav_msgs::Path>("path", 1000);
@@ -22,6 +23,7 @@ void D2Visualization::postSolve() {
     imu_prop_pub.publish(imu_prop);
     auto pcl = _estimator->getState().getInitializedLandmarks();
     pcl_pub.publish(toPointCloud(pcl));
+    margined_pcl.publish(toPointCloud(_estimator->getMarginedLandmarks(), true));
 
     geometry_msgs::PoseStamped pose_stamped;
     pose_stamped.header = odom.header;
@@ -33,7 +35,7 @@ void D2Visualization::postSolve() {
     path_pub.publish(path);
 }
 
-sensor_msgs::PointCloud toPointCloud(const std::vector<D2FrontEnd::LandmarkPerId> landmarks) {
+sensor_msgs::PointCloud toPointCloud(const std::vector<D2FrontEnd::LandmarkPerId> landmarks, bool use_raw_color) {
     sensor_msgs::PointCloud pcl;
     pcl.header.frame_id = "world";
     pcl.points.resize(landmarks.size());
@@ -44,13 +46,17 @@ sensor_msgs::PointCloud toPointCloud(const std::vector<D2FrontEnd::LandmarkPerId
         pcl.points[i].x = landmarks[i].position.x();
         pcl.points[i].y = landmarks[i].position.y();
         pcl.points[i].z = landmarks[i].position.z();
-        Vector3i color(255., 255., 0.);
-        if (landmarks[i].flag == D2FrontEnd::LandmarkFlag::ESTIMATED) {
-            //set color to green
-            color = Vector3i(0., 255., 0.);
-        } else if (landmarks[i].flag == D2FrontEnd::LandmarkFlag::OUTLIER) {
-            //set color to gray
-            color = Vector3i(200., 200., 200.);
+        Vector3i color(255, 255, 0.);
+        if (use_raw_color) {
+            color = Vector3i(landmarks[i].color[2], landmarks[i].color[1], landmarks[i].color[0]);
+        } else {
+            if (landmarks[i].flag == D2FrontEnd::LandmarkFlag::ESTIMATED) {
+                //set color to green
+                color = Vector3i(0, 255, 0.);
+            } else if (landmarks[i].flag == D2FrontEnd::LandmarkFlag::OUTLIER) {
+                //set color to gray
+                color = Vector3i(200, 200, 200.);
+            }
         }
         uint32_t hex_r = (0xff & color(0)) << 16;
         uint32_t hex_g = (0xff & color(1)) << 8;

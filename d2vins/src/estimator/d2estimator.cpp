@@ -91,7 +91,7 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
 
 void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
-    state.clearFrame();
+    margined_landmarks = state.clearFrame();
     if (state.size() > 0) {
         imubuf.pop(state.firstFrame().stamp + state.td);
     }
@@ -334,6 +334,10 @@ void D2Estimator::setupPriorFactor(ceres::Problem & problem) {
         problem.AddResidualBlock(prior_factor, nullptr, prior_factor->getKeepParamsPointers());
         marginalizer->addPrior(prior_factor);
     }
+}
+
+std::vector<LandmarkPerId> D2Estimator::getMarginedLandmarks() const {
+    return margined_landmarks;
 }
 
 Swarm::Odometry D2Estimator::getImuPropagation() const {

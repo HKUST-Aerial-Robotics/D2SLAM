@@ -18,7 +18,7 @@ public:
     double * getLandmarkState(LandmarkIdType landmark_id) const;
     void initialLandmarks(const D2EstimatorState * state);
     void syncState(const D2EstimatorState * state);
-    void popFrame(FrameIdType frame_id);
+    std::vector<LandmarkPerId> popFrame(FrameIdType frame_id);
     std::vector<LandmarkPerId> getInitializedLandmarks() const;
     LandmarkPerId & getLandmark(LandmarkIdType landmark_id);
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;

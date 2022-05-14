@@ -8,7 +8,7 @@ using namespace Eigen;
 using D2FrontEnd::generateCameraId;
 namespace D2VINS {
 
-void D2EstimatorState::popFrame(int index) {
+std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
     //Remove from sliding window
     auto frame_id = sld_win[index]->frame_id;
     if (params->verbose) {
@@ -16,12 +16,13 @@ void D2EstimatorState::popFrame(int index) {
     }
     delete sld_win[index];
     sld_win.erase(sld_win.begin() + index);
-    lmanager.popFrame(frame_id);
+    auto ret = lmanager.popFrame(frame_id);
     frame_db.erase(frame_id);
     delete _frame_pose_state[frame_id];
     delete _frame_spd_Bias_state[frame_id];
     _frame_pose_state.erase(frame_id);
     _frame_spd_Bias_state.erase(frame_id);
+    return ret;
 }
 
 void D2EstimatorState::init(std::vector<Swarm::Pose> _extrinsic, double _td) {
@@ -106,21 +107,23 @@ std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements() con
     return lmanager.availableMeasurements();
 }
 
-void D2EstimatorState::clearFrame() {
+std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
+    std::vector<LandmarkPerId> ret;
     if (sld_win.size() >= params->min_solve_frames) {
         if (!sld_win[sld_win.size() - 1]->is_keyframe) {
             //If last frame is not keyframe then remove it.
-            popFrame(sld_win.size() - 1);
+            ret = popFrame(sld_win.size() - 1);
         } else if (sld_win.size() >= params->max_sld_win_size) {
             std::set<FrameIdType> clear_frames{sld_win[0]->frame_id};
             if (params->enable_marginalization) {
                 prior_factor = marginalizer->marginalize(clear_frames);
             }
-            popFrame(0);
+            ret = popFrame(0);
         }
     }
     outlierRejection();
     updatePoseIndices();
+    return ret;
 }
 
 void D2EstimatorState::updatePoseIndices() {
