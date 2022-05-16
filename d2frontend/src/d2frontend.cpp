@@ -1,6 +1,6 @@
 #include <d2frontend/d2frontend.h>
 #include <d2frontend/utils.h>
-
+#include <d2frontend/d2featuretracker.h>
 #include "ros/ros.h"
 #include <iostream>
 #include "d2frontend/loop_net.h"
@@ -195,7 +195,6 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     loop_cam->show = params->debug_image; 
     loop_detector = new LoopDetector(params->self_id, *(params->loopdetectorconfig));
     loop_detector->loop_cam = loop_cam;
-    loop_detector->enable_visualize = params->debug_image;
 
     loop_detector->on_loop_cb = [&] (LoopEdge & loop_con) {
         this->onLoopConnection(loop_con, true);

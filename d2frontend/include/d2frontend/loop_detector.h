@@ -123,7 +123,6 @@ public:
     void onImageRecv(const VisualImageDescArray & img_des, std::vector<cv::Mat> img = std::vector<cv::Mat>(0));
     void onLoopConnection(LoopEdge & loop_conn);
     LoopCam * loop_cam = nullptr;
-    bool enable_visualize = true;
     cv::Mat decode_image(const VisualImageDesc & _img_desc);
 
     int databaseSize() const;

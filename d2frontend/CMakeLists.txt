@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -Wall -Wno-deprecated-declarations -Wno-format")
 set(USE_TENSORRT on)
+set(USE_ONNX on)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -40,6 +41,11 @@ if (USE_TENSORRT)
   find_package(CUDA)
   include_directories(${CUDA_INCLUDE_DIRS} ${TORCH_INCLUDE_DIRS})
   add_definitions("-D USE_TENSORRT")
+endif()
+
+if (USE_ONNX)
+  add_definitions("-D USE_ONNX")
+  link_directories("/usr/local/lib/")
 endif()
 
 catkin_package(
@@ -88,27 +94,28 @@ set_property(TARGET ${PROJECT_NAME}_nodelet PROPERTY CXX_STANDARD 14)
 set_property(TARGET ${PROJECT_NAME}_node PROPERTY CXX_STANDARD 14)
 set_property(TARGET libd2frontend PROPERTY CXX_STANDARD 14)
 
-if (USE_TENSORRT)
-  cuda_add_library(loop_cnn
-    src/CNN/superpoint_tensorrt.cpp
-    src/CNN/tensorrt_generic.cpp
-    src/CNN/mobilenetvlad_tensorrt.cpp
-  )
-  target_link_libraries(loop_cnn nvinfer nvinfer_plugin  detector opencv_dnn)
+cuda_add_library(loop_cnn
+  src/CNN/superpoint_tensorrt.cpp
+  src/CNN/tensorrt_generic.cpp
+  src/CNN/mobilenetvlad_tensorrt.cpp
+  src/CNN/onnx_generic.cpp
+)
 
-  add_executable(loop_tensorrt_test
-    tests/loop_tensorrt_test.cpp
-  )
+#Use tensorrt and onnx
+target_link_libraries(loop_cnn nvinfer nvinfer_plugin  detector opencv_dnn onnxruntime)
 
-  target_link_libraries(loop_tensorrt_test
-    loop_cnn
-    dw
-    ${TORCH_LIBRARIES}
-    ${OpenCV_LIBRARIES}
-    ${catkin_LIBRARIES}
-    )
-    set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 14)
-endif()
+add_executable(loop_tensorrt_test
+  tests/loop_tensorrt_test.cpp
+)
+
+target_link_libraries(loop_tensorrt_test
+  loop_cnn
+  dw
+  ${TORCH_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${catkin_LIBRARIES}
+  )
+  set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 14)
 
 add_dependencies(${PROJECT_NAME}_nodelet
     ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -116,27 +123,15 @@ add_dependencies(${PROJECT_NAME}_nodelet
 add_dependencies(${PROJECT_NAME}_spy
     ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-if (USE_TENSORRT)
-  target_link_libraries(libd2frontend
-    ${catkin_LIBRARIES}
-    ${OpenCV_LIBRARIES}
-    ${TORCH_LIBRARIES}
-    lcm
-    faiss
-    dw
-    loop_cnn
-  )
-else()
-  target_link_libraries(libd2frontend
-    ${catkin_LIBRARIES}
-    ${OpenCV_LIBRARIES}
-    ${TORCH_LIBRARIES}
-    lcm
-    faiss
-    dw
-    loop_cnn
-  )
-endif()
+target_link_libraries(libd2frontend
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${TORCH_LIBRARIES}
+  lcm
+  faiss
+  dw
+  loop_cnn
+)
 
 
 target_link_libraries(${PROJECT_NAME}_nodelet

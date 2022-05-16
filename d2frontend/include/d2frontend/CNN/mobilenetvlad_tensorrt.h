@@ -1,8 +1,7 @@
 #pragma once
-
+#include "tensorrt_generic.h"
 #ifdef USE_TENSORRT
-#include "d2frontend/tensorrt_generic.h"
-namespace Swarm {
+namespace D2FrontEnd {
 class MobileNetVLADTensorRT: public TensorRTInferenceGeneric {
 public:
     bool enable_perf;

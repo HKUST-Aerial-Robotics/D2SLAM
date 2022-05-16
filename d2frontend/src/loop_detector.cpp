@@ -39,10 +39,10 @@ void LoopDetector::onImageRecv(const VisualImageDescArray & flatten_desc, std::v
     } else {
         if (loop_cam->getCameraConfiguration() == STEREO_FISHEYE) {
             ROS_INFO("[SWARM_LOOP] Detector start process KeyFrame from %d with %d images and landmark: %d", drone_id, flatten_desc.images.size(), 
-                flatten_desc.landmarkNum());
+                flatten_desc.spLandmarkNum());
         } else {
             ROS_INFO("[SWARM_LOOP] Detector start process KeyFrame from %d with landmark: %d and lm desc size %d", drone_id,
-                flatten_desc.images[0].landmarkNum(), flatten_desc.images[0].landmark_descriptor.size());
+                flatten_desc.images[0].spLandmarkNum(), flatten_desc.images[0].landmark_descriptor.size());
         }
     }
 
@@ -52,7 +52,7 @@ void LoopDetector::onImageRecv(const VisualImageDescArray & flatten_desc, std::v
 
     int dir_count = 0;
     for (auto & img : flatten_desc.images) {
-        if (img.landmarkNum() > 0) {
+        if (img.spLandmarkNum() > 0) {
             dir_count ++;
         }
     }
@@ -63,7 +63,7 @@ void LoopDetector::onImageRecv(const VisualImageDescArray & flatten_desc, std::v
         return;
     }
 
-    if (flatten_desc.landmarkNum() >= _config.MIN_LOOP_NUM) {
+    if (flatten_desc.spLandmarkNum() >= _config.MIN_LOOP_NUM) {
         bool init_mode = false;
         if (drone_id != self_id) {
             init_mode = true;
@@ -73,7 +73,7 @@ void LoopDetector::onImageRecv(const VisualImageDescArray & flatten_desc, std::v
         }
 
         //Initialize images for visualization
-        if (enable_visualize) {
+        if (params->debug_image) {
             for (unsigned int i = 0; i < images_num; i++) {
                 auto & img_des = flatten_desc.images[i];
                 if (imgs[i].empty()) {
@@ -131,7 +131,7 @@ void LoopDetector::onImageRecv(const VisualImageDescArray & flatten_desc, std::v
 
         // std::cout << "LOOP Detector cost" << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 <<"ms" << std::endl;
     } else {
-        ROS_WARN("[SWARM_LOOP] Frame contain too less landmark %d, give up", flatten_desc.landmarkNum());
+        ROS_WARN("[SWARM_LOOP] Frame contain too less landmark %d, give up", flatten_desc.spLandmarkNum());
     }
 
     t_sum += tt.toc();
@@ -153,7 +153,7 @@ cv::Mat LoopDetector::decode_image(const VisualImageDesc & _img_desc) {
 int LoopDetector::addToDatabase(const VisualImageDescArray & new_fisheye_desc) {
     for (size_t i = 0; i < new_fisheye_desc.images.size(); i++) {
         auto & img_desc = new_fisheye_desc.images[i];
-        if (img_desc.landmarkNum() > 0) {
+        if (img_desc.spLandmarkNum() > 0) {
             int index = addToDatabase(img_desc);
             imgid2fisheye[index] = new_fisheye_desc.frame_id;
             imgid2dir[index] = i;
@@ -262,7 +262,7 @@ VisualImageDescArray & LoopDetector::queryDescArrayFromFatabase(const VisualImag
         exit(-1);
     }
 
-    if (new_img_desc.images[camera_index_new].landmarkNum() > 0) {
+    if (new_img_desc.images[camera_index_new].spLandmarkNum() > 0) {
         double distance = -1;
         int id = queryFromDatabase(new_img_desc.images.at(camera_index_new), init_mode, nonkeyframe, distance);
         if (id != -1 && distance > best_distance) {
@@ -461,8 +461,8 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDescArray & new_fr
         int dir_new = _dir_new % _config.MAX_DIRS;
         int dir_old = ((main_dir_old - main_dir_new + _config.MAX_DIRS) % _config.MAX_DIRS + _dir_new)% _config.MAX_DIRS;
         if (dir_new < new_frame_desc.images.size() && dir_old < old_frame_desc.images.size()) {
-            printf(" [%d: %d](%d:%d) OK", dir_old, dir_new, old_frame_desc.images[dir_old].landmarkNum(), new_frame_desc.images[dir_new].landmarkNum());
-            if (old_frame_desc.images[dir_old].landmarkNum() > 0 && new_frame_desc.images[dir_new].landmarkNum() > 0) {
+            printf(" [%d: %d](%d:%d) OK", dir_old, dir_new, old_frame_desc.images[dir_old].spLandmarkNum(), new_frame_desc.images[dir_new].spLandmarkNum());
+            if (old_frame_desc.images[dir_old].spLandmarkNum() > 0 && new_frame_desc.images[dir_new].spLandmarkNum() > 0) {
                 dirs_new.push_back(dir_new);
                 dirs_old.push_back(dir_old);
             }
@@ -548,17 +548,17 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & new_img_des
         std::vector<cv::Point2f> &old_norm_2d,
         std::vector<cv::Point3f> &old_3d,
         std::vector<int> &old_idx) {
-    // ROS_INFO("[SWARM_LOOP](LoopDetector::computeCorrespondFeatures) %d %d ", new_img_desc.landmarkNum(), new_img_desc.landmark_descriptor.size());
-    assert(new_img_desc.landmarkNum() * FEATURE_DESC_SIZE == new_img_desc.landmark_descriptor.size() && "Desciptor size of new img desc must equal to to landmarks*256!!!");
-    assert(old_img_desc.landmarkNum() * FEATURE_DESC_SIZE == old_img_desc.landmark_descriptor.size() && "Desciptor size of old img desc must equal to to landmarks*256!!!");
+    // ROS_INFO("[SWARM_LOOP](LoopDetector::computeCorrespondFeatures) %d %d ", new_img_desc.spLandmarkNum(), new_img_desc.landmark_descriptor.size());
+    assert(new_img_desc.spLandmarkNum() * FEATURE_DESC_SIZE == new_img_desc.landmark_descriptor.size() && "Desciptor size of new img desc must equal to to landmarks*256!!!");
+    assert(old_img_desc.spLandmarkNum() * FEATURE_DESC_SIZE == old_img_desc.landmark_descriptor.size() && "Desciptor size of old img desc must equal to to landmarks*256!!!");
 
     auto & _old_lms = old_img_desc.landmarks;
     auto & _now_lms = new_img_desc.landmarks;
 
-    cv::Mat desc_now( new_img_desc.landmarkNum(), FEATURE_DESC_SIZE, CV_32F);
+    cv::Mat desc_now( new_img_desc.spLandmarkNum(), FEATURE_DESC_SIZE, CV_32F);
     memcpy(desc_now.data, new_img_desc.landmark_descriptor.data(), new_img_desc.landmark_descriptor.size()*sizeof(float));
 
-    cv::Mat desc_old( old_img_desc.landmarkNum(), FEATURE_DESC_SIZE, CV_32F);
+    cv::Mat desc_old( old_img_desc.spLandmarkNum(), FEATURE_DESC_SIZE, CV_32F);
     memcpy(desc_old.data, old_img_desc.landmark_descriptor.data(), old_img_desc.landmark_descriptor.size()*sizeof(float));
     
     cv::BFMatcher bfmatcher(cv::NORM_L2, true);
@@ -631,7 +631,7 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & new_frame_desc, cons
     std::vector<cv::Mat> imgs_new, std::vector<cv::Mat> imgs_old,
     LoopEdge & ret, bool init_mode) {
 
-    if (new_frame_desc.landmarkNum() < _config.MIN_LOOP_NUM) {
+    if (new_frame_desc.spLandmarkNum() < _config.MIN_LOOP_NUM) {
         return false;
     }
     //Recover imformation
@@ -646,8 +646,8 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & new_frame_desc, cons
         old_frame_desc.drone_id, main_dir_old, new_frame_desc.drone_id, main_dir_new,
         told, tnew, tnew - told,
         old_frame_desc.frame_id, new_frame_desc.frame_id,
-        old_frame_desc.landmarkNum(),
-        new_frame_desc.landmarkNum(),
+        old_frame_desc.spLandmarkNum(),
+        new_frame_desc.spLandmarkNum(),
         init_mode);
 
     std::vector<cv::Point2f> new_norm_2d;
@@ -695,7 +695,7 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & new_frame_desc, cons
         success = false;
     }
 
-    if (enable_visualize) {
+    if (params->debug_image) {
         cv::Mat show;
         char title[100] = {0};
         std::vector<cv::Mat> _matched_imgs;
@@ -781,10 +781,9 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & new_frame_desc, cons
         if (!show.empty() && success) {
             sprintf(PATH, "loop/match%d.png", loop_match_count);
             cv::imwrite(params->OUTPUT_PATH+PATH, show);
-            
-            cv::imshow("Matches", show);
-            cv::waitKey(10);
         }
+        cv::imshow("Matches", show);
+        cv::waitKey(10);
     }
 
     if (success) {

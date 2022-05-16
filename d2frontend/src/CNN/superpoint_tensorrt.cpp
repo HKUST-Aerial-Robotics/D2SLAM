@@ -1,11 +1,11 @@
-#include "d2frontend/superpoint_tensorrt.h"
+#include "d2frontend/CNN/superpoint_tensorrt.h"
 #include "d2frontend/d2frontend_params.h"
 #include "ATen/Parallel.h"
 #include "d2frontend/utils.h"
 #include "swarm_msgs/swarm_types.hpp"
 
 #define USE_PCA
-using namespace Swarm;
+using namespace D2FrontEnd;
 //NMS code is modified from https://github.com/KinglittleQ/SuperPoint_SLAM
 void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts,
             int border, int dist_thresh, int img_width, int img_height, int max_num);
@@ -133,7 +133,7 @@ void SuperPointTensorRT::inference(const cv::Mat & input, std::vector<cv::Point2
     } else if (_input.type() == CV_16U) {
         _input.convertTo(_input, CV_32F, 1/65535.0);
     }
-    doInference(_input);
+    ((CNNInferenceGeneric*) this)->doInference(_input);
     if (enable_perf) {
         std::cout << "Inference Time " << tic.toc();
     }

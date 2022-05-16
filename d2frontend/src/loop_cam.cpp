@@ -18,15 +18,19 @@ namespace D2FrontEnd {
 LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) : 
     camera_configuration(config.camera_configuration),
     self_id(config.self_id),
-#ifdef USE_TENSORRT
-    superpoint_net(config.superpoint_model, config.pca_comp, 
-        config.pca_mean, config.width, config.height, 
-        config.superpoint_thres, 
-        config.superpoint_max_num), 
-        netvlad_net(config.netvlad_model, config.netvlad_width, config.netvlad_height), 
-#endif
     _config(config)
 {
+#ifdef USE_TENSORRT
+    superpoint_net = new SuperPointTensorRT(config.superpoint_model, config.pca_comp, 
+            config.pca_mean, config.width, config.height, config.superpoint_thres, config.superpoint_max_num); 
+    if (!config.mobilenetvlad_use_onnx)
+        netvlad_net = new MobileNetVLADTensorRT(config.netvlad_model, config.netvlad_width, config.netvlad_height); 
+#endif
+#ifdef USE_ONNX
+    if (config.mobilenetvlad_use_onnx)
+        netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, config.netvlad_width, config.netvlad_height);
+#endif
+
     camodocal::CameraFactory cam_factory;
     for (auto & cam_calib_path : config.camera_config_paths) {
         ROS_INFO("Read camera from %s", cam_calib_path.c_str());
@@ -482,16 +486,25 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         cv::Mat roi = img(cv::Rect(0, img.rows*3/4, img.cols, img.rows/4));
         roi.setTo(cv::Scalar(0, 0, 0));
     }
-#ifdef USE_TENSORRT
     std::vector<cv::Point2f> landmarks_2d;
     if (_config.superpoint_max_num > 0) {
         //We only inference when superpoint max num > 0
         //otherwise, d2vins only uses LK optical flow feature.
-        superpoint_net.inference(img, landmarks_2d, vframe.landmark_descriptor);
+#ifdef USE_TENSORRT
+        superpoint_net->inference(img, landmarks_2d, vframe.landmark_descriptor);
+#endif
     }
 
     if (!superpoint_mode) {
-        vframe.image_desc = netvlad_net.inference(img);
+        if (_config.mobilenetvlad_use_onnx) {
+#ifdef USE_ONNX
+            vframe.image_desc = netvlad_onnx->inference(img);
+#endif
+        } else {
+#ifdef USE_TENSORRT
+            vframe.image_desc = netvlad_net->inference(img);
+#endif
+        }
     }
 
     for (unsigned int i = 0; i < landmarks_2d.size(); i++)
@@ -517,7 +530,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
     } 
 
     return vframe;
-#else
+#ifndef USE_TENSORRT
     HFNetSrv hfnet_srv;
     hfnet_srv.request.image = msg;
     if (superpoint_mode) {

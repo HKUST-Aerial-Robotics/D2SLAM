@@ -8,7 +8,8 @@
     <arg name="self_id"     default="1"/>
     <arg name="vins"     default="false"/>
     <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_rtx3080_480x640_fp16.trt"/>
-    <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640_rtx3080_fp16.trt" />
+    <!-- <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640_rtx3080_fp16.trt" /> -->
+    <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640.onnx" />
     <arg name="vins_config_path" default="/home/xuhao/data/taichislam/realsense/realsense_d2slam.yaml" />
     <arg name="max_freq" default="1.0" />
     <arg name="match_index_dist" default="50" />
@@ -17,7 +18,7 @@
     <arg name="init_loop_min_feature_num" default="20" />
     <arg name="nonkeyframe_waitsec" default="5.0" />
     <arg name="inter_drone_init_frames" default="3" />
-    <arg name="enable_loop" default="false" />
+    <arg name="enable_loop" default="true" />
     
     <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" >
         <rosparam>

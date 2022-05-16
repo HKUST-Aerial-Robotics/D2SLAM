@@ -1,22 +1,29 @@
 #pragma once
 #include "ros/ros.h"
 #include <iostream>
-#include "d2frontend/loop_net.h"
-#include "d2frontend/loop_cam.h"
-#include "d2frontend/loop_detector.h"
-#include "d2frontend/d2featuretracker.h"
 #include <chrono> 
 #include <Eigen/Eigen>
 #include <thread>
 #include <nav_msgs/Odometry.h>
 #include <mutex>
 #include <swarm_msgs/ImageArrayDescriptor.h>
+#include <swarm_msgs/swarm_types.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <sensor_msgs/CompressedImage.h>
+#include <sensor_msgs/Image.h>
+#include "d2frontend_types.h"
+#include "d2frontend_params.h"
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
 
 using namespace std::chrono; 
+using namespace swarm_msgs;
 
 namespace D2FrontEnd {
+class LoopCam;
+class LoopNet;
+class D2FeatureTracker;
+class LoopDetector;
 class D2Frontend {
 protected:
     LoopDetector * loop_detector = nullptr;

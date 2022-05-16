@@ -1,14 +1,13 @@
 #pragma once
-
+#include "tensorrt_generic.h"
 #ifdef USE_TENSORRT
-#include "d2frontend/tensorrt_generic.h"
 #include <torch/csrc/autograd/variable.h>
 #include <ATen/ATen.h>
 #include <torch/csrc/api/include/torch/types.h>
 #include <Eigen/Dense>
 
 #define SP_DESC_RAW_LEN 256
-namespace Swarm {
+namespace D2FrontEnd {
 class SuperPointTensorRT: public TensorRTInferenceGeneric {
     Eigen::MatrixXf pca_comp_T;
     Eigen::RowVectorXf pca_mean;

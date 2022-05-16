@@ -1,9 +1,10 @@
-#include "d2frontend/superpoint_tensorrt.h"
+#include "d2frontend/CNN/superpoint_tensorrt.h"
 #include "d2frontend/d2frontend_params.h"
-#include "d2frontend/mobilenetvlad_tensorrt.h"
+#include "d2frontend/CNN/mobilenetvlad_tensorrt.h"
 #include "d2frontend/utils.h"
 #include "swarm_msgs/swarm_types.hpp"
 using namespace Swarm;
+using namespace D2FrontEnd;
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -28,13 +29,13 @@ int main(int argc, char* argv[]) {
 
     cv::Mat img_gray;
     cv::cvtColor(img, img_gray, cv::COLOR_BGR2GRAY);
-    TicToc tic;
+    D2FrontEnd::TicToc tic;
     for (unsigned int i = 0; i < 1000; i ++) {
         sp_trt.inference(img_gray, kps, local_desc);
     }
     double dt = tic.toc();
     
-    TicToc tic2;
+    D2FrontEnd::TicToc tic2;
     for (unsigned int i = 0; i < 1000; i ++) {
         netvlad_trt.inference(img_gray);
     }

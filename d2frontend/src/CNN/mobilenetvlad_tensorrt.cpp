@@ -1,5 +1,5 @@
-#include "d2frontend/mobilenetvlad_tensorrt.h"
-using namespace Swarm;
+#include "d2frontend/CNN/mobilenetvlad_tensorrt.h"
+using namespace D2FrontEnd;
 
 std::vector<float> MobileNetVLADTensorRT::inference(const cv::Mat & input) {
     if (m_Engine == nullptr) {
@@ -14,7 +14,7 @@ std::vector<float> MobileNetVLADTensorRT::inference(const cv::Mat & input) {
     } else {
         input.convertTo(_input, CV_32F);
     }
-    doInference(_input);
+    ((CNNInferenceGeneric*) this)->doInference(_input);
 
     return std::vector<float>(m_OutputTensors[0].hostBuffer, m_OutputTensors[0].hostBuffer+descriptor_size);
 }

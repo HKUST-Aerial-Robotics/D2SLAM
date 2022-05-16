@@ -1,7 +1,7 @@
 #pragma once
 
 #include <d2vins/d2vins_types.hpp>
-#include "d2frontend/d2featuretracker.h"
+#include "d2frontend/d2landmark_manager.h"
 
 namespace D2VINS {
 class D2EstimatorState;

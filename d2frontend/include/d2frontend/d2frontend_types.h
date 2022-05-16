@@ -102,6 +102,16 @@ struct VisualImageDesc {
     int landmarkNum() const {
         return landmarks.size();
     }
+
+    int spLandmarkNum() const {
+        int size = 0;
+        for (auto& l : landmarks) {
+            if (l.type == LandmarkType::SuperPointLandmark) {
+                size++;
+            }
+        }
+        return size;
+    }
     
     VisualImageDesc() {}
 
@@ -230,6 +240,14 @@ struct VisualImageDescArray {
         return num;
     }
     
+     int spLandmarkNum() const {
+        int num = 0;
+        for (auto & img : images) {
+            num += img.spLandmarkNum();
+        }
+        return num;
+    }
+
     VisualImageDescArray() {}
     
     ~VisualImageDescArray() {

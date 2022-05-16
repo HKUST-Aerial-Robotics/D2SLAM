@@ -4,8 +4,10 @@
 #include <cv_bridge/cv_bridge.h>
 #include <functional>
 #include "d2frontend_params.h"
-#include "superpoint_tensorrt.h"
-#include "mobilenetvlad_tensorrt.h"
+#include "CNN/onnx_generic.h"
+#include "CNN/superpoint_tensorrt.h"
+#include "CNN/mobilenetvlad_tensorrt.h"
+#include "CNN/mobilenetvlad_onnx.h"
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <d2frontend/utils.h>
@@ -38,8 +40,8 @@ struct LoopCamConfig
     std::string netvlad_model;
     int width;
     int height; 
-    int netvlad_width = 320;
-    int netvlad_height = 240;
+    int netvlad_width = 640;
+    int netvlad_height = 480;
     int self_id = 0;
     bool OUTPUT_RAW_SUPERPOINT_DESC;
     bool right_cam_as_main = false;
@@ -48,6 +50,7 @@ struct LoopCamConfig
     int ACCEPT_MIN_3D_PTS;
     double DEPTH_FAR_THRES;
     bool stereo_as_depth_cam = false;
+    bool mobilenetvlad_use_onnx = true;
 };
 
 class LoopCam {
@@ -61,12 +64,13 @@ class LoopCam {
     CameraConfig camera_configuration;
     std::fstream fsp;
 #ifdef USE_TENSORRT
-    Swarm::SuperPointTensorRT superpoint_net;
-    Swarm::MobileNetVLADTensorRT netvlad_net;
+    SuperPointTensorRT * superpoint_net = nullptr;
+    MobileNetVLADTensorRT * netvlad_net = nullptr;
 #endif
-
+#ifdef USE_ONNX
+    MobileNetVLADONNX * netvlad_onnx = nullptr;
+#endif
     bool send_img;
-
 public:
 
     bool show = false;

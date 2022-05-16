@@ -1,13 +1,12 @@
 #pragma once
+//Original code from https://github.com/enazoe/yolo-tensorrt
+#include <opencv2/opencv.hpp>
+#include "CNN_generic.h"
 
 #ifdef USE_TENSORRT
-
-//Original code from https://github.com/enazoe/yolo-tensorrt
 #include "NvInfer.h"
-#include <opencv2/opencv.hpp>
 #include <trt_utils.h>
-
-namespace Swarm {
+namespace D2FrontEnd {
 struct TensorInfo
 {
     std::string blobName;
@@ -16,8 +15,7 @@ struct TensorInfo
     int bindingIndex{-1};
 };
 
-
-class TensorRTInferenceGeneric {
+class TensorRTInferenceGeneric: public CNNInferenceGeneric {
 protected:
     Logger m_Logger;
     nvinfer1::ICudaEngine* m_Engine = nullptr;
@@ -28,15 +26,10 @@ protected:
     cudaStream_t m_CudaStream;
     std::vector<TensorInfo> m_OutputTensors;
     int m_BatchSize = 1;
-    const std::string m_InputBlobName;
-    int width = 400;
-    int height = 208;
 public:
     TensorRTInferenceGeneric(std::string input_blob_name, int _width, int _height);
 
-    virtual void doInference(const unsigned char* input, const uint32_t batchSize);
-
-    virtual void doInference(const cv::Mat & input);
+    virtual void doInference(const unsigned char* input, const uint32_t batchSize) override;
 
     bool verifyEngine();
 
