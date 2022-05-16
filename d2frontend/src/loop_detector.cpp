@@ -153,7 +153,7 @@ cv::Mat LoopDetector::decode_image(const VisualImageDesc & _img_desc) {
 int LoopDetector::addToDatabase(const VisualImageDescArray & new_fisheye_desc) {
     for (size_t i = 0; i < new_fisheye_desc.images.size(); i++) {
         auto & img_desc = new_fisheye_desc.images[i];
-        if (img_desc.spLandmarkNum() > 0) {
+        if (img_desc.spLandmarkNum() > 0 && img_desc.image_desc.size() > 0) {
             int index = addToDatabase(img_desc);
             imgid2fisheye[index] = new_fisheye_desc.frame_id;
             imgid2dir[index] = i;

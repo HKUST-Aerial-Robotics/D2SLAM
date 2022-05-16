@@ -12,10 +12,16 @@ public:
     MobileNetVLADONNX(std::string engine_path, int _width, int _height, bool _enable_perf = false) : 
             ONNXInferenceGeneric(engine_path, "image:0", "descriptor:0", _width, _height),
             output_shape_{1, NETVLAD_DESC_SIZE},
-            input_shape_{1, _height, _width, 1}
+            input_shape_{1, _height, _width, 1},
+            results_{0}
     {
         std::cout << "Trying to init TRT engine of MobileNetVLADONNX@" << engine_path << std::endl;
-        init(engine_path);
+        input_image = new float[width*height];
+        auto memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
+        input_tensor_ = Ort::Value::CreateTensor<float>(memory_info,
+               input_image, width*height, input_shape_.data(), 4);
+        output_tensor_ = Ort::Value::CreateTensor<float>(memory_info,
+            results_.data(), results_.size(), output_shape_.data(), output_shape_.size());
     }
 
     std::vector<float> inference(const cv::Mat & input) {
@@ -29,18 +35,12 @@ public:
         if (_input.rows != height || _input.cols != width) {
             cv::resize(_input, _input, cv::Size(width, height));
         } 
-        _input.convertTo(_input, CV_32F, 1/255.0);
+        _input.convertTo(_input, CV_32F);
         doInference(_input.data, 1);
-        printf("MobileNetVLADONNX::inference() took %f ms\n", tic.toc());
+        if (params->enable_perf_output) {
+            printf("MobileNetVLADONNX::inference() took %f ms\n", tic.toc());
+        }
         return std::vector<float>(results_.begin(), results_.end());
-    }
-
-    void init(const std::string & engine_path) {
-        input_image = new float[width*height];
-        auto memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
-        input_tensor_ = Ort::Value::CreateTensor<float>(memory_info,
-               input_image, width*height, input_shape_.data(), 4);
-        output_tensor_ = Ort::Value::CreateTensor<float>(memory_info, results_.data(), results_.size(), output_shape_.data(), output_shape_.size());
     }
 };
 }
