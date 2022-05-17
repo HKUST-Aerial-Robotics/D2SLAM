@@ -7,8 +7,9 @@
     <arg name="is_4dof"     default="true"/>
     <arg name="self_id"     default="1"/>
     <arg name="vins"     default="false"/>
-    <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_rtx3080_480x640_fp16.trt"/>
+    <!-- <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_rtx3080_480x640_fp16.trt"/> -->
     <!-- <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640_rtx3080_fp16.trt" /> -->
+    <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_480x640.onnx"/>
     <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640.onnx" />
     <arg name="vins_config_path" default="/home/xuhao/data/taichislam/realsense/realsense_d2slam.yaml" />
     <arg name="max_freq" default="1.0" />

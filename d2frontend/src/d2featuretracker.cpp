@@ -426,7 +426,6 @@ void D2FeatureTracker::draw(VisualImageDesc & lframe, VisualImageDesc & rframe, 
 void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
         const std::vector<float> & _desc_up, const std::vector<float> & _desc_down, 
         std::vector<int> & ids_down_to_up) {
-    // printf("matchLocalFeatures %ld %ld: ", pts_up.size(), pts_down.size());
     const cv::Mat desc_up(_desc_up.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(_desc_up.data()));
     const cv::Mat desc_down(_desc_down.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(_desc_down.data()));
 
@@ -437,6 +436,9 @@ void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vect
     std::fill(ids_down_to_up.begin(), ids_down_to_up.end(), -1);
     std::vector<cv::Point2f> up_2d, down_2d;
     std::vector<int> ids_up, ids_down;
+    if (params->enable_perf_output) {
+        printf("[D2Frontend] matchLocalFeatures %ld %ld: matches %ld ", pts_up.size(), pts_down.size(), _matches.size());
+    }
     for (auto match : _matches) {
         if (match.distance < ACCEPT_SP_MATCH_DISTANCE) {
             ids_up.push_back(match.queryIdx);

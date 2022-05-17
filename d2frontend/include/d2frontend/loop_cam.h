@@ -8,6 +8,7 @@
 #include "CNN/superpoint_tensorrt.h"
 #include "CNN/mobilenetvlad_tensorrt.h"
 #include "CNN/mobilenetvlad_onnx.h"
+#include "CNN/superpoint_onnx.h"
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <d2frontend/utils.h>
@@ -50,7 +51,7 @@ struct LoopCamConfig
     int ACCEPT_MIN_3D_PTS;
     double DEPTH_FAR_THRES;
     bool stereo_as_depth_cam = false;
-    bool mobilenetvlad_use_onnx = true;
+    bool cnn_use_onnx = true;
 };
 
 class LoopCam {
@@ -69,6 +70,7 @@ class LoopCam {
 #endif
 #ifdef USE_ONNX
     MobileNetVLADONNX * netvlad_onnx = nullptr;
+    SuperPointONNX * superpoint_onnx = nullptr;
 #endif
     bool send_img;
 public:

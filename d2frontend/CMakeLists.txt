@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -Wall -Wno-deprecated-declarations -Wno-format")
-set(USE_TENSORRT on)
+set(USE_TENSORRT off)
 set(USE_ONNX on)
 
 find_package(catkin REQUIRED COMPONENTS
@@ -22,7 +22,6 @@ find_package(catkin REQUIRED COMPONENTS
   message_filters
 )
 
-
 SET("OpenCV_DIR"  "/usr/local/share/OpenCV/")
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -30,16 +29,18 @@ find_package(lcm REQUIRED)
 # find_package(Backward)
 set(TENSORRT_ROOT $ENV{HOME}/source/TensorRT-7.1.3.4)
 
-if (USE_TENSORRT)
-  set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch")
-  find_package(Torch REQUIRED)
+set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch")
+find_package(Torch REQUIRED)
+include_directories(${TORCH_INCLUDE_DIRS})
 
+if (USE_TENSORRT)
+  # set(CUDA_HOME "/usr/local/cuda-11.1")
   include_directories("$ENV{HOME}/source/yolo-tensorrt/modules/")
   include_directories("$ENV{HOME}/source/TensorRT-7.1.3.4/include")
 
   link_directories(${TENSORRT_ROOT}/lib)
   find_package(CUDA)
-  include_directories(${CUDA_INCLUDE_DIRS} ${TORCH_INCLUDE_DIRS})
+  include_directories(${CUDA_INCLUDE_DIRS})
   add_definitions("-D USE_TENSORRT")
 endif()
 
@@ -94,15 +95,32 @@ set_property(TARGET ${PROJECT_NAME}_nodelet PROPERTY CXX_STANDARD 14)
 set_property(TARGET ${PROJECT_NAME}_node PROPERTY CXX_STANDARD 14)
 set_property(TARGET libd2frontend PROPERTY CXX_STANDARD 14)
 
-cuda_add_library(loop_cnn
-  src/CNN/superpoint_tensorrt.cpp
-  src/CNN/tensorrt_generic.cpp
-  src/CNN/mobilenetvlad_tensorrt.cpp
-  src/CNN/onnx_generic.cpp
-)
+if (USE_TENSORRT)
+  cuda_add_library(loop_cnn
+    src/CNN/superpoint_tensorrt.cpp
+    src/CNN/tensorrt_generic.cpp
+    src/CNN/mobilenetvlad_tensorrt.cpp
+    src/CNN/superpoint_common.cpp
+    src/CNN/superpoint_onnx.cpp
+    src/loop_utils.cpp
+    src/d2frontend_params.cpp
+  )
+else()
+  add_library(loop_cnn
+    src/CNN/superpoint_common.cpp
+    src/CNN/superpoint_onnx.cpp
+    src/loop_utils.cpp
+    src/d2frontend_params.cpp
+  )
+endif()
+
 
 #Use tensorrt and onnx
-target_link_libraries(loop_cnn nvinfer nvinfer_plugin  detector opencv_dnn onnxruntime)
+if (USE_TENSORRT)
+  target_link_libraries(loop_cnn nvinfer nvinfer_plugin  detector opencv_dnn onnxruntime onnxruntime_providers_cuda onnxruntime_providers_shared)
+else()
+  target_link_libraries(loop_cnn opencv_dnn onnxruntime onnxruntime_providers_cuda onnxruntime_providers_shared)
+endif()
 
 add_executable(loop_tensorrt_test
   tests/loop_tensorrt_test.cpp

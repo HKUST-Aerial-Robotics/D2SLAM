@@ -93,4 +93,83 @@ cv::Vec3b extractColor(const cv::Mat &img, cv::Point2f p) {
     return color;
 }
 
+
+#define MAXBUFSIZE 100000
+Eigen::MatrixXf load_csv_mat_eigen(std::string csv) {
+    int cols = 0, rows = 0;
+    double buff[MAXBUFSIZE];
+
+    // Read numbers from file into buffer.
+    std::ifstream infile;
+    infile.open(csv);
+    std::string line;
+
+    while (getline(infile, line))
+    {
+        int temp_cols = 0;
+        std::stringstream          lineStream(line);
+        std::string                cell;
+
+        while (std::getline(lineStream, cell, ','))
+        {
+            buff[rows * cols + temp_cols] = std::stod(cell);
+            temp_cols ++;
+        }
+
+        rows ++;
+        if (cols > 0) {
+            assert(cols == temp_cols && "Matrix must have same cols on each rows!");
+        } else {
+            cols = temp_cols;
+        }
+    }
+
+    infile.close();
+
+    Eigen::MatrixXf result(rows,cols);
+    for (int i = 0; i < rows; i++)
+        for (int j = 0; j < cols; j++)
+            result(i,j) = buff[ cols*i+j ];
+
+    return result;
+}
+
+Eigen::VectorXf load_csv_vec_eigen(std::string csv) {
+    int cols = 0, rows = 0;
+    double buff[MAXBUFSIZE];
+
+    // Read numbers from file into buffer.
+    std::ifstream infile;
+    infile.open(csv);
+    while (! infile.eof())
+    {
+        std::string line;
+        getline(infile, line);
+
+        int temp_cols = 0;
+        std::stringstream stream(line);
+        while(! stream.eof())
+            stream >> buff[cols*rows+temp_cols++];
+
+        if (temp_cols == 0)
+            continue;
+
+        if (cols == 0)
+            cols = temp_cols;
+
+        rows++;
+    }
+
+    infile.close();
+
+    rows--;
+
+    // Populate matrix with numbers.
+    Eigen::VectorXf result(rows,cols);
+    for (int i = 0; i < rows; i++)
+            result(i) = buff[ i ];
+
+    return result;
+}
+
 }

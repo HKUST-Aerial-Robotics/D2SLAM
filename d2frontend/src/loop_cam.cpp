@@ -20,16 +20,19 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     self_id(config.self_id),
     _config(config)
 {
-#ifdef USE_TENSORRT
-    superpoint_net = new SuperPointTensorRT(config.superpoint_model, config.pca_comp, 
+    if (config.cnn_use_onnx) {
+#ifdef USE_ONNX
+        netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, config.netvlad_width, config.netvlad_height);
+        superpoint_onnx = new SuperPointONNX(config.superpoint_model, config.pca_comp, 
             config.pca_mean, config.width, config.height, config.superpoint_thres, config.superpoint_max_num); 
-    if (!config.mobilenetvlad_use_onnx)
+#endif
+    }else {
+#ifdef USE_TENSORRT
+        superpoint_net = new SuperPointTensorRT(config.superpoint_model, config.pca_comp, 
+            config.pca_mean, config.width, config.height, config.superpoint_thres, config.superpoint_max_num); 
         netvlad_net = new MobileNetVLADTensorRT(config.netvlad_model, config.netvlad_width, config.netvlad_height); 
 #endif
-#ifdef USE_ONNX
-    if (config.mobilenetvlad_use_onnx)
-        netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, config.netvlad_width, config.netvlad_height);
-#endif
+    }
 
     camodocal::CameraFactory cam_factory;
     for (auto & cam_calib_path : config.camera_config_paths) {
@@ -41,13 +44,6 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
             ROS_ERROR("Failed to read camera from %s", cam_calib_path.c_str());
         }
     }
-#ifndef USE_TENSORRT
-    hfnet_client = nh.serviceClient<HFNetSrv>("/swarm_loop/hfnet");
-    superpoint_client = nh.serviceClient<HFNetSrv>("/swarm_loop/superpoint");
-    printf("Waiting for deepnet......\n");
-    hfnet_client.waitForExistence();
-    superpoint_client.waitForExistence();
-#endif
     printf("Deepnet ready\n");
     if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
         fsp.open(params->OUTPUT_PATH+"superpoint.csv", std::fstream::app);
@@ -490,13 +486,19 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
     if (_config.superpoint_max_num > 0) {
         //We only inference when superpoint max num > 0
         //otherwise, d2vins only uses LK optical flow feature.
-#ifdef USE_TENSORRT
-        superpoint_net->inference(img, landmarks_2d, vframe.landmark_descriptor);
+        if (_config.cnn_use_onnx) {
+#ifdef USE_ONNX
+            superpoint_onnx->inference(img, landmarks_2d, vframe.landmark_descriptor);
 #endif
+        } else {
+#ifdef USE_TENSORRT
+            superpoint_net->inference(img, landmarks_2d, vframe.landmark_descriptor);
+#endif
+        }
     }
 
     if (!superpoint_mode) {
-        if (_config.mobilenetvlad_use_onnx) {
+        if (_config.cnn_use_onnx) {
 #ifdef USE_ONNX
             vframe.image_desc = netvlad_onnx->inference(img);
 #endif
@@ -530,43 +532,5 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
     } 
 
     return vframe;
-#ifndef USE_TENSORRT
-    HFNetSrv hfnet_srv;
-    hfnet_srv.request.image = msg;
-    if (superpoint_mode) {
-        if (superpoint_client.call(hfnet_srv))
-        {
-            auto &local_kpts = hfnet_srv.response.keypoints;
-            auto &local_descriptors = hfnet_srv.response.local_descriptors;
-            if (local_kpts.size() > 0)
-            {
-                // ROS_INFO("Received response from server desc.size %ld", desc.size());
-                // ROSPoints2LCM(local_kpts, img_des.landmarks_2d);
-                vframe.feature_descriptor = local_descriptors;
-                vframe.landmarks_flag.resize(img_des.landmarkNum());
-                std::fill(vframe.landmarks_flag.begin(),vframe.landmarks_flag.begin()+vframe.landmarkNum(),0);  
-                return vframe;
-            }
-        }
-    } else {
-        if (hfnet_client.call(hfnet_srv))
-        {
-            auto &desc = hfnet_srv.response.global_desc;
-            auto &local_kpts = hfnet_srv.response.keypoints;
-            auto &local_descriptors = hfnet_srv.response.local_descriptors;
-            if (desc.size() > 0)
-            {
-                // ROS_INFO("Received response from server desc.size %ld", desc.size());
-                vframe.image_desc = desc;
-                ROSPoints2LCM(local_kpts, img_des.landmarks_2d);
-                img_des.landmark_num = local_kpts.size();
-                vframe.feature_descriptor = local_descriptors;
-                vframe.landmarks_flag.resize(vframe.landmarkNum());
-                std::fill(vframe.landmarks_flag.begin(),vframe.landmarks_flag.begin()+vframe.landmark_num,0);  
-                return vframe;
-            }
-        }
-    }
-#endif
 }
 }

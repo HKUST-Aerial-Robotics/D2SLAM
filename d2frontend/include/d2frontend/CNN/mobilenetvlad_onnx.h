@@ -15,7 +15,7 @@ public:
             input_shape_{1, _height, _width, 1},
             results_{0}
     {
-        std::cout << "Trying to init TRT engine of MobileNetVLADONNX@" << engine_path << std::endl;
+        std::cout << "Trying to init MobileNetVLADONNX@" << engine_path << std::endl;
         input_image = new float[width*height];
         auto memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
         input_tensor_ = Ort::Value::CreateTensor<float>(memory_info,

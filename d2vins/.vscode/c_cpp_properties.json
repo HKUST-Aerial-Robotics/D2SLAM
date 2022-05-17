@@ -7,12 +7,15 @@
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/src"
             ],
-            "defines": [],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu17",
             "cppStandard": "gnu++14",
             "intelliSenseMode": "linux-gcc-x64",
-            "configurationProvider": "ms-vscode.cmake-tools"
+            "configurationProvider": "ms-vscode.cmake-tools",
+            "defines": [
+                "USE_TENSORRT",
+                "USE_ONNX"
+            ] 
         }
     ],
     "version": 4
