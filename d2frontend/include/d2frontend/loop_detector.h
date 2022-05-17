@@ -8,14 +8,9 @@
 #include <functional>
 #include <swarm_msgs/Pose.h>
 #include <swarm_msgs/swarm_types.hpp>
-#ifdef USE_DEEPNET
 #include <faiss/IndexFlat.h>
-#else
-#include <DBoW3/DBoW3.h>
-#endif
 
 using namespace swarm_msgs;
-
 #define REMOTE_MAGIN_NUMBER 1000000
 
 namespace D2FrontEnd {
@@ -45,7 +40,6 @@ class LoopDetector {
 
 protected:
     faiss::IndexFlatIP local_index;
-
     faiss::IndexFlatIP remote_index;
 
     std::map<int, int64_t> imgid2fisheye;
@@ -106,7 +100,7 @@ protected:
 
     int addToDatabase(const VisualImageDescArray & new_fisheye_desc);
     int addToDatabase(const VisualImageDesc & new_img_desc);
-    VisualImageDescArray & queryDescArrayFromFatabase(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & camera_index_new, int & camera_index_old);
+    VisualImageDescArray & queryDescArrayFromDatabase(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & camera_index_new, int & camera_index_old);
     int queryFromDatabase(const VisualImageDesc & new_img_desc, bool init_mode, bool nonkeyframe, double & distance);
     int queryFromDatabase(const VisualImageDesc & new_img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & distance);
 
@@ -120,7 +114,7 @@ public:
     std::function<void(LoopEdge &)> on_loop_cb;
     int self_id = -1;
     LoopDetector(int self_id, const LoopDetectorConfig & config);
-    void onImageRecv(const VisualImageDescArray & img_des, std::vector<cv::Mat> img = std::vector<cv::Mat>(0));
+    void processImageArray(const VisualImageDescArray & img_des);
     void onLoopConnection(LoopEdge & loop_conn);
     LoopCam * loop_cam = nullptr;
     cv::Mat decode_image(const VisualImageDesc & _img_desc);

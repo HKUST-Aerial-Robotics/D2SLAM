@@ -20,6 +20,8 @@ namespace backward
 }
 
 namespace D2FrontEnd {
+typedef std::lock_guard<std::mutex> lock_guard;
+
 void D2Frontend::onLoopConnection(LoopEdge & loop_con, bool is_local) {
     if(is_local) {
         loop_net->broadcastLoopConnection(loop_con);
@@ -133,7 +135,7 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     static int count = 0;
     // ROS_INFO("[D2Frontend::processStereoframe] %d", count ++);
     auto vframearry = loop_cam->processStereoframe(stereoframe, debug_imgs);
-    bool is_keyframe = feature_tracker->track(vframearry);
+    bool is_keyframe = feature_tracker->trackLocalFrames(vframearry);
     vframearry.prevent_adding_db = !is_keyframe;
     vframearry.is_keyframe = is_keyframe;
     received_image = true;
@@ -146,8 +148,27 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
             loop_net->broadcastVisualImageDescArray(vframearry);
         }
         if (params->enable_loop) {
-            loop_detector->onImageRecv(vframearry, debug_imgs);
+            lock_guard guard(loop_lock);
+            loop_queue.push(vframearry);
         }
+    }
+}
+
+void D2Frontend::onRemoteImage(VisualImageDescArray frame_desc) {
+    ROS_INFO("Received from remote!");
+    feature_tracker->trackRemoteFrames(frame_desc);
+    loop_detector->processImageArray(frame_desc);
+}
+
+void D2Frontend::loopTimerCallback(const ros::TimerEvent & e) {
+    if (loop_queue.size() > 0) {
+        VisualImageDescArray vframearry;
+        {
+            lock_guard guard(loop_lock);
+            vframearry = loop_queue.front();
+            loop_queue.pop();
+        }
+        loop_detector->processImageArray(vframearry);
     }
 }
 
@@ -173,11 +194,6 @@ void D2Frontend::onRemoteFrameROS(const swarm_msgs::ImageArrayDescriptor & remot
     if (received_image) {
         this->onRemoteImage(remote_img_desc);
     }
-}
-
-void D2Frontend::onRemoteImage(const VisualImageDescArray & frame_desc) {
-    ROS_INFO("Received from remote!");
-    loop_detector->onImageRecv(frame_desc);
 }
 
 D2Frontend::D2Frontend () {}
@@ -271,6 +287,8 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     timer = nh.createTimer(ros::Duration(0.01), [&](const ros::TimerEvent & e) {
         loop_net->scanRecvPackets();
     });
+
+    loop_timer = nh.createTimer(ros::Duration(0.01), &D2Frontend::loopTimerCallback, this);
 
     th = std::thread([&] {
         while(0 == loop_net->lcmHandle()) {

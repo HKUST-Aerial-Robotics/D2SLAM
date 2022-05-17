@@ -6,7 +6,7 @@ namespace D2FrontEnd {
 #define PYR_LEVEL 3
 #define WIN_SIZE cv::Size(21, 21)
 
-bool D2FeatureTracker::track(VisualImageDescArray & frames) {
+bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     bool iskeyframe = false;
     frame_count ++;
     TrackReport report;
@@ -43,8 +43,68 @@ bool D2FeatureTracker::track(VisualImageDescArray & frames) {
             }
         }
     }
-
     return iskeyframe;
+}
+
+bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
+    bool matched = false;
+    frame_count ++;
+    TrackReport report;
+
+    TicToc tic;
+    if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+        report.compose(track(frames.images[0]));
+    } else {
+        for (auto & frame : frames.images) {
+            report.compose(track(frame));
+        }
+    }
+    
+    report.ft_time = tic.toc();
+    // if (params->debug_image) {
+    //     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
+    //         draw(frames.images[0], frames.images[1], iskeyframe, report);
+    //     } else {
+    //         for (auto & frame : frames.images) {
+    //             draw(frame, iskeyframe, report);
+    //         }
+    //     }
+    // }
+    if (report.remote_matched_num > 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame) {
+    TrackReport report;
+    const Map<VectorXf> vlad_desc_remote(frame.image_desc.data(), NETVLAD_DESC_SIZE);
+    const Map<VectorXf> vlad_desc(current_keyframe.images[0].image_desc.data(), NETVLAD_DESC_SIZE);
+    if (vlad_desc.dot(vlad_desc_remote) < params->vlad_threshold) {
+        printf("[D2FeatureTracker] Remote image does not match current image\n");
+        return report;
+    }
+    if (current_keyframe.images.size() > 0 && current_keyframe.frame_id != frame.frame_id) {
+        //Then current keyframe has been assigned, feature tracker by LK.
+        auto & previous = current_keyframe.images[frame.camera_index];
+        auto prev_pts = previous.landmarks2D();
+        auto cur_pts = frame.landmarks2D();
+        std::vector<int> ids_down_to_up;
+        matchLocalFeatures(prev_pts, cur_pts, previous.landmark_descriptor, frame.landmark_descriptor, ids_down_to_up);
+        for (size_t i = 0; i < ids_down_to_up.size(); i++) { 
+            if (ids_down_to_up[i] >= 0) {
+                assert(ids_down_to_up[i] < previous.landmarkNum() && "too large");
+                auto local_index = ids_down_to_up[i];
+                auto &remote_lm = frame.landmarks[i];
+                auto &local_lm = previous.landmarks[local_index];
+                remote_to_local[remote_lm.landmark_id] = local_lm.landmark_id;
+                remote_lm.landmark_id = local_lm.landmark_id;
+                report.remote_matched_num ++;
+            }
+        }
+    }
+    return report;
 }
 
 TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {

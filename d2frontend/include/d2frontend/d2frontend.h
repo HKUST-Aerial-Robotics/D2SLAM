@@ -35,6 +35,9 @@ protected:
     Eigen::Vector3d last_keyframe_position = Eigen::Vector3d(10000, 10000, 10000);
 
     std::set<ros::Time> received_keyframe_stamps;
+    std::queue<VisualImageDescArray> loop_queue;
+    std::mutex loop_lock;
+
 
     virtual void frameCallback(const VisualImageDescArray & viokf) {};
 
@@ -63,9 +66,10 @@ protected:
 
     void onRemoteFrameROS(const swarm_msgs::ImageArrayDescriptor & remote_img_desc);
 
-    void onRemoteImage(const VisualImageDescArray & frame_desc);
+    void onRemoteImage(VisualImageDescArray frame_desc);
 
     void processStereoframe(const StereoFrame & stereoframe);
+    void loopTimerCallback(const ros::TimerEvent & event);
 
     ros::Subscriber camera_sub;
     ros::Subscriber viokeyframe_sub;
@@ -88,7 +92,7 @@ protected:
 
     std::thread th;
     bool received_image = false;
-    ros::Timer timer;
+    ros::Timer timer, loop_timer;
 public:
     D2Frontend ();
     

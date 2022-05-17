@@ -8,7 +8,7 @@ using namespace std::chrono;
 #define MAX_LOOP_ID 100000000
 
 namespace D2FrontEnd {
-void LoopDetector::onImageRecv(const VisualImageDescArray & flatten_desc, std::vector<cv::Mat> imgs) {
+void LoopDetector::processImageArray(const VisualImageDescArray & flatten_desc) {
     TicToc tt;
     static double t_sum = 0;
     static int t_count = 0;
@@ -29,10 +29,6 @@ void LoopDetector::onImageRecv(const VisualImageDescArray & flatten_desc, std::v
     int drone_id = flatten_desc.drone_id;
     int images_num = flatten_desc.images.size();
 
-    if (imgs.size() < images_num) {
-        imgs.resize(images_num);
-    }
-    
     if (drone_id!= this->self_id && databaseSize() == 0) {
         ROS_INFO("[SWARM_LOOP] Empty local database, where giveup remote image");
         return;
@@ -73,19 +69,23 @@ void LoopDetector::onImageRecv(const VisualImageDescArray & flatten_desc, std::v
         }
 
         //Initialize images for visualization
+        std::vector<cv::Mat> imgs;
+
         if (params->debug_image) {
             for (unsigned int i = 0; i < images_num; i++) {
                 auto & img_des = flatten_desc.images[i];
-                if (imgs[i].empty()) {
-                    if (img_des.image.size() != 0) {
-                        imgs[i] = decode_image(img_des);
-                    } else {
-                        // imgs[i] = cv::Mat(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
-                        imgs[i] = cv::Mat(params->height, params->width, CV_8U, cv::Scalar(255));
-                    }
+                if (!img_des.raw_image.empty()) {
+                    imgs.emplace_back(img_des.raw_image);
+                }
+                if (img_des.image.size() != 0) {
+                    imgs.emplace_back(decode_image(img_des));
+                } else {
+                    // imgs[i] = cv::Mat(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
+                    imgs.emplace_back(cv::Mat(params->height, params->width, CV_8U, cv::Scalar(255)));
                 }
             }
         }
+
 
         if (!flatten_desc.prevent_adding_db || new_node) {
             addToDatabase(flatten_desc);
@@ -102,7 +102,7 @@ void LoopDetector::onImageRecv(const VisualImageDescArray & flatten_desc, std::v
             
             int camera_index = 1;
             int camera_index_old = -1;
-            VisualImageDescArray & _old_fisheye_img = queryDescArrayFromFatabase(flatten_desc, init_mode, flatten_desc.prevent_adding_db, camera_index, camera_index_old);
+            VisualImageDescArray & _old_fisheye_img = queryDescArrayFromDatabase(flatten_desc, init_mode, flatten_desc.prevent_adding_db, camera_index, camera_index_old);
             auto stop = high_resolution_clock::now(); 
 
             if (camera_index_old >= 0 ) {
@@ -158,6 +158,9 @@ int LoopDetector::addToDatabase(const VisualImageDescArray & new_fisheye_desc) {
             imgid2fisheye[index] = new_fisheye_desc.frame_id;
             imgid2dir[index] = i;
             // ROS_INFO("[SWARM_LOOP] Add keyframe from %d(dir %d) to local keyframe database index: %d", img_desc.drone_id, i, index);
+        }
+        if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+            break;
         }
     }
     keyframe_database[new_fisheye_desc.frame_id] = new_fisheye_desc;
@@ -245,7 +248,7 @@ int LoopDetector::queryFromDatabase(const VisualImageDesc & img_desc, faiss::Ind
 }
 
 
-VisualImageDescArray & LoopDetector::queryDescArrayFromFatabase(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & camera_index_new, int & camera_index_old) {
+VisualImageDescArray & LoopDetector::queryDescArrayFromDatabase(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & camera_index_new, int & camera_index_old) {
     double best_distance = -1;
     int best_image_id = -1;
     //Strict use camera_index 1 now
@@ -258,7 +261,7 @@ VisualImageDescArray & LoopDetector::queryDescArrayFromFatabase(const VisualImag
     ) {
         camera_index_new = 0;
     } else {
-        ROS_ERROR("[SWARM_LOOP] Camera configuration %d not support yet in queryDescArrayFromFatabase", loop_cam->getCameraConfiguration());
+        ROS_ERROR("[SWARM_LOOP] Camera configuration %d not support yet in queryDescArrayFromDatabase", loop_cam->getCameraConfiguration());
         exit(-1);
     }
 
@@ -457,14 +460,19 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDescArray & new_fr
         main_dir_new, new_frame_desc.drone_id
     );
 
-    for (int _dir_new = main_dir_new; _dir_new < main_dir_new + _config.MAX_DIRS; _dir_new ++) {
-        int dir_new = _dir_new % _config.MAX_DIRS;
-        int dir_old = ((main_dir_old - main_dir_new + _config.MAX_DIRS) % _config.MAX_DIRS + _dir_new)% _config.MAX_DIRS;
-        if (dir_new < new_frame_desc.images.size() && dir_old < old_frame_desc.images.size()) {
-            printf(" [%d: %d](%d:%d) OK", dir_old, dir_new, old_frame_desc.images[dir_old].spLandmarkNum(), new_frame_desc.images[dir_new].spLandmarkNum());
-            if (old_frame_desc.images[dir_old].spLandmarkNum() > 0 && new_frame_desc.images[dir_new].spLandmarkNum() > 0) {
-                dirs_new.push_back(dir_new);
-                dirs_old.push_back(dir_old);
+    if (params->camera_configuration == STEREO_PINHOLE || params->camera_configuration == PINHOLE_DEPTH) {
+        dirs_new = {0};
+        dirs_old = {0};
+    } else {
+        for (int _dir_new = main_dir_new; _dir_new < main_dir_new + _config.MAX_DIRS; _dir_new ++) {
+            int dir_new = _dir_new % _config.MAX_DIRS;
+            int dir_old = ((main_dir_old - main_dir_new + _config.MAX_DIRS) % _config.MAX_DIRS + _dir_new)% _config.MAX_DIRS;
+            if (dir_new < new_frame_desc.images.size() && dir_old < old_frame_desc.images.size()) {
+                printf(" [%d: %d](%d:%d) OK", dir_old, dir_new, old_frame_desc.images[dir_old].spLandmarkNum(), new_frame_desc.images[dir_new].spLandmarkNum());
+                if (old_frame_desc.images[dir_old].spLandmarkNum() > 0 && new_frame_desc.images[dir_new].spLandmarkNum() > 0) {
+                    dirs_new.push_back(dir_new);
+                    dirs_old.push_back(dir_old);
+                }
             }
         }
     }
@@ -565,13 +573,14 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & new_img_des
     std::vector<cv::DMatch> _matches;
     std::vector<unsigned char> mask;
     bfmatcher.match(desc_now, desc_old, _matches);
+    printf("[SWARM_LOOP] matches: %d\n", _matches.size());
 
 #ifdef USE_FUNDMENTAL
     std::vector<cv::Point2f> old_2d, new_2d;
     for (auto match : _matches) {
         int now_id = match.queryIdx;
         int old_id = match.trainIdx;
-        if (new_img_desc.landmarks[now_id].flag) {
+        if (new_img_desc.landmarks[now_id].flag == LandmarkFlag::ESTIMATED || true) {
             new_2d.push_back(_now_lms[now_id].pt2d);
             old_2d.push_back(_old_lms[old_id].pt2d);
 

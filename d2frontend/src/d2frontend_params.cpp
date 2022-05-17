@@ -65,6 +65,7 @@ namespace D2FrontEnd {
         ftconfig->long_track_frames = fsSettings["landmark_estimate_tracks"];
         ftconfig->check_homography = (int) fsSettings["check_homography"];
         ftconfig->enable_lk_optical_flow = (int) fsSettings["enable_lk_optical_flow"];
+        params->vlad_threshold = fsSettings["vlad_threshold"];
         nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
         nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);

@@ -66,6 +66,7 @@ struct D2FrontendParams {
     double recv_msg_duration = 0.5;
     double feature_min_dist = 20;
     int total_feature_num = 150;
+    double vlad_threshold = 0.3;
 
     bool debug_image = false;
     double min_movement_keyframe = 0.3;
