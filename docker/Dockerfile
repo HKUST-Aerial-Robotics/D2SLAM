@@ -38,6 +38,7 @@ RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` ma
       build-essential \
       python3-rosdep \
       ros-noetic-catkin \
+      net-tools \
       python3-catkin-tools && \
       rosdep init && \
       rosdep update
