@@ -83,7 +83,8 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
       git checkout tags/v1.4.0 && \
       mkdir build && cd build && \
       cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
-      make -j$(USE_PROC) install
+      make -j$(USE_PROC) install && \
+      pip install lcm
 
 #Install Faiss
 RUN   git clone https://github.com/facebookresearch/faiss.git && \
@@ -99,8 +100,9 @@ RUN wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.
 #Build D2SLAM
 RUN mkdir -p ${SWARM_WS}/src/ && \
       cd ${SWARM_WS}/src/ && \
-      git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM
+      git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM && \
+      git clone https://github.com/HKUST-Swarm/sync_bag_player.git 
 COPY ./ ${SWARM_WS}/src/
 WORKDIR $SWARM_WS
 RUN   source "/opt/ros/noetic/setup.bash" && \
-      catkin build d2vins
+      catkin build
