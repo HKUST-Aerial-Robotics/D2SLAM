@@ -13,7 +13,9 @@ RUN  apt-get -y update && \
       libeigen3-dev \
       libgoogle-glog-dev \
       libsuitesparse-dev \
-      libglib2.0-dev
+      libglib2.0-dev \
+      libyaml-cpp-dev \
+      libdw-dev
 
 #Install ROS
 # update ros repository
@@ -50,9 +52,8 @@ RUN   rm /usr/local/bin/cmake && \
       && cmake --version
 
 #Install ceres
-RUN   git clone https://github.com/HKUST-Swarm/ceres-solver && \
+RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       cd ceres-solver && \
-      git checkout tags/${CERES_VERSION} && \
       mkdir build && cd build && \
       cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
       make -j$(USE_PROC) install && \
@@ -94,12 +95,12 @@ RUN   git clone https://github.com/facebookresearch/faiss.git && \
 
 #Install Backward
 RUN wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp -O /usr/local/include/backward.hpp
-RUN apt install libyaml-cpp-dev libdw-dev -y
+
 #Build D2SLAM
-RUN mkdir -p /root/${SWARM_WS}/src/ && \
-      cd /root/${SWARM_WS}/src/ && \
+RUN mkdir -p ${SWARM_WS}/src/ && \
+      cd ${SWARM_WS}/src/ && \
       git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM
-COPY ./ /root/${SWARM_WS}/src/
-WORKDIR /root/$SWARM_WS
+COPY ./ ${SWARM_WS}/src/
+WORKDIR $SWARM_WS
 RUN   source "/opt/ros/noetic/setup.bash" && \
       catkin build d2vins
