@@ -239,7 +239,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
 
     if (vframe.image_desc.size() == 0)
     {
-        ROS_WARN("Failed on deepnet.");
+        ROS_WARN("Failed on deepnet: vframe.image_desc.size() == 0.");
         cv::Mat _img;
         // return ides;
     }
@@ -340,7 +340,7 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
 
     if (vframe0.image_desc.size() == 0 && vframe1.image_desc.size() == 0)
     {
-        ROS_WARN("Failed on deepnet;");
+        ROS_WARN("Failed on deepnet: vframe0.image_desc.size() == 0 && vframe1.image_desc.size() == 0");
         // cv::Mat _img;
         // return ides;
     }
@@ -500,6 +500,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
     if (!superpoint_mode) {
         if (_config.cnn_use_onnx) {
 #ifdef USE_ONNX
+            printf("NetVLAD by onnx\n");
             vframe.image_desc = netvlad_onnx->inference(img);
 #endif
         } else {

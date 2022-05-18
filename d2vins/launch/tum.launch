@@ -7,8 +7,10 @@
     <arg name="is_4dof"     default="true"/>
     <arg name="self_id"     default="1"/>
     <arg name="vins"     default="false"/>
-    <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_rtx3080_512x512_fp16.trt"/>
-    <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_240x320_rtx3080_fp16.trt" />
+    <!-- <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_rtx3080_512x512_fp16.trt"/> -->
+    <!-- <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_240x320_rtx3080_fp16.trt" /> -->
+    <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_512x512.onnx"/>
+    <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640.onnx" />
     <arg name="vins_config_path" default="/home/xuhao/data/tum_datasets/Configs/SwarmConfig1/tum/tum_d2slam.yaml" />
     <arg name="max_freq" default="1.0" />
     <arg name="match_index_dist" default="50" />
