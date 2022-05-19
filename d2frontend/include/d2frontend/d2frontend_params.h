@@ -57,7 +57,6 @@ struct D2FrontendParams {
     int JPG_QUALITY;
     double ACCEPT_NONKEYFRAME_WAITSEC;
     bool USE_DEPTH;
-    bool IS_PC_REPLAY;
     bool SEND_ALL_FEATURES;
     std::string OUTPUT_PATH;
     int width;
@@ -68,7 +67,6 @@ struct D2FrontendParams {
     int total_feature_num = 150;
     double vlad_threshold = 0.3;
 
-    bool debug_image = false;
     double min_movement_keyframe = 0.3;
     int self_id = 0;
     std::string vins_config_path;
@@ -84,7 +82,8 @@ struct D2FrontendParams {
     bool enable_sub_remote_frame;
     bool send_whole_img_desc;
     bool enable_perf_output = false;
-
+    bool debug_image = false;
+    bool debug_plot_superpoint_features = false;
     bool enable_loop = true;
     bool enable_network = true;
 

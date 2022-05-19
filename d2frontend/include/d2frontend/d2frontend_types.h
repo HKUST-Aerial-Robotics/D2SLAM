@@ -136,6 +136,7 @@ struct VisualImageDesc {
         swarm_msgs::ImageDescriptor img_desc;
         img_desc.header.stamp = ros::Time(stamp);
         img_desc.drone_id = drone_id;
+        img_desc.frame_id = frame_id;
         img_desc.landmark_descriptor = landmark_descriptor;
         img_desc.pose_drone = toROSPose(pose_drone);
         img_desc.camera_extrinsic = toROSPose(extrinsic);
@@ -156,6 +157,7 @@ struct VisualImageDesc {
         ImageDescriptor_t img_desc;
         img_desc.timestamp = toLCMTime(ros::Time(stamp));
         img_desc.drone_id = drone_id;
+        img_desc.frame_id = frame_id;
         img_desc.landmark_descriptor = landmark_descriptor;
         img_desc.landmark_descriptor_size = landmark_descriptor.size();
 
@@ -181,7 +183,8 @@ struct VisualImageDesc {
 
     VisualImageDesc(const swarm_msgs::ImageDescriptor & desc):
         extrinsic(desc.camera_extrinsic),
-        pose_drone(desc.pose_drone)
+        pose_drone(desc.pose_drone),
+        frame_id(desc.frame_id)
     {
         stamp = desc.header.stamp.toSec();
         drone_id = desc.drone_id;
@@ -199,12 +202,14 @@ struct VisualImageDesc {
 
     VisualImageDesc(const ImageDescriptor_t & desc):
         extrinsic(desc.camera_extrinsic),
-        pose_drone(desc.pose_drone)
+        pose_drone(desc.pose_drone),
+        frame_id(desc.frame_id)
     {
         stamp = toROSTime(desc.timestamp).toSec();
         drone_id = desc.drone_id;
         landmark_descriptor = desc.landmark_descriptor;
         image_desc = desc.image_desc;
+        printf("from ImageDescriptor_t frame_id %ld size %d\n", frame_id, image_desc.size());
         image = desc.image;
         camera_index = desc.camera_index;
         prevent_adding_db = desc.prevent_adding_db;
@@ -265,10 +270,12 @@ struct VisualImageDescArray {
         }
     }
 
-    VisualImageDescArray(const ImageArrayDescriptor_t & img_desc) {
-        frame_id = img_desc.msg_id;
-        prevent_adding_db = img_desc.prevent_adding_db;
-        drone_id = img_desc.drone_id;
+    VisualImageDescArray(const ImageArrayDescriptor_t & img_desc):
+        frame_id(img_desc.frame_id),
+        prevent_adding_db(img_desc.prevent_adding_db),
+        drone_id(img_desc.drone_id),
+        is_keyframe(is_keyframe)
+    {
         stamp = toROSTime(img_desc.timestamp).toSec();
         pose_drone = Swarm::Pose(img_desc.pose_drone);
         for (auto & _img: img_desc.images) {
@@ -298,6 +305,7 @@ struct VisualImageDescArray {
         ret.timestamp = toLCMTime(ros::Time(stamp));
         ret.landmark_num = landmarkNum();
         ret.pose_drone = fromPose(pose_drone);
+        ret.is_keyframe = is_keyframe;
         for (auto & _img: images) {
             ret.images.emplace_back(_img.toLCM());
         }

@@ -75,7 +75,8 @@ class D2FeatureTracker {
     bool isKeyframe(const TrackReport & reports);
     void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
     void draw(VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const;
-    cv::Mat drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right=false) const;
+    void drawRemote(VisualImageDesc & frame, const TrackReport & report) const;
+    cv::Mat drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right=false, bool is_remote=false) const;
     std::unordered_map<LandmarkIdType, LandmarkIdType> remote_to_local; // Remote landmark id to local;
 public:
     D2FeatureTracker(D2FTConfig config):

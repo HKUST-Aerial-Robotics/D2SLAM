@@ -35,6 +35,10 @@ class LoopNet {
                 const std::string& chan, 
                 const ImageDescriptor_t* msg);
 
+    void onImgArrayRecevied(const lcm::ReceiveBuffer* rbuf,
+                const std::string& chan, 
+                const ImageArrayDescriptor_t* msg);
+
     void onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
                 const ImageDescriptorHeader_t* msg);

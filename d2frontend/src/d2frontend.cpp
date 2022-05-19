@@ -143,7 +143,6 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     frameCallback(vframearry);
 
     if (is_keyframe) {
-        //Do we need to wait for VIO?
         if (params->enable_network) {
             loop_net->broadcastVisualImageDescArray(vframearry);
         }
@@ -157,7 +156,9 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
 void D2Frontend::onRemoteImage(VisualImageDescArray frame_desc) {
     ROS_INFO("Received from remote!");
     feature_tracker->trackRemoteFrames(frame_desc);
-    loop_detector->processImageArray(frame_desc);
+    if (params->enable_loop) {
+        loop_detector->processImageArray(frame_desc);
+    }
 }
 
 void D2Frontend::loopTimerCallback(const ros::TimerEvent & e) {
@@ -207,8 +208,6 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     loop_cam = new LoopCam(*(params->loopcamconfig), nh);
     feature_tracker = new D2FeatureTracker(*(params->ftconfig));
     feature_tracker->cams = loop_cam->cams;
-        
-    loop_cam->show = params->debug_image; 
     loop_detector = new LoopDetector(params->self_id, *(params->loopdetectorconfig));
     loop_detector->loop_cam = loop_cam;
 

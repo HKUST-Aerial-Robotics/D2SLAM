@@ -70,29 +70,37 @@ struct LandmarkPerFrame {
     LandmarkPerFrame(const Landmark_t & Landmark):
         frame_id(Landmark.frame_id),
         landmark_id(Landmark.landmark_id),
+        type((LandmarkType)Landmark.type),
         stamp(toROSTime(Landmark.timestamp).toSec()),
         camera_index(Landmark.camera_index),
+        camera_id(Landmark.camera_id),
         drone_id(Landmark.drone_id),
         flag((LandmarkFlag) Landmark.flag),
         pt2d(Landmark.pt2d.x, Landmark.pt2d.y),
         pt3d_norm(Landmark.pt3d_norm.x, Landmark.pt3d_norm.y, Landmark.pt3d_norm.z),
         pt3d(Landmark.pt3d.x, Landmark.pt3d.y, Landmark.pt3d.z),
         velocity(Landmark.velocity.x, Landmark.velocity.y, Landmark.velocity.z),
-        depth(Landmark.depth)
+        depth(Landmark.depth),
+        depth_mea(Landmark.depth_mea),
+        cur_td(Landmark.cur_td)
     {}
 
     LandmarkPerFrame(const swarm_msgs::Landmark & Landmark):
         frame_id(Landmark.frame_id),
         landmark_id(Landmark.landmark_id),
+        type((LandmarkType)Landmark.type),
         stamp(Landmark.header.stamp.toSec()),
         camera_index(Landmark.camera_index),
+        camera_id(Landmark.camera_id),
         drone_id(Landmark.drone_id),
         flag((LandmarkFlag) Landmark.flag),
         pt2d(Landmark.pt2d.x, Landmark.pt2d.y),
         pt3d_norm(Landmark.pt3d_norm.x, Landmark.pt3d_norm.y, Landmark.pt3d_norm.z),
         pt3d(Landmark.pt3d.x, Landmark.pt3d.y, Landmark.pt3d.z),
         velocity(Landmark.velocity.x, Landmark.velocity.y, Landmark.velocity.z),
-        depth(Landmark.depth)
+        depth(Landmark.depth),
+        depth_mea(Landmark.depth_mea),
+        cur_td(Landmark.cur_td)
     {}
 
     Landmark_t toLCM() {
@@ -103,7 +111,10 @@ struct LandmarkPerFrame {
         ret.camera_index = camera_index;
         ret.drone_id = drone_id;
         ret.flag = flag;
+        ret.type = type;
+        ret.camera_id = camera_id;
         ret.depth = depth;
+        ret.depth_mea = depth_mea;
         ret.pt2d.x = pt2d.x;
         ret.pt2d.y = pt2d.y;
         ret.velocity.x = velocity.x();
@@ -115,6 +126,7 @@ struct LandmarkPerFrame {
         ret.pt3d.x = pt3d.x();
         ret.pt3d.y = pt3d.y();
         ret.pt3d.z = pt3d.z();
+        ret.cur_td = cur_td;
         return ret;
     }
 
@@ -126,7 +138,10 @@ struct LandmarkPerFrame {
         ret.camera_index = camera_index;
         ret.drone_id = drone_id;
         ret.flag = flag;
+        ret.type = type;
+        ret.camera_id = camera_id;
         ret.depth = depth;
+        ret.depth_mea = depth_mea;
         ret.pt2d.x = pt2d.x;
         ret.pt2d.y = pt2d.y;
         ret.pt2d.z = 0.0;
@@ -140,6 +155,7 @@ struct LandmarkPerFrame {
         ret.pt3d.x = pt3d.x();
         ret.pt3d.y = pt3d.y();
         ret.pt3d.z = pt3d.z();
+        ret.cur_td = cur_td;
         return ret;
     }
 

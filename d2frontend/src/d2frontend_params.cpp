@@ -31,7 +31,6 @@ namespace D2FrontEnd {
         //Debug configs
         nh.param<bool>("send_img", send_img, false);
         nh.param<int>("jpg_quality", JPG_QUALITY, 50);
-        nh.param<bool>("is_pc_replay", IS_PC_REPLAY, false);
         nh.param<bool>("send_whole_img_desc", send_whole_img_desc, false);
         nh.param<bool>("debug_image", debug_image, false);
         nh.param<bool>("debug_no_rejection", loopdetectorconfig->DEBUG_NO_REJECT, false);

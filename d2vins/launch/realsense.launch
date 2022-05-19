@@ -38,7 +38,7 @@
             triangle_thres: 0.012
             #triangle_thres: 0.008
             min_direction_loop: 1
-            is_pc_replay: false
+            
             detector_match_thres: 0.7
             send_all_features: false
             lower_cam_as_main: false
@@ -49,7 +49,7 @@
             odometry_consistency_threshold: 3.0
             pos_covariance_per_meter: 0.01
             yaw_covariance_per_meter: 0.003
-            enable_network: false
+            enable_network: true
             show_feature_id: false
             check_homography: false
             ransacReprojThreshold: 10.0

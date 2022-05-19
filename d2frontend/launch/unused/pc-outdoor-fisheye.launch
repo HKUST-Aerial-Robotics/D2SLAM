@@ -34,7 +34,7 @@
             superpoint_max_num: 200
             triangle_thres: 0.012
             min_direction_loop: 2
-            is_pc_replay: true
+            
             detector_match_thres: 0.7
             output_path: /root/output/
             send_all_features: false
