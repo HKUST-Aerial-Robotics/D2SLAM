@@ -163,7 +163,11 @@ void D2EstimatorState::updatePoseIndices() {
 void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSFrame & _frame, bool is_keyframe) {
     auto * frame = new VINSFrame;
     *frame = _frame;
-    sld_win.push_back(frame);
+    if (_frame.drone_id != params->self_id) {
+        remote_sld_wins.at(_frame.drone_id).push_back(frame);
+    } else {
+        sld_win.push_back(frame);
+    }
     frame_db[frame->frame_id] = frame;
     _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
     _frame_spd_Bias_state[frame->frame_id] = new state_type[FRAME_SPDBIAS_SIZE];
@@ -171,7 +175,7 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
 
     lmanager.addKeyframe(images, td);
     if (params->verbose) {
-        printf("[D2VINS::D2EstimatorState] add frame %ld, current %ld frame\n", images.frame_id, sld_win.size());
+        printf("[D2VINS::D2EstimatorState] add frame %ld@%d, current %ld frame\n", images.frame_id, _frame.drone_id, sld_win.size());
     }
     updatePoseIndices();
 }

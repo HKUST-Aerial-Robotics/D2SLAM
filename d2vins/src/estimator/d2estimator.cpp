@@ -128,33 +128,21 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
 
 void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
-    // margined_landmarks = state.clearFrame();
-    // if (state.size() > 0) {
-    //     imubuf.pop(state.firstFrame().stamp + state.td);
-    // }
     // auto _imu = imubuf.periodIMU(frame.imu_queue);
-    // VINSFrame frame(_frame, _imu, state.lastFrame());
-    // if (params->init_method == D2VINSConfig::INIT_POSE_IMU) {
-    //     frame.odom = _imu.propagation(state.lastFrame());
-    // } else {
-    //     auto odom_imu = _imu.propagation(state.lastFrame());
-    //     auto pnp_init = initialFramePnP(_frame, state.lastFrame().odom.pose());
-    //     if (!pnp_init.first) {
-    //         //Use IMU
-    //         printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed, use IMU instead.\033[0m\n");
-    //     } else {
-    //         odom_imu.pose() = pnp_init.second;
-    //     }
-    //     frame.odom = odom_imu;
-    // }
-
-    // bool is_keyframe = _frame.is_keyframe; //Is keyframe is done in frontend
-    // state.addFrame(_frame, frame, is_keyframe);
-
-    // if (params->verbose || params->debug_print_states) {
-    //     printf("[D2VINS::D2Estimator] Initialize VINSFrame with %d: %s\n", 
-    //         params->init_method, frame.toStr().c_str());
-    // }
+    int r_drone_id = _frame.drone_id;
+    if (state.sizeRemote(r_drone_id) == 0) {
+        VINSFrame frame(_frame, _frame.Ba, _frame.Bg);
+        state.addFrame(_frame, frame, _frame.is_keyframe);
+        if (params->verbose || params->debug_print_states) {
+            printf("[D2VINS::D2Estimator] Initialize remote VINSFrame with %d: %s\n", _frame.drone_id, frame.toStr().c_str());
+        }
+    } else {
+        VINSFrame frame(_frame, _frame.imu_buf, state.lastRemoteFrame(r_drone_id));
+        state.addFrame(_frame, frame, _frame.is_keyframe);
+        if (params->verbose || params->debug_print_states) {
+            printf("[D2VINS::D2Estimator] Add Remote VINSFrame with %d: %s\n", _frame.drone_id, frame.toStr().c_str());
+        }
+    }
 }
 
 void D2Estimator::inputImage(VisualImageDescArray & _frame) {

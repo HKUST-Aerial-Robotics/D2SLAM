@@ -214,7 +214,9 @@ struct VisualImageDescArray {
     Swarm::Pose pose_drone;
     bool prevent_adding_db;
     bool is_keyframe = false;
-    std::vector<IMUData> imf_buf;
+    std::vector<IMUData> imu_buf;
+    Vector3d Ba;
+    Vector3d Bg;
 
     void sync_landmark_ids() {
         for (auto & image : images) {
@@ -259,12 +261,18 @@ struct VisualImageDescArray {
         frame_id(img_desc.frame_id),
         prevent_adding_db(img_desc.prevent_adding_db),
         drone_id(img_desc.drone_id),
-        is_keyframe(is_keyframe)
+        is_keyframe(is_keyframe),
+        Ba(img_desc.Ba.x, img_desc.Ba.y, img_desc.Ba.z),
+        Bg(img_desc.Bg.x, img_desc.Bg.y, img_desc.Bg.z)
     {
         stamp = toROSTime(img_desc.timestamp).toSec();
         pose_drone = Swarm::Pose(img_desc.pose_drone);
         for (auto & _img: img_desc.images) {
             images.emplace_back(_img);
+        }
+        for (int i = 0; i < img_desc.imu_buf.size(); i ++) {
+            auto data = img_desc.imu_buf[i];
+            imu_buf.emplace_back(IMUData(data));
         }
     }
 
@@ -295,6 +303,17 @@ struct VisualImageDescArray {
             ret.images.emplace_back(_img.toLCM());
         }
         ret.image_num = images.size();
+        ret.imu_buf_size = imu_buf.size();
+        ret.Ba.x = Ba.x();
+        ret.Ba.y = Ba.y();
+        ret.Ba.z = Ba.z();
+        ret.Bg.x = Bg.x();
+        ret.Bg.y = Bg.y();
+        ret.Bg.z = Bg.z();
+        
+        for (int i = 0; i < imu_buf.size(); i ++) {
+            ret.imu_buf.emplace_back(imu_buf[i].toLCM());
+        }
         return ret;
     }
 };

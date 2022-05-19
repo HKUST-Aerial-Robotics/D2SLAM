@@ -3,6 +3,8 @@
 #include "swarm_msgs/Pose.h"
 #include <swarm_msgs/Odometry.h>
 #include <mutex>
+#include <swarm_msgs/lcm_gen/IMUData_t.hpp>
+#include <swarm_msgs/swarm_lcm_converter.hpp>
 
 namespace D2Common {
 
@@ -13,12 +15,34 @@ struct IMUData {
     double dt = 0.0;
     Vector3d acc;
     Vector3d gyro;
+
     IMUData(): acc(0.0, 0.0, 0.0),gyro(0.0, 0.0, 0.0) {}
+    
     IMUData(const sensor_msgs::Imu & imu):
         t(imu.header.stamp.toSec()),
         gyro(imu.angular_velocity.x, imu.angular_velocity.y, imu.angular_velocity.z),
         acc(imu.linear_acceleration.x, imu.linear_acceleration.y, imu.linear_acceleration.z)
     {}
+
+    IMUData(const IMUData_t & imu):
+        dt(imu.dt),
+        gyro(imu.acc.x, imu.acc.y, imu.acc.z),
+        acc(imu.gyro.x, imu.gyro.y, imu.gyro.z) {
+        t = toROSTime(imu.timestamp).toSec();
+    }
+
+    IMUData_t toLCM() const { 
+        IMUData_t imu;
+        imu.timestamp = toLCMTime(ros::Time(t));
+        imu.dt = dt;
+        imu.gyro.x = gyro.x();
+        imu.gyro.y = gyro.y();
+        imu.gyro.z = gyro.z();
+        imu.acc.x = acc.x();
+        imu.acc.y = acc.y();
+        imu.acc.z = acc.z();
+        return imu;
+    }
 };
 
 
@@ -32,12 +56,19 @@ protected:
     typedef std::lock_guard<std::recursive_mutex> Guard;
     mutable std::recursive_mutex buf_lock;
 public:
+    std::vector<IMUData> buf;
     static Vector3d Gravity;
     IMUBuffer(const IMUBuffer & _buf)
         : buf(_buf.buf), t_last(_buf.t_last) {}
+
+    IMUBuffer(const std::vector<IMUData> & _buf) {
+        for (auto data : _buf) {
+            add(data);
+        }
+    }
+
     IMUBuffer() {}
 
-    std::vector<IMUData> buf;
 
     double t_last = 0.0;
     void add(const IMUData & data);
