@@ -117,9 +117,9 @@ endif()
 
 #Use tensorrt and onnx
 if (USE_TENSORRT)
-  target_link_libraries(loop_cnn nvinfer nvinfer_plugin  detector opencv_dnn onnxruntime onnxruntime_providers_cuda onnxruntime_providers_shared)
+  target_link_libraries(loop_cnn nvinfer nvinfer_plugin  detector opencv_dnn)
 else()
-  target_link_libraries(loop_cnn opencv_dnn onnxruntime onnxruntime_providers_cuda onnxruntime_providers_shared)
+  target_link_libraries(loop_cnn opencv_dnn onnxruntime)
 endif()
 
 add_executable(loop_tensorrt_test

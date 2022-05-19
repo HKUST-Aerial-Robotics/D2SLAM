@@ -50,7 +50,8 @@ add_library(${PROJECT_NAME}_estimator
   src/d2imu.cpp
   src/d2vins_types.cpp
   src/d2vins_params.cpp
-  src/estimator/visualization.cpp
+  src/visualization/visualization.cpp
+  src/visualization/CameraPoseVisualization.cpp
   src/estimator/landmark_manager.cpp
   src/estimator/d2vinsstate.cpp
   src/estimator/marginalization/marginalization.cpp

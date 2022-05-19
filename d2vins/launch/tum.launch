@@ -1,17 +1,15 @@
 <launch>
     <arg name="show" default="false" />
     <arg name="output" default="screen" />
-    <arg name="manager"     default="swarm_manager"/>
     <arg name="send_img"     default="false"/>
     <arg name="send_whole_img_desc"     default="false"/>
     <arg name="is_4dof"     default="true"/>
     <arg name="self_id"     default="1"/>
-    <arg name="vins"     default="false"/>
     <!-- <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_rtx3080_512x512_fp16.trt"/> -->
     <!-- <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_240x320_rtx3080_fp16.trt" /> -->
     <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_512x512.onnx"/>
     <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640.onnx" />
-    <arg name="vins_config_path" default="/home/xuhao/data/tum_datasets/Configs/SwarmConfig1/tum/tum_d2slam.yaml" />
+    <arg name="config" default="/home/xuhao/data/d2slam/tum_datasets/Configs/SwarmConfig1/tum/tum_d2slam.yaml" />
     <arg name="max_freq" default="1.0" />
     <arg name="match_index_dist" default="50" />
     <arg name="output_path" default="/home/dji/output/" />
@@ -20,6 +18,7 @@
     <arg name="nonkeyframe_waitsec" default="5.0" />
     <arg name="inter_drone_init_frames" default="3" />
     <arg name="enable_loop" default="false" />
+    <arg name="rviz" default="false" />
     
     <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" >
         <rosparam>
@@ -67,10 +66,10 @@
         <param name="init_loop_min_feature_num" value="$(arg init_loop_min_feature_num)" type="int" />
         <param name="max_freq" value="$(arg max_freq)" type="double" />
         <param name="inter_drone_init_frames" value="$(arg inter_drone_init_frames)" type="int" />
-        <param name="vins_config_path" value="$(arg vins_config_path)" type="string" />
+        <param name="vins_config_path" value="$(arg config)" type="string" />
         <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
         <param name="enable_loop" value="$(arg enable_loop)" type="bool" />
         <remap from="~imu" to="/dji_sdk_1/dji_sdk/imu" />
     </node>
-    <!-- <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2slam.rviz" /> -->
+    <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2slam.rviz" if="$(arg rviz)" />
 </launch>

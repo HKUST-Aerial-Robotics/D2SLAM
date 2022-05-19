@@ -1,7 +1,8 @@
 #include "visualization.hpp"
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/PointCloud.h>
-#include "d2estimator.hpp"
+#include "../estimator/d2estimator.hpp"
+#include "CameraPoseVisualization.h"
 
 namespace D2VINS {
 
@@ -13,6 +14,7 @@ void D2Visualization::init(ros::NodeHandle & nh, D2Estimator * estimator) {
     odom_pub = nh.advertise<nav_msgs::Odometry>("odometry", 1000);
     imu_prop_pub = nh.advertise<nav_msgs::Odometry>("imu_propagation", 1000);
     path_pub = nh.advertise<nav_msgs::Path>("path", 1000);
+    sld_win_pub = nh.advertise<visualization_msgs::MarkerArray>("slding_window", 1000);
     _estimator = estimator;
 }
 
@@ -33,6 +35,18 @@ void D2Visualization::postSolve() {
     path.header.frame_id = "world";
     path.poses.push_back(pose_stamped);
     path_pub.publish(path);
+
+    //For each drone
+    int drone_id = params->self_id;
+    CameraPoseVisualization cam_visual;
+    auto  & state = _estimator->getState();
+    for (int i = 0; i < state.size(); i ++) {
+        auto & frame = state.getFrame(i);
+        CamIdType camera_id = *state.getAvailableCameraIds().begin();
+        auto cam_pose = frame.odom.pose()*state.getExtrinsic(camera_id);
+        cam_visual.addPose(cam_pose.pos(), cam_pose.att());
+    }
+    cam_visual.publishBy(sld_win_pub, odom.header);
 }
 
 sensor_msgs::PointCloud toPointCloud(const std::vector<D2FrontEnd::LandmarkPerId> landmarks, bool use_raw_color) {

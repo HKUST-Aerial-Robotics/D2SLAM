@@ -31,6 +31,7 @@ RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` ma
       ros-noetic-nav-msgs \
       ros-noetic-sensor-msgs \
       ros-noetic-cv-bridge \
+      ros-noetic-rviz \
       python3-rosdep \
       python3-rosinstall \
       python3-rosinstall-generator \

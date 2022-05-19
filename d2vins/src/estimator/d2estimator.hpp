@@ -4,7 +4,7 @@
 #include "d2vinsstate.hpp"
 #include <swarm_msgs/Odometry.h>
 #include <ceres/ceres.h>
-#include "visualization.hpp"
+#include "../visualization/visualization.hpp"
 
 using namespace Eigen;
 using D2FrontEnd::VisualImageDescArray;
