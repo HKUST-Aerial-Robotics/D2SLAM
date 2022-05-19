@@ -2,13 +2,9 @@
 #include <ros/ros.h>
 #include <swarm_msgs/Landmark.h>
 #include <swarm_msgs/lcm_gen/Landmark_t.hpp>
+#include "d2basetypes.h"
 
-namespace D2FrontEnd {
-
-typedef uint64_t FrameIdType;
-typedef int64_t LandmarkIdType;
-typedef int32_t CamIdType;
-
+namespace D2Common {
 enum LandmarkFlag {
     UNINITIALIZED = 0,
     INITIALIZED = 1, //Initialized by stereo

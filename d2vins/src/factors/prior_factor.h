@@ -1,8 +1,9 @@
 #pragma once
 #include <ceres/ceres.h>
 #include <Eigen/Eigen>
-#include <d2vins/d2vins_types.hpp>
+#include <d2common/d2basetypes.h>
 
+using namespace D2Common;
 // This is devied from VINS-Mono
 namespace D2VINS
 {
@@ -21,7 +22,6 @@ class PriorFactor : public ceres::CostFunction {
 public:
     template <typename MatrixType>
     PriorFactor(const std::vector<ParamInfo> & _keep_params_list, const MatrixType &A, const VectorXd &b) {
-        TicToc tic_j;
         auto ret = toJacRes(A, b);
         linearized_jac = ret.first;
         linearized_res = ret.second;

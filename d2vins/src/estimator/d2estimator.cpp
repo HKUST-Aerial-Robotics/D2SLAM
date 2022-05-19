@@ -1,4 +1,4 @@
-#include <d2vins/utils.hpp>
+#include <d2common/utils.hpp>
 #include "d2estimator.hpp" 
 #include "unistd.h"
 #include "../factors/imu_factor.h"
@@ -46,7 +46,7 @@ bool D2Estimator::tryinitFirstPose(const VisualImageDescArray & frame) {
 
     //Easily use the average value as gyrobias now
     //Also the ba with average acc - g
-    VINSFrame first_frame(frame, imubuf.mean_acc() - Gravity, imubuf.mean_gyro());
+    VINSFrame first_frame(frame, imubuf.mean_acc() - IMUBuffer::Gravity, imubuf.mean_gyro());
     first_frame.odom = last_odom;
 
     state.addFrame(frame, first_frame, true);
@@ -124,6 +124,37 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
         printf("[D2VINS::D2Estimator] Initialize VINSFrame with %d: %s\n", 
             params->init_method, frame.toStr().c_str());
     }
+}
+
+void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
+    //First we init corresponding pose for with IMU
+    // margined_landmarks = state.clearFrame();
+    // if (state.size() > 0) {
+    //     imubuf.pop(state.firstFrame().stamp + state.td);
+    // }
+    // auto _imu = imubuf.periodIMU(frame.imu_queue);
+    // VINSFrame frame(_frame, _imu, state.lastFrame());
+    // if (params->init_method == D2VINSConfig::INIT_POSE_IMU) {
+    //     frame.odom = _imu.propagation(state.lastFrame());
+    // } else {
+    //     auto odom_imu = _imu.propagation(state.lastFrame());
+    //     auto pnp_init = initialFramePnP(_frame, state.lastFrame().odom.pose());
+    //     if (!pnp_init.first) {
+    //         //Use IMU
+    //         printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed, use IMU instead.\033[0m\n");
+    //     } else {
+    //         odom_imu.pose() = pnp_init.second;
+    //     }
+    //     frame.odom = odom_imu;
+    // }
+
+    // bool is_keyframe = _frame.is_keyframe; //Is keyframe is done in frontend
+    // state.addFrame(_frame, frame, is_keyframe);
+
+    // if (params->verbose || params->debug_print_states) {
+    //     printf("[D2VINS::D2Estimator] Initialize VINSFrame with %d: %s\n", 
+    //         params->init_method, frame.toStr().c_str());
+    // }
 }
 
 void D2Estimator::inputImage(VisualImageDescArray & _frame) {

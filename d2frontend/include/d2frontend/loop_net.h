@@ -6,13 +6,14 @@
 #include <string>
 #include <lcm/lcm-cpp.hpp>
 #include "d2frontend/d2frontend_params.h"
-#include "d2frontend/d2frontend_types.h"
+#include "d2common/d2frontend_types.h"
 #include <swarm_msgs/swarm_lcm_converter.hpp>
 #include <functional>
 #include <set>
 #include <mutex>
 
 using namespace swarm_msgs;
+using namespace D2Common;
 
 namespace D2FrontEnd {
 class LoopNet {

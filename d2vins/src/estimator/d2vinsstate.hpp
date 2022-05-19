@@ -1,6 +1,6 @@
 #pragma once
 #include "landmark_manager.hpp"
-#include <d2vins/d2vins_types.hpp>
+#include <d2common/d2vinsframe.h>
 
 using namespace Eigen;
 namespace D2VINS {
@@ -9,6 +9,8 @@ class PriorFactor;
 class D2EstimatorState {
 protected:
     std::vector<VINSFrame*> sld_win;
+    std::map<int, std::vector<VINSFrame*>> remote_sld_wins;
+    std::set<int> remote_drones;
     std::map<FrameIdType, VINSFrame*> frame_db;
     std::map<FrameIdType, int> frame_indices;
     D2LandmarkManager lmanager;
@@ -27,7 +29,6 @@ public:
     state_type td = 0.0;
     D2EstimatorState() {}
     void init(std::vector<Swarm::Pose> _extrinsic, double _td);
-    size_t size() const;
 
     //Get states
     double * getPoseState(FrameIdType frame_id) const;
@@ -54,7 +55,16 @@ public:
     const VINSFrame & getFramebyId(int frame_id) const;
     VINSFrame & firstFrame();
     VINSFrame lastFrame() const;
-    
+    size_t size() const;
+
+    //RemoteFrame access    
+    std::set<int> availableRemoteDrones() const;
+    VINSFrame & getRemoteFrame(int drone_id, int index);
+    VINSFrame & firstRemoteFrame(int drone_id);
+    VINSFrame lastRemoteFrame(int drone_id) const;
+    size_t sizeRemote(int drone_id) const;
+
+
     //Solving process
     void syncFromState();
     void preSolve();

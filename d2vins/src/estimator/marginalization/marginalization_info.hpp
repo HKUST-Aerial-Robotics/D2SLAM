@@ -1,7 +1,8 @@
 #pragma once
-#include <d2vins/d2vins_types.hpp>
+#include <d2common/d2vinsframe.h>
 #include <ceres/ceres.h>
 #include "../d2vinsstate.hpp"
+#include "../../d2vins_params.hpp"
 
 namespace D2VINS {
 class PriorFactor;

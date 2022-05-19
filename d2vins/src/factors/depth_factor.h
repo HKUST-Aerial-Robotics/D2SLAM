@@ -3,7 +3,7 @@
 #include <ros/assert.h>
 #include <ceres/ceres.h>
 #include <Eigen/Dense>
-#include <d2vins/d2vins_params.hpp>
+#include "../d2vins_params.hpp"
 
 namespace D2VINS {
 class OneFrameDepth {

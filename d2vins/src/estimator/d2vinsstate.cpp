@@ -1,13 +1,13 @@
 #include "d2vinsstate.hpp"
-#include <d2vins/d2vins_params.hpp>
-#include <d2vins/d2vins_types.hpp>
-#include "../factors/integration_base.h"
+#include "../d2vins_params.hpp"
+#include <d2common/d2vinsframe.h>
+#include <d2common/integration_base.h>
 #include "marginalization/marginalization.hpp"
 
 using namespace Eigen;
-using D2FrontEnd::generateCameraId;
-namespace D2VINS {
+using D2Common::generateCameraId;
 
+namespace D2VINS {
 std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
     //Remove from sliding window
     auto frame_id = sld_win[index]->frame_id;
@@ -52,6 +52,33 @@ const VINSFrame & D2EstimatorState::getFramebyId(int frame_id) const {
 
 VINSFrame & D2EstimatorState::firstFrame() {
     return *sld_win[0];
+}
+
+VINSFrame D2EstimatorState::lastFrame() const {
+    assert(sld_win.size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastFrame()");
+    return *sld_win.back();
+}
+
+std::set<int> D2EstimatorState::availableRemoteDrones() const { 
+    return remote_drones;
+}
+
+VINSFrame & D2EstimatorState::getRemoteFrame(int drone_id, int index) {
+    return *remote_sld_wins.at(drone_id)[index];
+}
+
+VINSFrame & D2EstimatorState::firstRemoteFrame(int drone_id) {
+    assert(remote_sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::firstRemoteFrame()");
+    return *remote_sld_wins.at(drone_id)[0];
+}
+
+VINSFrame D2EstimatorState::lastRemoteFrame(int drone_id) const { 
+    assert(remote_sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastRemoteFrame()");
+    return *sld_win.back();
+}
+
+size_t D2EstimatorState::sizeRemote(int drone_id) const { 
+    return remote_sld_wins.at(drone_id).size();
 }
 
 int D2EstimatorState::getPoseIndex(FrameIdType frame_id) const {
@@ -175,11 +202,6 @@ void D2EstimatorState::outlierRejection() {
 
 void D2EstimatorState::preSolve() {
     lmanager.initialLandmarks(this);
-}
-
-VINSFrame D2EstimatorState::lastFrame() const {
-    assert(sld_win.size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastFrame()");
-    return *sld_win.back();
 }
 
 std::vector<LandmarkPerId> D2EstimatorState::getInitializedLandmarks() const {

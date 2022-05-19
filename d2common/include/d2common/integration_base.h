@@ -9,10 +9,8 @@
 
 #pragma once
 
-#include <d2vins/d2vins_params.hpp>
-#include <d2vins/utils.hpp>
-#include <ceres/ceres.h>
-#include <d2vins/d2imu.hpp>
+#include "utils.hpp"
+#include "d2imu.h"
 
 enum StateOrder
 {
@@ -33,10 +31,11 @@ enum NoiseOrder
 
 using namespace Eigen;
 
-namespace D2VINS {
+namespace D2Common {
 class IntegrationBase
 {
   public:
+    static Eigen::Matrix<double, 18, 18> noise;
     IntegrationBase() = delete;
     IntegrationBase(const Eigen::Vector3d &_acc_0, const Eigen::Vector3d &_gyr_0,
                     const Eigen::Vector3d &_linearized_ba, const Eigen::Vector3d &_linearized_bg)
@@ -44,15 +43,8 @@ class IntegrationBase
           linearized_ba{_linearized_ba}, linearized_bg{_linearized_bg},
             jacobian{Eigen::Matrix<double, 15, 15>::Identity()}, covariance{Eigen::Matrix<double, 15, 15>::Zero()},
           sum_dt{0.0}, delta_p{Eigen::Vector3d::Zero()}, delta_q{Eigen::Quaterniond::Identity()}, delta_v{Eigen::Vector3d::Zero()}
-
     {
-        noise = Eigen::Matrix<double, 18, 18>::Zero();
-        noise.block<3, 3>(0, 0) =  (params->acc_n * params->acc_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(3, 3) =  (params->gyr_n * params->gyr_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(6, 6) =  (params->acc_n * params->acc_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(9, 9) =  (params->gyr_n * params->gyr_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(12, 12) =  (params->acc_w * params->acc_w) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(15, 15) =  (params->gyr_w * params->gyr_w) * Eigen::Matrix3d::Identity();
+
     }
 
     IntegrationBase(const IMUBuffer & buf, const Eigen::Vector3d &_linearized_ba, const Eigen::Vector3d &_linearized_bg):
@@ -61,14 +53,6 @@ class IntegrationBase
         jacobian{Eigen::Matrix<double, 15, 15>::Identity()}, covariance{Eigen::Matrix<double, 15, 15>::Zero()},
         sum_dt{0.0}, delta_p{Eigen::Vector3d::Zero()}, delta_q{Eigen::Quaterniond::Identity()}, delta_v{Eigen::Vector3d::Zero()}
     {
-        noise = Eigen::Matrix<double, 18, 18>::Zero();
-        noise.block<3, 3>(0, 0) =  (params->acc_n * params->acc_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(3, 3) =  (params->gyr_n * params->gyr_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(6, 6) =  (params->acc_n * params->acc_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(9, 9) =  (params->gyr_n * params->gyr_n) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(12, 12) =  (params->acc_w * params->acc_w) * Eigen::Matrix3d::Identity();
-        noise.block<3, 3>(15, 15) =  (params->gyr_w * params->gyr_w) * Eigen::Matrix3d::Identity();
-
         for (auto & imu : buf.buf) {
             push_back(imu.dt, imu.acc, imu.gyro);
         }
@@ -224,9 +208,9 @@ class IntegrationBase
         Eigen::Vector3d corrected_delta_v = delta_v + dv_dba * dba + dv_dbg * dbg;
         Eigen::Vector3d corrected_delta_p = delta_p + dp_dba * dba + dp_dbg * dbg;
 
-        residuals.block<3, 1>(O_P, 0) = Qi.inverse() * (0.5 * Gravity * sum_dt * sum_dt + Pj - Pi - Vi * sum_dt) - corrected_delta_p;
+        residuals.block<3, 1>(O_P, 0) = Qi.inverse() * (0.5 * IMUBuffer::Gravity * sum_dt * sum_dt + Pj - Pi - Vi * sum_dt) - corrected_delta_p;
         residuals.block<3, 1>(O_R, 0) = 2 * (corrected_delta_q.inverse() * (Qi.inverse() * Qj)).vec();
-        residuals.block<3, 1>(O_V, 0) = Qi.inverse() * (Gravity * sum_dt + Vj - Vi) - corrected_delta_v;
+        residuals.block<3, 1>(O_V, 0) = Qi.inverse() * (IMUBuffer::Gravity * sum_dt + Vj - Vi) - corrected_delta_v;
         residuals.block<3, 1>(O_BA, 0) = Baj - Bai;
         residuals.block<3, 1>(O_BG, 0) = Bgj - Bgi;
         return residuals;
@@ -242,7 +226,6 @@ class IntegrationBase
     Eigen::Matrix<double, 15, 15> jacobian, covariance;
     Eigen::Matrix<double, 15, 15> step_jacobian;
     Eigen::Matrix<double, 15, 18> step_V;
-    Eigen::Matrix<double, 18, 18> noise;
 
     double sum_dt;
     Eigen::Vector3d delta_p;

@@ -1,5 +1,6 @@
 #include "landmark_manager.hpp"
 #include "d2vinsstate.hpp"
+#include "../d2vins_params.hpp"
 
 namespace D2VINS {
 

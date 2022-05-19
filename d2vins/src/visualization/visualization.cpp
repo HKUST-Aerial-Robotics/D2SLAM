@@ -6,7 +6,7 @@
 
 namespace D2VINS {
 
-sensor_msgs::PointCloud toPointCloud(const std::vector<D2FrontEnd::LandmarkPerId> landmarks, bool use_raw_color = false);
+sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color = false);
 
 void D2Visualization::init(ros::NodeHandle & nh, D2Estimator * estimator) {
     pcl_pub = nh.advertise<sensor_msgs::PointCloud>("point_cloud", 1000);
@@ -49,7 +49,7 @@ void D2Visualization::postSolve() {
     cam_visual.publishBy(sld_win_pub, odom.header);
 }
 
-sensor_msgs::PointCloud toPointCloud(const std::vector<D2FrontEnd::LandmarkPerId> landmarks, bool use_raw_color) {
+sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color) {
     sensor_msgs::PointCloud pcl;
     pcl.header.frame_id = "world";
     pcl.points.resize(landmarks.size());
@@ -64,10 +64,10 @@ sensor_msgs::PointCloud toPointCloud(const std::vector<D2FrontEnd::LandmarkPerId
         if (use_raw_color) {
             color = Vector3i(landmarks[i].color[2], landmarks[i].color[1], landmarks[i].color[0]);
         } else {
-            if (landmarks[i].flag == D2FrontEnd::LandmarkFlag::ESTIMATED) {
+            if (landmarks[i].flag == D2Common::LandmarkFlag::ESTIMATED) {
                 //set color to green
                 color = Vector3i(0, 255, 0.);
-            } else if (landmarks[i].flag == D2FrontEnd::LandmarkFlag::OUTLIER) {
+            } else if (landmarks[i].flag == D2Common::LandmarkFlag::OUTLIER) {
                 //set color to gray
                 color = Vector3i(200, 200, 200.);
             }

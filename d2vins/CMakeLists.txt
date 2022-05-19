@@ -13,13 +13,15 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   swarm_msgs
+  d2common
 )
 find_package(d2frontend REQUIRED)
+find_package(d2common REQUIRED)
 
 catkin_package(
  INCLUDE_DIRS include
 #  LIBRARIES d2vins
- CATKIN_DEPENDS d2frontend roscpp rospy swarm_msgs
+ CATKIN_DEPENDS d2frontend roscpp rospy swarm_msgs d2common
 )
 
 find_package(Eigen3 REQUIRED)
@@ -47,8 +49,6 @@ add_dependencies(${PROJECT_NAME}_MSCKF ${${PROJECT_NAME}_EXPORTED_TARGETS} ${cat
 
 add_library(${PROJECT_NAME}_estimator
   src/estimator/d2estimator.cpp
-  src/d2imu.cpp
-  src/d2vins_types.cpp
   src/d2vins_params.cpp
   src/visualization/visualization.cpp
   src/visualization/CameraPoseVisualization.cpp
@@ -64,6 +64,10 @@ add_library(${PROJECT_NAME}_estimator
   src/factors/pose_local_parameterization.cpp
 )
 
+target_link_libraries(${PROJECT_NAME}_estimator
+  ${d2frontend_LIBRARIES}
+)
+
 add_dependencies(${PROJECT_NAME}_MSCKF ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(${PROJECT_NAME}_node 
@@ -74,6 +78,7 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${d2frontend_LIBRARIES}
+  ${d2common_LIBRARIES}
   ${PROJECT_NAME}_MSCKF
   ${PROJECT_NAME}_estimator
   ${CERES_LIBRARIES}

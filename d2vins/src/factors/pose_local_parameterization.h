@@ -11,7 +11,7 @@
 
 #include <eigen3/Eigen/Dense>
 #include <ceres/ceres.h>
-#include <d2vins/utils.hpp>
+#include <d2common/utils.hpp>
 
 namespace D2VINS {
 class PoseLocalParameterization : public ceres::LocalParameterization

@@ -3,9 +3,9 @@
 #include <swarm_msgs/Pose.h>
 #include <swarm_msgs/swarm_lcm_converter.hpp>
 #include "d2landmarks.h"
+#include "d2imu.h"
 
-namespace D2FrontEnd {
-
+namespace D2Common {
 inline FrameIdType generateKeyframeId(ros::Time stamp, int self_id) {
     static int keyframe_count = 0;
     int t_ms = 0;//stamp.toSec()*1000;
@@ -57,22 +57,6 @@ struct StereoFrame {
     {
         keyframe_id = generateKeyframeId(_stamp, self_id);
     }
-
-    // StereoFrame(vins::FlattenImages vins_flatten, int self_id):
-    //     stamp(vins_flatten.header.stamp) {
-    //     for (int i = 1; i < vins_flatten.up_cams.size(); i++) {
-    //         left_extrisincs.push_back(vins_flatten.extrinsic_up_cams[i]);
-    //         right_extrisincs.push_back(vins_flatten.extrinsic_down_cams[i]);
-            
-    //         auto _l = getImageFromMsg(vins_flatten.up_cams[i]);
-    //         auto _r = getImageFromMsg(vins_flatten.down_cams[i]);
-
-    //         left_images.push_back(_l->image);
-    //         right_images.push_back(_r->image);
-    //     }
-
-    //     keyframe_id = generate_keyframe_id(stamp, self_id);
-    // }
 };
 
 struct VisualImageDesc {
@@ -230,6 +214,7 @@ struct VisualImageDescArray {
     Swarm::Pose pose_drone;
     bool prevent_adding_db;
     bool is_keyframe = false;
+    std::vector<IMUData> imf_buf;
 
     void sync_landmark_ids() {
         for (auto & image : images) {

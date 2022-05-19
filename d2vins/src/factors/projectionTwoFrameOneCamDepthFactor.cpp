@@ -10,8 +10,9 @@
  *******************************************************/
 
 #include "projectionTwoFrameOneCamDepthFactor.h"
-#include <d2vins/utils.hpp>
-#include <d2vins/d2vins_params.hpp>
+#include <d2common/utils.hpp>
+#include "../d2vins_params.hpp"
+using namespace D2Common;
 
 namespace D2VINS {
 Eigen::Matrix3d ProjectionTwoFrameOneCamDepthFactor::sqrt_info;

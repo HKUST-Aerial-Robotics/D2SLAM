@@ -11,13 +11,14 @@
 #include <opencv2/core/eigen.hpp>
 #include <sensor_msgs/CompressedImage.h>
 #include <sensor_msgs/Image.h>
-#include "d2frontend_types.h"
+#include "d2common/d2frontend_types.h"
 #include "d2frontend_params.h"
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 
 using namespace std::chrono; 
 using namespace swarm_msgs;
+using namespace D2Common;
 
 namespace D2FrontEnd {
 class LoopCam;

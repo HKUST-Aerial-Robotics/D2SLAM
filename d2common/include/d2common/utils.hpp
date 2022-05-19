@@ -6,7 +6,7 @@
 
 using namespace Eigen;
 
-namespace D2VINS {
+namespace D2Common {
 namespace Utility {
 inline Quaterniond g2R(const Vector3d &g)
 {

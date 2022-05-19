@@ -1,5 +1,7 @@
 #pragma once
-#include "d2landmarks.h"
+#include "d2common/d2landmarks.h"
+
+using namespace D2Common;
 
 namespace D2FrontEnd {
 class LandmarkManager {

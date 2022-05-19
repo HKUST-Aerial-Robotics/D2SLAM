@@ -12,12 +12,14 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <d2frontend/utils.h>
-#include "d2frontend/d2frontend_types.h"
+#include "d2common/d2frontend_types.h"
 
 //#include <swarm_loop/HFNetSrv.h>
 
 using namespace swarm_msgs;
 using namespace Eigen;
+using namespace D2Common;
+
 namespace camodocal {
 class Camera;
 typedef boost::shared_ptr< Camera > CameraPtr;

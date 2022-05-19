@@ -1,10 +1,12 @@
-#include <d2vins/d2vins_params.hpp>
+#include "d2vins_params.hpp"
+#include <d2common/integration_base.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
 
+using namespace D2Common;
+
 namespace D2VINS {
 D2VINSConfig * params = nullptr;
-Vector3d Gravity;
 
 void initParams(ros::NodeHandle & nh) {
     params = new D2VINSConfig;
@@ -15,7 +17,6 @@ void initParams(ros::NodeHandle & nh) {
 }
 
 void D2VINSConfig::init(const std::string & config_file) {
-
     printf("[D2VINS::D2VINSConfig] readConfig from file %s\n", config_file.c_str());
     cv::FileStorage fsSettings;
     try {
@@ -37,8 +38,17 @@ void D2VINSConfig::init(const std::string & config_file) {
     acc_w = fsSettings["acc_w"];
     gyr_n = fsSettings["gyr_n"];
     gyr_w = fsSettings["gyr_w"];
+    Eigen::Matrix<double, 18, 18> noise = Eigen::Matrix<double, 18, 18>::Zero();
+    noise.block<3, 3>(0, 0) =  (params->acc_n * params->acc_n) * Eigen::Matrix3d::Identity();
+    noise.block<3, 3>(3, 3) =  (params->gyr_n * params->gyr_n) * Eigen::Matrix3d::Identity();
+    noise.block<3, 3>(6, 6) =  (params->acc_n * params->acc_n) * Eigen::Matrix3d::Identity();
+    noise.block<3, 3>(9, 9) =  (params->gyr_n * params->gyr_n) * Eigen::Matrix3d::Identity();
+    noise.block<3, 3>(12, 12) =  (params->acc_w * params->acc_w) * Eigen::Matrix3d::Identity();
+    noise.block<3, 3>(15, 15) =  (params->gyr_w * params->gyr_w) * Eigen::Matrix3d::Identity();
+    IntegrationBase::noise = noise;
+    
     depth_sqrt_inf = fsSettings["depth_sqrt_inf"];
-    Gravity = Vector3d(0., 0., fsSettings["g_norm"]);
+    IMUBuffer::Gravity = Vector3d(0., 0., fsSettings["g_norm"]);
 
     //Outputs
     fsSettings["output_path"] >> output_folder;

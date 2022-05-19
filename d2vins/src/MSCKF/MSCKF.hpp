@@ -1,7 +1,7 @@
-#include <d2vins/d2vins_types.hpp>
-#include <d2vins/d2vins_params.hpp>
+#include <d2common/d2vinsframe.h>
+#include "../d2vins_params.hpp"
 #include "MSCKF_state.hpp"
-
+using namespace D2Common;
 namespace D2VINS {
 class MSCKF {
     MSCKFStateVector nominal_state;
@@ -19,6 +19,6 @@ public:
     void initFirstPose();
     void predict(const double t, const IMUData & imudata);
     void addKeyframe(const double t); //For convience, we require t here is exact same to last imu t
-    void update(const D2FrontEnd::LandmarkPerId & feature_by_id);
+    void update(const LandmarkPerId & feature_by_id);
 };
 }

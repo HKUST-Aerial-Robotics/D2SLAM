@@ -1,9 +1,9 @@
-#include <d2vins/d2vins_types.hpp>
-#include "factors/integration_base.h"
+#include <d2common/d2vinsframe.h>
+#include <d2common/integration_base.h>
 
-namespace D2VINS {
+namespace D2Common {
 double t0 = 0;
-VINSFrame::VINSFrame(const D2FrontEnd::VisualImageDescArray & frame, const IMUBuffer & buf, const VINSFrame & prev_frame):
+VINSFrame::VINSFrame(const VisualImageDescArray & frame, const IMUBuffer & buf, const VINSFrame & prev_frame):
     stamp(frame.stamp),
     frame_id(frame.frame_id),
     drone_id(frame.drone_id),
@@ -16,7 +16,7 @@ VINSFrame::VINSFrame(const D2FrontEnd::VisualImageDescArray & frame, const IMUBu
     }
 }
 
-VINSFrame::VINSFrame(const D2FrontEnd::VisualImageDescArray & frame, const Vector3d & _Ba, const Vector3d & _Bg):
+VINSFrame::VINSFrame(const VisualImageDescArray & frame, const Vector3d & _Ba, const Vector3d & _Bg):
     stamp(frame.stamp),
     frame_id(frame.frame_id),
     drone_id(frame.drone_id),

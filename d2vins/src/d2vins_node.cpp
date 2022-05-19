@@ -1,5 +1,5 @@
 #include <d2frontend/d2frontend.h>
-#include <d2frontend/d2frontend_types.h>
+#include <d2common/d2frontend_types.h>
 #include "sensor_msgs/Imu.h"
 #include "estimator/d2estimator.hpp"
 #include <mutex>
@@ -13,16 +13,18 @@ namespace backward
 }
 
 using namespace D2VINS;
+using namespace D2Common;
+
 class D2VINSNode :  public D2FrontEnd::D2Frontend
 {
     D2Estimator estimator;
     ros::Subscriber imu_sub;
     int frame_count = 0;
-    std::queue<D2FrontEnd::VisualImageDescArray> viokf_queue;
+    std::queue<D2Common::VisualImageDescArray> viokf_queue;
     std::mutex queue_lock;
     ros::Timer estimator_timer;
 protected:
-    virtual void frameCallback(const D2FrontEnd::VisualImageDescArray & viokf) override {
+    virtual void frameCallback(const D2Common::VisualImageDescArray & viokf) override {
         if (frame_count % params->frame_step == 0) {
             queue_lock.lock();
             viokf_queue.emplace(viokf);
@@ -37,7 +39,7 @@ protected:
                 ROS_WARN("[D2VINS] Low efficient on D2VINS::estimator pending frames: %d", viokf_queue.size());
             }
             queue_lock.lock();
-            D2FrontEnd::VisualImageDescArray viokf = viokf_queue.front();
+            D2Common::VisualImageDescArray viokf = viokf_queue.front();
             viokf_queue.pop();
             queue_lock.unlock();
             estimator.inputImage(viokf);

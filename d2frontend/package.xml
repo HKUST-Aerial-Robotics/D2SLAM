@@ -25,14 +25,17 @@
   <build_export_depend>swarm_msgs</build_export_depend>
   <build_export_depend>swarmcomm_msgs</build_export_depend>
   <build_export_depend>message_filters</build_export_depend>
+  <build_export_depend>d2common</build_export_depend>
 
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>swarm_msgs</exec_depend>
   <exec_depend>swarmcomm_msgs</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>message_filters</exec_depend>
+  <exec_depend>d2common</exec_depend>
 
   <build_depend>roscpp</build_depend>
+  <build_depend>d2common</build_depend>
   <build_depend>rospy</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>

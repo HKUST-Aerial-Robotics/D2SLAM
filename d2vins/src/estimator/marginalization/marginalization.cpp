@@ -1,8 +1,10 @@
 #include "marginalization.hpp"
-#include <d2vins/utils.hpp>
+#include <d2common/utils.hpp>
 #include "../../factors/prior_factor.h"
 #include "../../factors/imu_factor.h"
 #include "../../factors/projectionTwoFrameOneCamFactor.h"
+
+using namespace D2Common;
 
 namespace D2VINS {
 void Marginalizer::addLandmarkResidual(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,

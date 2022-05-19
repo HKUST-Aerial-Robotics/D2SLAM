@@ -4,7 +4,7 @@
 #include <swarm_msgs/Odometry.h>
 #include <mutex>
 
-namespace D2VINS {
+namespace D2Common {
 
 struct VINSFrame;
 
@@ -13,13 +13,14 @@ struct IMUData {
     double dt = 0.0;
     Vector3d acc;
     Vector3d gyro;
-    IMUData(): acc(0.0, 0.0, 0.0),gyro(0.0, 0.0, 0.0){}
+    IMUData(): acc(0.0, 0.0, 0.0),gyro(0.0, 0.0, 0.0) {}
     IMUData(const sensor_msgs::Imu & imu):
         t(imu.header.stamp.toSec()),
         gyro(imu.angular_velocity.x, imu.angular_velocity.y, imu.angular_velocity.z),
         acc(imu.linear_acceleration.x, imu.linear_acceleration.y, imu.linear_acceleration.z)
     {}
 };
+
 
 class IMUBuffer {
 protected:
@@ -30,8 +31,8 @@ protected:
 
     typedef std::lock_guard<std::recursive_mutex> Guard;
     mutable std::recursive_mutex buf_lock;
-
 public:
+    static Vector3d Gravity;
     IMUBuffer(const IMUBuffer & _buf)
         : buf(_buf.buf), t_last(_buf.t_last) {}
     IMUBuffer() {}

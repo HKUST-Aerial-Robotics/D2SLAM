@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   swarm_msgs
   swarmcomm_msgs
+  d2common
   message_generation
   camera_models
   message_filters
@@ -52,7 +53,7 @@ endif()
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES loop_cnn libd2frontend
-  CATKIN_DEPENDS std_msgs cv_bridge roscpp rosmsg rospy swarm_msgs swarmcomm_msgs
+  CATKIN_DEPENDS std_msgs cv_bridge roscpp rosmsg rospy swarm_msgs swarmcomm_msgs d2common
   #DEPENDS system_lib
 )
 

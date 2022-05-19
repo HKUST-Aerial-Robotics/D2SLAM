@@ -8,6 +8,7 @@
  *******************************************************/
 
 #include "pose_local_parameterization.h"
+using namespace D2Common;
 namespace D2VINS {
 bool PoseLocalParameterization::Plus(const double *x, const double *delta, double *x_plus_delta) const
 {

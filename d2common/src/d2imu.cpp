@@ -1,7 +1,11 @@
-#include <d2vins/d2imu.hpp>
-#include <d2vins/d2vins_types.hpp>
+#include <d2common/d2imu.h>
+#include <d2common/d2vinsframe.h>
+#include <d2common/integration_base.h>
+namespace D2Common {
 
-namespace D2VINS {
+Vector3d IMUBuffer::Gravity = Vector3d(0., 0., 9.805);
+Eigen::Matrix<double, 18, 18> IntegrationBase::noise = Eigen::Matrix<double, 18, 18>::Zero();
+
 size_t IMUBuffer::searchClosest(double t) const {
     const Guard lock(buf_lock);
     if (buf.size() == 1) {

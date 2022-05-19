@@ -1,5 +1,5 @@
 #include "MSCKF.hpp"
-#include <d2vins/utils.hpp>
+#include <d2common/utils.hpp>
 
 namespace D2VINS {
 MSCKF::MSCKF() {
@@ -48,7 +48,7 @@ void MSCKF::predict(const double t, const IMUData & imudata) {
 
     //Naive intergation
     auto qdot = nominal_state.q_imu * omg_l;
-    auto vdot = Rq_hat*acc_hat + Gravity;
+    auto vdot = Rq_hat*acc_hat + IMUBuffer::Gravity;
     auto pdot = nominal_state.v_imu;
 
     //Internal the quaternion is save as [qw, qx, qy, qz] in Eigen
@@ -123,7 +123,7 @@ void MSCKF::addKeyframe(const double t) {
     nominal_state.addKeyframe(t);
 }
 
-void MSCKF::update(const D2FrontEnd::LandmarkPerId & feature_by_id) {  
+void MSCKF::update(const LandmarkPerId & feature_by_id) {  
    
 }
 

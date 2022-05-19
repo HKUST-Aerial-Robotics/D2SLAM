@@ -50,7 +50,6 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     bool matched = false;
     frame_count ++;
     TrackReport report;
-
     TicToc tic;
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         report.compose(trackRemote(frames.images[0]));
@@ -59,7 +58,6 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
             report.compose(trackRemote(frame));
         }
     }
-
     if (params->debug_image) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
             drawRemote(frames.images[0], report);
@@ -69,7 +67,6 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
             }
         }
     }
-    
     report.ft_time = tic.toc();
     if (report.remote_matched_num > 0) {
         return true;

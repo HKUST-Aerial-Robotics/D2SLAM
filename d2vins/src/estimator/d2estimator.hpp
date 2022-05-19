@@ -1,5 +1,5 @@
-#include "d2vins/d2vins_types.hpp"
-#include "d2vins/d2vins_params.hpp"
+#include "d2common/d2vinsframe.h"
+#include "../d2vins_params.hpp"
 #include "landmark_manager.hpp"
 #include "d2vinsstate.hpp"
 #include <swarm_msgs/Odometry.h>
@@ -7,7 +7,7 @@
 #include "../visualization/visualization.hpp"
 
 using namespace Eigen;
-using D2FrontEnd::VisualImageDescArray;
+using D2Common::VisualImageDescArray;
 
 namespace D2VINS {
 class Marginalizer;
@@ -23,6 +23,7 @@ protected:
     //Internal functions
     bool tryinitFirstPose(const VisualImageDescArray & frame);
     void addFrame(const VisualImageDescArray & _frame);
+    void addFrameRemote(const VisualImageDescArray & _frame);
     void solve();
     void setupImuFactors(ceres::Problem & problem);
     void setupLandmarkFactors(ceres::Problem & problem);

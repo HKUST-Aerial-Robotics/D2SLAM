@@ -1,23 +1,11 @@
 #pragma once
-#include "d2frontend/d2frontend_types.h"
-#include "d2vins_params.hpp"
+#include "d2frontend_types.h"
 #include "utils.hpp"
 #include <swarm_msgs/Odometry.h>
-#include "d2imu.hpp"
+#include "d2imu.h"
 
-using D2FrontEnd::LandmarkPerId;
-using D2FrontEnd::LandmarkPerFrame;
-using D2FrontEnd::FrameIdType;
-using D2FrontEnd::CamIdType;
-using D2FrontEnd::LandmarkIdType;
-using D2FrontEnd::LandmarkFlag;
-using D2FrontEnd::LandmarkSolverFlag;
-using D2FrontEnd::VisualImageDescArray;
-
-namespace D2VINS {
+namespace D2Common {
 class IntegrationBase;
-
-typedef Eigen::SparseMatrix<state_type> SparseMat;
 struct VINSFrame {
     double stamp = 0;
     FrameIdType frame_id = -1;
