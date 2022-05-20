@@ -143,9 +143,6 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     frameCallback(vframearry);
 
     if (is_keyframe) {
-        if (params->enable_network) {
-            loop_net->broadcastVisualImageDescArray(vframearry);
-        }
         if (params->enable_loop) {
             lock_guard guard(loop_lock);
             loop_queue.push(vframearry);
@@ -156,10 +153,16 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
 void D2Frontend::onRemoteImage(VisualImageDescArray frame_desc) {
     ROS_INFO("Received from remote!");
     feature_tracker->trackRemoteFrames(frame_desc);
+    //Process with D2VINS
+    processRemoteImage(frame_desc);
+}
+
+void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc) {
     if (params->enable_loop) {
         loop_detector->processImageArray(frame_desc);
     }
 }
+
 
 void D2Frontend::loopTimerCallback(const ros::TimerEvent & e) {
     if (loop_queue.size() > 0) {

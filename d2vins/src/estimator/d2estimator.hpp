@@ -21,8 +21,8 @@ protected:
     Swarm::Odometry last_prop_odom; //last imu propagation odometry
     Marginalizer * marginalizer = nullptr;
     //Internal functions
-    bool tryinitFirstPose(const VisualImageDescArray & frame);
-    void addFrame(const VisualImageDescArray & _frame);
+    bool tryinitFirstPose(VisualImageDescArray & frame);
+    void addFrame(VisualImageDescArray & _frame);
     void addFrameRemote(const VisualImageDescArray & _frame);
     void solve();
     void setupImuFactors(ceres::Problem & problem);
@@ -41,7 +41,8 @@ protected:
 public:
     D2Estimator() {}
     void inputImu(IMUData data);
-    void inputImage(VisualImageDescArray & frame);
+    bool inputImage(VisualImageDescArray & frame);
+    void inputRemoteImage(VisualImageDescArray & frame);
     Swarm::Odometry getImuPropagation() const;
     Swarm::Odometry getOdometry() const;
     void init(ros::NodeHandle & nh);

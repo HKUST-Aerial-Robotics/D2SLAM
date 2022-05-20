@@ -68,6 +68,7 @@ protected:
     void onRemoteFrameROS(const swarm_msgs::ImageArrayDescriptor & remote_img_desc);
 
     void onRemoteImage(VisualImageDescArray frame_desc);
+    virtual void processRemoteImage(VisualImageDescArray & frame_desc);
 
     void processStereoframe(const StereoFrame & stereoframe);
     void loopTimerCallback(const ros::TimerEvent & event);

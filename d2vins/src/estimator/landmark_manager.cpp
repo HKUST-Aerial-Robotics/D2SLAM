@@ -49,14 +49,19 @@ FrameIdType D2LandmarkManager::getLandmarkBaseFrame(LandmarkIdType landmark_id) 
 }
 
 void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2EstimatorState * state) {
-    auto lm_first = lm.track[0];
+    LandmarkPerFrame lm_first;
+    if (lm.track.size() > 0) {
+        lm_first = lm.track[0];
+    } else {
+        lm_first = lm.track_r[0];
+    }
     auto lm_id = lm.landmark_id;
     auto pt3d_n = lm_first.pt3d_norm;
-    auto firstFrame = state->getFramebyId(lm.track[0].frame_id);
+    auto firstFrame = state->getFramebyId(lm_first.frame_id);
     // printf("[D2VINS::D2LandmarkManager] Try initial landmark %ld dep %d tracks %ld\n", lm_id, 
     //     lm.track[0].depth_mea && lm.track[0].depth > params->min_depth_to_fuse && lm.track[0].depth < params->max_depth_to_fuse,
     //     lm.track.size());
-    if (lm.track[0].depth_mea && lm.track[0].depth > params->min_depth_to_fuse && lm.track[0].depth < params->max_depth_to_fuse) {
+    if (lm_first.depth_mea && lm_first.depth > params->min_depth_to_fuse && lm_first.depth < params->max_depth_to_fuse) {
         //Use depth to initial
         auto ext = state->getExtrinsic(lm_first.camera_id);
         //Note in depth mode, pt3d = (u, v, w), depth is distance since we use unitsphere
@@ -146,6 +151,10 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState * state) {
         //Set to unsolved
         lm.solver_flag = LandmarkSolverFlag::UNSOLVED;
         if (lm.flag == LandmarkFlag::UNINITIALIZED) {
+            if (lm.track.size() == 0 && lm.track_r.size() == 0) {
+                printf("\033[0;31m[D2VINS::D2LandmarkManager] Initialize landmark %ld failed, no track.\033[0m\n", lm_id);
+                continue;
+            }
             initialLandmarkState(lm, state);
             inited_count += 1;
         } else if(lm.flag == LandmarkFlag::ESTIMATED) {

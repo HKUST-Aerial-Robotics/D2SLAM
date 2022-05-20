@@ -194,13 +194,11 @@ struct LandmarkPerId {
                 break;
             }
         }
-        return track.size();
+        return track.size() + track_r.size();
     }
 
     void add(const LandmarkPerFrame & Landmark) {
-        //Simpified.
-        //Need to adopt for omni.
-        if (Landmark.camera_index == 0) {
+        if (Landmark.camera_index == 0 && Landmark.drone_id == drone_id) {
             track.emplace_back(Landmark);
         } else {
             track_r.emplace_back(Landmark);

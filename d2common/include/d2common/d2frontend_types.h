@@ -193,7 +193,6 @@ struct VisualImageDesc {
         drone_id = desc.drone_id;
         landmark_descriptor = desc.landmark_descriptor;
         image_desc = desc.image_desc;
-        printf("from ImageDescriptor_t frame_id %ld size %d\n", frame_id, image_desc.size());
         image = desc.image;
         camera_index = desc.camera_index;
         prevent_adding_db = desc.prevent_adding_db;
@@ -214,7 +213,7 @@ struct VisualImageDescArray {
     Swarm::Pose pose_drone;
     bool prevent_adding_db;
     bool is_keyframe = false;
-    std::vector<IMUData> imu_buf;
+    IMUBuffer imu_buf;
     Vector3d Ba;
     Vector3d Bg;
 
@@ -272,7 +271,7 @@ struct VisualImageDescArray {
         }
         for (int i = 0; i < img_desc.imu_buf.size(); i ++) {
             auto data = img_desc.imu_buf[i];
-            imu_buf.emplace_back(IMUData(data));
+            imu_buf.add(IMUData(data));
         }
     }
 
@@ -293,6 +292,7 @@ struct VisualImageDescArray {
     ImageArrayDescriptor_t toLCM() const {
         ImageArrayDescriptor_t ret;
         ret.msg_id = frame_id;
+        ret.frame_id = frame_id;
         ret.prevent_adding_db = prevent_adding_db;
         ret.drone_id = drone_id;
         ret.timestamp = toLCMTime(ros::Time(stamp));

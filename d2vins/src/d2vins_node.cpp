@@ -1,5 +1,7 @@
 #include <d2frontend/d2frontend.h>
 #include <d2common/d2frontend_types.h>
+#include <d2frontend/loop_net.h>
+#include <d2frontend/loop_detector.h>
 #include "sensor_msgs/Imu.h"
 #include "estimator/d2estimator.hpp"
 #include <mutex>
@@ -22,29 +24,49 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     int frame_count = 0;
     std::queue<D2Common::VisualImageDescArray> viokf_queue;
     std::mutex queue_lock;
+    std::mutex esti_lock;
     ros::Timer estimator_timer;
+    typedef std::lock_guard<std::mutex> Guard;
 protected:
     virtual void frameCallback(const D2Common::VisualImageDescArray & viokf) override {
         if (frame_count % params->frame_step == 0) {
-            queue_lock.lock();
+            Guard guard(queue_lock);
             viokf_queue.emplace(viokf);
-            queue_lock.unlock();
         }
         frame_count ++;
     };
 
+    void processRemoteImage(VisualImageDescArray & frame_desc) override {
+        {
+            Guard guard(esti_lock);
+            estimator.inputRemoteImage(frame_desc);
+        }
+        if (D2FrontEnd::params->enable_loop) {
+            loop_detector->processImageArray(frame_desc);
+        }
+    }
     void timerCallback(const ros::TimerEvent & event) {
         if (!viokf_queue.empty()) {
             if (viokf_queue.size() > params->warn_pending_frames) {
                 ROS_WARN("[D2VINS] Low efficient on D2VINS::estimator pending frames: %d", viokf_queue.size());
             }
-            queue_lock.lock();
-            D2Common::VisualImageDescArray viokf = viokf_queue.front();
-            viokf_queue.pop();
-            queue_lock.unlock();
-            estimator.inputImage(viokf);
+            D2Common::VisualImageDescArray viokf;
+            {
+                Guard guard(queue_lock);
+                viokf = viokf_queue.front();
+                viokf_queue.pop();
+            }
+            bool ret;
+            {
+                Guard guard(esti_lock);
+                ret = estimator.inputImage(viokf);
+            }
+            if (ret && D2FrontEnd::params->enable_network) {
+                    printf("Broadcast frame %d camera id %d\n", viokf.frame_id, viokf.images[0].camera_id);
+                    loop_net->broadcastVisualImageDescArray(viokf);
+                }
         }
-    };
+    }
 
     virtual void imuCallback(const sensor_msgs::Imu & imu) {
         IMUData data(imu);

@@ -57,20 +57,24 @@ protected:
     mutable std::recursive_mutex buf_lock;
 public:
     std::vector<IMUData> buf;
+    double t_last = 0.0;
     static Vector3d Gravity;
+    
     IMUBuffer(const IMUBuffer & _buf)
         : buf(_buf.buf), t_last(_buf.t_last) {}
-
     IMUBuffer(const std::vector<IMUData> & _buf) {
         for (auto data : _buf) {
             add(data);
         }
     }
-
     IMUBuffer() {}
+    
+    void operator=(const IMUBuffer & _buf) {
+        buf = _buf.buf;
+        t_last = _buf.t_last;
+    }
 
 
-    double t_last = 0.0;
     void add(const IMUData & data);
 
     Vector3d mean_acc() const;

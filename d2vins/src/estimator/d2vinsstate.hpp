@@ -49,6 +49,7 @@ public:
     //Frame operations
     std::vector<LandmarkPerId> clearFrame();
     void addFrame(const VisualImageDescArray & images, const VINSFrame & _frame, bool is_keyframe);
+    void addCamera(const Swarm::Pose & pose, int camera_index, int camera_id=-1);
 
     //Frame access    
     VINSFrame & getFrame(int index);

@@ -28,13 +28,19 @@ std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
 void D2EstimatorState::init(std::vector<Swarm::Pose> _extrinsic, double _td) {
     for (int i = 0; i < _extrinsic.size(); i ++) {
         auto pose = _extrinsic[i];
-        int cam_id = generateCameraId(params->self_id, i);
-        auto _p = new state_type[POSE_SIZE];
-        pose.to_vector(_p);
-        _camera_extrinsic_state[cam_id] = _p;
-        extrinsic[cam_id] = pose;
+        addCamera(pose, i);
     }
     td = _td;
+}
+
+void D2EstimatorState::addCamera(const Swarm::Pose & pose, int camera_index, int camera_id) {
+    if (camera_id < 0) {
+        camera_id = generateCameraId(params->self_id, camera_index);
+    }
+    auto _p = new state_type[POSE_SIZE];
+    pose.to_vector(_p);
+    _camera_extrinsic_state[camera_id] = _p;
+    extrinsic[camera_id] = pose;
 }
 
 size_t D2EstimatorState::size() const {
@@ -46,6 +52,10 @@ VINSFrame & D2EstimatorState::getFrame(int index) {
 }
 
 const VINSFrame & D2EstimatorState::getFramebyId(int frame_id) const {
+    if (frame_db.find(frame_id) == frame_db.end()) {
+        printf("\033[0;31m[D2EstimatorState::getFramebyId] Frame %d not found in database\033[0m\n", frame_id);
+        assert(true && "Frame not found in database");
+    }
     return *frame_db.at(frame_id);
 }
 
@@ -78,6 +88,9 @@ VINSFrame D2EstimatorState::lastRemoteFrame(int drone_id) const {
 }
 
 size_t D2EstimatorState::sizeRemote(int drone_id) const { 
+    if (remote_sld_wins.find(drone_id) == remote_sld_wins.end()) {
+        return 0;
+    }
     return remote_sld_wins.at(drone_id).size();
 }
 
@@ -88,7 +101,7 @@ int D2EstimatorState::getPoseIndex(FrameIdType frame_id) const {
 double * D2EstimatorState::getPoseState(FrameIdType frame_id) const {
     if (_frame_pose_state.find(frame_id) == _frame_pose_state.end()) {
         printf("\033[0;31m[D2VINS::D2EstimatorState] frame %ld not found\033[0m\n", frame_id);
-        exit(1);
+        assert(false && "Frame not found");
     }
     return _frame_pose_state.at(frame_id);
 }
@@ -98,6 +111,10 @@ double * D2EstimatorState::getTdState(int camera_index) {
 }
 
 double * D2EstimatorState::getExtrinsicState(int cam_id) const {
+    if (_camera_extrinsic_state.find(cam_id) == _camera_extrinsic_state.end()) {
+        printf("[D2VINS::D2EstimatorState] Camera %d not found!\n");
+        assert(false && "Camera_id not found");
+    }
     return _camera_extrinsic_state.at(cam_id);
 }
 
@@ -164,9 +181,15 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
     auto * frame = new VINSFrame;
     *frame = _frame;
     if (_frame.drone_id != params->self_id) {
-        remote_sld_wins.at(_frame.drone_id).push_back(frame);
+        remote_sld_wins[_frame.drone_id].emplace_back(frame);
+        for (auto & img : images.images) {
+            if (extrinsic.find(img.camera_id) == extrinsic.end()) {
+                printf("[D2VINS::D2EstimatorState] Adding extrinsic of camera %d from drone@%d\n", img.camera_id, _frame.drone_id);
+                addCamera(img.extrinsic, img.camera_index, img.camera_id);
+            }
+        }
     } else {
-        sld_win.push_back(frame);
+        sld_win.emplace_back(frame);
     }
     frame_db[frame->frame_id] = frame;
     _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];

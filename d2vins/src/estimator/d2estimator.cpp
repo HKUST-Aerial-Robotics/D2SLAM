@@ -37,7 +37,7 @@ void D2Estimator::inputImu(IMUData data) {
     //Propagation current with last Bias.
 }
 
-bool D2Estimator::tryinitFirstPose(const VisualImageDescArray & frame) {
+bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
     if (imubuf.size() < params->init_imu_num) {
         return false;
     }
@@ -51,9 +51,14 @@ bool D2Estimator::tryinitFirstPose(const VisualImageDescArray & frame) {
 
     state.addFrame(frame, first_frame, true);
     
-    printf("\033[0;32m[D2VINS::D2Estimator] Init pose with IMU: %s\n", last_odom.toStr().c_str());
-    printf("\033[0;32m[D2VINS::D2Estimator] Gyro bias: %.3f %.3f %.3f\n", first_frame.Bg.x(), first_frame.Bg.y(), first_frame.Bg.z());
-    printf("\033[0;32m[D2VINS::D2Estimator] Acc  bias: %.3f %.3f %.3f\033[0m\n\n", first_frame.Ba.x(), first_frame.Ba.y(), first_frame.Ba.z());
+    printf("\033[0;32m[D2VINS::D2Estimator] Initial firstPose %ld\n", frame.frame_id);
+    printf("[D2VINS::D2Estimator] Init pose with IMU: %s\n", last_odom.toStr().c_str());
+    printf("[D2VINS::D2Estimator] Gyro bias: %.3f %.3f %.3f\n", first_frame.Bg.x(), first_frame.Bg.y(), first_frame.Bg.z());
+    printf("[D2VINS::D2Estimator] Acc  bias: %.3f %.3f %.3f\033[0m\n\n", first_frame.Ba.x(), first_frame.Ba.y(), first_frame.Ba.z());
+
+    frame.pose_drone = first_frame.odom.pose();
+    frame.Ba = first_frame.Ba;
+    frame.Bg = first_frame.Bg;
     return true;
 }
 
@@ -68,7 +73,7 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
             auto & est_lm = state.getLandmarkbyId(lm_id);
             if (est_lm.flag >= LandmarkFlag::INITIALIZED) {
                 pts3d.push_back(cv::Point3f(est_lm.position.x(), est_lm.position.y(), est_lm.position.z()));
-                pts2d.push_back(cv::Point2f(lm.pt3d_norm.x(), lm.pt3d_norm.y()));
+                pts2d.push_back(cv::Point2f(lm.pt3d_norm.x()/lm.pt3d_norm.z(), lm.pt3d_norm.y()/lm.pt3d_norm.z()));
             }
         }
     }
@@ -80,7 +85,7 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
     cv::Mat inliers;
     cv::Mat D, rvec, t;
     cv::Mat K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0);
-    D2FrontEnd::PnPInitialFromCamPose(pose*state.getExtrinsic(0), rvec, t);
+    D2FrontEnd::PnPInitialFromCamPose(pose*image.extrinsic, rvec, t);
     // bool success = cv::solvePnP(pts3d, pts2d, K, D, rvec, t, true);
     bool success = cv::solvePnPRansac(pts3d, pts2d, K, D, rvec, t, true, params->pnp_iteratives,  3, 0.99,  inliers);
     auto pose_cam = D2FrontEnd::PnPRestoCamPose(rvec, t);
@@ -89,7 +94,7 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
     return std::make_pair(success, pose_imu);
 }
 
-void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
+void D2Estimator::addFrame(VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
     margined_landmarks = state.clearFrame();
     if (state.size() > 0) {
@@ -116,9 +121,15 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
         }
         frame.odom = odom_imu;
     }
-
+    
     bool is_keyframe = _frame.is_keyframe; //Is keyframe is done in frontend
     state.addFrame(_frame, frame, is_keyframe);
+
+    //Assign IMU and initialization to VisualImageDescArray for broadcasting.
+    _frame.imu_buf = _imu;
+    _frame.pose_drone = frame.odom.pose();
+    _frame.Ba = frame.Ba;
+    _frame.Bg = frame.Bg;
 
     if (params->verbose || params->debug_print_states) {
         printf("[D2VINS::D2Estimator] Initialize VINSFrame with %d: %s\n", 
@@ -127,31 +138,48 @@ void D2Estimator::addFrame(const VisualImageDescArray & _frame) {
 }
 
 void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
-    //First we init corresponding pose for with IMU
-    // auto _imu = imubuf.periodIMU(frame.imu_queue);
     int r_drone_id = _frame.drone_id;
-    if (state.sizeRemote(r_drone_id) == 0) {
-        VINSFrame frame(_frame, _frame.Ba, _frame.Bg);
-        state.addFrame(_frame, frame, _frame.is_keyframe);
-        if (params->verbose || params->debug_print_states) {
-            printf("[D2VINS::D2Estimator] Initialize remote VINSFrame with %d: %s\n", _frame.drone_id, frame.toStr().c_str());
-        }
+    VINSFrame frame(_frame, _frame.Ba, _frame.Bg);
+    auto _imu = _frame.imu_buf;
+    printf("[D2VINS::D2Estimator] Add remote frame %d@%d: %s\n", _frame.frame_id, r_drone_id, frame.toStr().c_str());
+    if (params->init_method == D2VINSConfig::INIT_POSE_IMU && 
+        state.sizeRemote(r_drone_id) > 0 &&
+        _imu.size() > 0
+    ) {
+        frame.odom = _imu.propagation(state.lastFrame());
+        printf("[D2VINS::D2Estimator] Initial first remoteframe@drone%d with IMU: %s", r_drone_id, frame.odom.pose().toStr().c_str());
     } else {
-        VINSFrame frame(_frame, _frame.imu_buf, state.lastRemoteFrame(r_drone_id));
-        state.addFrame(_frame, frame, _frame.is_keyframe);
-        if (params->verbose || params->debug_print_states) {
-            printf("[D2VINS::D2Estimator] Add Remote VINSFrame with %d: %s\n", _frame.drone_id, frame.toStr().c_str());
+        auto odom_imu = _imu.propagation(state.lastFrame());
+        auto pnp_init = initialFramePnP(_frame, state.lastFrame().odom.pose());
+        if (!pnp_init.first) {
+            //Use IMU
+            printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed, use IMU instead.\033[0m\n");
+        } else {
+            printf("[D2VINS::D2Estimator] Initial first remoteframe@drone%d with PnP: %s", r_drone_id, pnp_init.second.toStr().c_str());
+            odom_imu.pose() = pnp_init.second;
         }
+        frame.odom = odom_imu;
+    }
+
+    state.addFrame(_frame, frame, _frame.is_keyframe);
+    if (params->verbose || params->debug_print_states) {
+        printf("[D2VINS::D2Estimator] Add Remote VINSFrame with %d: %s IMU %d\n", 
+            _frame.drone_id, frame.toStr().c_str(), _frame.imu_buf.size());
     }
 }
 
-void D2Estimator::inputImage(VisualImageDescArray & _frame) {
+void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
+    printf("Bg %f %f %f\n", frame.Bg.x(), frame.Bg.y(), frame.Bg.z());
+    addFrameRemote(frame);
+}
+
+bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     //We MUST make sure this function is running by only one thread.
     //It is not thread safe.
     if(!initFirstPoseFlag) {
         printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imubuf.size());
         initFirstPoseFlag = tryinitFirstPose(_frame);
-        return;
+        return initFirstPoseFlag;
     }
 
     double t_imu_frame = _frame.stamp + state.td;
@@ -169,6 +197,7 @@ void D2Estimator::inputImage(VisualImageDescArray & _frame) {
         state.preSolve();
     }
     frame_count ++;
+    return true;
 }
 
 void D2Estimator::setStateProperties(ceres::Problem & problem) {
@@ -272,13 +301,13 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     auto lms = state.availableLandmarkMeasurements();
     current_landmark_num = lms.size();
     auto loss_function = new ceres::HuberLoss(1.0);    
-    std::vector<int> keyframe_measurements(state.size(), 0);
+    std::map<FrameIdType, int> keyframe_measurements;
     
     for (auto lm : lms) {
         auto lm_id = lm.landmark_id;
         auto firstObs = lm.track[0];
         auto mea0 = firstObs.measurement();
-        keyframe_measurements[state.getPoseIndex(firstObs.frame_id)] ++;
+        keyframe_measurements[firstObs.frame_id] ++;
         state.getLandmarkbyId(lm_id).solver_flag = LandmarkSolverFlag::SOLVED;
         if (firstObs.depth_mea && params->fuse_dep && 
                 firstObs.depth < params->max_depth_to_fuse &&
@@ -306,7 +335,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                 state.getLandmarkState(lm_id), state.getTdState(lm.track[i].camera_id));
             marginalizer->addLandmarkResidual(f_td, loss_function,
                 firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_id, true);
-            keyframe_measurements[state.getPoseIndex(lm.track[i].frame_id)] ++;
+            keyframe_measurements[lm.track[i].frame_id] ++;
             used_camera_sets.insert(firstObs.camera_id);
         }
 
@@ -339,10 +368,11 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     }
 
     //Check the measurements number of each keyframe
-    for (auto i = 0; i < state.size(); i++) {
-        if (keyframe_measurements[i] < params->min_measurements_per_keyframe) {
-            printf("\033[0;31m[D2VINS::D2Estimator] keyframe index %d frame_id %ld has only %d measurements\033[0m\n", 
-                i, state.getFrame(i).frame_id, keyframe_measurements[i]);
+    for (auto it : keyframe_measurements) {
+        auto frame_id = it.first;
+        if (it.second < params->min_measurements_per_keyframe) {
+            printf("\033[0;31m[D2VINS::D2Estimator] frame_id %ld has only %d measurements\033[0m\n", 
+                frame_id, it.second);
         }
     }
 }
