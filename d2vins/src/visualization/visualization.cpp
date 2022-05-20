@@ -5,8 +5,28 @@
 #include "CameraPoseVisualization.h"
 
 namespace D2VINS {
-
 sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color = false);
+
+D2Visualization::D2Visualization():
+    drone_colors{
+        Vector3d(1, 1, 0), //drone 0 yellow
+        Vector3d(1, 0, 0), //drone 1 red
+        Vector3d(0, 1, 0), //drone 2 green
+        Vector3d(0, 0, 1), //drone 3 blue
+        Vector3d(0, 1, 1), //drone 4 cyan
+        Vector3d(1, 0, 1), //drone 5 magenta
+        Vector3d(1, 1, 1), //drone 6 white
+        Vector3d(0, 0, 0), //drone 7 black
+        Vector3d(0.5, 0.5, 0.5), //drone 8 gray
+        Vector3d(0.5, 0, 0), //drone 9 orange
+        Vector3d(0, 0.5, 0), //drone 10 green
+        Vector3d(0, 0, 0.5), //drone 11 blue
+        Vector3d(0.5, 0, 0.5), //drone 12 purple
+        Vector3d(0.5, 0.5, 0), //drone 13 orange
+        Vector3d(0, 0.5, 0.5), //drone 14 cyan
+        Vector3d(0.5, 0.5, 0.5) //drone 15 white
+    }
+    {}
 
 void D2Visualization::init(ros::NodeHandle & nh, D2Estimator * estimator) {
     pcl_pub = nh.advertise<sensor_msgs::PointCloud>("point_cloud", 1000);
@@ -36,15 +56,16 @@ void D2Visualization::postSolve() {
     path.poses.push_back(pose_stamped);
     path_pub.publish(path);
 
-    //For each drone
-    int drone_id = params->self_id;
-    CameraPoseVisualization cam_visual;
+    //For self_drone
     auto  & state = _estimator->getState();
-    for (int i = 0; i < state.size(); i ++) {
-        auto & frame = state.getFrame(i);
-        CamIdType camera_id = *state.getAvailableCameraIds().begin();
-        auto cam_pose = frame.odom.pose()*state.getExtrinsic(camera_id);
-        cam_visual.addPose(cam_pose.pos(), cam_pose.att());
+    CameraPoseVisualization cam_visual;
+    for (auto drone_id: state.availableDrones()) {
+        for (int i = 0; i < state.sizeRemote(drone_id); i ++) {
+            auto & frame = state.getRemoteFrame(drone_id, i);
+            CamIdType camera_id = *state.getAvailableCameraIds().begin();
+            auto cam_pose = frame.odom.pose()*state.getExtrinsic(camera_id);
+            cam_visual.addPose(cam_pose.pos(), cam_pose.att(), drone_colors[drone_id], display_alpha);
+        }
     }
     cam_visual.publishBy(sld_win_pub, odom.header);
 }

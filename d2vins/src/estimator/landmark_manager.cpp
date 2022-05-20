@@ -7,6 +7,7 @@ namespace D2VINS {
 double triangulatePoint3DPts(std::vector<Swarm::Pose> poses, std::vector<Vector3d> &points, Vector3d &point_3d);
 
 void D2LandmarkManager::addKeyframe(const VisualImageDescArray & images, double td) {
+    printf("[D2LandmarkManager::addKeyframe] images.frame_id %d\n", images.frame_id);
     for (auto & image : images.images) {
         for (auto lm : image.landmarks) {
             if (lm.landmark_id < 0) {
@@ -50,11 +51,7 @@ FrameIdType D2LandmarkManager::getLandmarkBaseFrame(LandmarkIdType landmark_id) 
 
 void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2EstimatorState * state) {
     LandmarkPerFrame lm_first;
-    if (lm.track.size() > 0) {
-        lm_first = lm.track[0];
-    } else {
-        lm_first = lm.track_r[0];
-    }
+    lm_first = lm.track[0];
     auto lm_id = lm.landmark_id;
     auto pt3d_n = lm_first.pt3d_norm;
     auto firstFrame = state->getFramebyId(lm_first.frame_id);
@@ -86,14 +83,8 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
         Eigen::Vector3d _min = (firstFrame.odom.pose()*ext_base).pos();
         Eigen::Vector3d _max = (firstFrame.odom.pose()*ext_base).pos();
         for (auto & it: lm.track) {
-            auto & frame = state->getFramebyId(it.frame_id);
-            auto ext = state->getExtrinsic(it.camera_id);
-            poses.push_back(frame.odom.pose()*ext);
-            points.push_back(it.pt3d_norm);
-            _min = _min.cwiseMin((frame.odom.pose()*ext).pos());
-            _max = _max.cwiseMax((frame.odom.pose()*ext).pos());
-        }
-        for (auto & it: lm.track_r) {
+            // printf("[D2VINS::D2LandmarkManager] Initialize landmark %ld by motion frame %d camera_id %d index %d\n", 
+                // lm_id, it.frame_id, it.camera_id, it.camera_index);
             auto & frame = state->getFramebyId(it.frame_id);
             auto ext = state->getExtrinsic(it.camera_id);
             poses.push_back(frame.odom.pose()*ext);
@@ -151,7 +142,7 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState * state) {
         //Set to unsolved
         lm.solver_flag = LandmarkSolverFlag::UNSOLVED;
         if (lm.flag == LandmarkFlag::UNINITIALIZED) {
-            if (lm.track.size() == 0 && lm.track_r.size() == 0) {
+            if (lm.track.size() == 0) {
                 printf("\033[0;31m[D2VINS::D2LandmarkManager] Initialize landmark %ld failed, no track.\033[0m\n", lm_id);
                 continue;
             }

@@ -38,8 +38,9 @@ protected:
     ceres::Problem * problem = nullptr;
     std::set<int> used_camera_sets;
     std::vector<LandmarkPerId> margined_landmarks;
+    int self_id;
 public:
-    D2Estimator() {}
+    D2Estimator(int drone_id);
     void inputImu(IMUData data);
     bool inputImage(VisualImageDescArray & frame);
     void inputRemoteImage(VisualImageDescArray & frame);

@@ -21,7 +21,7 @@ class CameraPoseVisualization {
 public:
 	std::string m_marker_ns;
 	CameraPoseVisualization();
-	CameraPoseVisualization(float r, float g, float b, float a);
+	CameraPoseVisualization(Eigen::Vector3d rgb, float a =1.0);
 	
 	void setImageBoundaryColor(float r, float g, float b, float a=1.0);
 	void setOpticalCenterConnectorColor(float r, float g, float b, float a=1.0);
@@ -29,6 +29,7 @@ public:
 	void setLineWidth(double width);
 
 	void addPose(const Eigen::Vector3d& p, const Eigen::Quaterniond& q);
+	void addPose(const Eigen::Vector3d& p, const Eigen::Quaterniond& q, const Eigen::Vector3d& color, double alpha=1.0);
 	void reset();
 
 	void publishBy(ros::Publisher& pub, const std_msgs::Header& header);

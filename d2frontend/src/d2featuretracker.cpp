@@ -234,15 +234,15 @@ TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualIm
             auto &cur_lm = right_frame.landmarks[i];
             auto &prev_lm = left_frame.landmarks[prev_index];
             cur_lm.landmark_id = landmark_id;
-            // cur_lm.velocity = left_frame.landmarks[prev_index].velocity;
             cur_lm.velocity = cur_lm.velocity;
-            if (lmanager->hasLandmark(landmark_id) && lmanager->at(landmark_id).track_r.size() > 0) {
-                auto last_right = lmanager->at(landmark_id).track_r.back();
-                if (left_frame.stamp - last_right.stamp < _config.max_pts_velocity_time) {
-                    cur_lm.velocity = last_right.pt3d_norm - cur_lm.pt3d_norm;
-                    cur_lm.velocity /= (last_right.stamp - left_frame.stamp);
-                }
-            }
+            //TODO:Fix this for TD
+            // if (lmanager->hasLandmark(landmark_id) && lmanager->at(landmark_id).track_r.size() > 0) {
+            //     auto last_right = lmanager->at(landmark_id).track_r.back();
+            //     if (left_frame.stamp - last_right.stamp < _config.max_pts_velocity_time) {
+            //         cur_lm.velocity = last_right.pt3d_norm - cur_lm.pt3d_norm;
+            //         cur_lm.velocity /= (last_right.stamp - left_frame.stamp);
+            //     }
+            // }
             report.stereo_point_num ++;
         }
     }
@@ -266,13 +266,14 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
         lmanager->updateLandmark(lm);
         right_frame.landmarks.emplace_back(lm);
         auto lm_per_id = lmanager->at(cur_lk_ids[i]);
-        if (lm_per_id.track_r.size() > 0) {
-            auto prev_lm = lm_per_id.track_r.back();
-            if (lm.frame_id != prev_lm.frame_id) {
-                lm.velocity = lm.pt3d_norm - prev_lm.pt3d_norm;
-                lm.velocity /= (lm.stamp - prev_lm.stamp);
-            }
-        }
+        // TODO: Fix this for TD estimation
+        // if (lm_per_id.track_r.size() > 0) {
+        //     auto prev_lm = lm_per_id.track_r.back();
+        //     if (lm.frame_id != prev_lm.frame_id) {
+        //         lm.velocity = lm.pt3d_norm - prev_lm.pt3d_norm;
+        //         lm.velocity /= (lm.stamp - prev_lm.stamp);
+        //     }
+        // }
     }
     report.stereo_point_num = cur_lk_pts.size();
     return report;
@@ -370,6 +371,10 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
         cv::Scalar color = cv::Scalar(0, 255, 255);
         cv::circle(img, cur_pts[j], 1, color, 2);
         auto _id = frame.landmarks[j].landmark_id;
+        if (!lmanager->hasLandmark(_id)) {
+            continue;
+        }
+        auto lm = lmanager->at(_id);
         if (_id >= 0) {
             cv::Point2f prev;
             if (!lmanager->hasLandmark(_id)) {
@@ -381,8 +386,12 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
             if (!is_keyframe || pts2d.size() < 2 || is_right) {
                 prev = pts2d.back().pt2d;
             } else {
-                int index = pts2d.size()-2;
-                prev = lmanager->at(_id).track[index].pt2d;
+                for (int  index = pts2d.size()-2; index >= 0; index--) {
+                    if (pts2d[index].camera_id == frame.camera_id) {
+                        prev = lmanager->at(_id).track[index].pt2d;
+                        break;
+                    }
+                }
             }
             if (is_remote) {
                 cv::line(img, prev + cv::Point2f(width, 0), cur_pts[j], cv::Scalar(0, 255, 0));

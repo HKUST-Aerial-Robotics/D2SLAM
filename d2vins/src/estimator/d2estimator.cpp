@@ -14,6 +14,10 @@
 #include "marginalization/marginalization.hpp"
 
 namespace D2VINS {
+    
+D2Estimator::D2Estimator(int drone_id):
+    self_id(drone_id), state(drone_id) {}
+
 void D2Estimator::init(ros::NodeHandle & nh) {
     state.init(params->camera_extrinsics, params->td_initial);
     ProjectionTwoFrameOneCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
@@ -22,7 +26,7 @@ void D2Estimator::init(ros::NodeHandle & nh) {
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info = params->focal_length / 1.5 * Matrix3d::Identity();
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info(2,2) = params->depth_sqrt_inf;
     visual.init(nh, this);
-    printf("[D2Estimator::init] init done estimator on drone %d\n", params->self_id);
+    printf("[D2Estimator::init] init done estimator on drone %d\n", self_id);
     for (auto cam_id : state.getAvailableCameraIds()) {
         Swarm::Pose ext = state.getExtrinsic(cam_id);
         printf("[D2VINS::D2Estimator] extrinsic %d: %s\n", cam_id, ext.toStr().c_str());
@@ -89,7 +93,7 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
     // bool success = cv::solvePnP(pts3d, pts2d, K, D, rvec, t, true);
     bool success = cv::solvePnPRansac(pts3d, pts2d, K, D, rvec, t, true, params->pnp_iteratives,  3, 0.99,  inliers);
     auto pose_cam = D2FrontEnd::PnPRestoCamPose(rvec, t);
-    auto pose_imu = pose_cam*state.getExtrinsic(0).inverse();
+    auto pose_imu = pose_cam*image.extrinsic.inverse();
     // printf("[D2VINS::D2Estimator] PnP initial %s final %s points %d\n", pose.toStr().c_str(), pose_imu.toStr().c_str(), pts3d.size());
     return std::make_pair(success, pose_imu);
 }
@@ -302,10 +306,13 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     current_landmark_num = lms.size();
     auto loss_function = new ceres::HuberLoss(1.0);    
     std::map<FrameIdType, int> keyframe_measurements;
-    
+    if (params->verbose) {
+        printf("[D2VINS::setupLandmarkFactors] %d landmarks\n", lms.size());
+    }
     for (auto lm : lms) {
         auto lm_id = lm.landmark_id;
-        auto firstObs = lm.track[0];
+        LandmarkPerFrame firstObs = lm.track[0];
+        auto base_camera_id = firstObs.camera_id;
         auto mea0 = firstObs.measurement();
         keyframe_measurements[firstObs.frame_id] ++;
         state.getLandmarkbyId(lm_id).solver_flag = LandmarkSolverFlag::SOLVED;
@@ -317,56 +324,55 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
             marginalizer->addDepthResidual(f_dep, loss_function, firstObs.frame_id, lm_id);
         }
         for (auto i = 1; i < lm.track.size(); i++) {
-            auto mea1 = lm.track[i].measurement();
-            ceres::CostFunction * f_td = nullptr;
-            if (lm.track[i].depth_mea && params->fuse_dep &&
-                lm.track[i].depth < params->max_depth_to_fuse && 
-                lm.track[i].depth > params->min_depth_to_fuse) {
-                f_td = new ProjectionTwoFrameOneCamDepthFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,
-                    firstObs.cur_td, lm.track[i].cur_td, lm.track[i].depth);
-            } else {
-                f_td = new ProjectionTwoFrameOneCamFactor(mea0, mea1, firstObs.velocity, lm.track[i].velocity,
-                    firstObs.cur_td, lm.track[i].cur_td);
-            }
-            problem.AddResidualBlock(f_td, loss_function,
-                state.getPoseState(firstObs.frame_id), 
-                state.getPoseState(lm.track[i].frame_id), 
-                state.getExtrinsicState(firstObs.camera_id),
-                state.getLandmarkState(lm_id), state.getTdState(lm.track[i].camera_id));
-            marginalizer->addLandmarkResidual(f_td, loss_function,
-                firstObs.frame_id, lm.track[i].frame_id, lm_id, firstObs.camera_id, true);
-            keyframe_measurements[lm.track[i].frame_id] ++;
-            used_camera_sets.insert(firstObs.camera_id);
-        }
-
-        for (auto l_fm : lm.track_r) {
-            auto mea1 = l_fm.measurement();
-            if (l_fm.frame_id == firstObs.frame_id) {
-                auto f_td = new ProjectionOneFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
-                    l_fm.velocity, firstObs.cur_td, l_fm.cur_td);
-                problem.AddResidualBlock(f_td, nullptr,
-                    state.getExtrinsicState(firstObs.camera_id),
-                    state.getExtrinsicState(l_fm.camera_id),
-                    state.getLandmarkState(lm_id), state.getTdState(l_fm.camera_id));
-                marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, loss_function,
-                    firstObs.frame_id, lm_id, firstObs.camera_id, l_fm.camera_id);
-            } else {
-                auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
-                    l_fm.velocity, firstObs.cur_td, l_fm.cur_td);
+            auto lm_per_frame = lm.track[i];
+            auto mea1 = lm_per_frame.measurement();
+            if (lm_per_frame.camera_id == base_camera_id) {
+                ceres::CostFunction * f_td = nullptr;
+                if (lm_per_frame.depth_mea && params->fuse_dep &&
+                    lm_per_frame.depth < params->max_depth_to_fuse && 
+                    lm_per_frame.depth > params->min_depth_to_fuse) {
+                    f_td = new ProjectionTwoFrameOneCamDepthFactor(mea0, mea1, firstObs.velocity, lm_per_frame.velocity,
+                        firstObs.cur_td, lm_per_frame.cur_td, lm_per_frame.depth);
+                } else {
+                    f_td = new ProjectionTwoFrameOneCamFactor(mea0, mea1, firstObs.velocity, lm_per_frame.velocity,
+                        firstObs.cur_td, lm_per_frame.cur_td);
+                }
                 problem.AddResidualBlock(f_td, loss_function,
                     state.getPoseState(firstObs.frame_id), 
-                    state.getPoseState(l_fm.frame_id), 
+                    state.getPoseState(lm_per_frame.frame_id), 
                     state.getExtrinsicState(firstObs.camera_id),
-                    state.getExtrinsicState(l_fm.camera_id),
-                    state.getLandmarkState(lm_id), state.getTdState(l_fm.camera_id));
-                marginalizer->addLandmarkResidualTwoFrameTwoCam(f_td, loss_function,
-                    firstObs.frame_id, l_fm.frame_id, lm_id, firstObs.camera_id, l_fm.camera_id);
+                    state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.camera_id));
+                marginalizer->addLandmarkResidual(f_td, loss_function,
+                    firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, true);
+                keyframe_measurements[lm_per_frame.frame_id] ++;
+                used_camera_sets.insert(firstObs.camera_id);
+            } else {
+                if (lm_per_frame.frame_id == firstObs.frame_id) {
+                    auto f_td = new ProjectionOneFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
+                        lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
+                    problem.AddResidualBlock(f_td, nullptr,
+                        state.getExtrinsicState(firstObs.camera_id),
+                        state.getExtrinsicState(lm_per_frame.camera_id),
+                        state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.camera_id));
+                    marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, loss_function,
+                        firstObs.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                } else {
+                    auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
+                        lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
+                    problem.AddResidualBlock(f_td, loss_function,
+                        state.getPoseState(firstObs.frame_id), 
+                        state.getPoseState(lm_per_frame.frame_id), 
+                        state.getExtrinsicState(firstObs.camera_id),
+                        state.getExtrinsicState(lm_per_frame.camera_id),
+                        state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.camera_id));
+                    marginalizer->addLandmarkResidualTwoFrameTwoCam(f_td, loss_function,
+                        firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                }
+                used_camera_sets.insert(lm_per_frame.camera_id);
             }
-            used_camera_sets.insert(l_fm.camera_id);
+            problem.SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
         }
-        problem.SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
     }
-
     //Check the measurements number of each keyframe
     for (auto it : keyframe_measurements) {
         auto frame_id = it.first;

@@ -10,7 +10,7 @@ class D2EstimatorState {
 protected:
     std::vector<VINSFrame*> sld_win;
     std::map<int, std::vector<VINSFrame*>> remote_sld_wins;
-    std::set<int> remote_drones;
+    std::set<int> all_drones;
     std::map<FrameIdType, VINSFrame*> frame_db;
     std::map<FrameIdType, int> frame_indices;
     D2LandmarkManager lmanager;
@@ -24,10 +24,14 @@ protected:
     void updatePoseIndices();
     Marginalizer * marginalizer = nullptr;
     PriorFactor * prior_factor = nullptr;
-    
+    int self_id;
 public:
     state_type td = 0.0;
-    D2EstimatorState() {}
+    D2EstimatorState(int _self_id):
+        self_id(_self_id),
+        all_drones{_self_id}
+    {}
+
     void init(std::vector<Swarm::Pose> _extrinsic, double _td);
 
     //Get states
@@ -59,12 +63,11 @@ public:
     size_t size() const;
 
     //RemoteFrame access    
-    std::set<int> availableRemoteDrones() const;
+    std::set<int> availableDrones() const;
     VINSFrame & getRemoteFrame(int drone_id, int index);
     VINSFrame & firstRemoteFrame(int drone_id);
     VINSFrame lastRemoteFrame(int drone_id) const;
     size_t sizeRemote(int drone_id) const;
-
 
     //Solving process
     void syncFromState();

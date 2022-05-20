@@ -163,8 +163,8 @@ struct LandmarkPerFrame {
 struct LandmarkPerId {
     int landmark_id = -1;
     int drone_id = -1;
+    int base_frame_id = -1;
     std::vector<LandmarkPerFrame> track;
-    std::vector<LandmarkPerFrame> track_r; // tracks of right camera of that point
     Eigen::Vector3d position;  //Note thiswill be modified by estimator.
     LandmarkFlag flag = UNINITIALIZED;
     LandmarkSolverFlag solver_flag = UNSOLVED; //If 1, is solved
@@ -178,31 +178,26 @@ struct LandmarkPerId {
         flag(Landmark.flag),
         color(Landmark.color)
     {
+        base_frame_id = Landmark.frame_id;
         add(Landmark);
     }
 
     size_t popFrame(FrameIdType frame_id) {
-        for (int i = 0; i < track.size(); i ++ ) {
-            if (track[i].frame_id == frame_id) {
-                track.erase(track.begin() + i);
-                break;
+        for (auto it=track.begin(); it!=track.end();) {
+            if (it->frame_id == frame_id) {
+                it = track.erase(it);
+            } else {
+                ++it;
             }
         }
-        for (int i = 0; i < track_r.size(); i ++ ) {
-            if (track_r[i].frame_id == frame_id) {
-                track_r.erase(track_r.begin() + i);
-                break;
-            }
+        if (track.size() > 0) {
+            base_frame_id = track.front().frame_id;
         }
-        return track.size() + track_r.size();
+        return track.size();
     }
 
     void add(const LandmarkPerFrame & Landmark) {
-        if (Landmark.camera_index == 0 && Landmark.drone_id == drone_id) {
-            track.emplace_back(Landmark);
-        } else {
-            track_r.emplace_back(Landmark);
-        }
+        track.emplace_back(Landmark);
     }
 };
 

@@ -8,6 +8,8 @@ using namespace Eigen;
 using D2Common::generateCameraId;
 
 namespace D2VINS {
+
+
 std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
     //Remove from sliding window
     auto frame_id = sld_win[index]->frame_id;
@@ -35,7 +37,7 @@ void D2EstimatorState::init(std::vector<Swarm::Pose> _extrinsic, double _td) {
 
 void D2EstimatorState::addCamera(const Swarm::Pose & pose, int camera_index, int camera_id) {
     if (camera_id < 0) {
-        camera_id = generateCameraId(params->self_id, camera_index);
+        camera_id = generateCameraId(self_id, camera_index);
     }
     auto _p = new state_type[POSE_SIZE];
     pose.to_vector(_p);
@@ -69,11 +71,14 @@ VINSFrame D2EstimatorState::lastFrame() const {
     return *sld_win.back();
 }
 
-std::set<int> D2EstimatorState::availableRemoteDrones() const { 
-    return remote_drones;
+std::set<int> D2EstimatorState::availableDrones() const { 
+    return all_drones;
 }
 
 VINSFrame & D2EstimatorState::getRemoteFrame(int drone_id, int index) {
+    if (drone_id == self_id) {
+        return getFrame(index);
+    }
     return *remote_sld_wins.at(drone_id)[index];
 }
 
@@ -88,6 +93,8 @@ VINSFrame D2EstimatorState::lastRemoteFrame(int drone_id) const {
 }
 
 size_t D2EstimatorState::sizeRemote(int drone_id) const { 
+    if (drone_id == self_id)
+        return size();
     if (remote_sld_wins.find(drone_id) == remote_sld_wins.end()) {
         return 0;
     }
@@ -180,7 +187,8 @@ void D2EstimatorState::updatePoseIndices() {
 void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSFrame & _frame, bool is_keyframe) {
     auto * frame = new VINSFrame;
     *frame = _frame;
-    if (_frame.drone_id != params->self_id) {
+    if (_frame.drone_id != self_id) {
+        all_drones.insert(_frame.drone_id);
         remote_sld_wins[_frame.drone_id].emplace_back(frame);
         for (auto & img : images.images) {
             if (extrinsic.find(img.camera_id) == extrinsic.end()) {
