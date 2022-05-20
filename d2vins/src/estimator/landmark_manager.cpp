@@ -7,7 +7,6 @@ namespace D2VINS {
 double triangulatePoint3DPts(std::vector<Swarm::Pose> poses, std::vector<Vector3d> &points, Vector3d &point_3d);
 
 void D2LandmarkManager::addKeyframe(const VisualImageDescArray & images, double td) {
-    printf("[D2LandmarkManager::addKeyframe] images.frame_id %d\n", images.frame_id);
     for (auto & image : images.images) {
         for (auto lm : image.landmarks) {
             if (lm.landmark_id < 0) {

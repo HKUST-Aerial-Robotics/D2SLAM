@@ -32,7 +32,7 @@ protected:
     int frame_count = 0;
     D2Visualization visual;
     std::pair<bool, Swarm::Pose> initialFramePnP(const VisualImageDescArray & frame, 
-        const Swarm::Pose & pose);
+        const Swarm::Pose & initial_pose);
     int solve_count = 0;
     int current_landmark_num = 0;
     ceres::Problem * problem = nullptr;

@@ -71,6 +71,11 @@ VINSFrame D2EstimatorState::lastFrame() const {
     return *sld_win.back();
 }
 
+VINSFrame & D2EstimatorState::lastFrame() {
+    assert(sld_win.size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastFrame()");
+    return *sld_win.back();
+}
+
 std::set<int> D2EstimatorState::availableDrones() const { 
     return all_drones;
 }
@@ -88,8 +93,17 @@ VINSFrame & D2EstimatorState::firstRemoteFrame(int drone_id) {
 }
 
 VINSFrame D2EstimatorState::lastRemoteFrame(int drone_id) const { 
+    if (drone_id == self_id) 
+        return lastFrame();
     assert(remote_sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastRemoteFrame()");
-    return *sld_win.back();
+    return *remote_sld_wins.at(drone_id).back();
+}
+
+VINSFrame & D2EstimatorState::lastRemoteFrame(int drone_id) { 
+    if (drone_id == self_id) 
+        return lastFrame();
+    assert(remote_sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastRemoteFrame()");
+    return *remote_sld_wins.at(drone_id).back();
 }
 
 size_t D2EstimatorState::sizeRemote(int drone_id) const { 

@@ -60,6 +60,7 @@ public:
     const VINSFrame & getFramebyId(int frame_id) const;
     VINSFrame & firstFrame();
     VINSFrame lastFrame() const;
+    VINSFrame & lastFrame();
     size_t size() const;
 
     //RemoteFrame access    
@@ -67,6 +68,7 @@ public:
     VINSFrame & getRemoteFrame(int drone_id, int index);
     VINSFrame & firstRemoteFrame(int drone_id);
     VINSFrame lastRemoteFrame(int drone_id) const;
+    VINSFrame & lastRemoteFrame(int drone_id);
     size_t sizeRemote(int drone_id) const;
 
     //Solving process

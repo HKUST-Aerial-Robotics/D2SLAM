@@ -89,10 +89,10 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame) {
     const Map<VectorXf> vlad_desc(current_keyframe.images[0].image_desc.data(), NETVLAD_DESC_SIZE);
     double netvlad_similar = vlad_desc.dot(vlad_desc_remote);
     if (netvlad_similar < params->vlad_threshold) {
-        printf("[D2FeatureTracker::trackRemote] Remote image does not match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
+        // printf("[D2FeatureTracker::trackRemote] Remote image does not match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
         return report;
     } else {
-        printf("[D2FeatureTracker::trackRemote] Remote image match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
+        // printf("[D2FeatureTracker::trackRemote] Remote image match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
     }
     if (current_keyframe.images.size() > 0 && current_keyframe.frame_id != frame.frame_id) {
         //Then current keyframe has been assigned, feature tracker by LK.
@@ -113,8 +113,8 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame) {
             }
         }
     }
-    printf("[D2Frontend::D2FeatureTracker] match %d<->%d report.remote_matched_num %d",
-        frame.drone_id, current_keyframe.drone_id, report.remote_matched_num);
+    // printf("[D2Frontend::D2FeatureTracker] match %d<->%d report.remote_matched_num %d",
+    //     frame.drone_id, current_keyframe.drone_id, report.remote_matched_num);
     return report;
 }
 

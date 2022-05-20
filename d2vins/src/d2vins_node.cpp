@@ -62,7 +62,6 @@ protected:
                 ret = estimator->inputImage(viokf);
             }
             if (ret && D2FrontEnd::params->enable_network) {
-                    printf("Broadcast frame %d camera id %d\n", viokf.frame_id, viokf.images[0].camera_id);
                     loop_net->broadcastVisualImageDescArray(viokf);
                 }
         }

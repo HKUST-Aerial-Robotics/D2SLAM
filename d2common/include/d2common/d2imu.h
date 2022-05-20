@@ -26,8 +26,8 @@ struct IMUData {
 
     IMUData(const IMUData_t & imu):
         dt(imu.dt),
-        gyro(imu.acc.x, imu.acc.y, imu.acc.z),
-        acc(imu.gyro.x, imu.gyro.y, imu.gyro.z) {
+        acc(imu.acc.x, imu.acc.y, imu.acc.z),
+        gyro(imu.gyro.x, imu.gyro.y, imu.gyro.z) {
         t = toROSTime(imu.timestamp).toSec();
     }
 
