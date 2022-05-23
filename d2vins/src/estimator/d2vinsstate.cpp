@@ -242,6 +242,15 @@ void D2EstimatorState::syncFromState() {
             frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
         }
     }
+    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+        for (auto it : remote_sld_wins) {
+            for (auto frame : it.second) {
+                if (frame->pre_integrations != nullptr) {
+                    frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
+                }
+            }
+        }
+    }
 }
 
 void D2EstimatorState::outlierRejection() {

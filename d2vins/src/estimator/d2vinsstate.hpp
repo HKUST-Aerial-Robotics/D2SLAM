@@ -54,6 +54,7 @@ public:
     std::vector<LandmarkPerId> clearFrame();
     void addFrame(const VisualImageDescArray & images, const VINSFrame & _frame, bool is_keyframe);
     void addCamera(const Swarm::Pose & pose, int camera_index, int camera_id=-1);
+    void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
 
     //Frame access    
     VINSFrame & getFrame(int index);

@@ -143,20 +143,21 @@ void D2Estimator::addFrame(VisualImageDescArray & _frame) {
 
 void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
     int r_drone_id = _frame.drone_id;
-    VINSFrame frame(_frame, _frame.Ba, _frame.Bg);
+    VINSFrame vinsframe;
     auto _imu = _frame.imu_buf;
-    // printf("[D2VINS::D2Estimator] Add remote frame %d@%d: %s\n", _frame.frame_id, r_drone_id, frame.toStr().c_str());
+    if (state.sizeRemote(r_drone_id) > 0 ) {
+        vinsframe = VINSFrame(_frame, _imu, state.lastRemoteFrame(r_drone_id));
+    } else {
+        vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
+    }
     if (params->init_method == D2VINSConfig::INIT_POSE_IMU && 
         state.sizeRemote(r_drone_id) > 0 &&
         _imu.size() > 0
     ) {
         auto last_frame = state.lastRemoteFrame(r_drone_id);
-        frame.odom = _imu.propagation(last_frame);
-        printf("[D2VINS::D2Estimator] Initial remoteframe %ld@drone%d with IMU: %s last %s imu size %ld bias Ba %f %f %f Bg %f %f %f\n",
-            _frame.frame_id, r_drone_id, frame.odom.pose().toStr().c_str(), 
-            last_frame.toStr().c_str(), _imu.size(),
-            last_frame.Ba(0), last_frame.Ba(1), last_frame.Ba(2),             
-            last_frame.Bg(0), last_frame.Bg(1), last_frame.Bg(2));
+        vinsframe.odom = _imu.propagation(last_frame);
+        printf("[D2VINS::D2Estimator] Initial remoteframe %ld@drone%d with IMU: %s\n",
+            _frame.frame_id, r_drone_id, vinsframe.odom.pose().toStr().c_str());
     } else {
         auto pnp_init = initialFramePnP(_frame, state.lastFrame().odom.pose());
         if (!pnp_init.first) {
@@ -164,14 +165,14 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
             printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed for remote %d@%d.\033[0m\n", _frame.frame_id, _frame.drone_id);
         } else {
             printf("\033[0;32m[D2VINS::D2Estimator] Initial first remoteframe@drone%d with PnP: %s\033[0m\n", r_drone_id, pnp_init.second.toStr().c_str());
-            frame.odom.pose() = pnp_init.second;
+            vinsframe.odom.pose() = pnp_init.second;
         }
     }
 
-    state.addFrame(_frame, frame, _frame.is_keyframe);
+    state.addFrame(_frame, vinsframe, _frame.is_keyframe);
     if (params->verbose || params->debug_print_states) {
         printf("[D2VINS::D2Estimator] Add Remote VINSFrame with %d: %s IMU %d\n", 
-            _frame.drone_id, frame.toStr().c_str(), _frame.imu_buf.size());
+            _frame.drone_id, vinsframe.toStr().c_str(), _frame.imu_buf.size());
     }
 }
 
@@ -300,6 +301,25 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
             continue;
         }
         marginalizer->addImuResidual(imu_factor, frame_a.frame_id, frame_b.frame_id);
+    }
+
+    //In non-distributed mode, we add IMU factor for each drone
+    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+        for (auto drone_id : state.availableDrones()) {
+            if (drone_id == self_id) {
+                continue;
+            }
+            for (size_t i = 0; i < state.sizeRemote(drone_id) - 1; i ++ ) {
+                auto & frame_a = state.getRemoteFrame(drone_id, i);
+                auto & frame_b = state.getRemoteFrame(drone_id, i + 1);
+                auto pre_integrations = frame_b.pre_integrations; //Prev to current
+                IMUFactor* imu_factor = new IMUFactor(pre_integrations);
+                problem.AddResidualBlock(imu_factor, nullptr, 
+                    state.getPoseState(frame_a.frame_id), state.getSpdBiasState(frame_a.frame_id), 
+                    state.getPoseState(frame_b.frame_id), state.getSpdBiasState(frame_b.frame_id));
+                marginalizer->addImuResidual(imu_factor, frame_a.frame_id, frame_b.frame_id);
+            }
+        }
     }
 }
 
