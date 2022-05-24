@@ -4,6 +4,7 @@
 #include <d2frontend/loop_detector.h>
 #include "sensor_msgs/Imu.h"
 #include "estimator/d2estimator.hpp"
+#include "network/d2vins_net.hpp"
 #include <mutex>
 #include <queue>
 
@@ -19,14 +20,16 @@ using namespace D2Common;
 
 class D2VINSNode :  public D2FrontEnd::D2Frontend
 {
+    typedef std::lock_guard<std::mutex> Guard;
     D2Estimator * estimator = nullptr;
+    D2VINSNet * d2vins_net = nullptr;
     ros::Subscriber imu_sub;
     int frame_count = 0;
     std::queue<D2Common::VisualImageDescArray> viokf_queue;
     std::mutex queue_lock;
     std::mutex esti_lock;
     ros::Timer estimator_timer;
-    typedef std::lock_guard<std::mutex> Guard;
+    std::thread th;
 protected:
     virtual void frameCallback(const D2Common::VisualImageDescArray & viokf) override {
         if (frame_count % params->frame_step == 0) {
@@ -62,8 +65,9 @@ protected:
                 ret = estimator->inputImage(viokf);
             }
             if (ret && D2FrontEnd::params->enable_network) {
-                    loop_net->broadcastVisualImageDescArray(viokf);
-                }
+                loop_net->broadcastVisualImageDescArray(viokf);
+                // d2vins_net->pubSlidingWindow();
+            }
         }
     }
 
@@ -78,10 +82,15 @@ public:
         initParams(nh);
         Init(nh);
         estimator = new D2Estimator(params->self_id);
+        d2vins_net = new D2VINSNet(estimator);
         estimator->init(nh);
         imu_sub  = nh.subscribe(params->imu_topic, 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
         estimator_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::timerCallback, this);
+        th = std::thread([&] {
+            while(0 == d2vins_net->lcmHandle()) {
+        }
         ROS_INFO("D2VINS node initialized. Ready to start.");
+    });
     }
 };
 

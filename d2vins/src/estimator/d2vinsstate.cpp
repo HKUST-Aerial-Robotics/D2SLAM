@@ -191,6 +191,18 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
     return ret;
 }
 
+void D2EstimatorState::updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win) {
+    if (params->verbose) {
+        printf("[D2VINS::D2EstimatorState] Update SLDWIN for drone %d\n", drone_id);
+    }
+    std::set<FrameIdType> sld_win_set{sld_win.begin(), sld_win.end()};
+    if (remote_sld_wins.find(drone_id) == remote_sld_wins.end()) {
+        return;
+    }
+
+    //Remove frames that are not in the new SLDWIN
+}
+
 void D2EstimatorState::updatePoseIndices() {
     frame_indices.clear();
     for (int i = 0; i < sld_win.size(); i++) {

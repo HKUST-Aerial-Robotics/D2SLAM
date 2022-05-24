@@ -176,8 +176,15 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
     }
 }
 
+void D2Estimator::addSldWinToFrame(VisualImageDescArray & frame) {
+    for (int i = 0; i < state.size(); i ++) {
+        frame.sld_win_status.push_back(state.getFrame(i).frame_id);
+    }
+}
+
 void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
     addFrameRemote(frame);
+    state.updateSldwin(frame.drone_id, frame.sld_win_status);
 }
 
 bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
@@ -203,6 +210,7 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
         //Presolve only for initialization.
         state.preSolve();
     }
+    addSldWinToFrame(_frame);
     frame_count ++;
     return true;
 }

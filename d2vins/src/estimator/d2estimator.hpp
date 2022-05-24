@@ -39,6 +39,7 @@ protected:
     std::set<int> used_camera_sets;
     std::vector<LandmarkPerId> margined_landmarks;
     int self_id;
+    void addSldWinToFrame(VisualImageDescArray & frame);
 public:
     D2Estimator(int drone_id);
     void inputImu(IMUData data);

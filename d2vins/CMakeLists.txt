@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 find_package(d2frontend REQUIRED)
 find_package(d2common REQUIRED)
+find_package(lcm REQUIRED)
 
 catkin_package(
  INCLUDE_DIRS include
@@ -62,6 +63,7 @@ add_library(${PROJECT_NAME}_estimator
   src/factors/projectionOneFrameTwoCamFactor.cpp
   src/factors/prior_factor.cpp
   src/factors/pose_local_parameterization.cpp
+  src/network/d2vins_net.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_estimator
@@ -83,5 +85,6 @@ target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}_estimator
   ${CERES_LIBRARIES}
   dw
+  lcm
 )
 

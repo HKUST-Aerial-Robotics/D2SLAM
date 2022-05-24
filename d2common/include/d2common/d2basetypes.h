@@ -11,7 +11,7 @@
 using namespace Eigen;
 
 namespace D2Common {
-typedef uint64_t FrameIdType;
+typedef int64_t FrameIdType;
 typedef int64_t LandmarkIdType;
 typedef int32_t CamIdType;
 typedef double state_type;

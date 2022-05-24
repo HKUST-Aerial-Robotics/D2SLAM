@@ -210,6 +210,7 @@ struct VisualImageDescArray {
     FrameIdType frame_id;
     double stamp;
     std::vector<VisualImageDesc> images;
+    std::vector<FrameIdType> sld_win_status;
     Swarm::Pose pose_drone;
     bool prevent_adding_db;
     bool is_keyframe = false;
@@ -262,7 +263,8 @@ struct VisualImageDescArray {
         drone_id(img_desc.drone_id),
         is_keyframe(is_keyframe),
         Ba(img_desc.Ba.x, img_desc.Ba.y, img_desc.Ba.z),
-        Bg(img_desc.Bg.x, img_desc.Bg.y, img_desc.Bg.z)
+        Bg(img_desc.Bg.x, img_desc.Bg.y, img_desc.Bg.z),
+        sld_win_status(img_desc.sld_win_status.frame_ids)
     {
         stamp = toROSTime(img_desc.timestamp).toSec();
         pose_drone = Swarm::Pose(img_desc.pose_drone);
@@ -310,6 +312,10 @@ struct VisualImageDescArray {
         ret.Bg.x = Bg.x();
         ret.Bg.y = Bg.y();
         ret.Bg.z = Bg.z();
+        ret.sld_win_status.sld_win_len = sld_win_status.size();
+        ret.sld_win_status.timestamp = ret.timestamp;
+        ret.sld_win_status.drone_id = ret.drone_id;
+        ret.sld_win_status.frame_ids = sld_win_status;
         
         for (int i = 0; i < imu_buf.size(); i ++) {
             ret.imu_buf.emplace_back(imu_buf[i].toLCM());
