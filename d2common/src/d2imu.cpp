@@ -8,6 +8,10 @@ Eigen::Matrix<double, 18, 18> IntegrationBase::noise = Eigen::Matrix<double, 18,
 
 size_t IMUBuffer::searchClosest(double t) const {
     const Guard lock(buf_lock);
+    if (buf.size() == 0) {
+        printf("IMUBuffer::searchClosest: empty buffer\n");
+        return 0;
+    }
     if (buf.size() == 1) {
         return 0;
     }
@@ -80,6 +84,9 @@ bool IMUBuffer::available(double t) const {
 
 IMUBuffer IMUBuffer::pop(double t) {
     const Guard lock(buf_lock);
+    if (buf.size() == 0){
+        return IMUBuffer();
+    }
     auto i0 = searchClosest(t);
     IMUBuffer ret;
     if (i0 > 0) {
@@ -92,6 +99,9 @@ IMUBuffer IMUBuffer::pop(double t) {
 
 IMUBuffer IMUBuffer::back(double t) const {
     const Guard lock(buf_lock);
+    if (buf.size() == 0){
+        return IMUBuffer();
+    }
     auto i0 = searchClosest(t);
     IMUBuffer ret;
     ret.buf = std::vector<IMUData>(buf.begin() + i0, buf.end());
@@ -101,6 +111,9 @@ IMUBuffer IMUBuffer::back(double t) const {
 
 IMUBuffer IMUBuffer::periodIMU(double t0, double t1) const {
     const Guard lock(buf_lock);
+    if (buf.size() == 0){
+        return IMUBuffer();
+    }
     auto i0 = searchClosest(t0);
     auto i1 = searchClosest(t1);
     return slice(i0, i1);

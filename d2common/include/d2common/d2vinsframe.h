@@ -23,6 +23,7 @@ struct VINSFrame {
     VINSFrame(const VisualImageDescArray & frame, const IMUBuffer & buf, const VINSFrame & prev_frame);
     
     VINSFrame(const VisualImageDescArray & frame, const Vector3d & _Ba, const Vector3d & _Bg);
+    VINSFrame(const VisualImageDescArray & frame);
 
     std::string toStr();
 

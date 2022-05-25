@@ -17,6 +17,7 @@ protected:
     bool initFirstPoseFlag = false;   
     D2EstimatorState state;
     IMUBuffer imubuf;
+    std::map<int, IMUBuffer> remote_imu_bufs;
     Swarm::Odometry last_odom; //last accuacy odometry
     Swarm::Odometry last_prop_odom; //last imu propagation odometry
     Marginalizer * marginalizer = nullptr;
@@ -41,6 +42,7 @@ protected:
     std::vector<LandmarkPerId> margined_landmarks;
     int self_id;
     void addSldWinToFrame(VisualImageDescArray & frame);
+    void addRemoteImuBuf(int drone_id, const IMUBuffer & imu_buf);
 public:
     D2Estimator(int drone_id);
     void inputImu(IMUData data);

@@ -101,7 +101,7 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
 void D2Estimator::addFrame(VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
     margined_landmarks = state.clearFrame();
-    if (state.size() > 0) {
+    if (state.size() > params->min_solve_frames) {
         imubuf.pop(state.firstFrame().stamp + state.td);
     }
     auto _imu = imubuf.periodIMU(state.lastFrame().stamp + state.td, _frame.stamp + state.td);
@@ -141,26 +141,62 @@ void D2Estimator::addFrame(VisualImageDescArray & _frame) {
     }
 }
 
+void D2Estimator::addRemoteImuBuf(int drone_id, const IMUBuffer & imu_) {
+    if (remote_imu_bufs.find(drone_id) == remote_imu_bufs.end()) {
+        remote_imu_bufs[drone_id] = imu_;
+        printf("[D2Estimator::addRemoteImuBuf] Assign imu buf to drone %d cur_size %d\n", drone_id, remote_imu_bufs[drone_id].size());
+    } else {
+        auto & _imu_buf = remote_imu_bufs.at(drone_id);
+        auto t_last = _imu_buf.t_last;
+        bool add_first = true;
+        for (size_t i = 0; i < imu_.size(); i++) {
+            if (imu_[i].t > t_last) {
+                if (add_first) {
+                    if ((imu_[i].t - t_last)  > params->max_imu_time_err) {
+                        printf("\033[0;31m[D2VINS::D2Estimator] Add remote imu buffer %d: dt %.2fms\033[0m\\n", drone_id, (imu_[i].t - t_last)*1000);
+                    }
+                    add_first = false;
+                }
+                _imu_buf.add(imu_[i]);
+            }
+        }
+    }
+}
+
+
 void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
+    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+        printf("[D2Estimator::addFrameRemote] Add imu buf size %ld to drone %d\n", _frame.imu_buf.size(), _frame.drone_id);
+        addRemoteImuBuf(_frame.drone_id, _frame.imu_buf);
+    }
     int r_drone_id = _frame.drone_id;
     VINSFrame vinsframe;
     auto _imu = _frame.imu_buf;
     if (state.sizeRemote(r_drone_id) > 0 ) {
-        vinsframe = VINSFrame(_frame, _imu, state.lastRemoteFrame(r_drone_id));
-    } else {
-        vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
-    }
-    if (state.sizeRemote(r_drone_id) > 0) {
+        auto last_frame = state.lastRemoteFrame(r_drone_id);
+        if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+            auto & imu_buf = remote_imu_bufs.at(_frame.drone_id);
+            if (state.sizeRemote(r_drone_id) > params->min_solve_frames) {
+                // imu_buf.pop(state.firstRemoteFrame(r_drone_id).stamp + state.td);
+            }
+            auto _imu = imu_buf.periodIMU(last_frame.stamp + state.td, _frame.stamp + state.td);
+            printf("[D2VINS::D2Estimator] Period %d<->%d imu size %ld/%ld\n", last_frame.frame_id, _frame.frame_id, _imu.size(), imu_buf.size());
+            vinsframe = VINSFrame(_frame, _imu, last_frame);
+        } else {
+            vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
+        }
+        auto pose_last = last_frame.initial_ego_pose;
+        auto pose_cur = _frame.pose_drone;
+        auto dp = pose_cur.inverse()*pose_last;
+        auto pred_cur_pose = last_frame.odom.pose() * dp;
         if (params->verbose) {
-            auto pose_last = state.lastRemoteFrame(r_drone_id).initial_ego_pose;
-            auto pose_cur = _frame.pose_drone;
             printf("Ego pose last %s cur %s\n", pose_last.toStr().c_str(), pose_cur.toStr().c_str());
-            auto dp = pose_cur.inverse()*pose_last;
-            auto pred_cur_pose = state.lastRemoteFrame(r_drone_id).odom.pose() * dp;
             printf("[D2VINS::D2Estimator] Initial remoteframe %ld@drone%d with ego-motion: %s\n",
                 _frame.frame_id, r_drone_id, pred_cur_pose.toStr().c_str());
         }
     } else {
+        //Need to init the first frame.
+        vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
         auto pnp_init = initialFramePnP(_frame, Swarm::Pose::Identity());
         if (!pnp_init.first) {
             //Use IMU
@@ -189,8 +225,8 @@ void D2Estimator::addSldWinToFrame(VisualImageDescArray & frame) {
 }
 
 void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
-    addFrameRemote(frame);
     state.updateSldwin(frame.drone_id, frame.sld_win_status);
+    addFrameRemote(frame);
 }
 
 bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
@@ -321,25 +357,25 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
         addLandmarkFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
     }
 
-    //In non-distributed mode, we add IMU factor for each drone
-    // if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
-    //     for (auto drone_id : state.availableDrones()) {
-    //         if (drone_id == self_id) {
-    //             continue;
-    //         }
-    //         for (size_t i = 0; i < state.sizeRemote(drone_id) - 1; i ++ ) {
-    //             auto & frame_a = state.getRemoteFrame(drone_id, i);
-    //             auto & frame_b = state.getRemoteFrame(drone_id, i + 1);
-    //             auto pre_integrations = frame_b.pre_integrations; //Prev to current
-    //             if (pre_integrations == nullptr) {
-    //                 printf("\033[0;31m[D2VINS] Warning: frame %ld<->%ld@drone%d pre_integrations is nullptr.\033[0m\n",
-    //                     frame_a.frame_id, frame_b.frame_id, drone_id);
-    //                 continue;
-    //             }
-    //             addLandmarkFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
-    //         }
-    //     }
-    // }
+    // In non-distributed mode, we add IMU factor for each drone
+    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+        for (auto drone_id : state.availableDrones()) {
+            if (drone_id == self_id) {
+                continue;
+            }
+            for (size_t i = 0; i < state.sizeRemote(drone_id) - 1; i ++ ) {
+                auto & frame_a = state.getRemoteFrame(drone_id, i);
+                auto & frame_b = state.getRemoteFrame(drone_id, i + 1);
+                auto pre_integrations = frame_b.pre_integrations; //Prev to current
+                if (pre_integrations == nullptr) {
+                    printf("\033[0;31m[D2VINS] Warning: frame %ld<->%ld@drone%d pre_integrations is nullptr.\033[0m\n",
+                        frame_a.frame_id, frame_b.frame_id, drone_id);
+                    continue;
+                }
+                addLandmarkFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
+            }
+        }
+    }
 }
 
 void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {

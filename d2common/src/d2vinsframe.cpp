@@ -18,16 +18,29 @@ VINSFrame::VINSFrame(const VisualImageDescArray & frame, const IMUBuffer & buf, 
 }
 
 VINSFrame::VINSFrame(const VisualImageDescArray & frame, const Vector3d & _Ba, const Vector3d & _Bg):
-    stamp(frame.stamp),
-    frame_id(frame.frame_id),
-    drone_id(frame.drone_id),
-    is_keyframe(true),
-    initial_ego_pose(frame.pose_drone),
-    odom(frame.stamp), Ba(_Ba), Bg(_Bg) {
-        if (t0 == 0) {
-            t0 = stamp;
-        }
+        stamp(frame.stamp),
+        frame_id(frame.frame_id),
+        drone_id(frame.drone_id),
+        is_keyframe(true),
+        initial_ego_pose(frame.pose_drone),
+        odom(frame.stamp), Ba(_Ba), Bg(_Bg) {
+    if (t0 == 0) {
+        t0 = stamp;
     }
+}
+
+VINSFrame::VINSFrame(const VisualImageDescArray & frame):
+        stamp(frame.stamp),
+        frame_id(frame.frame_id),
+        drone_id(frame.drone_id),
+        is_keyframe(true),
+        initial_ego_pose(frame.pose_drone),
+        odom(frame.stamp), Ba(0, 0., 0.), Bg(0., 0., 0.) {
+    if (t0 == 0) {
+        t0 = stamp;
+    }
+}
+
 
 std::string VINSFrame::toStr() {
     char buf[1024] = {0};
