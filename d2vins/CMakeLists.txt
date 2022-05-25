@@ -2,13 +2,8 @@ cmake_minimum_required(VERSION 3.0.2)
 project(d2vins)
 
 set(CMAKE_CXX_STANDARD 17)
-## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-g -O3 -Wall -Wno-deprecated-declarations -Wno-format -Wno-reorder)
-# add_compile_options(-g -O0)
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy

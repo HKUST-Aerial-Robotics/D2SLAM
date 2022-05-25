@@ -226,8 +226,10 @@ void D2LandmarkManager::syncState(const D2EstimatorState * state) {
                 lm.position = pos;
                 lm.flag = LandmarkFlag::ESTIMATED;
                 if (params->debug_print_states) {
-                    printf("[D2VINS::D2LandmarkManager] update LM %d inv_dep/dep %.2f/%.2f mea %d %.2f pos %.2f %.2f %.2f baseFrame %ld pose %s extrinsic %s\n",
-                        lm_id, inv_dep, 1./inv_dep, lm_per_frame.depth_mea, lm_per_frame.depth, pos.x(), pos.y(), pos.z(),
+                    printf("[D2VINS::D2LandmarkManager] update LM %d inv_dep/dep %.2f/%.2f depmea %d %.2f pt3d_n %.2f %.2f %.2f pos %.2f %.2f %.2f baseFrame %ld pose %s extrinsic %s\n",
+                        lm_id, inv_dep, 1./inv_dep, lm_per_frame.depth_mea, lm_per_frame.depth, 
+                            pt3d_n.x(), pt3d_n.y(), pt3d_n.z(),
+                            pos.x(), pos.y(), pos.z(),
                             lm_per_frame.frame_id, firstFrame.odom.pose().toStr().c_str(), ext.toStr().c_str());
                 }
             } else {
@@ -275,6 +277,19 @@ std::vector<LandmarkPerId> D2LandmarkManager::getInitializedLandmarks() const {
 
 LandmarkPerId & D2LandmarkManager::getLandmark(LandmarkIdType landmark_id) {
     return landmark_db.at(landmark_id);
+}
+
+std::vector<LandmarkPerId> D2LandmarkManager::getRelatedLandmarks(FrameIdType frame_id) const {
+    if (related_landmarks.find(frame_id) == related_landmarks.end()) {
+        return std::vector<LandmarkPerId>();
+    }
+    std::vector<LandmarkPerId> lm_per_frame_set;
+    auto _landmark_ids = related_landmarks.at(frame_id);
+    for (auto _id : _landmark_ids) {
+        auto lm = landmark_db.at(_id);
+        lm_per_frame_set.emplace_back(lm);
+    }
+    return lm_per_frame_set;
 }
 
 bool D2LandmarkManager::hasLandmark(LandmarkIdType landmark_id) const {

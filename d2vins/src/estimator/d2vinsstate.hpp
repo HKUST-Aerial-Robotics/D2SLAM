@@ -20,6 +20,7 @@ protected:
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
 
     std::vector<LandmarkPerId> popFrame(int index);
+    std::vector<LandmarkPerId> removeFrameById(FrameIdType frame_id);
     void outlierRejection();
     void updatePoseIndices();
     Marginalizer * marginalizer = nullptr;
@@ -47,6 +48,7 @@ public:
     std::set<CamIdType> getAvailableCameraIds() const;
     std::vector<LandmarkPerId> availableLandmarkMeasurements() const;
     std::vector<LandmarkPerId> getInitializedLandmarks() const;
+    std::vector<LandmarkPerId> getRelatedLandmarks(FrameIdType frame_id) const;
     LandmarkPerId & getLandmarkbyId(LandmarkIdType id);
     bool hasLandmark(LandmarkIdType id) const;
 

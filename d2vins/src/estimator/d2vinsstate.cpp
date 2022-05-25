@@ -12,12 +12,16 @@ namespace D2VINS {
 
 std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
     //Remove from sliding window
-    auto frame_id = sld_win[index]->frame_id;
+    auto frame_id = sld_win.at(index)->frame_id;
     if (params->verbose) {
         printf("[D2VSIN::D2EstimatorState] remove frame %ld\n", frame_id);
     }
     delete sld_win[index];
     sld_win.erase(sld_win.begin() + index);
+    return removeFrameById(frame_id);
+}
+
+std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(FrameIdType frame_id) {
     auto ret = lmanager.popFrame(frame_id);
     frame_db.erase(frame_id);
     delete _frame_pose_state[frame_id];
@@ -195,12 +199,21 @@ void D2EstimatorState::updateSldwin(int drone_id, const std::vector<FrameIdType>
     if (params->verbose) {
         printf("[D2VINS::D2EstimatorState] Update SLDWIN for drone %d\n", drone_id);
     }
-    std::set<FrameIdType> sld_win_set{sld_win.begin(), sld_win.end()};
     if (remote_sld_wins.find(drone_id) == remote_sld_wins.end()) {
         return;
     }
-
+    std::set<FrameIdType> sld_win_set{sld_win.begin(), sld_win.end()};
+    auto & _sld_win = remote_sld_wins.at(drone_id);
     //Remove frames that are not in the new SLDWIN
+    for (auto it = _sld_win.begin(); it != _sld_win.end();) {
+        if (sld_win_set.find((*it)->frame_id) == sld_win_set.end()) {
+            removeFrameById((*it)->frame_id);
+            delete *it;
+            it = _sld_win.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 void D2EstimatorState::updatePoseIndices() {
@@ -232,7 +245,8 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
 
     lmanager.addKeyframe(images, td);
     if (params->verbose) {
-        printf("[D2VINS::D2EstimatorState] add frame %ld@%d, current %ld frame\n", images.frame_id, _frame.drone_id, sld_win.size());
+        printf("[D2VINS::D2EstimatorState] add frame %ld@%d with %d images, current %ld frame\n", 
+            images.frame_id, _frame.drone_id, images.images.size(), sld_win.size());
     }
     updatePoseIndices();
 }
@@ -282,16 +296,28 @@ LandmarkPerId & D2EstimatorState::getLandmarkbyId(LandmarkIdType id) {
     return lmanager.getLandmark(id);
 }
 
+std::vector<LandmarkPerId> D2EstimatorState::getRelatedLandmarks(FrameIdType frame_id) const {
+    return lmanager.getRelatedLandmarks(frame_id);
+}
+
 bool D2EstimatorState::hasLandmark(LandmarkIdType id) const {
     return lmanager.hasLandmark(id);
 }
 
 void D2EstimatorState::printSldWin() const {
-    printf("=========SLDWIN=========\n");
+    printf("=========SLDWIN@drone%d=========\n", self_id);
     for (int i = 0; i < sld_win.size(); i ++) {
         printf("index %d frame_id %ld frame: %s\n", i, sld_win[i]->frame_id, sld_win[i]->toStr().c_str());
     }
     printf("========================\n");
+
+    for (auto it : remote_sld_wins) {
+        printf("=========SLDWIN@drone%d=========\n", it.first);
+        for (int i = 0; i < it.second.size(); i ++) {
+            printf("index %d frame_id %ld frame: %s\n", i, it.second[i]->frame_id, it.second[i]->toStr().c_str());
+        }
+        printf("========================\n");
+    }
 }
 
 }

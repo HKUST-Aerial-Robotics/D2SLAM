@@ -176,20 +176,8 @@ void D2Frontend::loopTimerCallback(const ros::TimerEvent & e) {
 }
 
 void D2Frontend::pubNodeFrame(const VisualImageDescArray & viokf) {
-    ROS_INFO("[SWARM_LOOP](pubNodeFrame) drone %d pub nodeframe", viokf.drone_id);
-    swarm_msgs::node_frame nf;
-    nf.header.stamp = ros::Time(viokf.stamp);
-    nf.position.x = viokf.pose_drone.pos().x();
-    nf.position.y = viokf.pose_drone.pos().y();
-    nf.position.z = viokf.pose_drone.pos().z();
-    nf.quat.x = viokf.pose_drone.att().x();
-    nf.quat.y = viokf.pose_drone.att().y();
-    nf.quat.z = viokf.pose_drone.att().z();
-    nf.quat.w = viokf.pose_drone.att().w();
-    nf.vo_available = true;
-    nf.drone_id = viokf.drone_id;
-    nf.keyframe_id = viokf.frame_id;
-    keyframe_pub.publish(nf);
+    auto _kf = viokf.toROS();
+    keyframe_pub.publish(_kf);
 }
 
 void D2Frontend::onRemoteFrameROS(const swarm_msgs::ImageArrayDescriptor & remote_img_desc) {

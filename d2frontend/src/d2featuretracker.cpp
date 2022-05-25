@@ -53,6 +53,10 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     TicToc tic;
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         report.compose(trackRemote(frames.images[0]));
+        cvtRemoteLandmarkId(frames.images[0]);
+        if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
+            cvtRemoteLandmarkId(frames.images[1]);
+        }
     } else {
         for (auto & frame : frames.images) {
             report.compose(trackRemote(frame));
@@ -107,9 +111,11 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame) {
                 auto local_index = ids_down_to_up[i];
                 auto &remote_lm = frame.landmarks[i];
                 auto &local_lm = previous.landmarks[local_index];
-                remote_to_local[remote_lm.landmark_id] = local_lm.landmark_id;
-                remote_lm.landmark_id = local_lm.landmark_id;
-                report.remote_matched_num ++;
+                if (remote_lm.landmark_id >= 0 && local_lm.landmark_id>=0) {
+                    remote_to_local[remote_lm.landmark_id] = local_lm.landmark_id;
+                    remote_lm.landmark_id = local_lm.landmark_id;
+                    report.remote_matched_num ++;
+                }
             }
         }
     }
@@ -117,6 +123,19 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame) {
     //     frame.drone_id, current_keyframe.drone_id, report.remote_matched_num);
     return report;
 }
+
+void D2FeatureTracker::cvtRemoteLandmarkId(VisualImageDesc & frame) const {
+    int count = 0;
+    for (auto & lm : frame.landmarks) {
+        if (lm.landmark_id > 0 && remote_to_local.find(lm.landmark_id) != remote_to_local.end()) {
+            // printf("Lm origin %ld -> %ld camera %ld\n", lm.landmark_id, remote_to_local.at(lm.landmark_id), lm.camera_id);
+            lm.landmark_id = remote_to_local.at(lm.landmark_id);
+            count ++;
+        }
+    }
+    // printf("[D2FeatureTracker::cvtRemoteLandmarkId] Remote eff stereo %d\n", count);
+}
+
 
 TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
     TrackReport report;

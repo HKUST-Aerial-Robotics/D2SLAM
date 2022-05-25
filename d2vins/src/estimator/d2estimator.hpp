@@ -27,6 +27,7 @@ protected:
     void solve();
     void setupImuFactors(ceres::Problem & problem);
     void setupLandmarkFactors(ceres::Problem & problem);
+    void addLandmarkFactor(ceres::Problem & problem, FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* _pre_integration);
     void setStateProperties(ceres::Problem & problem);
     void setupPriorFactor(ceres::Problem & problem);
     int frame_count = 0;

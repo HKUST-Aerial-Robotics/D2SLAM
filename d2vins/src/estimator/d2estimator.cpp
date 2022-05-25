@@ -150,22 +150,28 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
     } else {
         vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
     }
-    if (params->init_method == D2VINSConfig::INIT_POSE_IMU && 
-        state.sizeRemote(r_drone_id) > 0 &&
-        _imu.size() > 0
-    ) {
-        auto last_frame = state.lastRemoteFrame(r_drone_id);
-        vinsframe.odom = _imu.propagation(last_frame);
-        printf("[D2VINS::D2Estimator] Initial remoteframe %ld@drone%d with IMU: %s\n",
-            _frame.frame_id, r_drone_id, vinsframe.odom.pose().toStr().c_str());
+    if (state.sizeRemote(r_drone_id) > 0) {
+        if (params->verbose) {
+            auto pose_last = state.lastRemoteFrame(r_drone_id).initial_ego_pose;
+            auto pose_cur = _frame.pose_drone;
+            printf("Ego pose last %s cur %s\n", pose_last.toStr().c_str(), pose_cur.toStr().c_str());
+            auto dp = pose_cur.inverse()*pose_last;
+            auto pred_cur_pose = state.lastRemoteFrame(r_drone_id).odom.pose() * dp;
+            printf("[D2VINS::D2Estimator] Initial remoteframe %ld@drone%d with ego-motion: %s\n",
+                _frame.frame_id, r_drone_id, pred_cur_pose.toStr().c_str());
+        }
     } else {
-        auto pnp_init = initialFramePnP(_frame, state.lastFrame().odom.pose());
+        auto pnp_init = initialFramePnP(_frame, Swarm::Pose::Identity());
         if (!pnp_init.first) {
             //Use IMU
-            printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed for remote %d@%d.\033[0m\n", _frame.frame_id, _frame.drone_id);
+            if (params->verbose) {
+                printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed for remote %d@%d.\033[0m\n", _frame.frame_id, _frame.drone_id);
+            }
         } else {
-            printf("\033[0;32m[D2VINS::D2Estimator] Initial first remoteframe@drone%d with PnP: %s\033[0m\n", r_drone_id, pnp_init.second.toStr().c_str());
-            vinsframe.odom.pose() = pnp_init.second;
+            if (params->verbose) {
+                printf("\033[0;32m[D2VINS::D2Estimator] Initial first remoteframe@drone%d with PnP: %s\033[0m\n", r_drone_id, pnp_init.second.toStr().c_str());
+                vinsframe.odom.pose() = pnp_init.second;
+            }
         }
     }
 
@@ -295,40 +301,45 @@ void D2Estimator::solve() {
     }
 }
 
+void D2Estimator::addLandmarkFactor(ceres::Problem & problem, FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* pre_integrations) {
+    IMUFactor* imu_factor = new IMUFactor(pre_integrations);
+        problem.AddResidualBlock(imu_factor, nullptr, 
+            state.getPoseState(frame_ida), state.getSpdBiasState(frame_ida), 
+            state.getPoseState(frame_idb), state.getSpdBiasState(frame_idb));
+        if (params->always_fixed_first_pose) {
+            //At this time we fix the first pose and ignore the margin of this imu factor to achieve better numerical stability
+            return;
+        }
+        marginalizer->addImuResidual(imu_factor, frame_ida, frame_idb);
+}
+
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {
     for (size_t i = 0; i < state.size() - 1; i ++ ) {
         auto & frame_a = state.getFrame(i);
         auto & frame_b = state.getFrame(i + 1);
         auto pre_integrations = frame_b.pre_integrations; //Prev to current
-        IMUFactor* imu_factor = new IMUFactor(pre_integrations);
-        problem.AddResidualBlock(imu_factor, nullptr, 
-            state.getPoseState(frame_a.frame_id), state.getSpdBiasState(frame_a.frame_id), 
-            state.getPoseState(frame_b.frame_id), state.getSpdBiasState(frame_b.frame_id));
-        if (params->always_fixed_first_pose) {
-            //At this time we fix the first pose and ignore the margin of this imu factor to achieve better numerical stability
-            continue;
-        }
-        marginalizer->addImuResidual(imu_factor, frame_a.frame_id, frame_b.frame_id);
+        addLandmarkFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
     }
 
     //In non-distributed mode, we add IMU factor for each drone
-    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
-        for (auto drone_id : state.availableDrones()) {
-            if (drone_id == self_id) {
-                continue;
-            }
-            for (size_t i = 0; i < state.sizeRemote(drone_id) - 1; i ++ ) {
-                auto & frame_a = state.getRemoteFrame(drone_id, i);
-                auto & frame_b = state.getRemoteFrame(drone_id, i + 1);
-                auto pre_integrations = frame_b.pre_integrations; //Prev to current
-                IMUFactor* imu_factor = new IMUFactor(pre_integrations);
-                problem.AddResidualBlock(imu_factor, nullptr, 
-                    state.getPoseState(frame_a.frame_id), state.getSpdBiasState(frame_a.frame_id), 
-                    state.getPoseState(frame_b.frame_id), state.getSpdBiasState(frame_b.frame_id));
-                marginalizer->addImuResidual(imu_factor, frame_a.frame_id, frame_b.frame_id);
-            }
-        }
-    }
+    // if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+    //     for (auto drone_id : state.availableDrones()) {
+    //         if (drone_id == self_id) {
+    //             continue;
+    //         }
+    //         for (size_t i = 0; i < state.sizeRemote(drone_id) - 1; i ++ ) {
+    //             auto & frame_a = state.getRemoteFrame(drone_id, i);
+    //             auto & frame_b = state.getRemoteFrame(drone_id, i + 1);
+    //             auto pre_integrations = frame_b.pre_integrations; //Prev to current
+    //             if (pre_integrations == nullptr) {
+    //                 printf("\033[0;31m[D2VINS] Warning: frame %ld<->%ld@drone%d pre_integrations is nullptr.\033[0m\n",
+    //                     frame_a.frame_id, frame_b.frame_id, drone_id);
+    //                 continue;
+    //             }
+    //             addLandmarkFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
+    //         }
+    //     }
+    // }
 }
 
 void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
@@ -367,6 +378,11 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                     f_td = new ProjectionTwoFrameOneCamFactor(mea0, mea1, firstObs.velocity, lm_per_frame.velocity,
                         firstObs.cur_td, lm_per_frame.cur_td);
                 }
+                if (firstObs.frame_id == lm_per_frame.frame_id) {
+                    printf("\033[0;31m[ [D2VINS::setupLandmarkFactors] Warning: frame %ld<->%ld@%ld is the same camera id %d.\033[0m\n",
+                        firstObs.frame_id, lm_per_frame.frame_id, lm_id, base_camera_id);
+                    continue;
+                }
                 problem.AddResidualBlock(f_td, loss_function,
                     state.getPoseState(firstObs.frame_id), 
                     state.getPoseState(lm_per_frame.frame_id), 
@@ -400,6 +416,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                 }
                 used_camera_sets.insert(lm_per_frame.camera_id);
             }
+            keyframe_measurements[lm_per_frame.frame_id] ++;
             problem.SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
         }
     }
@@ -407,8 +424,13 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     for (auto it : keyframe_measurements) {
         auto frame_id = it.first;
         if (it.second < params->min_measurements_per_keyframe) {
-            printf("\033[0;31m[D2VINS::D2Estimator] frame_id %ld has only %d measurements\033[0m\n", 
+            printf("\033[0;31m[D2VINS::D2Estimator] frame_id %ld has only %d measurements\033[0m\n Related landmarks:\n", 
                 frame_id, it.second);
+            std::vector<LandmarkPerId> related_landmarks = state.getRelatedLandmarks(frame_id);
+            for (auto lm : related_landmarks) {
+                printf("Landmark %ld tracks %ld flag %d\n", lm.landmark_id, lm.track.size(), lm.flag);
+            }
+            printf("====================");
         }
     }
 }

@@ -12,6 +12,7 @@ struct VINSFrame {
     int drone_id = -1;
     bool is_keyframe = false;
     Swarm::Odometry odom;
+    Swarm::Pose initial_ego_pose; //Only effective if this keyframe is from remote
     Vector3d Ba; // bias of acc
     Vector3d Bg; //bias of gyro
     FrameIdType prev_frame_id = -1;

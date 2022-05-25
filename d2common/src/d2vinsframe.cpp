@@ -9,7 +9,8 @@ VINSFrame::VINSFrame(const VisualImageDescArray & frame, const IMUBuffer & buf, 
     drone_id(frame.drone_id),
     is_keyframe(frame.is_keyframe),
     odom(frame.stamp), Ba(prev_frame.Ba), Bg(prev_frame.Bg),
-    prev_frame_id(prev_frame.frame_id) {
+    prev_frame_id(prev_frame.frame_id),
+    initial_ego_pose(frame.pose_drone) {
     pre_integrations = new IntegrationBase(buf, Ba, Bg);
     if (t0 == 0) {
         t0 = stamp;
@@ -21,6 +22,7 @@ VINSFrame::VINSFrame(const VisualImageDescArray & frame, const Vector3d & _Ba, c
     frame_id(frame.frame_id),
     drone_id(frame.drone_id),
     is_keyframe(true),
+    initial_ego_pose(frame.pose_drone),
     odom(frame.stamp), Ba(_Ba), Bg(_Bg) {
         if (t0 == 0) {
             t0 = stamp;
