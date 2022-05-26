@@ -28,7 +28,7 @@ protected:
     void solve();
     void setupImuFactors(ceres::Problem & problem);
     void setupLandmarkFactors(ceres::Problem & problem);
-    void addLandmarkFactor(ceres::Problem & problem, FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* _pre_integration);
+    void addIMUFactor(ceres::Problem & problem, FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* _pre_integration);
     void setStateProperties(ceres::Problem & problem);
     void setupPriorFactor(ceres::Problem & problem);
     int frame_count = 0;
@@ -43,6 +43,7 @@ protected:
     int self_id;
     void addSldWinToFrame(VisualImageDescArray & frame);
     void addRemoteImuBuf(int drone_id, const IMUBuffer & imu_buf);
+    bool isLocalFrame(FrameIdType frame_id) const;
 public:
     D2Estimator(int drone_id);
     void inputImu(IMUData data);

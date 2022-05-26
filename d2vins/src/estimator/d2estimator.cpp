@@ -163,7 +163,6 @@ void D2Estimator::addRemoteImuBuf(int drone_id, const IMUBuffer & imu_) {
     }
 }
 
-
 void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
     if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
         printf("[D2Estimator::addFrameRemote] Add imu buf size %ld to drone %d\n", _frame.imu_buf.size(), _frame.drone_id);
@@ -180,7 +179,9 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
                 // imu_buf.pop(state.firstRemoteFrame(r_drone_id).stamp + state.td);
             }
             auto _imu = imu_buf.periodIMU(last_frame.stamp + state.td, _frame.stamp + state.td);
-            printf("[D2VINS::D2Estimator] Period %d<->%d imu size %ld/%ld\n", last_frame.frame_id, _frame.frame_id, _imu.size(), imu_buf.size());
+            if (fabs(_imu.size()/(_frame.stamp - last_frame.stamp) - params->IMU_FREQ) > 10) {
+                printf("\033[0;31m[D2VINS::D2Estimator] Remote IMU error freq: %.3f \033[0m\n", _imu.size()/(_frame.stamp - last_frame.stamp));
+            }
             vinsframe = VINSFrame(_frame, _imu, last_frame);
         } else {
             vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
@@ -190,7 +191,6 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
         auto dp = pose_cur.inverse()*pose_last;
         auto pred_cur_pose = last_frame.odom.pose() * dp;
         if (params->verbose) {
-            printf("Ego pose last %s cur %s\n", pose_last.toStr().c_str(), pose_cur.toStr().c_str());
             printf("[D2VINS::D2Estimator] Initial remoteframe %ld@drone%d with ego-motion: %s\n",
                 _frame.frame_id, r_drone_id, pred_cur_pose.toStr().c_str());
         }
@@ -337,15 +337,16 @@ void D2Estimator::solve() {
     }
 }
 
-void D2Estimator::addLandmarkFactor(ceres::Problem & problem, FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* pre_integrations) {
+void D2Estimator::addIMUFactor(ceres::Problem & problem, FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* pre_integrations) {
     IMUFactor* imu_factor = new IMUFactor(pre_integrations);
-        problem.AddResidualBlock(imu_factor, nullptr, 
-            state.getPoseState(frame_ida), state.getSpdBiasState(frame_ida), 
-            state.getPoseState(frame_idb), state.getSpdBiasState(frame_idb));
-        if (params->always_fixed_first_pose) {
-            //At this time we fix the first pose and ignore the margin of this imu factor to achieve better numerical stability
-            return;
-        }
+    problem.AddResidualBlock(imu_factor, nullptr, 
+        state.getPoseState(frame_ida), state.getSpdBiasState(frame_ida), 
+        state.getPoseState(frame_idb), state.getSpdBiasState(frame_idb));
+    if (params->always_fixed_first_pose) {
+        //At this time we fix the first pose and ignore the margin of this imu factor to achieve better numerical stability
+        return;
+    }
+    if (isLocalFrame(frame_ida))
         marginalizer->addImuResidual(imu_factor, frame_ida, frame_idb);
 }
 
@@ -354,7 +355,7 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
         auto & frame_a = state.getFrame(i);
         auto & frame_b = state.getFrame(i + 1);
         auto pre_integrations = frame_b.pre_integrations; //Prev to current
-        addLandmarkFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
+        addIMUFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
     }
 
     // In non-distributed mode, we add IMU factor for each drone
@@ -372,7 +373,7 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
                         frame_a.frame_id, frame_b.frame_id, drone_id);
                     continue;
                 }
-                addLandmarkFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
+                addIMUFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
             }
         }
     }
@@ -398,7 +399,9 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                 firstObs.depth > params->min_depth_to_fuse) {
             auto f_dep = OneFrameDepth::Create(firstObs.depth);
             problem.AddResidualBlock(f_dep, loss_function, state.getLandmarkState(lm_id));
-            marginalizer->addDepthResidual(f_dep, loss_function, firstObs.frame_id, lm_id);
+            if (isLocalFrame(firstObs.frame_id) && isLocalFrame(firstObs.frame_id)) {
+                marginalizer->addDepthResidual(f_dep, loss_function, firstObs.frame_id, lm_id);
+            }
         }
         for (auto i = 1; i < lm.track.size(); i++) {
             auto lm_per_frame = lm.track[i];
@@ -424,8 +427,10 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                     state.getPoseState(lm_per_frame.frame_id), 
                     state.getExtrinsicState(firstObs.camera_id),
                     state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.camera_id));
-                marginalizer->addLandmarkResidual(f_td, loss_function,
-                    firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, true);
+                if (isLocalFrame(firstObs.frame_id) && isLocalFrame(lm_per_frame.frame_id)) {
+                    marginalizer->addLandmarkResidual(f_td, loss_function,
+                        firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, true);
+                }
                 keyframe_measurements[lm_per_frame.frame_id] ++;
                 used_camera_sets.insert(firstObs.camera_id);
             } else {
@@ -436,8 +441,10 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                         state.getExtrinsicState(firstObs.camera_id),
                         state.getExtrinsicState(lm_per_frame.camera_id),
                         state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.camera_id));
-                    marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, loss_function,
-                        firstObs.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                    if (isLocalFrame(firstObs.frame_id) && isLocalFrame(lm_per_frame.frame_id)) {
+                        marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, loss_function,
+                            firstObs.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                    }
                 } else {
                     auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                         lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
@@ -447,8 +454,10 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                         state.getExtrinsicState(firstObs.camera_id),
                         state.getExtrinsicState(lm_per_frame.camera_id),
                         state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.camera_id));
-                    marginalizer->addLandmarkResidualTwoFrameTwoCam(f_td, loss_function,
-                        firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                    if (isLocalFrame(firstObs.frame_id) && isLocalFrame(lm_per_frame.frame_id)) {
+                        marginalizer->addLandmarkResidualTwoFrameTwoCam(f_td, loss_function,
+                            firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                    }
                 }
                 used_camera_sets.insert(lm_per_frame.camera_id);
             }
@@ -493,6 +502,10 @@ Swarm::Odometry D2Estimator::getOdometry() const {
 
 D2EstimatorState & D2Estimator::getState() {
     return state;
+}
+
+bool D2Estimator::isLocalFrame(FrameIdType frame_id) const {
+    return state.getFramebyId(frame_id).drone_id == self_id;
 }
 
 }

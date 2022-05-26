@@ -93,10 +93,10 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame) {
     const Map<VectorXf> vlad_desc(current_keyframe.images[0].image_desc.data(), NETVLAD_DESC_SIZE);
     double netvlad_similar = vlad_desc.dot(vlad_desc_remote);
     if (netvlad_similar < params->vlad_threshold) {
-        // printf("[D2FeatureTracker::trackRemote] Remote image does not match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
+        printf("[D2FeatureTracker::trackRemote] Remote image does not match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
         return report;
     } else {
-        // printf("[D2FeatureTracker::trackRemote] Remote image match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
+        printf("[D2FeatureTracker::trackRemote] Remote image match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
     }
     if (current_keyframe.images.size() > 0 && current_keyframe.frame_id != frame.frame_id) {
         //Then current keyframe has been assigned, feature tracker by LK.
@@ -104,7 +104,10 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame) {
         auto prev_pts = previous.landmarks2D();
         auto cur_pts = frame.landmarks2D();
         std::vector<int> ids_down_to_up;
-        matchLocalFeatures(prev_pts, cur_pts, previous.landmark_descriptor, frame.landmark_descriptor, ids_down_to_up);
+        bool success = matchLocalFeatures(prev_pts, cur_pts, previous.landmark_descriptor, frame.landmark_descriptor, ids_down_to_up);
+        if (!success) {
+            return report;
+        }
         for (size_t i = 0; i < ids_down_to_up.size(); i++) { 
             if (ids_down_to_up[i] >= 0) {
                 assert(ids_down_to_up[i] < previous.landmarkNum() && "too large");
@@ -491,7 +494,7 @@ void D2FeatureTracker::draw(VisualImageDesc & lframe, VisualImageDesc & rframe, 
     }
 }
 
-void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
+bool matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
         const std::vector<float> & _desc_up, const std::vector<float> & _desc_down, 
         std::vector<int> & ids_down_to_up) {
     const cv::Mat desc_up(_desc_up.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(_desc_up.data()));
@@ -521,7 +524,7 @@ void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vect
     std::vector<unsigned char> mask;
     if (params->ftconfig->check_homography) {
         if (up_2d.size() < MIN_HOMOGRAPHY) {
-            return;
+            return false;
         }
         cv::findHomography(up_2d, down_2d, cv::RANSAC, params->ftconfig->ransacReprojThreshold, mask);
         reduceVector(ids_up, mask);
@@ -530,7 +533,10 @@ void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vect
     for (auto i = 0; i < ids_up.size(); i++) {
         ids_down_to_up[ids_down[i]] = ids_up[i];
     }
-    // printf("%ld/%ld matches...\n", ids_up.size(), _matches.size());
+    if (ids_down.size() > params->ftconfig->remote_min_match_num) {
+        return true;
+    }
+    return false;
 }
 
 void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts) {

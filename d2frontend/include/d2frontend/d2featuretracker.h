@@ -23,6 +23,7 @@ struct D2FTConfig {
     bool enable_lk_optical_flow = true;
     double ransacReprojThreshold = 10;
     double max_pts_velocity_time=0.3;
+    int remote_min_match_num = 30;
     std::string output_folder = "/root/output/";
 };
 
@@ -92,7 +93,7 @@ public:
     std::vector<camodocal::CameraPtr> cams;
 };
 
-void matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
+bool matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
         const std::vector<float> & _desc_up, const std::vector<float> & _desc_down, 
         std::vector<int> & ids_down_to_up);
 void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts);
