@@ -132,6 +132,10 @@ public:
     int camera_id;
     LandmarkTwoFrameOneCamResInfo():ResidualInfo(ResidualType::LandmarkTwoFrameOneCamResidual) {}
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
+        if (!params->remove_base_when_margin_remote) {
+            //In this case, only the base frame is considered in margin.
+            return frame_id.find(frame_ida) != frame_id.end();
+        }
         return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
     }
     virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
@@ -170,6 +174,9 @@ public:
     LandmarkTwoFrameTwoCamResInfoTD():ResidualInfo(ResidualType::LandmarkTwoFrameTwoCamResidualTD) {}
     // virtual void Evaluate(D2EstimatorState * state) override;
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
+        if (!params->remove_base_when_margin_remote) {
+            return frame_id.find(frame_ida) != frame_id.end();
+        }
         return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
     }
     virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {

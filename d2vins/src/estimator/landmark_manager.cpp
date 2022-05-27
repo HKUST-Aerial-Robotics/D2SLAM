@@ -243,7 +243,7 @@ void D2LandmarkManager::syncState(const D2EstimatorState * state) {
     }
 }
 
-std::vector<LandmarkPerId> D2LandmarkManager::popFrame(FrameIdType frame_id) {
+std::vector<LandmarkPerId> D2LandmarkManager::popFrame(FrameIdType frame_id, bool pop_base) {
     //Returning margined landmarks
     std::vector<LandmarkPerId> margined_landmarks;
     if (related_landmarks.find(frame_id) == related_landmarks.end()) {
@@ -252,6 +252,10 @@ std::vector<LandmarkPerId> D2LandmarkManager::popFrame(FrameIdType frame_id) {
     auto _landmark_ids = related_landmarks[frame_id];
     for (auto _id : _landmark_ids) {
         auto & lm = landmark_db.at(_id);
+        if (pop_base) {
+            related_landmarks.at(lm.base_frame_id).erase(lm.landmark_id);
+            lm.popBaseFrame();
+        }
         auto _size = lm.popFrame(frame_id);
         if (_size == 0) {
             //Remove this landmark.

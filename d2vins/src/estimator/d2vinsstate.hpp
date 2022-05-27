@@ -8,8 +8,8 @@ class Marginalizer;
 class PriorFactor;
 class D2EstimatorState {
 protected:
-    std::vector<VINSFrame*> sld_win;
-    std::map<int, std::vector<VINSFrame*>> remote_sld_wins;
+    std::map<int, std::vector<VINSFrame*>> sld_wins;
+    std::map<int, std::vector<FrameIdType>> latest_remote_sld_wins;
     std::set<int> all_drones;
     std::map<FrameIdType, VINSFrame*> frame_db;
     std::map<FrameIdType, int> frame_indices;
@@ -20,18 +20,25 @@ protected:
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
 
     std::vector<LandmarkPerId> popFrame(int index);
-    std::vector<LandmarkPerId> removeFrameById(FrameIdType frame_id);
+    std::vector<LandmarkPerId> removeFrameById(FrameIdType frame_id, bool remove_base=false); 
+        //If remove base, will remove the relevant landmarks' base frame.
+        //This is for marginal the keyframes that not is baseframe of all landmarks (in multi-drone)
     void outlierRejection();
     void updatePoseIndices();
     Marginalizer * marginalizer = nullptr;
     PriorFactor * prior_factor = nullptr;
     int self_id;
+
+    typedef std::lock_guard<std::recursive_mutex> Guard;
+    mutable std::recursive_mutex state_lock;
 public:
     state_type td = 0.0;
     D2EstimatorState(int _self_id):
         self_id(_self_id),
         all_drones{_self_id}
-    {}
+    {
+        sld_wins[self_id] = std::vector<VINSFrame*>();
+    }
 
     void init(std::vector<Swarm::Pose> _extrinsic, double _td);
 
@@ -54,7 +61,7 @@ public:
 
     //Frame operations
     std::vector<LandmarkPerId> clearFrame();
-    void addFrame(const VisualImageDescArray & images, const VINSFrame & _frame, bool is_keyframe);
+    void addFrame(const VisualImageDescArray & images, const VINSFrame & _frame);
     void addCamera(const Swarm::Pose & pose, int camera_index, int camera_id=-1);
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
 

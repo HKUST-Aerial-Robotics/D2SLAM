@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.0.2)
 project(d2vins)
 
 set(CMAKE_CXX_STANDARD 17)
-add_compile_options(-g -O3 -Wall -Wno-deprecated-declarations -Wno-format -Wno-reorder)
+set(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -Wall -Wno-deprecated-declarations -Wno-format")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wno-deprecated-declarations -Wno-format")
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp

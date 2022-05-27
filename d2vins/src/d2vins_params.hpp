@@ -74,6 +74,7 @@ struct D2VINSConfig {
     //Margin config
     bool margin_sparse_solver = true;
     bool enable_marginalization = true;
+    bool remove_base_when_margin_remote = false;
 
     //Safety
     int min_measurements_per_keyframe = 10;

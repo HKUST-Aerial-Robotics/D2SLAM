@@ -153,7 +153,10 @@ int Marginalizer::filterResiduals() {
                         if (remove_frame_ids.find(base_frame_id) != remove_frame_ids.end()) {
                             param.is_remove = true;
                         } else {
-                            printf("[D2VINS::Marginalizer::filterResiduals] landmark %d base frame %d not in remove_frame_ids %ld\n", param.id, base_frame_id, *remove_frame_ids.begin());
+                            if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
+                                printf("[D2VINS::Marginalizer::filterResiduals] landmark %d base frame %d not in remove_frame_ids %ld but will be remove\n", param.id, base_frame_id, *remove_frame_ids.begin());
+                                param.is_remove = params->remove_base_when_margin_remote;
+                            }
                         }
                     }
                 }
@@ -212,7 +215,10 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     if (params->enable_perf_output) {
         printf("[D2VINS::Marginalizer::marginalize] JtJ cost %.1fms\n", tt.toc());
     }
-    
+    if (keep_block_size == 0 || remove_state_dim == 0) {
+        printf("\033[0;31m[D2VINS::Marginalizer::marginalize] keep_block_size=%d remove_state_dim%d\033[0m\n", keep_block_size, remove_state_dim);
+        return nullptr;
+    }
     std::vector<ParamInfo> keep_params_list(params_list.begin(), params_list.begin() + keep_block_size);
     //Compute the schur complement, by sparse LLT.
     PriorFactor * prior = nullptr;
@@ -228,17 +234,23 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
         prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
     }
 
-    if (params->enable_perf_output) {
+    if (params->enable_perf_output || params->verbose) {
         printf("[D2VINS::Marginalizer::marginalize] time cost %.1fms frame_id %ld total_eff_state_dim: %d keep_size %d remove size %d eff_residual_size: %d keep_block_size %d \n", 
             tic.toc(), *remove_frame_ids.begin(), total_eff_state_dim, keep_state_dim, remove_state_dim, eff_residual_size, keep_block_size);
     }
 
     if (params->debug_write_margin_matrix) {
-        Utility::writeMatrixtoFile("/home/xuhao/output/H.txt", MatrixXd(H));
-        Utility::writeMatrixtoFile("/home/xuhao/output/g.txt", MatrixXd(g));
+        Utility::writeMatrixtoFile(params->output_folder + "/H.txt", MatrixXd(H));
+        Utility::writeMatrixtoFile(params->output_folder + "/g.txt", MatrixXd(g));
     }
 
+    // for (auto & param : keep_params_list) {
+    //     printf("param id %d type %d size %d \n", param.id, param.type, param.size);
+    //     std::cout << "H:\n" << H.block(param.index, 0, param.eff_size, total_eff_state_dim) << std::endl;
+    //     std::cout << "g:" << g.segment(param.index, param.eff_size).transpose() << std::endl;
+    // }
     if (prior->hasNan()) {
+        printf("\033[0;31m[D2VINS::Marginalizer::marginalize] prior has nan\033[0m\n");
         return nullptr;
     }
     return prior;

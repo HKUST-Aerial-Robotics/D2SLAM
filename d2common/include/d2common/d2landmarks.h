@@ -182,7 +182,18 @@ struct LandmarkPerId {
         add(Landmark);
     }
 
+    size_t popBaseFrame() {
+        if (track.size() == 0) {
+            return 0;
+        }
+        return popFrame(base_frame_id);
+    }
+
     size_t popFrame(FrameIdType frame_id) {
+        if (track.size() == 0) {
+            return 0;
+        }
+
         for (auto it=track.begin(); it!=track.end();) {
             if (it->frame_id == frame_id) {
                 it = track.erase(it);
