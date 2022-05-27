@@ -132,5 +132,41 @@ static void writeMatrixtoFile(const std::string & path, const MatrixBase<Derived
     f.close();
 }
 
+template <typename Derived>
+void removeRows(Matrix<Derived, Dynamic, Dynamic>& matrix, unsigned int rowToRemove, unsigned int count)
+{
+    unsigned int numRows = matrix.rows()-count;
+    unsigned int numCols = matrix.cols();
+
+    if( rowToRemove < numRows )
+        matrix.block(rowToRemove,0,numRows-rowToRemove,numCols) = matrix.bottomRows(numRows-rowToRemove);
+
+    matrix.conservativeResize(numRows,numCols);
+}
+
+template <typename Derived>
+void removeCols(Matrix<Derived, Dynamic, Dynamic>& matrix, unsigned int colToRemove, unsigned int count)
+{
+    unsigned int numRows = matrix.rows();
+    unsigned int numCols = matrix.cols()-count;
+
+    if( colToRemove < numCols )
+        matrix.block(0,colToRemove,numRows,numCols-colToRemove) = matrix.rightCols(numCols-colToRemove);
+
+    matrix.conservativeResize(numRows,numCols);
+}
+
+template <typename Derived>
+void removeRows(Matrix<Derived, Dynamic, 1>& matrix, unsigned int rowToRemove, unsigned int count)
+{
+    unsigned int numRows = matrix.rows()-count;
+
+    if( rowToRemove < numRows )
+        matrix.segment(rowToRemove,numRows-rowToRemove) = matrix.tail(numRows-rowToRemove);
+
+    matrix.conservativeResize(numRows,1);
+}
+
+
 }
 }

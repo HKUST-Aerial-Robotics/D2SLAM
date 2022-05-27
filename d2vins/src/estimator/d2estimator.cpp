@@ -301,7 +301,6 @@ void D2Estimator::solve() {
 
     ceres::Solver::Summary summary;
     // params->options.?
-    std::cout << "Start solving ... " << std::endl;
     ceres::Solve(params->options, problem, &summary);
     state.syncFromState();
     last_odom = state.lastFrame().odom;

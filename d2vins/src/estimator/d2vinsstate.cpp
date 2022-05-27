@@ -3,6 +3,7 @@
 #include <d2common/d2vinsframe.h>
 #include <d2common/integration_base.h>
 #include "marginalization/marginalization.hpp"
+#include "../factors/prior_factor.h"
 
 using namespace Eigen;
 using D2Common::generateCameraId;
@@ -175,7 +176,7 @@ std::set<CamIdType> D2EstimatorState::getAvailableCameraIds() const {
 std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements() const {
     return lmanager.availableMeasurements();
 }
-
+int clear_count = 0;
 std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
     std::vector<LandmarkPerId> ret;
     std::set<FrameIdType> clear_frames; //Frames in this set will be deleted.
@@ -216,6 +217,15 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
         //At this time, non-keyframes is also removed, so add them to remove set to avoid pointer issue.
         clear_key_frames.insert(clear_frames.begin(), clear_frames.end());
         prior_factor = marginalizer->marginalize(clear_key_frames);
+    }
+    if (prior_factor != nullptr) {
+        std::vector<ParamInfo> keeps = prior_factor->getKeepParams();
+        for (auto p : keeps) {
+            if (clear_frames.find(p.id)!=clear_frames.end()) {
+                printf("\033[0;31m[D2EstimatorState::clearFrame] Removed Frame %ld in prior is removed from prior\033[0m\n", p.id);
+                prior_factor->removeFrame(p.id);
+            }
+        }
     }
 
     if (clear_frames.size() > 0 ) {

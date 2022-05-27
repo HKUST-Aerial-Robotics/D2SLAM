@@ -15,11 +15,29 @@ bool PriorFactor::hasNan() const {
     return false;
 }
 
+void PriorFactor::removeFrame(int frame_id) {
+    int move_idx = 0;
+    for (int i = 0; i < keep_param_blk_num; i++) {
+        auto & param = keep_params_list[i];
+        if (param.id == frame_id && param.type == ParamsType::POSE) {
+            printf("\033[0;31m [D2VINS::PriorFactor] remove frame %d at %d\033[0m\n", frame_id, i);
+            Utility::removeRows(linearized_jac, param.index, param.eff_size);
+            Utility::removeCols(linearized_jac, param.index, param.eff_size);
+            Utility::removeRows(linearized_res, param.index, param.eff_size);
+            keep_eff_param_dim-=param.eff_size;
+            keep_params_list.erase(keep_params_list.begin() + i);
+            keep_param_blk_num--;
+            move_idx = param.eff_size;
+        } else {
+            param.index -= move_idx;
+        }
+    }
+    initDims(keep_params_list);
+}
+
 bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
-    // std::cout << "keep_eff_param_dim" << keep_eff_param_dim << std::endl;
     Eigen::VectorXd dx(keep_eff_param_dim);
-
     for (int i = 0; i < keep_param_blk_num; i++) {
         auto & info = keep_params_list[i];
         int size = info.size; //Use norminal size instead of tangent space size here.
@@ -85,6 +103,7 @@ void PriorFactor::initDims(const std::vector<ParamInfo> & _keep_params_list) {
     keep_params_list = _keep_params_list;
     keep_param_blk_num = keep_params_list.size();
     keep_eff_param_dim = getEffParamsDim();
+    mutable_parameter_block_sizes()->clear();
     for (auto it : keep_params_list) {
         mutable_parameter_block_sizes()->push_back(it.size);
     }

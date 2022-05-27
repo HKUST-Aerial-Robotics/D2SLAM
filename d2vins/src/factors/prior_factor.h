@@ -37,6 +37,7 @@ public:
     virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const;
     virtual std::vector<state_type *> getKeepParamsPointers() const;
     virtual std::vector<ParamInfo> getKeepParams() const;
+    void removeFrame(int frame_id);
     int getEffParamsDim() const;
     bool hasNan() const;
 };

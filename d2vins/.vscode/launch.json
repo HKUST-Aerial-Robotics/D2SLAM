@@ -7,7 +7,7 @@
         "name": "(gdb) d2vins",
         "type": "cppdbg",
         "request": "launch",
-        "program": "/home/xuhao/swarm_ws/devel/lib/d2vins/d2vins_node",
+        "program": "/home/xuhao/d2slam_ws/devel/lib/d2vins/d2vins_node",
         "MIMode": "gdb",
         "cwd": "${workspaceFolder}",
         "setupCommands": [

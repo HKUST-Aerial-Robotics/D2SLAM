@@ -154,7 +154,7 @@ int Marginalizer::filterResiduals() {
                             param.is_remove = true;
                         } else {
                             if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-                                printf("[D2VINS::Marginalizer::filterResiduals] landmark %d base frame %d not in remove_frame_ids %ld but will be remove\n", param.id, base_frame_id, *remove_frame_ids.begin());
+                                // printf("[D2VINS::Marginalizer::filterResiduals] landmark %d base frame %d not in remove_frame_ids %ld but will be remove\n", param.id, base_frame_id, *remove_frame_ids.begin());
                                 param.is_remove = params->remove_base_when_margin_remote;
                             }
                         }
