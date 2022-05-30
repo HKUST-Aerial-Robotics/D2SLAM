@@ -44,7 +44,7 @@ void computeDescriptors(const torch::Tensor & mProb, const torch::Tensor & mDesc
     }
 
 
-    auto fkpts = torch::from_blob(kpt_mat.data, {keypoints.size(), 2}, torch::kFloat);
+    auto fkpts = at::from_blob(kpt_mat.data, {keypoints.size(), 2}, torch::kFloat);
 
     auto grid = torch::zeros({1, 1, fkpts.size(0), 2});  // [1, 1, n_keypoints, 2]
     grid[0][0].slice(1, 0, 1) = 2.0 * fkpts.slice(1, 1, 2) / width - 1;  // x

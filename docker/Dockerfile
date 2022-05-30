@@ -41,6 +41,7 @@ RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` ma
       ros-noetic-catkin \
       net-tools \
       python3-catkin-tools \
+      htop \
       xterm \
       gdb && \
       rosdep init && \

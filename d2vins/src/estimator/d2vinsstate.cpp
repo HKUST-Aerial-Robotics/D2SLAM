@@ -25,11 +25,13 @@ std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
 
 std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(FrameIdType frame_id, bool remove_base) {
     const Guard lock(state_lock);
-    printf("[D2VSIN::D2EstimatorState] remove frame %ld remove base %d\n", frame_id, remove_base);
+    if (params->verbose) {
+        printf("[D2VSIN::D2EstimatorState] remove frame %ld remove base %d\n", frame_id, remove_base);
+    }
     auto ret = lmanager.popFrame(frame_id, remove_base);
     frame_db.erase(frame_id);
-    delete _frame_pose_state[frame_id];
-    delete _frame_spd_Bias_state[frame_id];
+    delete _frame_pose_state.at(frame_id);
+    delete _frame_spd_Bias_state.at(frame_id);
     _frame_pose_state.erase(frame_id);
     _frame_spd_Bias_state.erase(frame_id);
     return ret;
@@ -205,9 +207,7 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
                 clear_frames.insert(it->frame_id);
                 if (frame_db.at(it->frame_id)->is_keyframe) {
                     clear_key_frames.insert(it->frame_id);
-                    printf("[D2EstimatorState::clearFrame]  Will remove keyframe %ld\n", it->frame_id);
                 } else {
-                    printf("[D2EstimatorState::clearFrame]  Will remove nonkeyframe %ld\n", it->frame_id);
                 }
             }
         }
@@ -217,10 +217,8 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
     if (self_sld_win.size() >= params->min_solve_frames) {
         if (!self_sld_win[self_sld_win.size() - 1]->is_keyframe) {
             //If last frame is not keyframe then remove it.
-            printf("[D2EstimatorState::clearFrame]  Will remove nonkeyframe %ld\n", self_sld_win[self_sld_win.size() - 1]->frame_id);
             clear_frames.insert(self_sld_win[self_sld_win.size() - 1]->frame_id);
         } else if (self_sld_win.size() >= params->max_sld_win_size) {
-            printf("[D2EstimatorState::clearFrame]  Will remove first %ld\n", self_sld_win[0]->frame_id);
             clear_key_frames.insert(self_sld_win[0]->frame_id);
             clear_frames.insert(self_sld_win[0]->frame_id);
         }
@@ -229,13 +227,18 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
     if (params->enable_marginalization && clear_key_frames.size() > 0) {
         //At this time, non-keyframes is also removed, so add them to remove set to avoid pointer issue.
         clear_key_frames.insert(clear_frames.begin(), clear_frames.end());
+        if (prior_factor!=nullptr) {
+            delete prior_factor;
+        }
         prior_factor = marginalizer->marginalize(clear_key_frames);
     }
     if (prior_factor != nullptr) {
         std::vector<ParamInfo> keeps = prior_factor->getKeepParams();
         for (auto p : keeps) {
             if (clear_frames.find(p.id)!=clear_frames.end()) {
-                printf("\033[0;31m[D2EstimatorState::clearFrame] Removed Frame %ld in prior is removed from prior\033[0m\n", p.id);
+                if (params->verbose)
+                    printf("[D2EstimatorState::clearFrame] Removed Frame %ld in prior is removed from prior\n", p.id);
+                std::cout << std::endl;
                 prior_factor->removeFrame(p.id);
             }
         }
@@ -247,6 +250,8 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
             auto & _sld_win = _it.second;
             for (auto it = _sld_win.begin(); it != _sld_win.end();) {
                 if (clear_frames.find((*it)->frame_id) != clear_frames.end()) {
+                    if (params->verbose)
+                        printf("[D2EstimatorState::clearFrame] Remove Frame %ld is kf %d\n", (*it)->frame_id, (*it)->is_keyframe);
                     bool remove_base = false;
                     if (clear_key_frames.find((*it)->frame_id) != clear_key_frames.end() && 
                         params->landmark_param == D2VINSConfig::LM_INV_DEP) {

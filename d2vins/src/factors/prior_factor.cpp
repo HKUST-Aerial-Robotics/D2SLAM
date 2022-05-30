@@ -17,19 +17,20 @@ bool PriorFactor::hasNan() const {
 
 void PriorFactor::removeFrame(int frame_id) {
     int move_idx = 0;
-    for (int i = 0; i < keep_param_blk_num; i++) {
-        auto & param = keep_params_list[i];
-        if (param.id == frame_id && param.type == ParamsType::POSE) {
-            printf("\033[0;31m [D2VINS::PriorFactor] remove frame %d at %d\033[0m\n", frame_id, i);
+    for (auto it = keep_params_list.begin(); it != keep_params_list.end();) {
+        auto & param = *it;
+        param.index -= move_idx;
+        if (param.id == frame_id && (param.type == ParamsType::POSE || param.type == ParamsType::SPEED_BIAS)) {
             Utility::removeRows(linearized_jac, param.index, param.eff_size);
             Utility::removeCols(linearized_jac, param.index, param.eff_size);
             Utility::removeRows(linearized_res, param.index, param.eff_size);
             keep_eff_param_dim-=param.eff_size;
-            keep_params_list.erase(keep_params_list.begin() + i);
             keep_param_blk_num--;
-            move_idx = param.eff_size;
+            move_idx += param.eff_size;
+            // printf("\033[0;31m [D2VINS::PriorFactor] remove frame %d type %d remain size %d \033[0m\n", frame_id, param.type, keep_eff_param_dim);
+            it = keep_params_list.erase(it);
         } else {
-            param.index -= move_idx;
+            it++;
         }
     }
     initDims(keep_params_list);
@@ -44,7 +45,7 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
         int idx = info.index;
         Eigen::Map<const Eigen::VectorXd> x(parameters[i], size);
         Eigen::Map<const Eigen::VectorXd> x0(info.data_copied, size);
-        // std::cout << "idx" << idx << "size" << size  << "keep_eff_param_dim" <<keep_eff_param_dim<< std::endl;
+        // std::cout << "idx" << idx << "type" << info.type <<"size" << size  << "keep_eff_param_dim" <<keep_eff_param_dim<< std::endl;
         if (info.type != POSE && info.type != EXTRINSIC) {
             dx.segment(idx, size) = x - x0;
         } else {
@@ -78,7 +79,6 @@ std::vector<state_type*> PriorFactor::getKeepParamsPointers() const {
     std::vector<state_type *> pointers;
     // printf("prior blocks %d\n", keep_param_blk_num);
     for (auto & info : keep_params_list) {
-        // printf("Prior info type %d id %ld\n", info.type, info.id);
         pointers.push_back(info.pointer);
     }
     return pointers;
@@ -89,15 +89,11 @@ std::vector<ParamInfo> PriorFactor::getKeepParams() const {
 }
 
 int PriorFactor::getEffParamsDim() const {
-    if (keep_eff_param_dim < 0) {
-        int size = 0;
-        for (auto & info : keep_params_list) {
-            size += info.eff_size;
-        }
-        return size;
-    } else {
-        return keep_eff_param_dim;
+    int size = 0;
+    for (auto & info : keep_params_list) {
+        size += info.eff_size;
     }
+    return size;
 }
 
 void PriorFactor::initDims(const std::vector<ParamInfo> & _keep_params_list) {

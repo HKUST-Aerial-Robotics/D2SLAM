@@ -165,7 +165,6 @@ void D2Estimator::addRemoteImuBuf(int drone_id, const IMUBuffer & imu_) {
 
 void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
     if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
-        printf("[D2Estimator::addFrameRemote] Add imu buf size %ld to drone %d\n", _frame.imu_buf.size(), _frame.drone_id);
         addRemoteImuBuf(_frame.drone_id, _frame.imu_buf);
     }
     int r_drone_id = _frame.drone_id;
@@ -288,11 +287,17 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
 }
 
 void D2Estimator::solve() {
+    if (marginalizer!=nullptr) {
+        delete marginalizer;
+    }
     marginalizer = new Marginalizer(&state);
     state.setMarginalizer(marginalizer);
     solve_count ++;
     state.preSolve();
     used_camera_sets.clear();
+    if (problem != nullptr) {
+        delete problem;
+    }
     problem = new ceres::Problem();
     setupImuFactors(*problem);
     setupLandmarkFactors(*problem);
@@ -382,6 +387,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     auto lms = state.availableLandmarkMeasurements();
     current_landmark_num = lms.size();
     auto loss_function = new ceres::HuberLoss(1.0);    
+    int residual_count = 0;
     std::map<FrameIdType, int> keyframe_measurements;
     if (params->verbose) {
         printf("[D2VINS::setupLandmarkFactors] %d landmarks\n", lms.size());
@@ -399,6 +405,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
             auto f_dep = OneFrameDepth::Create(firstObs.depth);
             problem.AddResidualBlock(f_dep, loss_function, state.getLandmarkState(lm_id));
             marginalizer->addDepthResidual(f_dep, loss_function, firstObs.frame_id, lm_id);
+            residual_count++;
         }
         for (auto i = 1; i < lm.track.size(); i++) {
             auto lm_per_frame = lm.track[i];
@@ -415,8 +422,8 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                         firstObs.cur_td, lm_per_frame.cur_td);
                 }
                 if (firstObs.frame_id == lm_per_frame.frame_id) {
-                    printf("\033[0;31m[ [D2VINS::setupLandmarkFactors] Warning: frame %ld<->%ld@%ld is the same camera id %d.\033[0m\n",
-                        firstObs.frame_id, lm_per_frame.frame_id, lm_id, base_camera_id);
+                    printf("\033[0;31m[ [D2VINS::setupLandmarkFactors] Warning: landmarkid %ld frame %ld<->%ld@%ld is the same camera id %d.\033[0m\n",
+                        lm_per_frame.landmark_id, firstObs.frame_id, lm_per_frame.frame_id, lm_id, base_camera_id);
                     continue;
                 }
                 problem.AddResidualBlock(f_td, loss_function,
@@ -426,6 +433,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                     state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.camera_id));
                 marginalizer->addLandmarkResidual(f_td, loss_function,
                     firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, true);
+                residual_count++;
                 keyframe_measurements[lm_per_frame.frame_id] ++;
                 used_camera_sets.insert(firstObs.camera_id);
             } else {
@@ -438,6 +446,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                         state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.camera_id));
                     marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, loss_function,
                         firstObs.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                    residual_count++;
                 } else {
                     auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                         lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
@@ -449,6 +458,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                         state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.camera_id));
                     marginalizer->addLandmarkResidualTwoFrameTwoCam(f_td, loss_function,
                         firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                    residual_count++;
                 }
                 used_camera_sets.insert(lm_per_frame.camera_id);
             }
@@ -469,13 +479,17 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
             printf("====================");
         }
     }
+    if (params->verbose) {
+        printf("[D2VINS::setupLandmarkFactors] %d residuals\n", lms.size());
+    }
 }
 
 void D2Estimator::setupPriorFactor(ceres::Problem & problem) {
     auto prior_factor = state.getPrior();
     if (prior_factor != nullptr) {
-        problem.AddResidualBlock(prior_factor, nullptr, prior_factor->getKeepParamsPointers());
-        marginalizer->addPrior(prior_factor);
+        auto pfactor = new PriorFactor(*prior_factor);
+        problem.AddResidualBlock(pfactor, nullptr, prior_factor->getKeepParamsPointers());
+        marginalizer->addPrior(pfactor);
     }
 }
 

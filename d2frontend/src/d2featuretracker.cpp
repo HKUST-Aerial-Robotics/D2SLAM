@@ -98,7 +98,8 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame) {
         printf("[D2FeatureTracker::trackRemote] Remote image does not match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
         return report;
     } else {
-        printf("[D2FeatureTracker::trackRemote] Remote image match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
+        if (params->verbose)
+            printf("[D2FeatureTracker::trackRemote] Remote image match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
     }
     if (current_keyframe.images.size() > 0 && current_keyframe.frame_id != frame.frame_id) {
         //Then current keyframe has been assigned, feature tracker by LK.

@@ -33,6 +33,15 @@ public:
         }
         initDims(_keep_params_list);
     }
+    PriorFactor(const PriorFactor & factor):
+        keep_params_list(factor.keep_params_list),
+        keep_param_blk_num(factor.keep_param_blk_num),
+        linearized_jac(factor.linearized_jac),
+        linearized_res(factor.linearized_res),
+        keep_eff_param_dim(factor.keep_eff_param_dim)
+    {
+        initDims(keep_params_list);
+    }
 
     virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const;
     virtual std::vector<state_type *> getKeepParamsPointers() const;
