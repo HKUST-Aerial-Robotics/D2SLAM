@@ -32,7 +32,6 @@ namespace D2FrontEnd {
         nh.param<bool>("send_img", send_img, false);
         nh.param<int>("jpg_quality", JPG_QUALITY, 50);
         nh.param<bool>("send_whole_img_desc", send_whole_img_desc, false);
-        ROS_INFO("send_whole_img_desc : %d", send_whole_img_desc);
         nh.param<bool>("debug_image", debug_image, false);
         nh.param<bool>("debug_no_rejection", loopdetectorconfig->DEBUG_NO_REJECT, false);
         nh.param<bool>("enable_pub_remote_frame", enable_pub_remote_frame, false);
@@ -61,6 +60,8 @@ namespace D2FrontEnd {
         loopcamconfig->camera_configuration = camera_configuration;
         loopcamconfig->self_id = self_id;
         loopcamconfig->cnn_use_onnx = (int) fsSettings["cnn_use_onnx"];
+        loopcamconfig->send_img = send_img;
+        loopcamconfig->show = debug_image;
 
         //Feature tracker.
         ftconfig->show_feature_id = (int) fsSettings["show_track_id"];

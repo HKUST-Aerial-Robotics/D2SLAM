@@ -54,6 +54,8 @@ struct LoopCamConfig
     double DEPTH_FAR_THRES;
     bool stereo_as_depth_cam = false;
     bool cnn_use_onnx = true;
+    bool send_img;
+    bool show = false;
 };
 
 class LoopCam {
@@ -74,10 +76,8 @@ class LoopCam {
     MobileNetVLADONNX * netvlad_onnx = nullptr;
     SuperPointONNX * superpoint_onnx = nullptr;
 #endif
-    bool send_img;
 public:
 
-    bool show = false;
 
     // LoopDetector * loop_detector = nullptr;
     LoopCam(LoopCamConfig config, ros::NodeHandle & nh);

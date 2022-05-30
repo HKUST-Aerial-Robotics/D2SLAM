@@ -318,7 +318,6 @@ struct VisualImageDescArray {
         ret.sld_win_status.timestamp = ret.timestamp;
         ret.sld_win_status.drone_id = ret.drone_id;
         ret.sld_win_status.frame_ids = sld_win_status;
-        std::cout << "sld_win_len" << ret.sld_win_status.sld_win_len << std::endl;
         for (int i = 0; i < imu_buf.size(); i ++) {
             ret.imu_buf.emplace_back(imu_buf[i].toLCM());
         }

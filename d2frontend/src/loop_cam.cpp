@@ -214,7 +214,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
     visual_array.pose_drone = msg.pose_drone;
     visual_array.drone_id = self_id;
 
-    if (show && !_show.empty()) {
+    if (_config.show && !_show.empty()) {
         char text[100] = {0};
         char PATH[100] = {0};
         sprintf(text, "FEATURES@Drone%d", self_id);
@@ -298,15 +298,15 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
 
     // ROS_INFO("Image 2d kpts: %ld 3d : %d desc size %ld", ides.landmarks_2d.size(), count_3d, ides.feature_descriptor.size());
 
-    if (send_img) {
+    if (_config.send_img) {
         encodeImage(image_left, vframe);
     }
 
-    if (show) {
+    if (_config.show) {
         cv::Mat img_up = image_left;
 
         img_up.copyTo(img);
-        if (!send_img) {
+        if (!_config.send_img) {
             encodeImage(img_up, vframe);
         }
 
@@ -411,20 +411,17 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
         }
     }
 
-    if (send_img) {
-        if (_config.right_cam_as_main) {
-            encodeImage(image_right, vframe1);
-        } else {
-            encodeImage(image_left, vframe0);
-        }
+    if (_config.send_img) {
+        encodeImage(image_left, vframe0);
+        encodeImage(image_right, vframe1);
     }
 
-    if (show) {
+    if (_config.show) {
         cv::Mat img_up = image_left;
         cv::Mat img_down = image_right;
 
         img_up.copyTo(img);
-        if (!send_img) {
+        if (!_config.send_img) {
             encodeImage(img_up, vframe0);
             encodeImage(img_down, vframe1);
         }
