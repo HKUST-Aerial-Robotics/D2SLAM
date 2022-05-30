@@ -146,9 +146,14 @@ double * D2EstimatorState::getPoseState(FrameIdType frame_id) const {
     return _frame_pose_state.at(frame_id);
 }
 
-double * D2EstimatorState::getTdState(int camera_index) {
+double * D2EstimatorState::getTdState(int drone_id) {
     return &td;
 }
+
+double D2EstimatorState::getTd(int drone_id) {
+    return td;
+}
+
 
 double * D2EstimatorState::getExtrinsicState(int cam_id) const {
     if (_camera_extrinsic_state.find(cam_id) == _camera_extrinsic_state.end()) {
@@ -207,7 +212,6 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
                 clear_frames.insert(it->frame_id);
                 if (frame_db.at(it->frame_id)->is_keyframe) {
                     clear_key_frames.insert(it->frame_id);
-                } else {
                 }
             }
         }
@@ -269,9 +273,7 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
             }
         }
     }
-
     outlierRejection();
-    updatePoseIndices();
     return ret;
 }
 
@@ -286,12 +288,31 @@ void D2EstimatorState::updateSldwin(int drone_id, const std::vector<FrameIdType>
     latest_remote_sld_wins[drone_id] = sld_win;
 }
 
-void D2EstimatorState::updatePoseIndices() {
-    // frame_indices.clear();
-    // for (int i = 0; i < sld_wins[self_id].size(); i++) {
-    //     frame_indices[sld_wins[self_id][i]->frame_id] = i;
-    // }
+void D2EstimatorState::updateRemoteSldIMU(const std::map<int, IMUBuffer> & remote_imu_bufs) {
+    if (params->estimation_mode != D2VINSConfig::SOLVE_ALL_MODE) {
+        return;
+    }
+    for (auto & _it : sld_wins) {
+        auto drone_id = _it.first;
+        auto & _sld_win = _it.second;
+        for (size_t i = 0; i < _sld_win.size() - 1; i ++) {
+            auto frame_a = _sld_win[i];
+            auto frame_b = _sld_win[i+1];
+            if (frame_b->prev_frame_id != frame_a->frame_id) {
+                //Update IMU factor.
+                auto td = getTd(frame_a->drone_id);
+                auto _imu_buf = remote_imu_bufs.at(drone_id).periodIMU(frame_a->stamp + td, frame_b->stamp + td);
+                frame_b->pre_integrations = new IntegrationBase(_imu_buf, frame_a->Ba, frame_a->Bg);
+                frame_b->prev_frame_id = frame_a->frame_id;
+                if (fabs(_imu_buf.size()/(frame_b->stamp - frame_a->stamp) - params->IMU_FREQ) > 10) {
+                    printf("\033[0;31m[D2VINS::D2Estimator] Remote IMU error freq: %.3f in updateRemoteSldIMU \033[0m\n", 
+                        _imu_buf.size()/(frame_b->stamp - frame_a->stamp));
+                }
+            }
+        }
+    }
 }
+
 
 void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSFrame & _frame) {
     const Guard lock(state_lock);
@@ -319,7 +340,6 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
         printf("[D2VINS::D2EstimatorState] add frame %ld@%d iskeyframe %d with %d images, current %ld frame\n", 
             images.frame_id, _frame.drone_id, frame->is_keyframe, images.images.size(), sld_wins[self_id].size());
     }
-    updatePoseIndices();
 }
 
 void D2EstimatorState::syncFromState() {
@@ -338,17 +358,22 @@ void D2EstimatorState::syncFromState() {
         extrinsic.at(cam_id).from_vector(_camera_extrinsic_state.at(cam_id));
     }
     lmanager.syncState(this);
-    for (auto frame : sld_wins[self_id]) {
-        if (frame->pre_integrations != nullptr) {
-            frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
-        }
+
+    for (size_t i = 0; i < sld_wins[self_id].size() - 1; i ++) {
+        auto frame_a = sld_wins[self_id][i];
+        auto frame_b = sld_wins[self_id][i+1];
+        frame_b->pre_integrations->repropagate(frame_a->Ba, frame_a->Bg);
     }
+
     if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
         for (auto it : sld_wins) {
-            for (auto frame : it.second) {
-                if (frame->pre_integrations != nullptr) {
-                    frame->pre_integrations->repropagate(frame->Ba, frame->Bg);
-                }
+            if (it.first == self_id) {
+                continue;
+            }
+            for (size_t i = 0; i < it.second.size() - 1; i ++) {
+                auto frame_a = it.second[i];
+                auto frame_b = it.second[i+1];
+                frame_b->pre_integrations->repropagate(frame_a->Ba, frame_a->Bg);
             }
         }
     }
@@ -359,7 +384,8 @@ void D2EstimatorState::outlierRejection() {
     lmanager.outlierRejection(this);
 }
 
-void D2EstimatorState::preSolve() {
+void D2EstimatorState::preSolve(const std::map<int, IMUBuffer> & remote_imu_bufs) {
+    updateRemoteSldIMU(remote_imu_bufs);
     lmanager.initialLandmarks(this);
 }
 

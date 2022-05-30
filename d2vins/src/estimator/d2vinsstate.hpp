@@ -24,7 +24,7 @@ protected:
         //If remove base, will remove the relevant landmarks' base frame.
         //This is for marginal the keyframes that not is baseframe of all landmarks (in multi-drone)
     void outlierRejection();
-    void updatePoseIndices();
+    void updateRemoteSldIMU(const std::map<int, IMUBuffer> & remote_imu_bufs);
     Marginalizer * marginalizer = nullptr;
     PriorFactor * prior_factor = nullptr;
     int self_id;
@@ -48,7 +48,8 @@ public:
     double * getExtrinsicState(int i) const;
     double * getSpdBiasState(FrameIdType frame_id) const;
     double * getLandmarkState(LandmarkIdType landmark_id) const;
-    double * getTdState(int camera_index);
+    double * getTdState(int drone_id);
+    double getTd(int drone_id);
     PriorFactor * getPrior() const;
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;
     Swarm::Pose getExtrinsic(CamIdType cam_id) const;
@@ -83,7 +84,7 @@ public:
 
     //Solving process
     void syncFromState();
-    void preSolve();
+    void preSolve(const std::map<int, IMUBuffer> & remote_imu_bufs);
 
     //Debug
     void printSldWin() const;
