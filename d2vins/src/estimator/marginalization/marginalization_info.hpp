@@ -18,11 +18,11 @@ enum ResidualType {
 };
 
 enum ParamsType {
-    POSE,
+    POSE = 0,
     SPEED_BIAS,
-    LANDMARK,
     EXTRINSIC,
-    TD
+    TD,
+    LANDMARK
 };
 
 struct ParamInfo {
@@ -132,7 +132,7 @@ public:
     int camera_id;
     LandmarkTwoFrameOneCamResInfo():ResidualInfo(ResidualType::LandmarkTwoFrameOneCamResidual) {}
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
-        if (!params->remove_base_when_margin_remote) {
+        if (params->remove_base_when_margin_remote == 0) {
             //In this case, only the base frame is considered in margin.
             return frame_id.find(frame_ida) != frame_id.end();
         }
@@ -174,7 +174,7 @@ public:
     LandmarkTwoFrameTwoCamResInfoTD():ResidualInfo(ResidualType::LandmarkTwoFrameTwoCamResidualTD) {}
     // virtual void Evaluate(D2EstimatorState * state) override;
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
-        if (!params->remove_base_when_margin_remote) {
+        if (params->remove_base_when_margin_remote == 0) {
             return frame_id.find(frame_ida) != frame_id.end();
         }
         return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();

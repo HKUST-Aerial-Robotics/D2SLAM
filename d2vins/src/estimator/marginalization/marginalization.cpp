@@ -243,7 +243,6 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
         Utility::writeMatrixtoFile(params->output_folder + "/H.txt", MatrixXd(H));
         Utility::writeMatrixtoFile(params->output_folder + "/g.txt", MatrixXd(g));
     }
-
     // for (auto & param : keep_params_list) {
     //     printf("param id %d type %d size %d \n", param.id, param.type, param.size);
     //     std::cout << "H:\n" << H.block(param.index, 0, param.eff_size, total_eff_state_dim) << std::endl;
@@ -263,7 +262,11 @@ void Marginalizer::sortParams() {
     }
 
     std::sort(params_list.begin(), params_list.end(), [](const ParamInfo & a, const ParamInfo & b) {
-        return a.is_remove < b.is_remove;
+        if (a.is_remove != b.is_remove) {
+            return a.is_remove < b.is_remove;
+        } else {
+            return a.type < b.type;
+        }
     });
 
     total_eff_state_dim = 0; //here on tangent space

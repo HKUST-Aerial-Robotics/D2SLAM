@@ -257,7 +257,7 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
                         params->landmark_param == D2VINSConfig::LM_INV_DEP) {
                         //If the frame is a keyframe, then remove the base frame of it's related measurements.
                         //This is because the frame's related measurment's inv_dep is marginalized.
-                        remove_base = params->remove_base_when_margin_remote;
+                        remove_base = params->remove_base_when_margin_remote == 1;
                     }
                     auto tmp = removeFrameById((*it)->frame_id, remove_base);
                     ret.insert(ret.end(), tmp.begin(), tmp.end());

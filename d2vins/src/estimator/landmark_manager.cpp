@@ -262,7 +262,12 @@ std::vector<LandmarkPerId> D2LandmarkManager::popFrame(FrameIdType frame_id, boo
     for (auto _id : _landmark_ids) {
         auto & lm = landmark_db.at(_id);
         if (pop_base) {
-            related_landmarks.at(lm.base_frame_id).erase(lm.landmark_id);
+            if (related_landmarks.find(lm.base_frame_id)!=related_landmarks.end()) {
+                related_landmarks.at(lm.base_frame_id).erase(lm.landmark_id);
+            }
+            if (lm.base_frame_id != frame_id) {
+                // printf("[D2VINS::D2LandmarkManager] popFrame base_frame_id %ld != frame_id %ld\n", lm.base_frame_id, frame_id);
+            }
             lm.popBaseFrame();
         }
         auto _size = lm.popFrame(frame_id);
