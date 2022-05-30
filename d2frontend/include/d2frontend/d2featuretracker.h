@@ -72,7 +72,7 @@ class D2FeatureTracker {
     TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame);
     TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame);
     TrackReport track(VisualImageDesc & frame);
-    TrackReport trackRemote(VisualImageDesc & frame);
+    TrackReport trackRemote(VisualImageDesc & frame, bool skip_whole_frame_match=false);
     void processKeyframe(VisualImageDescArray & frames);
     bool isKeyframe(const TrackReport & reports);
     void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
@@ -81,6 +81,7 @@ class D2FeatureTracker {
     void cvtRemoteLandmarkId(VisualImageDesc & frame) const;
     cv::Mat drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right=false, bool is_remote=false) const;
     std::unordered_map<LandmarkIdType, LandmarkIdType> remote_to_local; // Remote landmark id to local;
+    std::unordered_map<LandmarkIdType, std::unordered_map<int, LandmarkIdType>> local_to_remote; // local landmark id to remote drone and id;
     typedef std::lock_guard<std::recursive_mutex> Guard;
     mutable std::recursive_mutex state_lock;
 public:
