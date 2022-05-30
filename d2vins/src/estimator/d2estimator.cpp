@@ -322,7 +322,7 @@ void D2Estimator::solve() {
     printf("[D2VINS] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
         current_landmark_num, last_odom.toStr().c_str(), state.td*1000, summary.total_time_in_seconds*1000);
 
-    //Reprogation
+    // Reprogation
     auto _imu = imubuf.back(state.lastFrame().stamp + state.td);
     last_prop_odom = _imu.propagation(state.lastFrame());
     visual.postSolve();

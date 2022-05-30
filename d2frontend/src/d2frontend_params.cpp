@@ -32,6 +32,7 @@ namespace D2FrontEnd {
         nh.param<bool>("send_img", send_img, false);
         nh.param<int>("jpg_quality", JPG_QUALITY, 50);
         nh.param<bool>("send_whole_img_desc", send_whole_img_desc, false);
+        ROS_INFO("send_whole_img_desc : %d", send_whole_img_desc);
         nh.param<bool>("debug_image", debug_image, false);
         nh.param<bool>("debug_no_rejection", loopdetectorconfig->DEBUG_NO_REJECT, false);
         nh.param<bool>("enable_pub_remote_frame", enable_pub_remote_frame, false);

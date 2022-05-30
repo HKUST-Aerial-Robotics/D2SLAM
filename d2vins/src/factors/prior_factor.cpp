@@ -44,6 +44,7 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
         int idx = info.index;
         Eigen::Map<const Eigen::VectorXd> x(parameters[i], size);
         Eigen::Map<const Eigen::VectorXd> x0(info.data_copied, size);
+        // std::cout << "idx" << idx << "size" << size  << "keep_eff_param_dim" <<keep_eff_param_dim<< std::endl;
         if (info.type != POSE && info.type != EXTRINSIC) {
             dx.segment(idx, size) = x - x0;
         } else {

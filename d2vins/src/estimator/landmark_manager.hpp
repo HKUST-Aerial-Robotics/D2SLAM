@@ -12,6 +12,8 @@ class D2LandmarkManager : public D2FrontEnd::LandmarkManager {
     int estimated_landmark_size = 0;
 
     void initialLandmarkState(LandmarkPerId & lm, const D2EstimatorState * state);
+    typedef std::lock_guard<std::recursive_mutex> Guard;
+    mutable std::recursive_mutex state_lock;
 public:
     virtual void addKeyframe(const VisualImageDescArray & images, double td);
     std::vector<LandmarkPerId> availableMeasurements() const;

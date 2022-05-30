@@ -12,6 +12,7 @@ namespace D2VINS {
 
 
 std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
+    const Guard lock(state_lock);
     //Remove from sliding window
     auto frame_id = sld_wins[self_id].at(index)->frame_id;
     if (params->verbose) {
@@ -23,6 +24,8 @@ std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
 }
 
 std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(FrameIdType frame_id, bool remove_base) {
+    const Guard lock(state_lock);
+    printf("[D2VSIN::D2EstimatorState] remove frame %ld remove base %d\n", frame_id, remove_base);
     auto ret = lmanager.popFrame(frame_id, remove_base);
     frame_db.erase(frame_id);
     delete _frame_pose_state[frame_id];
@@ -72,11 +75,13 @@ VINSFrame & D2EstimatorState::firstFrame() {
 }
 
 VINSFrame D2EstimatorState::lastFrame() const {
+    const Guard lock(state_lock);
     assert(sld_wins.at(self_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastFrame()");
     return *sld_wins.at(self_id).back();
 }
 
 VINSFrame & D2EstimatorState::lastFrame() {
+    const Guard lock(state_lock);
     assert(sld_wins[self_id].size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastFrame()");
     return *sld_wins[self_id].back();
 }
@@ -86,6 +91,7 @@ std::set<int> D2EstimatorState::availableDrones() const {
 }
 
 VINSFrame & D2EstimatorState::getRemoteFrame(int drone_id, int index) {
+    const Guard lock(state_lock);
     if (drone_id == self_id) {
         return getFrame(index);
     }
@@ -93,11 +99,13 @@ VINSFrame & D2EstimatorState::getRemoteFrame(int drone_id, int index) {
 }
 
 VINSFrame & D2EstimatorState::firstRemoteFrame(int drone_id) {
+    const Guard lock(state_lock);
     assert(sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::firstRemoteFrame()");
     return *sld_wins.at(drone_id)[0];
 }
 
 VINSFrame D2EstimatorState::lastRemoteFrame(int drone_id) const { 
+    const Guard lock(state_lock);
     if (drone_id == self_id) 
         return lastFrame();
     assert(sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastRemoteFrame()");
@@ -105,6 +113,7 @@ VINSFrame D2EstimatorState::lastRemoteFrame(int drone_id) const {
 }
 
 VINSFrame & D2EstimatorState::lastRemoteFrame(int drone_id) { 
+    const Guard lock(state_lock);
     if (drone_id == self_id) 
         return lastFrame();
     assert(sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastRemoteFrame()");
@@ -112,6 +121,7 @@ VINSFrame & D2EstimatorState::lastRemoteFrame(int drone_id) {
 }
 
 size_t D2EstimatorState::sizeRemote(int drone_id) const { 
+    const Guard lock(state_lock);
     if (drone_id == self_id)
         return size();
     if (sld_wins.find(drone_id) == sld_wins.end()) {
@@ -121,10 +131,12 @@ size_t D2EstimatorState::sizeRemote(int drone_id) const {
 }
 
 int D2EstimatorState::getPoseIndex(FrameIdType frame_id) const {
+    const Guard lock(state_lock);
     return frame_indices.at(frame_id);
 }
 
 double * D2EstimatorState::getPoseState(FrameIdType frame_id) const {
+    const Guard lock(state_lock);
     if (_frame_pose_state.find(frame_id) == _frame_pose_state.end()) {
         printf("\033[0;31m[D2VINS::D2EstimatorState] frame %ld not found\033[0m\n", frame_id);
         assert(false && "Frame not found");
@@ -176,8 +188,9 @@ std::set<CamIdType> D2EstimatorState::getAvailableCameraIds() const {
 std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements() const {
     return lmanager.availableMeasurements();
 }
-int clear_count = 0;
+
 std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
+    const Guard lock(state_lock);
     std::vector<LandmarkPerId> ret;
     std::set<FrameIdType> clear_frames; //Frames in this set will be deleted.
     std::set<FrameIdType> clear_key_frames; //Frames in this set will be MARGINALIZED and deleted.
@@ -229,7 +242,6 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
     }
 
     if (clear_frames.size() > 0 ) {
-        const Guard lock(state_lock);
         //Remove frames that are not in the new SLDWIN
         for (auto & _it : sld_wins) {
             auto & _sld_win = _it.second;
@@ -244,7 +256,7 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
                     }
                     auto tmp = removeFrameById((*it)->frame_id, remove_base);
                     ret.insert(ret.end(), tmp.begin(), tmp.end());
-                    delete *it;
+                    // delete *it;
                     it = _sld_win.erase(it);
                 } else {
                     ++it;
@@ -259,6 +271,7 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
 }
 
 void D2EstimatorState::updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win) {
+    const Guard lock(state_lock);
     if (params->verbose) {
         printf("[D2VINS::D2EstimatorState] Update SLDWIN for drone %d\n", drone_id);
     }
@@ -305,6 +318,7 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
 }
 
 void D2EstimatorState::syncFromState() {
+    const Guard lock(state_lock);
     //copy state buffer to structs.
     //First sync the poses
     for (auto it : _frame_pose_state) {
@@ -361,6 +375,7 @@ bool D2EstimatorState::hasLandmark(LandmarkIdType id) const {
 }
 
 void D2EstimatorState::printSldWin() const {
+    const Guard lock(state_lock);
     for (auto it : sld_wins) {
         printf("=========SLDWIN@drone%d=========\n", it.first);
         for (int i = 0; i < it.second.size(); i ++) {

@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.0.2)
 project(d2vins)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -Wall -Wno-deprecated-declarations -Wno-format")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wno-deprecated-declarations -Wno-format")
+set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+add_compile_options(-Wno-deprecated-declarations -Wno-reorder  -Wno-format -Wno-sign-compare)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -80,7 +81,7 @@ target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}_MSCKF
   ${PROJECT_NAME}_estimator
   ${CERES_LIBRARIES}
-  dw
+  # dw
   lcm
 )
 

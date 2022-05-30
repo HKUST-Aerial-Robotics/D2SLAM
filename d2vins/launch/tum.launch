@@ -50,7 +50,7 @@
             yaw_covariance_per_meter: 0.003
             enable_network: true
             ransacReprojThreshold: 10.0
-            verbose: true
+            verbose: false
         </rosparam>
         <param name="pca_comp_path" value="$(find d2frontend)/models/components_.csv" type="string" />
         <param name="output_path" value="$(arg output_path)" type="string" />

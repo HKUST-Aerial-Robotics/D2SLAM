@@ -7,6 +7,7 @@ namespace D2FrontEnd {
 #define WIN_SIZE cv::Size(21, 21)
 
 bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
+    const Guard lock(state_lock);
     bool iskeyframe = false;
     frame_count ++;
     TrackReport report;
@@ -46,7 +47,8 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     return iskeyframe;
 }
 
-bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
+bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {\
+    const Guard lock(state_lock);
     bool matched = false;
     frame_count ++;
     TrackReport report;

@@ -21,9 +21,10 @@ void LoopNet::setupNetwork(std::string _lcm_uri) {
 }
 
 void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array) {
-    auto fisheye_desc = image_array.toLCM();
+    ImageArrayDescriptor_t fisheye_desc = image_array.toLCM();
     if (send_whole_img_desc) {
         sent_message.insert(fisheye_desc.msg_id);
+        // printf("encoded image size %d\n", fisheye_desc.getEncodedSize());
         lcm.publish("VIOKF_IMG_ARRAY", &fisheye_desc);
     } else {
         for (auto & img : fisheye_desc.images) {

@@ -4,6 +4,7 @@
 #include "loop_cam.h"
 #include "d2landmark_manager.h"
 #include <unordered_map>
+#include <mutex>
 
 using namespace Eigen;
 
@@ -80,6 +81,8 @@ class D2FeatureTracker {
     void cvtRemoteLandmarkId(VisualImageDesc & frame) const;
     cv::Mat drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right=false, bool is_remote=false) const;
     std::unordered_map<LandmarkIdType, LandmarkIdType> remote_to_local; // Remote landmark id to local;
+    typedef std::lock_guard<std::recursive_mutex> Guard;
+    mutable std::recursive_mutex state_lock;
 public:
     D2FeatureTracker(D2FTConfig config):
         _config(config)

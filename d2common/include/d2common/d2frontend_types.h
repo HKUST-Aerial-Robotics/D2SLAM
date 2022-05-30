@@ -162,6 +162,8 @@ struct VisualImageDesc {
         img_desc.prevent_adding_db = prevent_adding_db;
         img_desc.camera_index = camera_index;
         img_desc.camera_id = camera_id;
+        // printf("Encoding landmark num %d landmark_descriptor_size %d \n", 
+        //     img_desc.landmark_num, img_desc.landmark_descriptor_size);
         return img_desc;
     }
 
@@ -316,6 +318,7 @@ struct VisualImageDescArray {
         ret.sld_win_status.timestamp = ret.timestamp;
         ret.sld_win_status.drone_id = ret.drone_id;
         ret.sld_win_status.frame_ids = sld_win_status;
+        std::cout << "sld_win_len" << ret.sld_win_status.sld_win_len << std::endl;
         for (int i = 0; i < imu_buf.size(); i ++) {
             ret.imu_buf.emplace_back(imu_buf[i].toLCM());
         }

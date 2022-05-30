@@ -7,6 +7,7 @@ namespace D2VINS {
 double triangulatePoint3DPts(std::vector<Swarm::Pose> poses, std::vector<Vector3d> &points, Vector3d &point_3d);
 
 void D2LandmarkManager::addKeyframe(const VisualImageDescArray & images, double td) {
+    const Guard lock(state_lock);
     for (auto & image : images.images) {
         for (auto lm : image.landmarks) {
             if (lm.landmark_id < 0) {
@@ -29,6 +30,7 @@ void D2LandmarkManager::addKeyframe(const VisualImageDescArray & images, double 
 
 std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements() const {
     //Return all avaiable measurements
+    const Guard lock(state_lock);
     std::vector<LandmarkPerId> ret;
     for (auto & it: landmark_db) {
         auto & lm = it.second;
@@ -41,14 +43,17 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements() const {
 }
 
 double * D2LandmarkManager::getLandmarkState(LandmarkIdType landmark_id) const {
+    const Guard lock(state_lock);
     return landmark_state.at(landmark_id);
 }
 
 FrameIdType D2LandmarkManager::getLandmarkBaseFrame(LandmarkIdType landmark_id) const {
+    const Guard lock(state_lock);
     return landmark_db.at(landmark_id).track[0].frame_id;
 }
 
 void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2EstimatorState * state) {
+    const Guard lock(state_lock);
     LandmarkPerFrame lm_first;
     lm_first = lm.track[0];
     auto lm_id = lm.landmark_id;
@@ -134,6 +139,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
 }
 
 void D2LandmarkManager::initialLandmarks(const D2EstimatorState * state) {
+    const Guard lock(state_lock);
     int inited_count = 0;
     for (auto & it: landmark_db) {
         auto & lm = it.second;
@@ -169,6 +175,7 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState * state) {
 }
 
 void D2LandmarkManager::outlierRejection(const D2EstimatorState * state) {
+    const Guard lock(state_lock);
     int remove_count = 0;
     int total_count = 0;
     if (estimated_landmark_size < params->perform_outlier_rejection_num) {
@@ -209,6 +216,7 @@ void D2LandmarkManager::outlierRejection(const D2EstimatorState * state) {
 }
 
 void D2LandmarkManager::syncState(const D2EstimatorState * state) {
+    const Guard lock(state_lock);
     //Sync inverse depth to 3D positions
     estimated_landmark_size = 0;
     for (auto it : landmark_state) {
@@ -244,6 +252,7 @@ void D2LandmarkManager::syncState(const D2EstimatorState * state) {
 }
 
 std::vector<LandmarkPerId> D2LandmarkManager::popFrame(FrameIdType frame_id, bool pop_base) {
+    const Guard lock(state_lock);
     //Returning margined landmarks
     std::vector<LandmarkPerId> margined_landmarks;
     if (related_landmarks.find(frame_id) == related_landmarks.end()) {
@@ -269,6 +278,7 @@ std::vector<LandmarkPerId> D2LandmarkManager::popFrame(FrameIdType frame_id, boo
 }
 
 std::vector<LandmarkPerId> D2LandmarkManager::getInitializedLandmarks() const {
+    const Guard lock(state_lock);
     std::vector<LandmarkPerId> lm_per_frame_vec;
     for (auto it : landmark_db) {
         auto & lm = it.second;
@@ -280,10 +290,12 @@ std::vector<LandmarkPerId> D2LandmarkManager::getInitializedLandmarks() const {
 }
 
 LandmarkPerId & D2LandmarkManager::getLandmark(LandmarkIdType landmark_id) {
+    const Guard lock(state_lock);
     return landmark_db.at(landmark_id);
 }
 
 std::vector<LandmarkPerId> D2LandmarkManager::getRelatedLandmarks(FrameIdType frame_id) const {
+    const Guard lock(state_lock);
     if (related_landmarks.find(frame_id) == related_landmarks.end()) {
         return std::vector<LandmarkPerId>();
     }
@@ -297,6 +309,7 @@ std::vector<LandmarkPerId> D2LandmarkManager::getRelatedLandmarks(FrameIdType fr
 }
 
 bool D2LandmarkManager::hasLandmark(LandmarkIdType landmark_id) const {
+    const Guard lock(state_lock);
     return landmark_db.find(landmark_id) != landmark_db.end();
 }
 

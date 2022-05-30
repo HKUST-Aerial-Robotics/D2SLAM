@@ -279,10 +279,9 @@ VisualImageDescArray & LoopDetector::queryDescArrayFromDatabase(const VisualImag
         if (best_image_id != -1) {
             int frame_id = imgid2fisheye[best_image_id];
             camera_index_old = imgid2dir[best_image_id];
-            VisualImageDescArray & ret = keyframe_database[frame_id];
             ROS_INFO("[SWARM_LOOP] Database return image %d fisheye frame from drone %d with camera_index %d dist %f", 
-                best_image_id, ret.drone_id, camera_index_old, distance);
-            return ret;
+                best_image_id, keyframe_database[frame_id].drone_id, camera_index_old, distance);
+            return keyframe_database[frame_id];
         }
     }
 
