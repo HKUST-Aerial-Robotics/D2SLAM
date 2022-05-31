@@ -72,6 +72,7 @@ void D2VINSConfig::init(const std::string & config_file) {
 
     //Multi-drone
     self_id = fsSettings["self_id"];
+    estimation_mode = (ESTIMATION_MODE) (int) fsSettings["estimation_mode"];
 
     //Initialiazation
     init_method = (InitialMethod) (int)fsSettings["init_method"];

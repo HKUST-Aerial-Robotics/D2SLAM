@@ -41,8 +41,10 @@ protected:
 
     void processRemoteImage(VisualImageDescArray & frame_desc) override {
         {
-            Guard guard(esti_lock);
-            estimator->inputRemoteImage(frame_desc);
+            if (params->estimation_mode != D2VINSConfig::SINGLE_DRONE_MODE) {
+                Guard guard(esti_lock);
+                estimator->inputRemoteImage(frame_desc);
+            }
         }
         if (D2FrontEnd::params->enable_loop) {
             loop_detector->processImageArray(frame_desc);

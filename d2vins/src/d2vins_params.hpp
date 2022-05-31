@@ -53,7 +53,7 @@ struct D2VINSConfig {
     bool always_fixed_first_pose = false;
     double estimator_timer_freq = 1000.0;
     int warn_pending_frames = 10;
-    enum {
+    enum ESTIMATION_MODE {
         SINGLE_DRONE_MODE, //Not accept remote frame
         SOLVE_ALL_MODE, //Each drone solve all the information
         DISTRIBUTED_CAMERA_CONSENUS //Distributed camera consensus
