@@ -39,6 +39,7 @@ Panels:
         - /VIOGroup1
         - /Odometry1/Shape1
         - /VINS-Odom1/Shape1
+        - /GT1
         - /Remote1
       Splitter Ratio: 0.5
     Tree Height: 524
@@ -455,7 +456,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.510471343994141
+      Distance: 4.999742031097412
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -463,17 +464,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.9337461590766907
-        Y: 0.022014953196048737
-        Z: 0.0926709920167923
+        X: 0.038257524371147156
+        Y: -0.1409466415643692
+        Z: -0.5282605290412903
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.47479742765426636
+      Pitch: 0.7947973608970642
       Target Frame: world
-      Yaw: 2.63000750541687
+      Yaw: 2.290003776550293
     Saved: ~
 Window Geometry:
   Displays:
@@ -491,5 +492,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1187
-  X: 1639
-  Y: 39
+  X: 347
+  Y: 54

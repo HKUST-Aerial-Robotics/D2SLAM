@@ -187,14 +187,14 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
         } else {
             vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
         }
-        auto pose_last = last_frame.initial_ego_pose;
-        auto pose_cur = _frame.pose_drone;
-        auto dp = pose_cur.inverse()*pose_last;
-        auto pred_cur_pose = last_frame.odom.pose() * dp;
+        auto ego_last = last_frame.initial_ego_pose;
+        auto ego_cur = _frame.pose_drone;
+        auto pred_cur_pose = last_frame.odom.pose() * ego_last.inverse()*ego_cur;
         if (params->verbose) {
             printf("[D2VINS::D2Estimator] Initial remoteframe %ld@drone%d with ego-motion: %s\n",
                 _frame.frame_id, r_drone_id, pred_cur_pose.toStr().c_str());
         }
+        vinsframe.odom.pose() = pred_cur_pose;
     } else {
         //Need to init the first frame.
         vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
