@@ -51,7 +51,7 @@
         <param name="pca_mean_path" value="$(find swarm_loop)/models/mean_.csv" type="string" />
         <param name="superpoint_model_path" value="$(arg superpoint_model_path)" type="string" />
         <param name="netvlad_model_path" value="$(arg netvlad_model_path)" type="string" />
-        <param name="debug_image" value="$(arg show)" type="bool" />
+        <param name="show" value="$(arg show)" type="bool" />
         <param name="width" value="$(arg width)" type="int" />
         <param name="height" value="$(arg height)" type="int" />
         <param name="send_img" value="$(arg send_img)" type="bool" />

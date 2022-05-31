@@ -61,7 +61,7 @@
         <param name="pca_mean_path" value="$(find d2frontend)/models/mean_.csv" type="string" />
         <param name="superpoint_model_path" value="$(arg superpoint_model_path)" type="string" />
         <param name="netvlad_model_path" value="$(arg netvlad_model_path)" type="string" />
-        <param name="debug_image" value="$(arg show)" type="bool" />
+        <param name="show" value="$(arg show)" type="bool" />
         <param name="send_img" value="$(arg send_img)" type="bool" />
         <param name="send_whole_img_desc" value="$(arg send_whole_img_desc)" type="bool" />
         <param name="self_id" value="$(arg self_id)" type="int" />

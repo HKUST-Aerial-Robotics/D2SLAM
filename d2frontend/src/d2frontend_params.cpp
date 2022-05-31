@@ -32,7 +32,7 @@ namespace D2FrontEnd {
         nh.param<bool>("send_img", send_img, false);
         nh.param<int>("jpg_quality", JPG_QUALITY, 50);
         nh.param<bool>("send_whole_img_desc", send_whole_img_desc, false);
-        nh.param<bool>("debug_image", debug_image, false);
+        nh.param<bool>("show", show, false);
         nh.param<bool>("debug_no_rejection", loopdetectorconfig->DEBUG_NO_REJECT, false);
         nh.param<bool>("enable_pub_remote_frame", enable_pub_remote_frame, false);
         nh.param<bool>("enable_pub_local_frame", enable_pub_local_frame, false);
@@ -48,6 +48,7 @@ namespace D2FrontEnd {
         total_feature_num = (int) fsSettings["max_cnt"];
         loopcamconfig->DEPTH_FAR_THRES = fsSettings["depth_far_thres"];
         loopcamconfig->DEPTH_NEAR_THRES = fsSettings["depth_near_thres"];
+        loopcamconfig->show = (int) fsSettings["show_feature_extraction"];
         nh.param<double>("superpoint_thres", loopcamconfig->superpoint_thres, 0.012);
         nh.param<std::string>("pca_comp_path",loopcamconfig->pca_comp, "");
         nh.param<std::string>("pca_mean_path",loopcamconfig->pca_mean, "");
@@ -61,7 +62,6 @@ namespace D2FrontEnd {
         loopcamconfig->self_id = self_id;
         loopcamconfig->cnn_use_onnx = (int) fsSettings["cnn_use_onnx"];
         loopcamconfig->send_img = send_img;
-        loopcamconfig->show = debug_image;
 
         //Feature tracker.
         ftconfig->show_feature_id = (int) fsSettings["show_track_id"];

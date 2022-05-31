@@ -252,7 +252,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
     vframe.extrinsic = msg.left_extrisincs[vcam_id];
     vframe.pose_drone = msg.pose_drone;
     vframe.frame_id = msg.keyframe_id;
-    if (params->debug_plot_superpoint_features || params->ftconfig->enable_lk_optical_flow || params->debug_image) {
+    if (params->debug_plot_superpoint_features || params->ftconfig->enable_lk_optical_flow || params->show) {
         vframe.raw_image = msg.left_images[vcam_id];
         vframe.raw_depth_image = msg.depth_images[vcam_id];
     }
@@ -458,7 +458,7 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
         cv::putText(_show, text, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
     }
 
-    if (params->debug_plot_superpoint_features  || params->debug_image || params->ftconfig->enable_lk_optical_flow) {
+    if (params->debug_plot_superpoint_features  || params->show || params->ftconfig->enable_lk_optical_flow) {
         vframe1.raw_image = msg.right_images[vcam_id];
         vframe0.raw_image = msg.left_images[vcam_id];
     }

@@ -35,7 +35,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
 
     report.ft_time = tic.toc();
 
-    if (params->debug_image) {
+    if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
             draw(frames.images[0], frames.images[1], iskeyframe, report);
         } else {
@@ -63,7 +63,7 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
             report.compose(trackRemote(frame));
         }
     }
-    if (params->debug_image) {
+    if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
             drawRemote(frames.images[0], report);
         } else {

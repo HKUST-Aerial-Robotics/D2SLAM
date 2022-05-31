@@ -71,7 +71,7 @@ void LoopDetector::processImageArray(const VisualImageDescArray & flatten_desc) 
         //Initialize images for visualization
         std::vector<cv::Mat> imgs;
 
-        if (params->debug_image) {
+        if (params->show) {
             for (unsigned int i = 0; i < images_num; i++) {
                 auto & img_des = flatten_desc.images[i];
                 if (!img_des.raw_image.empty()) {
@@ -703,7 +703,7 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & new_frame_desc, cons
         success = false;
     }
 
-    if (params->debug_image) {
+    if (params->show) {
         cv::Mat show;
         char title[100] = {0};
         std::vector<cv::Mat> _matched_imgs;
