@@ -154,6 +154,7 @@ Swarm::Odometry IMUBuffer::propagation(const Swarm::Odometry & prev_odom, const 
         odom.vel() += imu.dt * un_acc;
         acc_last = imu.acc;
         gyro_last = imu.gyro;
+        odom.stamp = imu.t;
     }
     return odom;
 }

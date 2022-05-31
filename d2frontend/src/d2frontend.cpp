@@ -152,8 +152,8 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
 
 void D2Frontend::onRemoteImage(VisualImageDescArray frame_desc) {
     feature_tracker->trackRemoteFrames(frame_desc);
-    //Process with D2VINS
     processRemoteImage(frame_desc);
+    //Process with D2VINS
 }
 
 void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc) {

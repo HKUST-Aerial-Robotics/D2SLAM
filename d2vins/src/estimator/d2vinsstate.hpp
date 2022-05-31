@@ -24,7 +24,7 @@ protected:
         //If remove base, will remove the relevant landmarks' base frame.
         //This is for marginal the keyframes that not is baseframe of all landmarks (in multi-drone)
     void outlierRejection();
-    void updateRemoteSldIMU(const std::map<int, IMUBuffer> & remote_imu_bufs);
+    void updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs);
     Marginalizer * marginalizer = nullptr;
     PriorFactor * prior_factor = nullptr;
     int self_id;
@@ -68,6 +68,7 @@ public:
 
     //Frame access    
     VINSFrame & getFrame(int index);
+    const VINSFrame & getFrame(int index) const;
     const VINSFrame & getFramebyId(int frame_id) const;
     VINSFrame & firstFrame();
     VINSFrame lastFrame() const;
@@ -77,6 +78,7 @@ public:
     //RemoteFrame access    
     std::set<int> availableDrones() const;
     VINSFrame & getRemoteFrame(int drone_id, int index);
+    const VINSFrame & getRemoteFrame(int drone_id, int index) const;
     VINSFrame & firstRemoteFrame(int drone_id);
     VINSFrame lastRemoteFrame(int drone_id) const;
     VINSFrame & lastRemoteFrame(int drone_id);

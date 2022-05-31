@@ -128,7 +128,7 @@ void D2Estimator::addFrame(VisualImageDescArray & _frame) {
         }
         frame.odom = odom_imu;
     }
-    
+    frame.odom.stamp = _frame.stamp;
     state.addFrame(_frame, frame);
 
     //Assign IMU and initialization to VisualImageDescArray for broadcasting.
@@ -264,10 +264,13 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
     // auto pose_manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
     auto pose_local_param = new PoseLocalParameterization;
     //set LocalParameterization
-    for (size_t i = 0; i < state.size(); i ++ ) {
-        auto & frame_a = state.getFrame(i);
-        // problem.SetManifold(state.getPoseState(frame_a.frame_id), pose_manifold);
-        problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
+    for (auto & drone_id : state.availableDrones()) {
+        if (state.sizeRemote(drone_id) > 0) {
+            for (size_t i = 0; i < state.sizeRemote(drone_id); i ++) {
+                auto frame_a = state.getRemoteFrame(drone_id, i);
+                problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
+            }
+        }
     }
 
     for (auto cam_id: used_camera_sets) {
@@ -357,12 +360,14 @@ void D2Estimator::addIMUFactor(ceres::Problem & problem, FrameIdType frame_ida, 
 }
 
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {
-    for (size_t i = 0; i < state.size() - 1; i ++ ) {
-        auto & frame_a = state.getFrame(i);
-        auto & frame_b = state.getFrame(i + 1);
-        auto pre_integrations = frame_b.pre_integrations; //Prev to current
-        assert(frame_b.prev_frame_id == frame_a.frame_id && "Wrong prev frame id");
-        addIMUFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
+    if (state.size() > 1) {
+        for (size_t i = 0; i < state.size() - 1; i ++ ) {
+            auto & frame_a = state.getFrame(i);
+            auto & frame_b = state.getFrame(i + 1);
+            auto pre_integrations = frame_b.pre_integrations; //Prev to current
+            assert(frame_b.prev_frame_id == frame_a.frame_id && "Wrong prev frame id");
+            addIMUFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
+        }
     }
 
     // In non-distributed mode, we add IMU factor for each drone
@@ -371,17 +376,19 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
             if (drone_id == self_id) {
                 continue;
             }
-            for (size_t i = 0; i < state.sizeRemote(drone_id) - 1; i ++ ) {
-                auto & frame_a = state.getRemoteFrame(drone_id, i);
-                auto & frame_b = state.getRemoteFrame(drone_id, i + 1);
-                auto pre_integrations = frame_b.pre_integrations; //Prev to current
-                if (pre_integrations == nullptr) {
-                    printf("\033[0;31m[D2VINS] Warning: frame %ld<->%ld@drone%d pre_integrations is nullptr.\033[0m\n",
-                        frame_a.frame_id, frame_b.frame_id, drone_id);
-                    continue;
+            if (state.sizeRemote(drone_id) > 1) {
+                for (size_t i = 0; i < state.sizeRemote(drone_id) - 1; i ++ ) {
+                    auto & frame_a = state.getRemoteFrame(drone_id, i);
+                    auto & frame_b = state.getRemoteFrame(drone_id, i + 1);
+                    auto pre_integrations = frame_b.pre_integrations; //Prev to current
+                    if (pre_integrations == nullptr) {
+                        printf("\033[0;31m[D2VINS] Warning: frame %ld<->%ld@drone%d pre_integrations is nullptr.\033[0m\n",
+                            frame_a.frame_id, frame_b.frame_id, drone_id);
+                        continue;
+                    }
+                    assert(frame_b.prev_frame_id == frame_a.frame_id && "Wrong prev frame id on remote");
+                    addIMUFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
                 }
-                assert(frame_b.prev_frame_id == frame_a.frame_id && "Wrong prev frame id on remote");
-                addIMUFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
             }
         }
     }
@@ -508,6 +515,14 @@ Swarm::Odometry D2Estimator::getImuPropagation() const {
 Swarm::Odometry D2Estimator::getOdometry() const {
     return last_odom;
 }
+
+Swarm::Odometry D2Estimator::getOdometry(int drone_id) const {
+    if (drone_id == self_id) {
+        return getOdometry();
+    }
+    return state.lastRemoteFrame(drone_id).odom;
+}
+
 
 D2EstimatorState & D2Estimator::getState() {
     return state;

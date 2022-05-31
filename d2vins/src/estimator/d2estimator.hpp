@@ -51,6 +51,7 @@ public:
     void inputRemoteImage(VisualImageDescArray & frame);
     Swarm::Odometry getImuPropagation() const;
     Swarm::Odometry getOdometry() const;
+    Swarm::Odometry getOdometry(int drone_id) const;
     void init(ros::NodeHandle & nh);
     D2EstimatorState & getState();
     std::vector<LandmarkPerId> getMarginedLandmarks() const;

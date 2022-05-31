@@ -36,27 +36,47 @@ void D2Visualization::init(ros::NodeHandle & nh, D2Estimator * estimator) {
     path_pub = nh.advertise<nav_msgs::Path>("path", 1000);
     sld_win_pub = nh.advertise<visualization_msgs::MarkerArray>("slding_window", 1000);
     _estimator = estimator;
+    _nh = &nh;
 }
 
 void D2Visualization::postSolve() {
-    auto odom = _estimator->getOdometry().toRos();
-    odom_pub.publish(odom);
     auto imu_prop = _estimator->getImuPropagation().toRos();
     imu_prop_pub.publish(imu_prop);
     auto pcl = _estimator->getState().getInitializedLandmarks();
     pcl_pub.publish(toPointCloud(pcl));
     margined_pcl.publish(toPointCloud(_estimator->getMarginedLandmarks(), true));
 
-    geometry_msgs::PoseStamped pose_stamped;
-    pose_stamped.header = odom.header;
-    pose_stamped.header.frame_id = "world";
-    pose_stamped.pose = odom.pose.pose;
-    path.header = odom.header;
-    path.header.frame_id = "world";
-    path.poses.push_back(pose_stamped);
-    path_pub.publish(path);
+    for (auto drone_id: _estimator->getState().availableDrones()) {
+        printf("drone %d\n", drone_id);
+        auto odom = _estimator->getOdometry(drone_id).toRos();
+        if (paths.find(drone_id) != paths.end() && (odom.header.stamp - paths[drone_id].header.stamp).toSec() < 1e-3) {
+            std::cout << "odom not new" << odom.header.stamp << ", " << paths[drone_id].header.stamp<< " , " << (odom.header.stamp - paths[drone_id].header.stamp).toSec() << std::endl;
+            continue;
+        }
+        auto & path = paths[drone_id];
+        if (odom_pubs.find(drone_id) == odom_pubs.end()) {
+            odom_pubs[drone_id] = _nh->advertise<nav_msgs::Odometry>("odometry_" + std::to_string(drone_id), 1000);
+            path_pubs[drone_id] = _nh->advertise<nav_msgs::Path>("path_" + std::to_string(drone_id), 1000);
+        }
+        geometry_msgs::PoseStamped pose_stamped;
+        pose_stamped.header = odom.header;
+        pose_stamped.header.frame_id = "world";
+        pose_stamped.pose = odom.pose.pose;
+        path.header = odom.header;
+        path.header.frame_id = "world";
+        path.poses.push_back(pose_stamped);
+        printf("Publishing pose %d\n", drone_id);
+        
+        if (drone_id == params->self_id) {
+            printf("Publishing self %d\n", drone_id);
+            path_pub.publish(path);
+            odom_pub.publish(odom);
+        }
 
-    //For self_drone
+        odom_pubs[drone_id].publish(odom);
+        path_pubs[drone_id].publish(path);
+    }
+
     auto  & state = _estimator->getState();
     CameraPoseVisualization cam_visual;
     for (auto drone_id: state.availableDrones()) {
@@ -67,7 +87,7 @@ void D2Visualization::postSolve() {
             cam_visual.addPose(cam_pose.pos(), cam_pose.att(), drone_colors[drone_id], display_alpha);
         }
     }
-    cam_visual.publishBy(sld_win_pub, odom.header);
+    cam_visual.publishBy(sld_win_pub, imu_prop.header);
 }
 
 sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color) {

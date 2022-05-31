@@ -63,6 +63,10 @@ VINSFrame & D2EstimatorState::getFrame(int index) {
     return *sld_wins[self_id][index];
 }
 
+const VINSFrame & D2EstimatorState::getFrame(int index) const {
+    return *sld_wins.at(self_id).at(index);
+}
+
 const VINSFrame & D2EstimatorState::getFramebyId(int frame_id) const {
     if (frame_db.find(frame_id) == frame_db.end()) {
         printf("\033[0;31m[D2EstimatorState::getFramebyId] Frame %d not found in database\033[0m\n", frame_id);
@@ -99,6 +103,15 @@ VINSFrame & D2EstimatorState::getRemoteFrame(int drone_id, int index) {
     }
     return *sld_wins.at(drone_id)[index];
 }
+
+const VINSFrame & D2EstimatorState::getRemoteFrame(int drone_id, int index) const {
+    const Guard lock(state_lock);
+    if (drone_id == self_id) {
+        return getFrame(index);
+    }
+    return *sld_wins.at(drone_id)[index];
+}
+
 
 VINSFrame & D2EstimatorState::firstRemoteFrame(int drone_id) {
     const Guard lock(state_lock);
@@ -288,13 +301,15 @@ void D2EstimatorState::updateSldwin(int drone_id, const std::vector<FrameIdType>
     latest_remote_sld_wins[drone_id] = sld_win;
 }
 
-void D2EstimatorState::updateRemoteSldIMU(const std::map<int, IMUBuffer> & remote_imu_bufs) {
+void D2EstimatorState::updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs) {
     if (params->estimation_mode != D2VINSConfig::SOLVE_ALL_MODE) {
         return;
     }
     for (auto & _it : sld_wins) {
         auto drone_id = _it.first;
         auto & _sld_win = _it.second;
+        if (drone_id == self_id || _sld_win.size() <=1 )
+            continue;
         for (size_t i = 0; i < _sld_win.size() - 1; i ++) {
             auto frame_a = _sld_win[i];
             auto frame_b = _sld_win[i+1];
@@ -361,10 +376,12 @@ void D2EstimatorState::syncFromState() {
     }
     lmanager.syncState(this);
 
-    for (size_t i = 0; i < sld_wins[self_id].size() - 1; i ++) {
-        auto frame_a = sld_wins[self_id][i];
-        auto frame_b = sld_wins[self_id][i+1];
-        frame_b->pre_integrations->repropagate(frame_a->Ba, frame_a->Bg);
+    if (sld_wins[self_id].size() > 1) {
+        for (size_t i = 0; i < sld_wins[self_id].size() - 1; i ++) {
+            auto frame_a = sld_wins[self_id][i];
+            auto frame_b = sld_wins[self_id][i+1];
+            frame_b->pre_integrations->repropagate(frame_a->Ba, frame_a->Bg);
+        }
     }
 
     if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
@@ -387,7 +404,7 @@ void D2EstimatorState::outlierRejection() {
 }
 
 void D2EstimatorState::preSolve(const std::map<int, IMUBuffer> & remote_imu_bufs) {
-    updateRemoteSldIMU(remote_imu_bufs);
+    updateSldWinsIMU(remote_imu_bufs);
     lmanager.initialLandmarks(this);
 }
 
