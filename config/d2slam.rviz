@@ -83,7 +83,7 @@ Visualization Manager:
           Buffer Length: 1
           Class: rviz/Path
           Color: 25; 255; 0
-          Enabled: true
+          Enabled: false
           Head Diameter: 0.30000001192092896
           Head Length: 0.20000000298023224
           Length: 0.30000001192092896
@@ -102,15 +102,7 @@ Visualization Manager:
           Shaft Length: 0.10000000149011612
           Topic: /d2vins/path
           Unreliable: false
-          Value: true
-        - Class: rviz/MarkerArray
-          Enabled: true
-          Marker Topic: /d2vins/camera_pose_visual
-          Name: CameraMarker
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: true
+          Value: false
         - Alpha: 1
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
@@ -166,6 +158,14 @@ Visualization Manager:
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /d2vins/slding_window
+          Name: SldWin
+          Namespaces:
+            {}
+          Queue Size: 100
           Value: false
       Enabled: true
       Name: VIOGroup
@@ -290,14 +290,6 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic: /vins_estimator/path
       Unreliable: false
-      Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /d2vins/slding_window
-      Name: MarkerArray
-      Namespaces:
-        CameraPoseVisualization: true
-      Queue Size: 100
       Value: true
     - Class: rviz/Group
       Displays:
@@ -428,6 +420,41 @@ Visualization Manager:
           Topic: /d2vins/path_1
           Unreliable: false
           Value: true
+        - Angle Tolerance: 0.10000000149011612
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Keep: 1
+          Name: Odometry2
+          Position Tolerance: 0.10000000149011612
+          Queue Size: 10
+          Shape:
+            Alpha: 1
+            Axes Length: 0.30000001192092896
+            Axes Radius: 0.10000000149011612
+            Color: 255; 25; 0
+            Head Length: 0.30000001192092896
+            Head Radius: 0.10000000149011612
+            Shaft Length: 0.30000001192092896
+            Shaft Radius: 0.05000000074505806
+            Value: Axes
+          Topic: /d2vins/odometry_2
+          Unreliable: false
+          Value: true
       Enabled: true
       Name: Remote
   Enabled: true
@@ -456,7 +483,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.999742031097412
+      Distance: 7.128687858581543
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -472,9 +499,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7947973608970642
+      Pitch: 0.6797974705696106
       Target Frame: world
-      Yaw: 2.290003776550293
+      Yaw: 1.3050012588500977
     Saved: ~
 Window Geometry:
   Displays:
@@ -492,5 +519,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1187
-  X: 347
-  Y: 54
+  X: 1536
+  Y: 27
