@@ -40,6 +40,7 @@ Panels:
         - /VIOGroup1
         - /Odometry1/Shape1
         - /VINS-Odom1/Shape1
+        - /Path1
       Splitter Ratio: 0.5
     Tree Height: 524
 Preferences:
@@ -322,7 +323,7 @@ Visualization Manager:
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
-      Line Style: Lines
+      Line Style: Billboards
       Line Width: 0.029999999329447746
       Name: Path
       Offset:
@@ -364,7 +365,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 6.885295867919922
+      Distance: 4.805348873138428
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -372,17 +373,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.9721542596817017
-        Y: -0.8087731003761292
-        Z: 0.6071556210517883
+        X: -0.6829468011856079
+        Y: -0.6267774105072021
+        Z: -0.25801634788513184
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9147962927818298
+      Pitch: 0.7197965383529663
       Target Frame: world
-      Yaw: 0.8850002288818359
+      Yaw: 1.2349998950958252
     Saved: ~
 Window Geometry:
   Displays:
@@ -400,5 +401,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1187
-  X: 1352
-  Y: 174
+  X: 1449
+  Y: 201

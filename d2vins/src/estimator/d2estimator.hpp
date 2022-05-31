@@ -18,8 +18,7 @@ protected:
     D2EstimatorState state;
     IMUBuffer imubuf;
     std::map<int, IMUBuffer> remote_imu_bufs;
-    Swarm::Odometry last_odom; //last accuacy odometry
-    Swarm::Odometry last_prop_odom; //last imu propagation odometry
+    std::map<int, Swarm::Odometry> last_prop_odom; //last imu propagation odometry
     Marginalizer * marginalizer = nullptr;
     //Internal functions
     bool tryinitFirstPose(VisualImageDescArray & frame);

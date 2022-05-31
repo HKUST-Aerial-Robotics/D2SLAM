@@ -10,6 +10,14 @@ using D2Common::generateCameraId;
 
 namespace D2VINS {
 
+D2EstimatorState::D2EstimatorState(int _self_id):
+    self_id(_self_id)
+{
+    sld_wins[self_id] = std::vector<VINSFrame*>();
+    if (params->estimation_mode != D2VINSConfig::SERVER_MODE) {
+        all_drones.insert(self_id);
+    }
+}
 
 std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
     const Guard lock(state_lock);
@@ -56,15 +64,15 @@ void D2EstimatorState::addCamera(const Swarm::Pose & pose, int camera_index, int
 }
 
 size_t D2EstimatorState::size() const {
-    return sld_wins.at(self_id).size();
+    return size(self_id);
 }
 
 VINSFrame & D2EstimatorState::getFrame(int index) {
-    return *sld_wins[self_id][index];
+    return getFrame(self_id, index);
 }
 
 const VINSFrame & D2EstimatorState::getFrame(int index) const {
-    return *sld_wins.at(self_id).at(index);
+    return getFrame(self_id, index);
 }
 
 const VINSFrame & D2EstimatorState::getFramebyId(int frame_id) const {
@@ -77,68 +85,52 @@ const VINSFrame & D2EstimatorState::getFramebyId(int frame_id) const {
 
 
 VINSFrame & D2EstimatorState::firstFrame() {
-    return *sld_wins[self_id][0];
+    return firstFrame(self_id);
 }
 
-VINSFrame D2EstimatorState::lastFrame() const {
-    const Guard lock(state_lock);
-    assert(sld_wins.at(self_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastFrame()");
-    return *sld_wins.at(self_id).back();
+const VINSFrame & D2EstimatorState::lastFrame() const {
+    return lastFrame(self_id);
 }
 
 VINSFrame & D2EstimatorState::lastFrame() {
-    const Guard lock(state_lock);
-    assert(sld_wins[self_id].size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastFrame()");
-    return *sld_wins[self_id].back();
+    return lastFrame(self_id);
 }
 
 std::set<int> D2EstimatorState::availableDrones() const { 
     return all_drones;
 }
 
-VINSFrame & D2EstimatorState::getRemoteFrame(int drone_id, int index) {
+VINSFrame & D2EstimatorState::getFrame(int drone_id, int index) {
     const Guard lock(state_lock);
-    if (drone_id == self_id) {
-        return getFrame(index);
-    }
     return *sld_wins.at(drone_id)[index];
 }
 
-const VINSFrame & D2EstimatorState::getRemoteFrame(int drone_id, int index) const {
+const VINSFrame & D2EstimatorState::getFrame(int drone_id, int index) const {
     const Guard lock(state_lock);
-    if (drone_id == self_id) {
-        return getFrame(index);
-    }
     return *sld_wins.at(drone_id)[index];
 }
 
 
-VINSFrame & D2EstimatorState::firstRemoteFrame(int drone_id) {
+VINSFrame & D2EstimatorState::firstFrame(int drone_id) {
     const Guard lock(state_lock);
-    assert(sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::firstRemoteFrame()");
+    assert(sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::firstFrame()");
     return *sld_wins.at(drone_id)[0];
 }
 
-VINSFrame D2EstimatorState::lastRemoteFrame(int drone_id) const { 
+const VINSFrame & D2EstimatorState::lastFrame(int drone_id) const { 
     const Guard lock(state_lock);
-    if (drone_id == self_id) 
-        return lastFrame();
-    assert(sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastRemoteFrame()");
+    assert(sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastFrame()");
     return *sld_wins.at(drone_id).back();
 }
 
-VINSFrame & D2EstimatorState::lastRemoteFrame(int drone_id) { 
+VINSFrame & D2EstimatorState::lastFrame(int drone_id) { 
     const Guard lock(state_lock);
-    if (drone_id == self_id) 
-        return lastFrame();
-    assert(sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastRemoteFrame()");
+    assert(sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::lastFrame()");
     return *sld_wins.at(drone_id).back();
 }
 
-size_t D2EstimatorState::sizeRemote(int drone_id) const { 
+size_t D2EstimatorState::size(int drone_id) const { 
     const Guard lock(state_lock);
-    if (drone_id == self_id)
-        return size();
     if (sld_wins.find(drone_id) == sld_wins.end()) {
         return 0;
     }

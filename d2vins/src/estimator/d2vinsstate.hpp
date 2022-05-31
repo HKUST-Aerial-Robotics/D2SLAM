@@ -33,12 +33,7 @@ protected:
     mutable std::recursive_mutex state_lock;
 public:
     state_type td = 0.0;
-    D2EstimatorState(int _self_id):
-        self_id(_self_id),
-        all_drones{_self_id}
-    {
-        sld_wins[self_id] = std::vector<VINSFrame*>();
-    }
+    D2EstimatorState(int _self_id);
 
     void init(std::vector<Swarm::Pose> _extrinsic, double _td);
 
@@ -71,18 +66,16 @@ public:
     const VINSFrame & getFrame(int index) const;
     const VINSFrame & getFramebyId(int frame_id) const;
     VINSFrame & firstFrame();
-    VINSFrame lastFrame() const;
+    const VINSFrame & lastFrame() const;
     VINSFrame & lastFrame();
     size_t size() const;
-
-    //RemoteFrame access    
     std::set<int> availableDrones() const;
-    VINSFrame & getRemoteFrame(int drone_id, int index);
-    const VINSFrame & getRemoteFrame(int drone_id, int index) const;
-    VINSFrame & firstRemoteFrame(int drone_id);
-    VINSFrame lastRemoteFrame(int drone_id) const;
-    VINSFrame & lastRemoteFrame(int drone_id);
-    size_t sizeRemote(int drone_id) const;
+    VINSFrame & getFrame(int drone_id, int index);
+    const VINSFrame & getFrame(int drone_id, int index) const;
+    VINSFrame & firstFrame(int drone_id);
+    const VINSFrame &  lastFrame(int drone_id) const;
+    VINSFrame & lastFrame(int drone_id);
+    size_t size(int drone_id) const;
 
     //Solving process
     void syncFromState();

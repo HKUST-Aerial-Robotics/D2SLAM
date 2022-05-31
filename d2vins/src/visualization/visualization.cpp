@@ -40,8 +40,10 @@ void D2Visualization::init(ros::NodeHandle & nh, D2Estimator * estimator) {
 }
 
 void D2Visualization::postSolve() {
-    auto imu_prop = _estimator->getImuPropagation().toRos();
-    imu_prop_pub.publish(imu_prop);
+    if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
+        auto imu_prop = _estimator->getImuPropagation().toRos();
+        imu_prop_pub.publish(imu_prop);
+    }
     auto pcl = _estimator->getState().getInitializedLandmarks();
     pcl_pub.publish(toPointCloud(pcl));
     margined_pcl.publish(toPointCloud(_estimator->getMarginedLandmarks(), true));
@@ -80,14 +82,17 @@ void D2Visualization::postSolve() {
     auto  & state = _estimator->getState();
     CameraPoseVisualization cam_visual;
     for (auto drone_id: state.availableDrones()) {
-        for (int i = 0; i < state.sizeRemote(drone_id); i ++) {
-            auto & frame = state.getRemoteFrame(drone_id, i);
+        for (int i = 0; i < state.size(drone_id); i ++) {
+            auto & frame = state.getFrame(drone_id, i);
             CamIdType camera_id = *state.getAvailableCameraIds().begin();
             auto cam_pose = frame.odom.pose()*state.getExtrinsic(camera_id);
             cam_visual.addPose(cam_pose.pos(), cam_pose.att(), drone_colors[drone_id], display_alpha);
         }
     }
-    cam_visual.publishBy(sld_win_pub, imu_prop.header);
+    std_msgs::Header header;
+    header.frame_id = "world";
+    header.stamp = ros::Time::now();
+    cam_visual.publishBy(sld_win_pub, header);
 }
 
 sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color) {

@@ -32,7 +32,7 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     std::thread th;
 protected:
     virtual void frameCallback(const D2Common::VisualImageDescArray & viokf) override {
-        if (frame_count % params->frame_step == 0) {
+        if (params->estimation_mode < D2VINSConfig::SERVER_MODE && frame_count % params->frame_step == 0) {
             Guard guard(queue_lock);
             viokf_queue.emplace(viokf);
         }

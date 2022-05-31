@@ -48,7 +48,7 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
         return false;
     }
     auto q0 = Utility::g2R(_imubuf.mean_acc());
-    last_odom = Swarm::Odometry(frame.stamp, Swarm::Pose(q0, Vector3d::Zero()));
+    auto last_odom = Swarm::Odometry(frame.stamp, Swarm::Pose(q0, Vector3d::Zero()));
 
     //Easily use the average value as gyrobias now
     //Also the ba with average acc - g
@@ -172,8 +172,8 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
     int r_drone_id = _frame.drone_id;
     VINSFrame vinsframe;
     auto _imu = _frame.imu_buf;
-    if (state.sizeRemote(r_drone_id) > 0 ) {
-        auto last_frame = state.lastRemoteFrame(r_drone_id);
+    if (state.size(r_drone_id) > 0 ) {
+        auto last_frame = state.lastFrame(r_drone_id);
         if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
             auto & imu_buf = remote_imu_bufs.at(_frame.drone_id);
             auto ret = imu_buf.periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
@@ -223,11 +223,16 @@ void D2Estimator::addSldWinToFrame(VisualImageDescArray & frame) {
     for (int i = 0; i < state.size(); i ++) {
         frame.sld_win_status.push_back(state.getFrame(i).frame_id);
     }
+
 }
 
 void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
     state.updateSldwin(frame.drone_id, frame.sld_win_status);
     addFrameRemote(frame);
+    if (params->estimation_mode == D2VINSConfig::SERVER_MODE && state.size(frame.drone_id) >= params->min_solve_frames) {
+        state.clearFrame();
+        solve();
+    }
 }
 
 bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
@@ -265,9 +270,9 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
     auto pose_local_param = new PoseLocalParameterization;
     //set LocalParameterization
     for (auto & drone_id : state.availableDrones()) {
-        if (state.sizeRemote(drone_id) > 0) {
-            for (size_t i = 0; i < state.sizeRemote(drone_id); i ++) {
-                auto frame_a = state.getRemoteFrame(drone_id, i);
+        if (state.size(drone_id) > 0) {
+            for (size_t i = 0; i < state.size(drone_id); i ++) {
+                auto frame_a = state.getFrame(drone_id, i);
                 problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
             }
         }
@@ -287,7 +292,15 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
     }
 
     if (!state.getPrior() || params->always_fixed_first_pose) {
-        problem.SetParameterBlockConstant(state.getPoseState(state.firstFrame().frame_id));
+        if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
+            problem.SetParameterBlockConstant(state.getPoseState(state.firstFrame().frame_id));
+        } else {
+            //Set first drone pose as fixed (whatever it is).
+            if (state.availableDrones().size() > 0) {
+                auto drone_id = *state.availableDrones().begin();
+                problem.SetParameterBlockConstant(state.getPoseState(state.firstFrame(drone_id).frame_id));
+            }
+        }
     }
 }
 
@@ -313,7 +326,6 @@ void D2Estimator::solve() {
     // params->options.?
     ceres::Solve(params->options, problem, &summary);
     state.syncFromState();
-    last_odom = state.lastFrame().odom;
 
     //Now do some statistics
     static double sum_time = 0;
@@ -329,12 +341,22 @@ void D2Estimator::solve() {
             sum_time*1000/solve_count, sum_iteration/solve_count, sum_cost/solve_count);
     }
 
-    printf("[D2VINS] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
-        current_landmark_num, last_odom.toStr().c_str(), state.td*1000, summary.total_time_in_seconds*1000);
+    if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
+        auto last_odom = state.lastFrame().odom;
+        printf("[D2VINS] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
+            current_landmark_num, last_odom.toStr().c_str(), state.td*1000, summary.total_time_in_seconds*1000);
+    } else {
+        printf("[D2VINS] solve_count %d landmarks %d td %.1fms opti_time %.1fms\n", solve_count, 
+            current_landmark_num, state.td*1000, summary.total_time_in_seconds*1000);
+    }
 
     // Reprogation
-    auto _imu = imubuf.back(state.lastFrame().stamp + state.td);
-    last_prop_odom = _imu.propagation(state.lastFrame());
+    for (auto drone_id : state.availableDrones()) {
+        std::cout << "propagate drone " << drone_id << std::endl;
+        auto _imu = imubuf.back(state.lastFrame(drone_id).stamp + state.td);
+        last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
+    }
+
     visual.postSolve();
 
     if (params->debug_print_states || params->debug_print_sldwin) {
@@ -376,10 +398,10 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
             if (drone_id == self_id) {
                 continue;
             }
-            if (state.sizeRemote(drone_id) > 1) {
-                for (size_t i = 0; i < state.sizeRemote(drone_id) - 1; i ++ ) {
-                    auto & frame_a = state.getRemoteFrame(drone_id, i);
-                    auto & frame_b = state.getRemoteFrame(drone_id, i + 1);
+            if (state.size(drone_id) > 1) {
+                for (size_t i = 0; i < state.size(drone_id) - 1; i ++ ) {
+                    auto & frame_a = state.getFrame(drone_id, i);
+                    auto & frame_b = state.getFrame(drone_id, i + 1);
                     auto pre_integrations = frame_b.pre_integrations; //Prev to current
                     if (pre_integrations == nullptr) {
                         printf("\033[0;31m[D2VINS] Warning: frame %ld<->%ld@drone%d pre_integrations is nullptr.\033[0m\n",
@@ -509,18 +531,15 @@ std::vector<LandmarkPerId> D2Estimator::getMarginedLandmarks() const {
 }
 
 Swarm::Odometry D2Estimator::getImuPropagation() const {
-    return last_prop_odom;
+    return last_prop_odom.at(self_id);
 }
 
 Swarm::Odometry D2Estimator::getOdometry() const {
-    return last_odom;
+    return getOdometry(self_id);
 }
 
 Swarm::Odometry D2Estimator::getOdometry(int drone_id) const {
-    if (drone_id == self_id) {
-        return getOdometry();
-    }
-    return state.lastRemoteFrame(drone_id).odom;
+    return state.lastFrame(drone_id).odom;
 }
 
 
