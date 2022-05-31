@@ -5,7 +5,6 @@ namespace D2Common {
 
 Vector3d IMUBuffer::Gravity = Vector3d(0., 0., 9.805);
 Eigen::Matrix<double, 18, 18> IntegrationBase::noise = Eigen::Matrix<double, 18, 18>::Zero();
-
 size_t IMUBuffer::searchClosest(double t) const {
     const Guard lock(buf_lock);
     if (buf.size() == 0) {
@@ -19,6 +18,7 @@ size_t IMUBuffer::searchClosest(double t) const {
 }
 
 size_t IMUBuffer::searchClosest(double t, int i0, int i1) const {
+    const double eps = 5e-4;
     const Guard lock(buf_lock);
     // printf("IMUBuffer::searchClosest: t=%f, i0=%d, i1=%d\n", t, i0, i1);
     if (i1 - i0 == 1) {
@@ -28,7 +28,7 @@ size_t IMUBuffer::searchClosest(double t, int i0, int i1) const {
     if (i > buf.size()) {
         return i0;
     }
-    if (buf[i].t > t) {
+    if (buf[i].t > t - eps) {
         return searchClosest(t, i0, i);
     } else {
         return searchClosest(t, i, i1);
@@ -118,7 +118,7 @@ std::pair<IMUBuffer, int> IMUBuffer::periodIMU(double t0, double t1) const {
     }
     auto i0 = searchClosest(t0);
     auto i1 = searchClosest(t1);
-    return std::make_pair(slice(i0, i1), i1);
+    return std::make_pair(slice(i0 + 1, i1 + 1), i1 + 1);
 }
 
 std::pair<IMUBuffer, int> IMUBuffer::periodIMU(int i0, double t1) const {

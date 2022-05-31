@@ -42,17 +42,20 @@ void D2Estimator::inputImu(IMUData data) {
 }
 
 bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
-    if (imubuf.size() < params->init_imu_num) {
+    auto ret = imubuf.periodIMU(-1, frame.stamp + state.getTd(frame.drone_id));
+    auto _imubuf = ret.first;
+    if (_imubuf.size() < params->init_imu_num) {
         return false;
     }
-    auto q0 = Utility::g2R(imubuf.mean_acc());
+    auto q0 = Utility::g2R(_imubuf.mean_acc());
     last_odom = Swarm::Odometry(frame.stamp, Swarm::Pose(q0, Vector3d::Zero()));
 
     //Easily use the average value as gyrobias now
     //Also the ba with average acc - g
-    VINSFrame first_frame(frame, imubuf.mean_acc() - IMUBuffer::Gravity, imubuf.mean_gyro());
+    VINSFrame first_frame(frame, _imubuf.mean_acc() - IMUBuffer::Gravity, _imubuf.mean_gyro());
     first_frame.is_keyframe = true;
     first_frame.odom = last_odom;
+    first_frame.imu_buf_index = ret.second;
 
     state.addFrame(frame, first_frame);
     
