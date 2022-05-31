@@ -294,7 +294,7 @@ void D2EstimatorState::updateSldwin(int drone_id, const std::vector<FrameIdType>
 }
 
 void D2EstimatorState::updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs) {
-    if (params->estimation_mode != D2VINSConfig::SOLVE_ALL_MODE) {
+    if (params->estimation_mode != D2VINSConfig::SOLVE_ALL_MODE && params->estimation_mode != D2VINSConfig::SERVER_MODE) {
         return;
     }
     for (auto & _it : sld_wins) {

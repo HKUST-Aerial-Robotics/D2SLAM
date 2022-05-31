@@ -12,12 +12,12 @@ class D2Visualization {
     std::map<int, ros::Publisher> path_pubs, odom_pubs;
     ros::Publisher sld_win_pub;
     std::map<int, nav_msgs::Path> paths;
-    std::vector<Eigen::Vector3d> drone_colors;
     double display_alpha = 0.5;
     ros::NodeHandle * _nh = nullptr;
 public:
     D2Visualization();
     void init(ros::NodeHandle & nh, D2Estimator * estimator);
     void postSolve();
+    static std::vector<Eigen::Vector3d> drone_colors;
 };
 }

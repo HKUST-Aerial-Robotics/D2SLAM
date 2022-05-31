@@ -7,8 +7,7 @@
 namespace D2VINS {
 sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color = false);
 
-D2Visualization::D2Visualization():
-    drone_colors{
+std::vector<Eigen::Vector3d> D2Visualization::drone_colors{
         Vector3d(1, 1, 0), //drone 0 yellow
         Vector3d(1, 0, 0), //drone 1 red
         Vector3d(0, 1, 0), //drone 2 green
@@ -25,8 +24,10 @@ D2Visualization::D2Visualization():
         Vector3d(0.5, 0.5, 0), //drone 13 orange
         Vector3d(0, 0.5, 0.5), //drone 14 cyan
         Vector3d(0.5, 0.5, 0.5) //drone 15 white
-    }
-    {}
+};
+
+D2Visualization::D2Visualization()
+{}
 
 void D2Visualization::init(ros::NodeHandle & nh, D2Estimator * estimator) {
     pcl_pub = nh.advertise<sensor_msgs::PointCloud>("point_cloud", 1000);
@@ -110,13 +111,15 @@ sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> 
         if (use_raw_color) {
             color = Vector3i(landmarks[i].color[2], landmarks[i].color[1], landmarks[i].color[0]);
         } else {
-            if (landmarks[i].flag == D2Common::LandmarkFlag::ESTIMATED) {
-                //set color to green
-                color = Vector3i(0, 255, 0.);
-            } else if (landmarks[i].flag == D2Common::LandmarkFlag::OUTLIER) {
-                //set color to gray
-                color = Vector3i(200, 200, 200.);
-            }
+            // if (landmarks[i].flag == D2Common::LandmarkFlag::ESTIMATED) {
+            //     //set color to green
+            //     color = Vector3i(0, 255, 0.);
+            // } else if (landmarks[i].flag == D2Common::LandmarkFlag::OUTLIER) {
+            //     //set color to gray
+            //     color = Vector3i(200, 200, 200.);
+            // }
+            //Set color with drone id
+            color = (D2Visualization::drone_colors[landmarks[i].track[0].drone_id]*255).template cast<int>();
         }
         uint32_t hex_r = (0xff & color(0)) << 16;
         uint32_t hex_g = (0xff & color(1)) << 8;

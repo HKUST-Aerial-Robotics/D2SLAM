@@ -166,7 +166,7 @@ void D2Estimator::addRemoteImuBuf(int drone_id, const IMUBuffer & imu_) {
 }
 
 void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
-    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || params->estimation_mode == D2VINSConfig::SERVER_MODE) {
         addRemoteImuBuf(_frame.drone_id, _frame.imu_buf);
     }
     int r_drone_id = _frame.drone_id;
@@ -174,7 +174,7 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
     auto _imu = _frame.imu_buf;
     if (state.size(r_drone_id) > 0 ) {
         auto last_frame = state.lastFrame(r_drone_id);
-        if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+        if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || params->estimation_mode == D2VINSConfig::SERVER_MODE) {
             auto & imu_buf = remote_imu_bufs.at(_frame.drone_id);
             auto ret = imu_buf.periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
             auto _imu = ret.first;
@@ -393,7 +393,7 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
     }
 
     // In non-distributed mode, we add IMU factor for each drone
-    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || params->estimation_mode == D2VINSConfig::SERVER_MODE) {
         for (auto drone_id : state.availableDrones()) {
             if (drone_id == self_id) {
                 continue;
