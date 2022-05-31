@@ -20,21 +20,16 @@ size_t IMUBuffer::searchClosest(double t) const {
 
 size_t IMUBuffer::searchClosest(double t, int i0, int i1) const {
     const Guard lock(buf_lock);
+    // printf("IMUBuffer::searchClosest: t=%f, i0=%d, i1=%d\n", t, i0, i1);
     if (i1 - i0 == 1) {
         return i0;
     }
-    if (i1 - i0 == 2) {
-        //select i0 or i0 + 1
-        if (std::abs(buf[i0 + 1].t - t) < std::abs(buf[i0].t - t)) {
-            return i0 + 1;
-        } else {
-            return i0;
-        }
-    }
-
     int i = (i0 + i1) / 2;
+    if (i > buf.size()) {
+        return i0;
+    }
     if (buf[i].t > t) {
-        return searchClosest(t, i0, std::min(i + 1, i1));
+        return searchClosest(t, i0, i);
     } else {
         return searchClosest(t, i, i1);
     }
@@ -43,7 +38,14 @@ size_t IMUBuffer::searchClosest(double t, int i0, int i1) const {
 IMUBuffer IMUBuffer::slice(int i0, int i1) const {
     const Guard lock(buf_lock);
     IMUBuffer ret;
-    ret.buf = std::vector<IMUData>(buf.begin() + i0, buf.begin() + i1 + 1);
+    if (i0 > buf.size()) {
+        return ret;
+    }
+    if (i1 + 1 > buf.size()) {
+        ret.buf = std::vector<IMUData>(buf.begin() + i0, buf.end());
+    } else {
+        ret.buf = std::vector<IMUData>(buf.begin() + i0, buf.begin() + i1 + 1);
+    }
     ret.t_last = buf.back().t;
     return ret;
 }
@@ -90,9 +92,9 @@ IMUBuffer IMUBuffer::pop(double t) {
     auto i0 = searchClosest(t);
     IMUBuffer ret;
     if (i0 > 0) {
-        ret.buf = std::vector<IMUData>(buf.begin(), buf.begin() + i0 + 1);
+        ret.buf = std::vector<IMUData>(buf.begin(), buf.begin() + i0);
         ret.t_last = ret.buf.back().t;
-        buf.erase(buf.begin(), buf.begin() + i0 + 1);
+        buf.erase(buf.begin(), buf.begin() + i0);
     }
     return ret;
 }
@@ -109,14 +111,23 @@ IMUBuffer IMUBuffer::back(double t) const {
     return ret;
 }
 
-IMUBuffer IMUBuffer::periodIMU(double t0, double t1) const {
+std::pair<IMUBuffer, int> IMUBuffer::periodIMU(double t0, double t1) const {
     const Guard lock(buf_lock);
     if (buf.size() == 0){
-        return IMUBuffer();
+        return std::make_pair(IMUBuffer(), 0);
     }
     auto i0 = searchClosest(t0);
     auto i1 = searchClosest(t1);
-    return slice(i0, i1);
+    return std::make_pair(slice(i0, i1), i1);
+}
+
+std::pair<IMUBuffer, int> IMUBuffer::periodIMU(int i0, double t1) const {
+    const Guard lock(buf_lock);
+    if (buf.size() == 0){
+        return std::make_pair(IMUBuffer(), 0);
+    }
+    auto i1 = searchClosest(t1, i0 + 1, buf.size());;
+    return std::make_pair(slice(i0 + 1, i1 + 1), i1 + 1);
 }
 
 Swarm::Odometry IMUBuffer::propagation(const VINSFrame & baseframe) const {

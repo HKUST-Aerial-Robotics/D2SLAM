@@ -102,22 +102,21 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
 void D2Estimator::addFrame(VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
     margined_landmarks = state.clearFrame();
-    if (state.size() > params->min_solve_frames) {
-        imubuf.pop(state.firstFrame().stamp + state.td);
+    auto & last_frame = state.lastFrame();
+    auto ret = imubuf.periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
+    auto _imu = ret.first;
+    auto index = ret.second;
+    if (fabs(_imu.size()/(_frame.stamp - last_frame.stamp) - params->IMU_FREQ) > 15) {
+        printf("\033[0;31m[D2VINS::D2Estimator] Local IMU error freq: %.3f  start_t %.3f/%.3f end_t %.3f/%.3f\033[0m\n", 
+            _imu.size()/(_frame.stamp - last_frame.stamp),
+            last_frame.stamp + state.td, _imu[0].t, _frame.stamp + state.td, _imu[_imu.size()-1].t);
     }
-    auto _imu = imubuf.periodIMU(state.lastFrame().stamp + state.td, _frame.stamp + state.td);
-    assert(_imu.size() > 0 && "IMU buffer is empty");
-    if (fabs(_imu[_imu.size()-1].t - _frame.stamp - state.td) > params->max_imu_time_err && frame_count > 10) {
-        printf("\033[0;31m[D2VINS::D2Estimator] Too large time difference %.3f\n", _imu[_imu.size()-1].t - _frame.stamp - state.td);
-        printf("\033[0;31m[D2VINS::D2Estimator] Prev frame  %.3f cur   %.3f td %.1fms\n", state.lastFrame().stamp + state.td, _frame.stamp + state.td, state.td*1000);
-        printf("\033[0;31m[D2VINS::D2Estimator] Imu t_start %.3f t_end %.3f num %ld t_last %.3f\033[0m\n", _imu[0].t, _imu[_imu.size()-1].t, _imu.size(), imubuf[imubuf.size()-1].t);
-    }
-    VINSFrame frame(_frame, _imu, state.lastFrame());
+    VINSFrame frame(_frame, ret, last_frame);
     if (params->init_method == D2VINSConfig::INIT_POSE_IMU) {
-        frame.odom = _imu.propagation(state.lastFrame());
+        frame.odom = _imu.propagation(last_frame);
     } else {
-        auto odom_imu = _imu.propagation(state.lastFrame());
-        auto pnp_init = initialFramePnP(_frame, state.lastFrame().odom.pose());
+        auto odom_imu = _imu.propagation(last_frame);
+        auto pnp_init = initialFramePnP(_frame, last_frame.odom.pose());
         if (!pnp_init.first) {
             //Use IMU
             printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed, use IMU instead.\033[0m\n");
@@ -174,14 +173,14 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
         auto last_frame = state.lastRemoteFrame(r_drone_id);
         if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
             auto & imu_buf = remote_imu_bufs.at(_frame.drone_id);
-            if (state.sizeRemote(r_drone_id) > params->min_solve_frames) {
-                // imu_buf.pop(state.firstRemoteFrame(r_drone_id).stamp + state.td);
+            auto ret = imu_buf.periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
+            auto _imu = ret.first;
+            if (fabs(_imu.size()/(_frame.stamp - last_frame.stamp) - params->IMU_FREQ) > 15) {
+                printf("\033[0;31m[D2VINS::D2Estimator] Remote IMU error freq: %.3f  start_t %.3f/%.3f end_t %.3f/%.3f\033[0m\n", 
+                    _imu.size()/(_frame.stamp - last_frame.stamp), last_frame.stamp + state.td, _imu[0].t,
+                    _frame.stamp + state.td, _imu[_imu.size()-1].t);
             }
-            auto _imu = imu_buf.periodIMU(last_frame.stamp + state.td, _frame.stamp + state.td);
-            if (fabs(_imu.size()/(_frame.stamp - last_frame.stamp) - params->IMU_FREQ) > 10) {
-                printf("\033[0;31m[D2VINS::D2Estimator] Remote IMU error freq: %.3f \033[0m\n", _imu.size()/(_frame.stamp - last_frame.stamp));
-            }
-            vinsframe = VINSFrame(_frame, _imu, last_frame);
+            vinsframe = VINSFrame(_frame, ret, last_frame);
         } else {
             vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
         }

@@ -89,7 +89,9 @@ public:
 
     IMUBuffer back(double t) const;
 
-    IMUBuffer periodIMU(double t0, double t1) const;
+    //Return imu buf and last data's index
+    std::pair<IMUBuffer, int> periodIMU(double t0, double t1) const;
+    std::pair<IMUBuffer, int> periodIMU(int i0, double t1) const;
 
     Swarm::Odometry propagation(const Swarm::Odometry & odom, const Vector3d & Ba, const Vector3d & Bg) const;
     Swarm::Odometry propagation(const VINSFrame & baseframe) const;

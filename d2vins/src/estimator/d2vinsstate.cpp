@@ -301,9 +301,11 @@ void D2EstimatorState::updateRemoteSldIMU(const std::map<int, IMUBuffer> & remot
             if (frame_b->prev_frame_id != frame_a->frame_id) {
                 //Update IMU factor.
                 auto td = getTd(frame_a->drone_id);
-                auto _imu_buf = remote_imu_bufs.at(drone_id).periodIMU(frame_a->stamp + td, frame_b->stamp + td);
+                auto ret = remote_imu_bufs.at(drone_id).periodIMU(frame_a->imu_buf_index, frame_b->stamp + td);
+                auto _imu_buf = ret.first;
                 frame_b->pre_integrations = new IntegrationBase(_imu_buf, frame_a->Ba, frame_a->Bg);
                 frame_b->prev_frame_id = frame_a->frame_id;
+                frame_b->imu_buf_index = ret.second;
                 if (fabs(_imu_buf.size()/(frame_b->stamp - frame_a->stamp) - params->IMU_FREQ) > 10) {
                     printf("\033[0;31m[D2VINS::D2Estimator] Remote IMU error freq: %.3f in updateRemoteSldIMU \033[0m\n", 
                         _imu_buf.size()/(frame_b->stamp - frame_a->stamp));
