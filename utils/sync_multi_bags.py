@@ -1,4 +1,4 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
 import rosbag
 import sys
 from transformations import *
@@ -24,6 +24,13 @@ def generate_bagname(bag):
     bagname = p.stem + "-sync-calib.bag"
     output_bag = p.parents[0].joinpath(bagname)
     # output_bag = "/home/xuhao/Dropbox/data/d2slam/tum_datasets/" + bagname
+    return output_bag
+
+def generate_groundtruthname(bag):
+    from pathlib import Path
+    p = Path(bag)
+    bagname = p.stem + "-groundtruth.txt"
+    output_bag = p.parents[0].joinpath(bagname)
     return output_bag
 
 if __name__ == "__main__":
@@ -61,6 +68,7 @@ if __name__ == "__main__":
         with rosbag.Bag(output_bag, 'w') as outbag:
             from nav_msgs.msg import Path
             path = Path()
+            path_arr = []
             c = 0
             for topic, msg, t in rosbag.Bag(bag).read_messages():
                 if msg._has_header:
@@ -85,8 +93,10 @@ if __name__ == "__main__":
                     posestamp.pose.orientation.z = quat[3]
                     path.header = posestamp.header
                     outbag.write("/calib_pose", posestamp, t + _dt )
+                    path_arr.append(np.concatenate((quat, pos)))
                     if c % 10 == 0:
                         path.poses.append(posestamp)
                         outbag.write("/calib_path", path, t + _dt )
                     c+=1
+            np.savetxt(generate_groundtruthname(bag), path_arr)
 
