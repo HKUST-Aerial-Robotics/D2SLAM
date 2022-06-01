@@ -326,7 +326,8 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
         import tabulate
         return tabulate.tabulate(output_table, tablefmt='html')
 
-def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,main_id=1,dte=100000,show=True, outlier_thres=100, verbose=True):
+def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,main_id=1,dte=100000,show=True, 
+    outlier_thres=100, outlier_thres_yaw=100, verbose=True):
     #Plot Fused Vs GT absolute error
     ate_vo_sum = 0
     rmse_vo_ang_sum = 0
@@ -351,10 +352,12 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
             ypr_vo = poses_vo[i].ypr
         
         mask_fused = np.linalg.norm(pos_fused - pos_gt, axis=1) < outlier_thres
+        mask_fused = np.logical_and(mask_fused, np.linalg.norm(ypr_gt - ypr_fused, axis=1) < outlier_thres_yaw)
         pos_gt =  pos_gt[mask_fused]
         ypr_gt = ypr_gt[mask_fused]
         pos_fused = pos_fused[mask_fused]
         ypr_fused = ypr_fused[mask_fused]
+        t_ = t_[mask_fused]
 
         fused_cov_per_meter, fused_yaw_cov_per_meter = odometry_covariance_per_meter(pos_fused, ypr_fused[:,0], pos_gt, ypr_gt[:,0])
         rmse_x = RMSE(pos_fused[:,0] , pos_gt[:,0])
