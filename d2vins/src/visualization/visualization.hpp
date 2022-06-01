@@ -14,6 +14,7 @@ class D2Visualization {
     std::map<int, nav_msgs::Path> paths;
     double display_alpha = 0.5;
     ros::NodeHandle * _nh = nullptr;
+    std::map<int, std::ofstream> csv_output_files;
 public:
     D2Visualization();
     void init(ros::NodeHandle & nh, D2Estimator * estimator);

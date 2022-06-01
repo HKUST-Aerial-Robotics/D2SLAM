@@ -50,33 +50,31 @@ void D2Visualization::postSolve() {
     margined_pcl.publish(toPointCloud(_estimator->getMarginedLandmarks(), true));
 
     for (auto drone_id: _estimator->getState().availableDrones()) {
-        printf("drone %d\n", drone_id);
-        auto odom = _estimator->getOdometry(drone_id).toRos();
-        if (paths.find(drone_id) != paths.end() && (odom.header.stamp - paths[drone_id].header.stamp).toSec() < 1e-3) {
-            std::cout << "odom not new" << odom.header.stamp << ", " << paths[drone_id].header.stamp<< " , " << (odom.header.stamp - paths[drone_id].header.stamp).toSec() << std::endl;
+        auto odom = _estimator->getOdometry(drone_id);
+        auto odom_ros = odom.toRos();
+        if (paths.find(drone_id) != paths.end() && (odom_ros.header.stamp - paths[drone_id].header.stamp).toSec() < 1e-3) {
             continue;
         }
         auto & path = paths[drone_id];
         if (odom_pubs.find(drone_id) == odom_pubs.end()) {
             odom_pubs[drone_id] = _nh->advertise<nav_msgs::Odometry>("odometry_" + std::to_string(drone_id), 1000);
             path_pubs[drone_id] = _nh->advertise<nav_msgs::Path>("path_" + std::to_string(drone_id), 1000);
+            csv_output_files[drone_id] = std::ofstream(params->output_folder + "/d2vins_" + std::to_string(drone_id) + "_.csv", std::ios::out);
         }
         geometry_msgs::PoseStamped pose_stamped;
-        pose_stamped.header = odom.header;
+        pose_stamped.header = odom_ros.header;
         pose_stamped.header.frame_id = "world";
-        pose_stamped.pose = odom.pose.pose;
-        path.header = odom.header;
+        pose_stamped.pose = odom_ros.pose.pose;
+        path.header = odom_ros.header;
         path.header.frame_id = "world";
         path.poses.push_back(pose_stamped);
-        printf("Publishing pose %d\n", drone_id);
         
         if (drone_id == params->self_id) {
-            printf("Publishing self %d\n", drone_id);
             path_pub.publish(path);
-            odom_pub.publish(odom);
+            odom_pub.publish(odom_ros);
         }
-
-        odom_pubs[drone_id].publish(odom);
+        csv_output_files[drone_id] << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << odom.stamp << " " << odom.pose().toStr(true) << std::endl;
+        odom_pubs[drone_id].publish(odom_ros);
         path_pubs[drone_id].publish(path);
     }
 

@@ -20,7 +20,7 @@
     <arg name="enable_loop" default="false" />
     <arg name="rviz" default="false" />
     
-    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" launch-prefix="xterm -e gdb -ex run --args" >
+    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" launch-prefix="gdb -ex run --args" >
         <rosparam>
             lcm_uri: udpm://224.0.0.251:7667?ttl=1
             jpg_quality: 75

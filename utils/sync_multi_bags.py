@@ -93,7 +93,7 @@ if __name__ == "__main__":
                     posestamp.pose.orientation.z = quat[3]
                     path.header = posestamp.header
                     outbag.write("/calib_pose", posestamp, t + _dt )
-                    path_arr.append(np.concatenate((quat, pos)))
+                    path_arr.append(np.concatenate(([msg.header.stamp.to_sec()], pos, quat)))
                     if c % 10 == 0:
                         path.poses.append(posestamp)
                         outbag.write("/calib_path", path, t + _dt )

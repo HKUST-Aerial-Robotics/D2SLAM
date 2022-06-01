@@ -352,7 +352,6 @@ void D2Estimator::solve() {
 
     // Reprogation
     for (auto drone_id : state.availableDrones()) {
-        std::cout << "propagate drone " << drone_id << std::endl;
         auto _imu = imubuf.back(state.lastFrame(drone_id).stamp + state.td);
         last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
     }
