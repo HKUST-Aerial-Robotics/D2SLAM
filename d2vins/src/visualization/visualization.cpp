@@ -59,7 +59,7 @@ void D2Visualization::postSolve() {
         if (odom_pubs.find(drone_id) == odom_pubs.end()) {
             odom_pubs[drone_id] = _nh->advertise<nav_msgs::Odometry>("odometry_" + std::to_string(drone_id), 1000);
             path_pubs[drone_id] = _nh->advertise<nav_msgs::Path>("path_" + std::to_string(drone_id), 1000);
-            csv_output_files[drone_id] = std::ofstream(params->output_folder + "/d2vins_" + std::to_string(drone_id) + "_.csv", std::ios::out);
+            csv_output_files[drone_id] = std::ofstream(params->output_folder + "/d2vins_" + std::to_string(drone_id) + ".csv", std::ios::out);
         }
         geometry_msgs::PoseStamped pose_stamped;
         pose_stamped.header = odom_ros.header;
