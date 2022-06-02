@@ -8,7 +8,7 @@
 #include "../factors/projectionTwoFrameOneCamFactor.h"
 #include "../factors/projectionOneFrameTwoCamFactor.h"
 #include "../factors/projectionTwoFrameTwoCamFactor.h"
-// #include "../factors/projectionTwoFrameOneCamFactorNoTD.h"
+#include "../factors/projectionTwoFrameTwoCamFactorDistrib.h"
 #include "../factors/pose_local_parameterization.h"
 #include <d2frontend/utils.h>
 #include "marginalization/marginalization.hpp"
@@ -23,6 +23,7 @@ void D2Estimator::init(ros::NodeHandle & nh) {
     ProjectionTwoFrameOneCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionOneFrameTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionTwoFrameTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
+    ProjectionTwoFrameTwoCamFactorDistrib::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info = params->focal_length / 1.5 * Matrix3d::Identity();
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info(2,2) = params->depth_sqrt_inf;
     visual.init(nh, this);
@@ -252,7 +253,7 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     }
 
     addFrame(_frame);
-    if (state.size() >= params->min_solve_frames) {
+    if (state.size() >= params->min_solve_frames && params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
         solve();
     } else {
         //Presolve only for initialization.
@@ -302,6 +303,14 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
             }
         }
     }
+}
+
+
+bool D2Estimator::isMain() const {
+    return self_id == 1; //Temp code/
+}
+
+void D2Estimator::solveinDistributedMode() {
 }
 
 void D2Estimator::solve() {

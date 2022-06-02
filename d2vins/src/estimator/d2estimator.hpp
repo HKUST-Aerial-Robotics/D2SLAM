@@ -43,11 +43,13 @@ protected:
     void addSldWinToFrame(VisualImageDescArray & frame);
     void addRemoteImuBuf(int drone_id, const IMUBuffer & imu_buf);
     bool isLocalFrame(FrameIdType frame_id) const;
+    bool isMain() const;
 public:
     D2Estimator(int drone_id);
     void inputImu(IMUData data);
     bool inputImage(VisualImageDescArray & frame);
     void inputRemoteImage(VisualImageDescArray & frame);
+    void solveinDistributedMode();
     Swarm::Odometry getImuPropagation() const;
     Swarm::Odometry getOdometry() const;
     Swarm::Odometry getOdometry(int drone_id) const;

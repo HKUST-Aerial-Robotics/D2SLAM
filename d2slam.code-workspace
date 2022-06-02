@@ -1,0 +1,35 @@
+{
+	"folders": [
+		{
+			"name": "d2vins",
+			"path": "d2vins"
+		},
+		{
+			"name": "d2frontend",
+			"path": "d2frontend"
+		},
+		{
+			"name": "d2common",
+			"path": "d2common"
+		},
+		{
+			"name": "D2SLAM",
+			"path": "."
+		},
+		{
+			"name": "sync_bag_player",
+			"path": "../sync_bag_player"
+		},
+		{
+			"name": "data",
+			"path": "../../../data"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.ipp": "cpp",
+			"numeric": "cpp",
+			"core": "cpp"
+		}
+	}
+}

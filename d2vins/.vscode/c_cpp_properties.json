@@ -15,7 +15,8 @@
             "defines": [
                 "USE_TENSORRT",
                 "USE_ONNX"
-            ] 
+            ],
+            "compileCommands": "${workspaceFolder}/d2vins/build/compile_commands.json"
         }
     ],
     "version": 4
