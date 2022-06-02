@@ -346,8 +346,8 @@ void D2Estimator::solve() {
 
     if (params->enable_perf_output) {
         std::cout << summary.BriefReport() << std::endl;
-        printf("[D2VINS] average time %.3fms, average iteration %.3f, average cost %.3f\n", 
-            sum_time*1000/solve_count, sum_iteration/solve_count, sum_cost/solve_count);
+        printf("[D2VINS] average time %.1fms, average time of iter: %.1fms, average iteration %.3f, average cost %.3f\n", 
+            sum_time*1000/solve_count, sum_time*1000/sum_iteration, sum_iteration/solve_count, sum_cost/solve_count);
     }
 
     if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {

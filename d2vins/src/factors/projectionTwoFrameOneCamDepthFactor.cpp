@@ -79,6 +79,12 @@ bool ProjectionTwoFrameOneCamDepthFactor::Evaluate(double const *const *paramete
         Eigen::Matrix3d Rj = Qj.toRotationMatrix();
         Eigen::Matrix3d ric = qic.toRotationMatrix();
         Eigen::Matrix3d reduce = Eigen::Matrix3d::Identity();
+        const auto ric_t = ric.transpose();
+        const auto Rj_t = Rj.transpose();
+        const auto J_w = ric_t * Rj_t;
+        const auto J_imu_i = J_w * Ri;
+        const auto J_cam_i = J_imu_i * ric;
+        
 #ifdef UNIT_SPHERE_ERROR
         double norm = pts_camera_j.norm();
         Eigen::Matrix3d norm_jaco;
@@ -114,8 +120,8 @@ bool ProjectionTwoFrameOneCamDepthFactor::Evaluate(double const *const *paramete
             Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor>> jacobian_pose_i(jacobians[0]);
 
             Eigen::Matrix<double, 3, 6> jaco_i;
-            jaco_i.leftCols<3>() = ric.transpose() * Rj.transpose();
-            jaco_i.rightCols<3>() = ric.transpose() * Rj.transpose() * Ri * -Utility::skewSymmetric(pts_imu_i);
+            jaco_i.leftCols<3>() = J_w;
+            jaco_i.rightCols<3>() = J_imu_i * -Utility::skewSymmetric(pts_imu_i);
 
             jacobian_pose_i.leftCols<6>() = reduce * jaco_i;
             jacobian_pose_i.rightCols<1>().setZero();
@@ -126,8 +132,8 @@ bool ProjectionTwoFrameOneCamDepthFactor::Evaluate(double const *const *paramete
             Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor>> jacobian_pose_j(jacobians[1]);
 
             Eigen::Matrix<double, 3, 6> jaco_j;
-            jaco_j.leftCols<3>() = ric.transpose() * -Rj.transpose();
-            jaco_j.rightCols<3>() = ric.transpose() * Utility::skewSymmetric(pts_imu_j);
+            jaco_j.leftCols<3>() = -J_w;
+            jaco_j.rightCols<3>() = ric_t * Utility::skewSymmetric(pts_imu_j);
 
             jacobian_pose_j.leftCols<6>() = reduce * jaco_j;
             jacobian_pose_j.rightCols<1>().setZero();
@@ -136,17 +142,16 @@ bool ProjectionTwoFrameOneCamDepthFactor::Evaluate(double const *const *paramete
         {
             Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor>> jacobian_ex_pose(jacobians[2]);
             Eigen::Matrix<double, 3, 6> jaco_ex;
-            jaco_ex.leftCols<3>() = ric.transpose() * (Rj.transpose() * Ri - Eigen::Matrix3d::Identity());
-            Eigen::Matrix3d tmp_r = ric.transpose() * Rj.transpose() * Ri * ric;
-            jaco_ex.rightCols<3>() = -tmp_r * Utility::skewSymmetric(pts_camera_i) + Utility::skewSymmetric(tmp_r * pts_camera_i) +
-                                     Utility::skewSymmetric(ric.transpose() * (Rj.transpose() * (Ri * tic + Pi - Pj) - tic));
+            jaco_ex.leftCols<3>() = J_imu_i - ric_t;
+            jaco_ex.rightCols<3>() = -J_cam_i * Utility::skewSymmetric(pts_camera_i) + Utility::skewSymmetric(J_cam_i * pts_camera_i) +
+                                     Utility::skewSymmetric(J_w * (Ri * tic + Pi - Pj) - Rj_t*tic);
             jacobian_ex_pose.leftCols<6>() = reduce * jaco_ex;
             jacobian_ex_pose.rightCols<1>().setZero();
         }
         if (jacobians[3])
         {
             Eigen::Map<Eigen::Vector3d> jacobian_feature(jacobians[3]);
-            jacobian_feature = reduce * ric.transpose() * Rj.transpose() * Ri * ric * pts_i_td * -1.0 / (inv_dep_i * inv_dep_i);
+            jacobian_feature = reduce * J_cam_i * pts_i_td * -1.0 / (inv_dep_i * inv_dep_i);
         }
         if (jacobians[4])
         {
@@ -154,10 +159,10 @@ bool ProjectionTwoFrameOneCamDepthFactor::Evaluate(double const *const *paramete
 #ifdef UNIT_SPHERE_ERROR
             Eigen::Vector3d jac_td_j(0., 0., 0.);
             jac_td_j.head<2>() = sqrt_info.block<2, 2>(0, 0) * tangent_base * reduce_j_td* velocity_j;
-            jacobian_td = reduce * ric.transpose() * Rj.transpose() * Ri * ric * velocity_i / inv_dep_i * -1.0
+            jacobian_td = reduce * J_cam_i * velocity_i / inv_dep_i * -1.0
                  + jac_td_j;
 #else
-            jacobian_td = reduce * ric.transpose() * Rj.transpose() * Ri * ric * velocity_i / inv_dep_i * -1.0  +
+            jacobian_td = reduce * J_cam_i * velocity_i / inv_dep_i * -1.0  +
                           sqrt_info.leftCols(2) * velocity_j.head(2);
 #endif
         }

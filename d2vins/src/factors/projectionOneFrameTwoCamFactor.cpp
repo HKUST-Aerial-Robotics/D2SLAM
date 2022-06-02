@@ -81,6 +81,9 @@ bool ProjectionOneFrameTwoCamFactor::Evaluate(double const *const *parameters, d
         Eigen::Matrix3d ric = qic.toRotationMatrix();
         Eigen::Matrix3d ric2 = qic2.toRotationMatrix();
         Eigen::Matrix<double, 2, 3> reduce(2, 3);
+        const auto ric2_t = ric2.transpose();
+        const auto ric2_t_ric = ric2_t * ric;
+
 #ifdef UNIT_SPHERE_ERROR
         double norm = pts_camera_j.norm();
         Eigen::Matrix3d norm_jaco;
@@ -111,8 +114,8 @@ bool ProjectionOneFrameTwoCamFactor::Evaluate(double const *const *parameters, d
         {
             Eigen::Map<Eigen::Matrix<double, 2, 7, Eigen::RowMajor>> jacobian_ex_pose(jacobians[0]);
             Eigen::Matrix<double, 3, 6> jaco_ex;
-            jaco_ex.leftCols<3>() = ric2.transpose(); 
-            jaco_ex.rightCols<3>() = ric2.transpose() * ric * -Utility::skewSymmetric(pts_camera_i);
+            jaco_ex.leftCols<3>() = ric2_t; 
+            jaco_ex.rightCols<3>() = ric2_t_ric * -Utility::skewSymmetric(pts_camera_i);
             jacobian_ex_pose.leftCols<6>() = reduce * jaco_ex;
             jacobian_ex_pose.rightCols<1>().setZero();
         }
@@ -128,17 +131,17 @@ bool ProjectionOneFrameTwoCamFactor::Evaluate(double const *const *parameters, d
         if (jacobians[2])
         {
             Eigen::Map<Eigen::Vector2d> jacobian_feature(jacobians[2]);
-            jacobian_feature = reduce * ric2.transpose() * ric * pts_i_td * -1.0 / (inv_dep_i * inv_dep_i);
+            jacobian_feature = reduce * ric2_t_ric * pts_i_td * -1.0 / (inv_dep_i * inv_dep_i);
         }
         if (jacobians[3])
         {
 #ifdef UNIT_SPHERE_ERROR
             Eigen::Map<Eigen::Vector2d> jacobian_td(jacobians[3]);
-            jacobian_td = reduce * (ric2.transpose() * ric * velocity_i / inv_dep_i * -1.0)  +
+            jacobian_td = reduce * (ric2_t_ric * velocity_i / inv_dep_i * -1.0)  +
                        sqrt_info * tangent_base * reduce_j_td * velocity_j;
 #else
             Eigen::Map<Eigen::Vector2d> jacobian_td(jacobians[3]);
-            jacobian_td = reduce * ric2.transpose() * ric * velocity_i / inv_dep_i * -1.0  +
+            jacobian_td = reduce * ric2_t_ric * velocity_i / inv_dep_i * -1.0  +
                           sqrt_info * velocity_j.head(2);
 #endif
         }
