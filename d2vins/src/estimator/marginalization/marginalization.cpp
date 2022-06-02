@@ -65,6 +65,21 @@ void Marginalizer::addLandmarkResidualTwoFrameTwoCam(ceres::CostFunction * cost_
     residual_info_list.push_back(info);
 }
 
+void Marginalizer::addLandmarkResidualTwoFrameTwoCamDistrib(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+        FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b) {
+    auto * info = new LandmarkTwoFrameTwoCamResDistribInfoTD();
+    info->frame_ida = frame_ida;
+    info->frame_idb = frame_idb;
+    info->landmark_id = landmark_id;
+    info->camera_id_a = camera_id_a;
+    info->camera_id_b = camera_id_b;
+    info->drone_ida = state->getFramebyId(frame_ida).drone_id;
+    info->drone_idb = state->getFramebyId(frame_idb).drone_id;
+    info->cost_function = cost_function;
+    info->loss_function = loss_function;
+    residual_info_list.push_back(info);
+}
+
 void Marginalizer::addImuResidual(ceres::CostFunction * cost_function,  FrameIdType frame_ida, FrameIdType frame_idb) {
     auto * info = new ImuResInfo();
     info->frame_ida = frame_ida;

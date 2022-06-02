@@ -44,6 +44,7 @@ protected:
     void addRemoteImuBuf(int drone_id, const IMUBuffer & imu_buf);
     bool isLocalFrame(FrameIdType frame_id) const;
     bool isMain() const;
+    std::map<int, bool> relative_frame_is_used;
 public:
     D2Estimator(int drone_id);
     void inputImu(IMUData data);

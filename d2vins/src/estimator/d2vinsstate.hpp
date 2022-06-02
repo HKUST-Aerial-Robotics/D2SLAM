@@ -19,7 +19,7 @@ protected:
     std::map<CamIdType, state_type*> _camera_extrinsic_state;
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
     std::map<int, Swarm::Pose> P_w_iks; //pose of drone i's local frame in self (k)'s local_frame
-    std::map<int, state_type*> p_w_ik_state; //pose of drone i's local frame in self (k)'s local_frame
+    std::map<int, state_type*> P_w_ik_state; //pose of drone i's local frame in self (k)'s local_frame
 
     std::vector<LandmarkPerId> popFrame(int index);
     std::vector<LandmarkPerId> removeFrameById(FrameIdType frame_id, bool remove_base=false); 
@@ -45,11 +45,13 @@ public:
     double * getExtrinsicState(int i) const;
     double * getSpdBiasState(FrameIdType frame_id) const;
     double * getLandmarkState(LandmarkIdType landmark_id) const;
+    double * getPwikState(int drone_id) const;
     double * getTdState(int drone_id);
     double getTd(int drone_id);
     PriorFactor * getPrior() const;
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;
     Swarm::Pose getExtrinsic(CamIdType cam_id) const;
+    Swarm::Pose getPwik(int drone_id) const;
     std::set<CamIdType> getAvailableCameraIds() const;
     std::vector<LandmarkPerId> availableLandmarkMeasurements() const;
     std::vector<LandmarkPerId> getInitializedLandmarks() const;

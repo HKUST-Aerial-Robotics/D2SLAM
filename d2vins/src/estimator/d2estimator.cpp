@@ -277,6 +277,15 @@ void D2Estimator::setStateProperties(ceres::Problem & problem) {
                 problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
             }
         }
+        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+            if (relative_frame_is_used[drone_id]) {
+                if (drone_id == self_id) {
+                    problem.SetParameterBlockConstant(state.getPwikState(drone_id));
+                } else {
+                        problem.SetParameterization(state.getPwikState(drone_id), pose_local_param);
+                }
+            }
+        }
     }
 
     for (auto cam_id: used_camera_sets) {
@@ -311,6 +320,10 @@ bool D2Estimator::isMain() const {
 }
 
 void D2Estimator::solveinDistributedMode() {
+    relative_frame_is_used.clear();
+    for (auto & drone_id : state.availableDrones()) {
+        relative_frame_is_used[drone_id] = false;
+    }
 }
 
 void D2Estimator::solve() {
@@ -447,6 +460,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
             }
         }
         LandmarkPerFrame firstObs = lm.track[0];
+        auto & firstFrame = state.getFramebyId(firstObs.frame_id);
         auto base_camera_id = firstObs.camera_id;
         auto mea0 = firstObs.measurement();
         keyframe_measurements[firstObs.frame_id] ++;
@@ -462,6 +476,7 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
         for (auto i = 1; i < lm.track.size(); i++) {
             auto lm_per_frame = lm.track[i];
             auto mea1 = lm_per_frame.measurement();
+            auto & frame1 = state.getFramebyId(lm_per_frame.frame_id);
             if (lm_per_frame.camera_id == base_camera_id) {
                 ceres::CostFunction * f_td = nullptr;
                 if (lm_per_frame.depth_mea && params->fuse_dep &&
@@ -500,17 +515,34 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                         firstObs.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
                     residual_count++;
                 } else {
-                    auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
+                    if (firstFrame.drone_id != frame1.drone_id) {
+                        auto f_td = new ProjectionTwoFrameTwoCamFactorDistrib(mea0, mea1, firstObs.velocity, 
                         lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
-                    problem.AddResidualBlock(f_td, loss_function,
-                        state.getPoseState(firstObs.frame_id), 
-                        state.getPoseState(lm_per_frame.frame_id), 
-                        state.getExtrinsicState(firstObs.camera_id),
-                        state.getExtrinsicState(lm_per_frame.camera_id),
-                        state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.drone_id));
-                    marginalizer->addLandmarkResidualTwoFrameTwoCam(f_td, loss_function,
-                        firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
-                    residual_count++;
+                        problem.AddResidualBlock(f_td, loss_function,
+                            state.getPoseState(firstObs.frame_id), 
+                            state.getPoseState(lm_per_frame.frame_id), 
+                            state.getExtrinsicState(firstObs.camera_id),
+                            state.getExtrinsicState(lm_per_frame.camera_id),
+                            state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.drone_id), 
+                            state.getPwikState(firstFrame.drone_id), state.getPwikState(frame1.drone_id));
+                        relative_frame_is_used[firstFrame.drone_id] = true;
+                        relative_frame_is_used[frame1.drone_id] = true;
+                        marginalizer->addLandmarkResidualTwoFrameTwoCamDistrib(f_td, loss_function,
+                            firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                        residual_count++;
+                    } else {
+                        auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
+                            lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
+                        problem.AddResidualBlock(f_td, loss_function,
+                            state.getPoseState(firstObs.frame_id), 
+                            state.getPoseState(lm_per_frame.frame_id), 
+                            state.getExtrinsicState(firstObs.camera_id),
+                            state.getExtrinsicState(lm_per_frame.camera_id),
+                            state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.drone_id));
+                        marginalizer->addLandmarkResidualTwoFrameTwoCam(f_td, loss_function,
+                            firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                        residual_count++;
+                    }
                 }
                 used_camera_sets.insert(lm_per_frame.camera_id);
             }

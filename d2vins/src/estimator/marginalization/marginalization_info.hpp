@@ -12,17 +12,19 @@ enum ResidualType {
     LandmarkTwoFrameOneCamResidual, // 2
     LandmarkTwoFrameOneCamResidualTD, // 3
     LandmarkTwoFrameTwoCamResidualTD, // 4
-    LandmarkOneFrameTwoCamResidualTD, // 5
-    PriorResidual, // 6
-    DepthResidual // 7
+    LandmarkTwoFrameTwoCamDistribResidualTD, // 5
+    LandmarkOneFrameTwoCamResidualTD, // 6
+    PriorResidual, // 7
+    DepthResidual // 8
 };
 
 enum ParamsType {
     POSE = 0,
+    REL_COOR, //Relative cooridinate frame pose (P_w_i_k)
     SPEED_BIAS,
     EXTRINSIC,
     TD,
-    LANDMARK
+    LANDMARK,
 };
 
 struct ParamInfo {
@@ -47,6 +49,19 @@ protected:
         info.eff_size = POSE_EFF_SIZE;
         info.type = POSE;
         info.id = id;
+        info.data_copied = new state_type[info.size];
+        memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
+        return info;
+    }
+    
+    ParamInfo paramInfoRelativeCoor(D2EstimatorState * state, int drone_id) const {
+        ParamInfo info;
+        info.pointer = state->getPwikState(drone_id);
+        info.index = -1;
+        info.size = POSE_SIZE;
+        info.eff_size = POSE_EFF_SIZE;
+        info.type = POSE;
+        info.id = drone_id;
         info.data_copied = new state_type[info.size];
         memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
         return info;
@@ -187,6 +202,38 @@ public:
         params_list.push_back(paramInfoExtrinsic(state, camera_id_b));
         params_list.push_back(paramInfoLandmark(state, landmark_id));
         params_list.push_back(paramInfoTd(state, camera_id_a));
+        return params_list;
+    }
+};
+
+class LandmarkTwoFrameTwoCamResDistribInfoTD : public ResidualInfo {
+public:
+    int drone_ida;
+    int drone_idb;
+    FrameIdType frame_ida;
+    FrameIdType frame_idb;
+    LandmarkIdType landmark_id;
+    int camera_id_a;
+    int camera_id_b;
+
+    LandmarkTwoFrameTwoCamResDistribInfoTD(): ResidualInfo(ResidualType::LandmarkTwoFrameTwoCamDistribResidualTD) {}
+    bool relavant(const std::set<FrameIdType> & frame_id) const override {
+        if (params->remove_base_when_margin_remote == 0) {
+            return frame_id.find(frame_ida) != frame_id.end();
+        }
+        return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
+    }
+
+    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
+        std::vector<ParamInfo> params_list;
+        params_list.push_back(paramInfoFramePose(state, frame_ida));
+        params_list.push_back(paramInfoFramePose(state, frame_idb));
+        params_list.push_back(paramInfoExtrinsic(state, camera_id_a));
+        params_list.push_back(paramInfoExtrinsic(state, camera_id_b));
+        params_list.push_back(paramInfoLandmark(state, landmark_id));
+        params_list.push_back(paramInfoTd(state, camera_id_a));
+        params_list.push_back(paramInfoRelativeCoor(state, drone_ida));
+        params_list.push_back(paramInfoRelativeCoor(state, drone_idb));
         return params_list;
     }
 };

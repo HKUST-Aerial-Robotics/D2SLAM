@@ -17,6 +17,11 @@ D2EstimatorState::D2EstimatorState(int _self_id):
     if (params->estimation_mode != D2VINSConfig::SERVER_MODE) {
         all_drones.insert(self_id);
     }
+    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        P_w_iks[self_id] = Swarm::Pose::Identity();
+        P_w_ik_state[self_id] = new state_type[POSE_SIZE];
+        P_w_iks[self_id].to_vector(P_w_ik_state[self_id]);
+    }
 }
 
 std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
@@ -184,6 +189,14 @@ Swarm::Pose D2EstimatorState::getExtrinsic(CamIdType cam_id) const {
     return extrinsic.at(cam_id);
 }
 
+Swarm::Pose D2EstimatorState::getPwik(int drone_id) const {
+    return P_w_iks.at(drone_id);
+}
+
+double * D2EstimatorState::getPwikState(int drone_id) const {
+    return P_w_ik_state.at(drone_id);
+}
+
 PriorFactor * D2EstimatorState::getPrior() const {
     return prior_factor;
 }
@@ -339,8 +352,8 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
         if (P_w_iks.find(_frame.drone_id) == P_w_iks.end()) {
             auto P_w_ik = _frame.odom.pose() * _frame.initial_ego_pose.inverse();
             P_w_iks[_frame.drone_id] = P_w_ik;
-            p_w_ik_state[_frame.drone_id] = new state_type[POSE_SIZE];
-            P_w_ik.to_vector(p_w_ik_state[_frame.drone_id]);
+            P_w_ik_state[_frame.drone_id] = new state_type[POSE_SIZE];
+            P_w_ik.to_vector(P_w_ik_state[_frame.drone_id]);
         }
     } else {
         sld_wins[self_id].emplace_back(frame);
@@ -375,7 +388,7 @@ void D2EstimatorState::syncFromState() {
                 continue;
             }
             auto & P_w_ik = it.second;
-            P_w_iks[drone_id].from_vector(p_w_ik_state[drone_id]);
+            P_w_iks[drone_id].from_vector(P_w_ik_state[drone_id]);
         }
     }
 

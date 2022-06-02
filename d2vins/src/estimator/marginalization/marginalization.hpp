@@ -34,6 +34,8 @@ public:
         FrameIdType frame_ida, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b);
     void addLandmarkResidualTwoFrameTwoCam(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
         FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b);
+    void addLandmarkResidualTwoFrameTwoCamDistrib(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+        FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b);
     void addImuResidual(ceres::CostFunction * cost_function, FrameIdType frame_ida, FrameIdType frame_idb);
     void addPrior(PriorFactor * cost_function);
     PriorFactor * marginalize(std::set<FrameIdType> remove_frame_ids);
