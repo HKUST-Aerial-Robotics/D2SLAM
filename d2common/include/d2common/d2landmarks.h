@@ -27,9 +27,11 @@ struct LandmarkPerFrame {
     LandmarkIdType landmark_id = -1;
     LandmarkType type = LandmarkType::SuperPointLandmark;
     double stamp = 0.0;
+    double stamp_discover = 0.0; // first discovery time
     int camera_index = 0;
     int camera_id = 0;
     int drone_id = -1; //-1 is intra landmark
+    int solver_id = -1;
     LandmarkFlag flag = UNINITIALIZED;
     cv::Point2f pt2d;
     Eigen::Vector3d pt3d_norm; //[x, y, 1]
@@ -57,6 +59,7 @@ struct LandmarkPerFrame {
         lm.stamp = stamp;
         lm.pt2d = pt2d;
         lm.pt3d_norm = pt3d_norm;
+        lm.stamp_discover = stamp;
         return lm;
     }
 
@@ -68,6 +71,7 @@ struct LandmarkPerFrame {
         landmark_id(Landmark.landmark_id),
         type((LandmarkType)Landmark.type),
         stamp(toROSTime(Landmark.timestamp).toSec()),
+        stamp_discover(toROSTime(Landmark.stamp_discover).toSec()),
         camera_index(Landmark.camera_index),
         camera_id(Landmark.camera_id),
         drone_id(Landmark.drone_id),
@@ -104,6 +108,7 @@ struct LandmarkPerFrame {
         ret.frame_id = frame_id;
         ret.landmark_id = landmark_id;
         ret.timestamp = toLCMTime(ros::Time(stamp));
+        ret.stamp_discover = toLCMTime(ros::Time(stamp_discover));
         ret.camera_index = camera_index;
         ret.drone_id = drone_id;
         ret.flag = flag;
@@ -164,6 +169,8 @@ struct LandmarkPerId {
     int landmark_id = -1;
     int drone_id = -1;
     int base_frame_id = -1;
+    int solver_id = -1; //solve on local drone
+    double stamp_discover = 0.0; // first discovery time
     std::vector<LandmarkPerFrame> track;
     Eigen::Vector3d position;  //Note thiswill be modified by estimator.
     LandmarkFlag flag = UNINITIALIZED;
@@ -176,7 +183,9 @@ struct LandmarkPerId {
         drone_id(Landmark.drone_id),
         position(Landmark.pt3d),
         flag(Landmark.flag),
-        color(Landmark.color)
+        color(Landmark.color),
+        solver_id(Landmark.solver_id),
+        stamp_discover(Landmark.stamp_discover)
     {
         base_frame_id = Landmark.frame_id;
         add(Landmark);
@@ -209,6 +218,11 @@ struct LandmarkPerId {
 
     void add(const LandmarkPerFrame & Landmark) {
         track.emplace_back(Landmark);
+        if (Landmark.solver_id >= 0) {
+            //Update the solver id
+            solver_id = Landmark.solver_id;
+        }
+         
     }
 };
 

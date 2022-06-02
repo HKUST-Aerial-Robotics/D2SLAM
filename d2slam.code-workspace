@@ -23,13 +23,25 @@
 		{
 			"name": "data",
 			"path": "../../../data"
+		},
+		{
+			"path": "../swarm_msgs/swarm_msgs"
 		}
 	],
 	"settings": {
 		"files.associations": {
 			"*.ipp": "cpp",
 			"numeric": "cpp",
-			"core": "cpp"
+			"core": "cpp",
+			"*.tcc": "cpp",
+			"deque": "cpp",
+			"vector": "cpp",
+			"hash_map": "cpp",
+			"hash_set": "cpp",
+			"string": "cpp",
+			"unordered_map": "cpp",
+			"unordered_set": "cpp",
+			"string_view": "cpp"
 		}
 	}
 }

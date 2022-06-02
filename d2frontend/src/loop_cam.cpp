@@ -520,6 +520,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         lm.camera_index = camera_index;
         lm.camera_id = camera_id;
         lm.stamp = vframe.stamp;
+        lm.stamp_discover = vframe.stamp;
         lm.color = extractColor(img, pt_up);
         vframe.landmarks.emplace_back(lm);
         if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {

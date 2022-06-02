@@ -133,6 +133,13 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, bool skip_who
                     //     remote_lm.landmark_id, local_to_remote[local_lm.landmark_id][frame.drone_id], local_lm.landmark_id, frame.camera_id);
                     local_to_remote[local_lm.landmark_id][frame.drone_id] = remote_lm.landmark_id;
                     remote_lm.landmark_id = local_lm.landmark_id;
+                    if (remote_lm.stamp_discover < local_lm.stamp_discover) {
+                        remote_lm.solver_id = frame.drone_id;
+                    } else {
+                        remote_lm.solver_id = params->self_id;
+                    }
+                    // printf("[D2FeatureTracker::trackRemote] landmark %ld will solve by %ld\n",
+                    //         remote_lm.landmark_id, remote_lm.solver_id);
                     report.remote_matched_num ++;
                 }
             }
@@ -175,6 +182,7 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
                 cur_lm.landmark_id = landmark_id;
                 cur_lm.velocity = cur_lm.pt3d_norm - prev_lm.pt3d_norm;
                 cur_lm.velocity /= (frame.stamp - current_keyframe.stamp);
+                cur_lm.stamp_discover = prev_lm.stamp_discover;
                 report.sum_parallex += (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm();
                 report.parallex_num ++;
                 // printf("[D2FeatureTracker] landmark %d, prev_pt %f %f, cur_pt %f %f norm prev_pt %f %f, cur_pt %f %f parallex %f\%\n", 
@@ -222,6 +230,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
             lm.velocity = lm.pt3d_norm - prev_lm.pt3d_norm;
             lm.velocity /= (lm.stamp - prev_lm.stamp);
         }
+        lm.stamp_discover = prev_lm.stamp_discover;
         lmanager->updateLandmark(lm);
         frame.landmarks.emplace_back(lm);
         if (lmanager->at(cur_lk_ids[i]).track.size() >= _config.long_track_frames) {
@@ -272,6 +281,7 @@ TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualIm
             auto &cur_lm = right_frame.landmarks[i];
             auto &prev_lm = left_frame.landmarks[prev_index];
             cur_lm.landmark_id = landmark_id;
+            cur_lm.stamp_discover = prev_lm.stamp_discover;
             cur_lm.velocity = cur_lm.velocity;
             //TODO:Fix this for TD
             // if (lmanager->hasLandmark(landmark_id) && lmanager->at(landmark_id).track_r.size() > 0) {
@@ -301,6 +311,7 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
         cur_lk_pts = opticalflowTrack(right_frame.raw_image, left_frame.raw_image, cur_lk_pts, cur_lk_ids);
     for (int i = 0; i < cur_lk_pts.size(); i++) {
         auto lm = createLKLandmark(right_frame, cur_lk_pts[i], cur_lk_ids[i]);
+        lm.stamp_discover = lmanager->at(cur_lk_ids[i]).stamp_discover;
         lmanager->updateLandmark(lm);
         right_frame.landmarks.emplace_back(lm);
         auto lm_per_id = lmanager->at(cur_lk_ids[i]);

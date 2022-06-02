@@ -18,6 +18,8 @@ protected:
     std::map<FrameIdType, state_type*> _frame_spd_Bias_state;
     std::map<CamIdType, state_type*> _camera_extrinsic_state;
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
+    std::map<int, Swarm::Pose> P_w_iks; //pose of drone i's local frame in self (k)'s local_frame
+    std::map<int, state_type*> p_w_ik_state; //pose of drone i's local frame in self (k)'s local_frame
 
     std::vector<LandmarkPerId> popFrame(int index);
     std::vector<LandmarkPerId> removeFrameById(FrameIdType frame_id, bool remove_base=false); 

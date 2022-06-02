@@ -336,13 +336,25 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
                 addCamera(img.extrinsic, img.camera_index, img.camera_id);
             }
         }
+        if (P_w_iks.find(_frame.drone_id) == P_w_iks.end()) {
+            auto P_w_ik = _frame.odom.pose() * _frame.initial_ego_pose.inverse();
+            P_w_iks[_frame.drone_id] = P_w_ik;
+            p_w_ik_state[_frame.drone_id] = new state_type[POSE_SIZE];
+            P_w_ik.to_vector(p_w_ik_state[_frame.drone_id]);
+        }
     } else {
         sld_wins[self_id].emplace_back(frame);
     }
     frame_db[frame->frame_id] = frame;
     _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
     _frame_spd_Bias_state[frame->frame_id] = new state_type[FRAME_SPDBIAS_SIZE];
-    frame->toVector(_frame_pose_state[frame->frame_id], _frame_spd_Bias_state[frame->frame_id]);
+    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && _frame.drone_id != self_id) {
+        //In this mode, the estimate state is always ego-motion, and the bias is not been estimated on remote
+        auto ego_i = P_w_iks[_frame.drone_id].inverse()* _frame.odom.pose();
+        ego_i.to_vector(_frame_pose_state[frame->frame_id]);
+    } else {
+        frame->toVector(_frame_pose_state[frame->frame_id], _frame_spd_Bias_state[frame->frame_id]);
+    }
 
     lmanager.addKeyframe(images, td);
     if (params->verbose) {
@@ -355,12 +367,30 @@ void D2EstimatorState::syncFromState() {
     const Guard lock(state_lock);
     //copy state buffer to structs.
     //First sync the poses
+    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        //Sync the transformation of frames.
+        for (auto it: P_w_iks) {
+            auto drone_id = it.first;
+            if (drone_id == self_id) {
+                continue;
+            }
+            auto & P_w_ik = it.second;
+            P_w_iks[drone_id].from_vector(p_w_ik_state[drone_id]);
+        }
+    }
+
     for (auto it : _frame_pose_state) {
         auto frame_id = it.first;
         if (frame_db.find(frame_id) == frame_db.end()) {
             printf("[D2VINS::D2EstimatorState] Cannot find frame %ld\033[0m\n", frame_id);
         }
-        frame_db.at(frame_id)->fromVector(it.second, _frame_spd_Bias_state.at(frame_id));
+        auto frame = frame_db.at(frame_id);
+        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
+            Swarm::Pose ego_i(it.second);
+            frame->odom.pose() = P_w_iks[frame->drone_id] * ego_i;
+        }else {
+            frame->fromVector(it.second, _frame_spd_Bias_state.at(frame_id));
+        }
     }
     for (auto it : _camera_extrinsic_state) {
         auto cam_id = it.first;

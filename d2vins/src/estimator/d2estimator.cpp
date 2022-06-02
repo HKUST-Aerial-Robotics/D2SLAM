@@ -435,6 +435,17 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     }
     for (auto lm : lms) {
         auto lm_id = lm.landmark_id;
+        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+            if (lm.solver_id == -1 && lm.drone_id != self_id) {
+                // This is a internal only remote landmark
+                printf("[D2VINS::setupLandmarkFactors] skip remote landmark %d solver_id %ld drone_id %ld\n", lm_id, lm.solver_id, lm.drone_id);
+                continue;
+            }
+            if (lm.solver_id > 0 && lm.solver_id != self_id) {
+                printf("[D2VINS::setupLandmarkFactors] skip remote landmark %d solver_id %ld drone_id %ld\n", lm_id, lm.solver_id, lm.drone_id);
+                continue;
+            }
+        }
         LandmarkPerFrame firstObs = lm.track[0];
         auto base_camera_id = firstObs.camera_id;
         auto mea0 = firstObs.measurement();
