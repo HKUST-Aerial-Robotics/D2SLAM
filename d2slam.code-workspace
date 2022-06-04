@@ -45,7 +45,9 @@
 			"memory": "cpp",
 			"istream": "cpp",
 			"functional": "cpp",
-			"tuple": "cpp"
+			"tuple": "cpp",
+			"iostream": "cpp",
+			"iterativelinearsolvers": "cpp"
 		}
 	}
 }

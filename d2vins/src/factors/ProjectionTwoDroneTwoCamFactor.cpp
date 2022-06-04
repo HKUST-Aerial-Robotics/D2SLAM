@@ -9,17 +9,17 @@
  * Author: Qin Tong (qintonguav@gmail.com)
  *******************************************************/
 
-#include "projectionTwoFrameTwoCamFactorDistrib.h"
+#include "ProjectionTwoDroneTwoCamFactor.h"
 #include <d2common/utils.hpp>
 #include "../d2vins_params.hpp"
 using namespace D2Common;
 
 namespace D2VINS
 {
-    Eigen::Matrix2d ProjectionTwoFrameTwoCamFactorDistrib::sqrt_info;
-    double ProjectionTwoFrameTwoCamFactorDistrib::sum_t;
+    Eigen::Matrix2d ProjectionTwoDroneTwoCamFactor::sqrt_info;
+    double ProjectionTwoDroneTwoCamFactor::sum_t;
 
-    ProjectionTwoFrameTwoCamFactorDistrib::ProjectionTwoFrameTwoCamFactorDistrib(const Eigen::Vector3d &_pts_i, const Eigen::Vector3d &_pts_j,
+    ProjectionTwoDroneTwoCamFactor::ProjectionTwoDroneTwoCamFactor(const Eigen::Vector3d &_pts_i, const Eigen::Vector3d &_pts_j,
                                                                                  const Eigen::Vector3d &_velocity_i, const Eigen::Vector3d &_velocity_j,
                                                                                  const double _td_i, const double _td_j) : pts_i(_pts_i), pts_j(_pts_j),
                                                                                                                            td_i(_td_i), td_j(_td_j),
@@ -38,7 +38,7 @@ namespace D2VINS
 #endif
     };
 
-    bool ProjectionTwoFrameTwoCamFactorDistrib::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
+    bool ProjectionTwoDroneTwoCamFactor::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
     {
         Eigen::Vector3d Pi(parameters[0][0], parameters[0][1], parameters[0][2]);
         Eigen::Quaterniond Qi(parameters[0][6], parameters[0][3], parameters[0][4], parameters[0][5]);

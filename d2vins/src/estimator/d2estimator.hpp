@@ -5,6 +5,7 @@
 #include <swarm_msgs/Odometry.h>
 #include <ceres/ceres.h>
 #include "../visualization/visualization.hpp"
+#include "solver/SolverWrapper.hpp"
 
 using namespace Eigen;
 using D2Common::VisualImageDescArray;
@@ -20,31 +21,32 @@ protected:
     std::map<int, IMUBuffer> remote_imu_bufs;
     std::map<int, Swarm::Odometry> last_prop_odom; //last imu propagation odometry
     Marginalizer * marginalizer = nullptr;
+    SolverWrapper * solver = nullptr;
+    int solve_count = 0;
+    int current_landmark_num = 0;
+    std::set<int> used_camera_sets;
+    std::vector<LandmarkPerId> margined_landmarks;
+    std::map<int, bool> relative_frame_is_used;
+    int self_id;
+    int frame_count = 0;
+    D2Visualization visual;
+    
     //Internal functions
     bool tryinitFirstPose(VisualImageDescArray & frame);
     void addFrame(VisualImageDescArray & _frame);
     void addFrameRemote(const VisualImageDescArray & _frame);
     void solve();
-    void setupImuFactors(ceres::Problem & problem);
-    void setupLandmarkFactors(ceres::Problem & problem);
-    void addIMUFactor(ceres::Problem & problem, FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* _pre_integration);
-    void setStateProperties(ceres::Problem & problem);
-    void setupPriorFactor(ceres::Problem & problem);
-    int frame_count = 0;
-    D2Visualization visual;
+    void setupImuFactors();
+    void setupLandmarkFactors();
+    void addIMUFactor(FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* _pre_integration);
+    void setStateProperties();
+    void setupPriorFactor();
     std::pair<bool, Swarm::Pose> initialFramePnP(const VisualImageDescArray & frame, 
         const Swarm::Pose & initial_pose);
-    int solve_count = 0;
-    int current_landmark_num = 0;
-    ceres::Problem * problem = nullptr;
-    std::set<int> used_camera_sets;
-    std::vector<LandmarkPerId> margined_landmarks;
-    int self_id;
     void addSldWinToFrame(VisualImageDescArray & frame);
     void addRemoteImuBuf(int drone_id, const IMUBuffer & imu_buf);
     bool isLocalFrame(FrameIdType frame_id) const;
     bool isMain() const;
-    std::map<int, bool> relative_frame_is_used;
 public:
     D2Estimator(int drone_id);
     void inputImu(IMUData data);

@@ -57,10 +57,6 @@ void D2VINSConfig::init(const std::string & config_file) {
     debug_print_sldwin = (int)fsSettings["debug_print_sldwin"];
     debug_write_margin_matrix = (int)fsSettings["debug_write_margin_matrix"];
     
-    //Solver
-    solver_time = fsSettings["max_solver_time"];
-    options.max_num_iterations = fsSettings["max_num_iterations"];
-
     //Estimation
     td_initial = fsSettings["td"];
     estimate_td = (int)fsSettings["estimate_td"];
@@ -103,14 +99,17 @@ void D2VINSConfig::init(const std::string & config_file) {
         camera_extrinsics.push_back(Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3)));
     }
 
+    //Solver
+    solver_time = fsSettings["max_solver_time"];
     // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
     // options.num_threads = 1;
     // options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;// ceres::DOGLEG;
     // options.max_solver_time_in_seconds = solver_time;
-    options.linear_solver_type = ceres::DENSE_SCHUR;
-    options.num_threads = 1;
-    options.trust_region_strategy_type = ceres::DOGLEG;
-    options.max_solver_time_in_seconds = solver_time;
+    ceres_options.linear_solver_type = ceres::DENSE_SCHUR;
+    ceres_options.num_threads = 1;
+    ceres_options.trust_region_strategy_type = ceres::DOGLEG;
+    ceres_options.max_solver_time_in_seconds = solver_time;
+    ceres_options.max_num_iterations = fsSettings["max_num_iterations"];
 }
 
 }

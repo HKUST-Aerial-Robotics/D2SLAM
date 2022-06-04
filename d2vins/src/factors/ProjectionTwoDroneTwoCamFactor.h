@@ -16,10 +16,10 @@
 #include <Eigen/Dense>
 
 namespace D2VINS {
-class ProjectionTwoFrameTwoCamFactorDistrib : public ceres::SizedCostFunction<2, 7, 7, 7, 7, 1, 1, 7, 7>
+class ProjectionTwoDroneTwoCamFactor : public ceres::SizedCostFunction<2, 7, 7, 7, 7, 1, 1, 7, 7>
 {
   public:
-    ProjectionTwoFrameTwoCamFactorDistrib(const Eigen::Vector3d &_pts_i, const Eigen::Vector3d &_pts_j,
+    ProjectionTwoDroneTwoCamFactor(const Eigen::Vector3d &_pts_i, const Eigen::Vector3d &_pts_j,
     							   const Eigen::Vector3d &_velocity_i, const Eigen::Vector3d &_velocity_j,
     				   			   const double _td_i, const double _td_j);
     virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const;

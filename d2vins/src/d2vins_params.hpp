@@ -66,7 +66,7 @@ struct D2VINSConfig {
     double depth_sqrt_inf = 20.0;
     double max_depth_to_fuse = 5.;
     double min_depth_to_fuse = 0.3;
-    ceres::Solver::Options options;
+    ceres::Solver::Options ceres_options;
 
     //Outlier rejection
     int perform_outlier_rejection_num = 50;

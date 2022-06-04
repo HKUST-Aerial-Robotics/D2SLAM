@@ -8,7 +8,7 @@
 #include "../factors/projectionTwoFrameOneCamFactor.h"
 #include "../factors/projectionOneFrameTwoCamFactor.h"
 #include "../factors/projectionTwoFrameTwoCamFactor.h"
-#include "../factors/projectionTwoFrameTwoCamFactorDistrib.h"
+#include "../factors/ProjectionTwoDroneTwoCamFactor.h"
 #include "../factors/pose_local_parameterization.h"
 #include <d2frontend/utils.h>
 #include "marginalization/marginalization.hpp"
@@ -23,7 +23,7 @@ void D2Estimator::init(ros::NodeHandle & nh) {
     ProjectionTwoFrameOneCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionOneFrameTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionTwoFrameTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
-    ProjectionTwoFrameTwoCamFactorDistrib::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
+    ProjectionTwoDroneTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info = params->focal_length / 1.5 * Matrix3d::Identity();
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info(2,2) = params->depth_sqrt_inf;
     visual.init(nh, this);
@@ -264,10 +264,11 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     return true;
 }
 
-void D2Estimator::setStateProperties(ceres::Problem & problem) {
+void D2Estimator::setStateProperties() {
     // ceres::EigenQuaternionManifold quat_manifold;
     // ceres::EuclideanManifold<3> euc_manifold;
     // auto pose_manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
+    ceres::Problem & problem = solver->getProblem();
     auto pose_local_param = new PoseLocalParameterization;
     //set LocalParameterization
     for (auto & drone_id : state.availableDrones()) {
@@ -335,18 +336,19 @@ void D2Estimator::solve() {
     solve_count ++;
     state.preSolve(remote_imu_bufs);
     used_camera_sets.clear(); 
-    if (problem != nullptr) {
-        delete problem;
+    if (solver != nullptr) {
+        delete solver;
     }
-    problem = new ceres::Problem();
-    setupImuFactors(*problem);
-    setupLandmarkFactors(*problem);
-    setupPriorFactor(*problem);
-    setStateProperties(*problem);
+    if (params->estimation_mode < D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        solver = new BaseSolverWrapper(&state);
+    }
 
-    ceres::Solver::Summary summary;
-    // params->options.?
-    ceres::Solve(params->options, problem, &summary);
+    setupImuFactors();
+    setupLandmarkFactors();
+    setupPriorFactor();
+    setStateProperties();
+
+    ceres::Solver::Summary summary = solver->solve();
     state.syncFromState();
 
     //Now do some statistics
@@ -390,27 +392,25 @@ void D2Estimator::solve() {
     }
 }
 
-void D2Estimator::addIMUFactor(ceres::Problem & problem, FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* pre_integrations) {
+void D2Estimator::addIMUFactor(FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* pre_integrations) {
     IMUFactor* imu_factor = new IMUFactor(pre_integrations);
-    problem.AddResidualBlock(imu_factor, nullptr, 
-        state.getPoseState(frame_ida), state.getSpdBiasState(frame_ida), 
-        state.getPoseState(frame_idb), state.getSpdBiasState(frame_idb));
+    auto info = ImuResInfo::create(imu_factor, frame_ida, frame_idb);
+    solver->addResidual(info);
     if (params->always_fixed_first_pose) {
         //At this time we fix the first pose and ignore the margin of this imu factor to achieve better numerical stability
         return;
     }
-    auto info = ImuResInfo::create(imu_factor, frame_ida, frame_idb);
     marginalizer->addResidualInfo(info);
 }
 
-void D2Estimator::setupImuFactors(ceres::Problem & problem) {
+void D2Estimator::setupImuFactors() {
     if (state.size() > 1) {
         for (size_t i = 0; i < state.size() - 1; i ++ ) {
             auto & frame_a = state.getFrame(i);
             auto & frame_b = state.getFrame(i + 1);
             auto pre_integrations = frame_b.pre_integrations; //Prev to current
             assert(frame_b.prev_frame_id == frame_a.frame_id && "Wrong prev frame id");
-            addIMUFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
+            addIMUFactor(frame_a.frame_id, frame_b.frame_id, pre_integrations);
         }
     }
 
@@ -431,14 +431,14 @@ void D2Estimator::setupImuFactors(ceres::Problem & problem) {
                         continue;
                     }
                     assert(frame_b.prev_frame_id == frame_a.frame_id && "Wrong prev frame id on remote");
-                    addIMUFactor(problem, frame_a.frame_id, frame_b.frame_id, pre_integrations);
+                    addIMUFactor(frame_a.frame_id, frame_b.frame_id, pre_integrations);
                 }
             }
         }
     }
 }
 
-void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
+void D2Estimator::setupLandmarkFactors() {
     auto lms = state.availableLandmarkMeasurements();
     current_landmark_num = lms.size();
     auto loss_function = new ceres::HuberLoss(1.0);    
@@ -470,15 +470,16 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                 firstObs.depth < params->max_depth_to_fuse &&
                 firstObs.depth > params->min_depth_to_fuse) {
             auto f_dep = OneFrameDepth::Create(firstObs.depth);
-            problem.AddResidualBlock(f_dep, loss_function, state.getLandmarkState(lm_id));
             auto info = DepthResInfo::create(f_dep, loss_function, firstObs.frame_id, lm_id);
             marginalizer->addResidualInfo(info);
+            solver->addResidual(info);
             residual_count++;
         }
         for (auto i = 1; i < lm.track.size(); i++) {
             auto lm_per_frame = lm.track[i];
             auto mea1 = lm_per_frame.measurement();
             auto & frame1 = state.getFramebyId(lm_per_frame.frame_id);
+            ResidualInfo * info = nullptr;
             if (lm_per_frame.camera_id == base_camera_id) {
                 ceres::CostFunction * f_td = nullptr;
                 bool enable_depth_mea = false;
@@ -497,14 +498,8 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                         lm_per_frame.landmark_id, firstObs.frame_id, lm_per_frame.frame_id, lm_id, base_camera_id);
                     continue;
                 }
-                problem.AddResidualBlock(f_td, loss_function,
-                    state.getPoseState(firstObs.frame_id), 
-                    state.getPoseState(lm_per_frame.frame_id), 
-                    state.getExtrinsicState(firstObs.camera_id),
-                    state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.drone_id));
-                auto info = LandmarkTwoFrameOneCamResInfo::create(f_td, loss_function,
+                info = LandmarkTwoFrameOneCamResInfo::create(f_td, loss_function,
                     firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, enable_depth_mea);
-                marginalizer->addResidualInfo(info);
                 residual_count++;
                 keyframe_measurements[lm_per_frame.frame_id] ++;
                 used_camera_sets.insert(firstObs.camera_id);
@@ -512,50 +507,34 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                 if (lm_per_frame.frame_id == firstObs.frame_id) {
                     auto f_td = new ProjectionOneFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                         lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
-                    problem.AddResidualBlock(f_td, nullptr,
-                        state.getExtrinsicState(firstObs.camera_id),
-                        state.getExtrinsicState(lm_per_frame.camera_id),
-                        state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.drone_id));
-                    auto info = LandmarkOneFrameTwoCamResInfo::create(f_td, nullptr,
+                    info = LandmarkOneFrameTwoCamResInfo::create(f_td, nullptr,
                         firstObs.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
-                    marginalizer->addResidualInfo(info);
                     residual_count++;
                 } else {
                     if (firstFrame.drone_id != frame1.drone_id && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-                        auto f_td = new ProjectionTwoFrameTwoCamFactorDistrib(mea0, mea1, firstObs.velocity, 
+                        auto f_td = new ProjectionTwoDroneTwoCamFactor(mea0, mea1, firstObs.velocity, 
                         lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
-                        problem.AddResidualBlock(f_td, loss_function,
-                            state.getPoseState(firstObs.frame_id), 
-                            state.getPoseState(lm_per_frame.frame_id), 
-                            state.getExtrinsicState(firstObs.camera_id),
-                            state.getExtrinsicState(lm_per_frame.camera_id),
-                            state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.drone_id), 
-                            state.getPwikState(firstFrame.drone_id), state.getPwikState(frame1.drone_id));
                         relative_frame_is_used[firstFrame.drone_id] = true;
                         relative_frame_is_used[frame1.drone_id] = true;
-                        auto info = LandmarkTwoDroneTwoCamResInfo::create(f_td, loss_function, firstObs.frame_id, lm_per_frame.frame_id, lm_id, 
+                        info = LandmarkTwoDroneTwoCamResInfo::create(f_td, loss_function, firstObs.frame_id, lm_per_frame.frame_id, lm_id, 
                             firstObs.camera_id, lm_per_frame.camera_id, firstFrame.drone_id, frame1.drone_id);
-                        marginalizer->addResidualInfo(info);
                         residual_count++;
                     } else {
                         auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                             lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
-                        problem.AddResidualBlock(f_td, loss_function,
-                            state.getPoseState(firstObs.frame_id), 
-                            state.getPoseState(lm_per_frame.frame_id), 
-                            state.getExtrinsicState(firstObs.camera_id),
-                            state.getExtrinsicState(lm_per_frame.camera_id),
-                            state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.drone_id));
-                        auto info = LandmarkTwoFrameTwoCamResInfo::create(f_td, loss_function, firstObs.frame_id, lm_per_frame.frame_id, lm_id, 
+                        info = LandmarkTwoFrameTwoCamResInfo::create(f_td, loss_function, firstObs.frame_id, lm_per_frame.frame_id, lm_id, 
                             firstObs.camera_id, lm_per_frame.camera_id);
-                        marginalizer->addResidualInfo(info);
                         residual_count++;
                     }
                 }
                 used_camera_sets.insert(lm_per_frame.camera_id);
             }
+            if (info != nullptr) {
+                solver->addResidual(info);
+                marginalizer->addResidualInfo(info);
+            }
             keyframe_measurements[lm_per_frame.frame_id] ++;
-            problem.SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
+            solver->getProblem().SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
         }
     }
     //Check the measurements number of each keyframe
@@ -576,12 +555,13 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
     }
 }
 
-void D2Estimator::setupPriorFactor(ceres::Problem & problem) {
+void D2Estimator::setupPriorFactor() {
     auto prior_factor = state.getPrior();
     if (prior_factor != nullptr) {
         auto pfactor = new PriorFactor(*prior_factor);
-        problem.AddResidualBlock(pfactor, nullptr, prior_factor->getKeepParamsPointers());
-        marginalizer->addPrior(pfactor);
+        auto info = PriorResInfo::create(pfactor);
+        solver->addResidual(info);
+        marginalizer->addResidualInfo(info);
     }
 }
 

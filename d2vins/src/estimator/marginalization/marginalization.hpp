@@ -1,7 +1,7 @@
 #pragma once
 #include <d2common/d2vinsframe.h>
 #include <ceres/ceres.h>
-#include "marginalization_info.hpp"
+#include "../solver/ResidualInfo.hpp"
 
 namespace D2VINS {
 class Marginalizer {

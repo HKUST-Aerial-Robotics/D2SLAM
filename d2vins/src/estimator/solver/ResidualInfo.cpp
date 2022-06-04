@@ -1,4 +1,4 @@
-#include "marginalization_info.hpp"
+#include "ResidualInfo.hpp"
 #include "../../factors/prior_factor.h"
 
 namespace D2VINS {

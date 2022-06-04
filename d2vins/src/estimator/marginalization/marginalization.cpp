@@ -11,13 +11,6 @@ void Marginalizer::addResidualInfo(ResidualInfo* info) {
     residual_info_list.push_back(info);
 }
 
-void Marginalizer::addPrior(PriorFactor * cost_function) {
-    auto * info = new PriorResInfo(cost_function);
-    info->cost_function = cost_function;
-    info->loss_function = nullptr;
-    residual_info_list.push_back(info);
-}
-
 VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_param_size) {
     //Then evaluate all residuals
     //Setup Jacobian

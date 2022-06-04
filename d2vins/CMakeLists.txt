@@ -53,12 +53,13 @@ add_library(${PROJECT_NAME}_estimator
   src/estimator/landmark_manager.cpp
   src/estimator/d2vinsstate.cpp
   src/estimator/marginalization/marginalization.cpp
-  src/estimator/marginalization/marginalization_info.cpp
+  src/estimator/solver/ResidualInfo.cpp
+  src/estimator/solver/BaseSolverWrapper.cpp
   src/factors/projectionTwoFrameOneCamFactor.cpp
   src/factors/projectionTwoFrameOneCamDepthFactor.cpp
   src/factors/projectionTwoFrameTwoCamFactor.cpp
   src/factors/projectionOneFrameTwoCamFactor.cpp
-  src/factors/projectionTwoFrameTwoCamFactorDistrib.cpp
+  src/factors/ProjectionTwoDroneTwoCamFactor.cpp
   src/factors/prior_factor.cpp
   src/factors/pose_local_parameterization.cpp
   src/network/d2vins_net.cpp

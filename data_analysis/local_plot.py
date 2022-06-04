@@ -337,7 +337,7 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
     if poses_vo is not None:
         pass
     else:
-        output_table = [["Drone", "ATE Pos", "ATE Att", "Cov/m: x", "y", "z", "PGO:ATE Pos ", "ATE Att"]]
+        output_table = [["Drone", "Traj. Len", "ATE Pos", "ATE Att", "Cov/m: x", "y", "z", "PGO:ATE Pos ", "ATE Att"]]
 
     for i in nodes:
         t_ = poses_gt[i].t
@@ -428,7 +428,7 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
             # print(f"{i}by{main_id}",end="\t")
             # print(f"{ate_fused:3.3f}\t{rmse_angular_fused*180/pi:3.3f}°\t{rmse_yaw_fused*180/pi:3.3f}°\t{rmse_pitch_fused*180/pi:3.3f}°\t{rmse_roll_fused*180/pi:3.3f}°\t{rmse_x:3.3f},{rmse_y:3.3f},{rmse_z:3.3f}\t{fused_cov_x:.1e},{fused_cov_y:.1e},{fused_cov_z:.1e}\t{fused_yaw_cov_per_meter:.1e}rad/m\t\t{ate_path:3.3f}\t{rmse_angular_path*180/pi:3.3f}°\t|\t",end="")
             output_table.append([
-                f"{i}by{main_id}", f"{ate_fused:3.3f}", f"{rmse_angular_fused*180/pi:3.3f}", f"{fused_cov_x:.1e}",f"{fused_cov_y:.1e}",f"{fused_cov_z:.1e}",f"{ate_path:3.3f}",f"{rmse_angular_path*180/pi:3.3f}°"
+                f"{i}by{main_id}",f"{poses_fused[i].length():.1f}m", f"{ate_fused:3.3f}", f"{rmse_angular_fused*180/pi:3.3f}", f"{fused_cov_x:.1e}",f"{fused_cov_y:.1e}",f"{fused_cov_z:.1e}",f"{ate_path:3.3f}",f"{rmse_angular_path*180/pi:3.3f}°"
             ])
 
         if show:
