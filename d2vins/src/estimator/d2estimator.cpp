@@ -399,7 +399,8 @@ void D2Estimator::addIMUFactor(ceres::Problem & problem, FrameIdType frame_ida, 
         //At this time we fix the first pose and ignore the margin of this imu factor to achieve better numerical stability
         return;
     }
-    marginalizer->addImuResidual(imu_factor, frame_ida, frame_idb);
+    auto info = ImuResInfo::create(imu_factor, frame_ida, frame_idb);
+    marginalizer->addResidualInfo(info);
 }
 
 void D2Estimator::setupImuFactors(ceres::Problem & problem) {
@@ -470,7 +471,8 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                 firstObs.depth > params->min_depth_to_fuse) {
             auto f_dep = OneFrameDepth::Create(firstObs.depth);
             problem.AddResidualBlock(f_dep, loss_function, state.getLandmarkState(lm_id));
-            marginalizer->addDepthResidual(f_dep, loss_function, firstObs.frame_id, lm_id);
+            auto info = DepthResInfo::create(f_dep, loss_function, firstObs.frame_id, lm_id);
+            marginalizer->addResidualInfo(info);
             residual_count++;
         }
         for (auto i = 1; i < lm.track.size(); i++) {
@@ -479,9 +481,11 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
             auto & frame1 = state.getFramebyId(lm_per_frame.frame_id);
             if (lm_per_frame.camera_id == base_camera_id) {
                 ceres::CostFunction * f_td = nullptr;
+                bool enable_depth_mea = false;
                 if (lm_per_frame.depth_mea && params->fuse_dep &&
                     lm_per_frame.depth < params->max_depth_to_fuse && 
                     lm_per_frame.depth > params->min_depth_to_fuse) {
+                    enable_depth_mea = true;
                     f_td = new ProjectionTwoFrameOneCamDepthFactor(mea0, mea1, firstObs.velocity, lm_per_frame.velocity,
                         firstObs.cur_td, lm_per_frame.cur_td, lm_per_frame.depth);
                 } else {
@@ -498,8 +502,9 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                     state.getPoseState(lm_per_frame.frame_id), 
                     state.getExtrinsicState(firstObs.camera_id),
                     state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.drone_id));
-                marginalizer->addLandmarkResidual(f_td, loss_function,
-                    firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, true);
+                auto info = LandmarkTwoFrameOneCamResInfo::create(f_td, loss_function,
+                    firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, enable_depth_mea);
+                marginalizer->addResidualInfo(info);
                 residual_count++;
                 keyframe_measurements[lm_per_frame.frame_id] ++;
                 used_camera_sets.insert(firstObs.camera_id);
@@ -511,11 +516,12 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                         state.getExtrinsicState(firstObs.camera_id),
                         state.getExtrinsicState(lm_per_frame.camera_id),
                         state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.drone_id));
-                    marginalizer->addLandmarkResidualOneFrameTwoCam(f_td, loss_function,
+                    auto info = LandmarkOneFrameTwoCamResInfo::create(f_td, nullptr,
                         firstObs.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                    marginalizer->addResidualInfo(info);
                     residual_count++;
                 } else {
-                    if (firstFrame.drone_id != frame1.drone_id) {
+                    if (firstFrame.drone_id != frame1.drone_id && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
                         auto f_td = new ProjectionTwoFrameTwoCamFactorDistrib(mea0, mea1, firstObs.velocity, 
                         lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
                         problem.AddResidualBlock(f_td, loss_function,
@@ -527,8 +533,9 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                             state.getPwikState(firstFrame.drone_id), state.getPwikState(frame1.drone_id));
                         relative_frame_is_used[firstFrame.drone_id] = true;
                         relative_frame_is_used[frame1.drone_id] = true;
-                        marginalizer->addLandmarkResidualTwoFrameTwoCamDistrib(f_td, loss_function,
-                            firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                        auto info = LandmarkTwoDroneTwoCamResInfo::create(f_td, loss_function, firstObs.frame_id, lm_per_frame.frame_id, lm_id, 
+                            firstObs.camera_id, lm_per_frame.camera_id, firstFrame.drone_id, frame1.drone_id);
+                        marginalizer->addResidualInfo(info);
                         residual_count++;
                     } else {
                         auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
@@ -539,8 +546,9 @@ void D2Estimator::setupLandmarkFactors(ceres::Problem & problem) {
                             state.getExtrinsicState(firstObs.camera_id),
                             state.getExtrinsicState(lm_per_frame.camera_id),
                             state.getLandmarkState(lm_id), state.getTdState(lm_per_frame.drone_id));
-                        marginalizer->addLandmarkResidualTwoFrameTwoCam(f_td, loss_function,
-                            firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
+                        auto info = LandmarkTwoFrameTwoCamResInfo::create(f_td, loss_function, firstObs.frame_id, lm_per_frame.frame_id, lm_id, 
+                            firstObs.camera_id, lm_per_frame.camera_id);
+                        marginalizer->addResidualInfo(info);
                         residual_count++;
                     }
                 }

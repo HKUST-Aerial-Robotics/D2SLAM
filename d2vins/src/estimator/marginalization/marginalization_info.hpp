@@ -10,10 +10,9 @@ enum ResidualType {
     NONE, // 0
     IMUResidual, // 1
     LandmarkTwoFrameOneCamResidual, // 2
-    LandmarkTwoFrameOneCamResidualTD, // 3
-    LandmarkTwoFrameTwoCamResidualTD, // 4
-    LandmarkTwoFrameTwoCamDistribResidualTD, // 5
-    LandmarkOneFrameTwoCamResidualTD, // 6
+    LandmarkTwoFrameTwoCamResidual, // 3
+    LandmarkTwoDroneTwoCamResidual, // 4
+    LandmarkOneFrameTwoCamResidual, // 5
     PriorResidual, // 7
     DepthResidual // 8
 };
@@ -145,6 +144,7 @@ public:
     FrameIdType frame_idb;
     LandmarkIdType landmark_id;
     int camera_id;
+    bool enable_depth_mea = false;
     LandmarkTwoFrameOneCamResInfo():ResidualInfo(ResidualType::LandmarkTwoFrameOneCamResidual) {}
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         if (params->remove_base_when_margin_remote == 0) {
@@ -159,34 +159,32 @@ public:
         params_list.push_back(paramInfoFramePose(state, frame_idb));
         params_list.push_back(paramInfoExtrinsic(state, camera_id));
         params_list.push_back(paramInfoLandmark(state, landmark_id));
-        return params_list;
-    }
-};
-
-class LandmarkTwoFrameOneCamResInfoTD : public LandmarkTwoFrameOneCamResInfo {
-public:
-    LandmarkTwoFrameOneCamResInfoTD() {
-        residual_type = ResidualType::LandmarkTwoFrameOneCamResidualTD;
-    }
-    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
-        std::vector<ParamInfo> params_list;
-        params_list.push_back(paramInfoFramePose(state, frame_ida));
-        params_list.push_back(paramInfoFramePose(state, frame_idb));
-        params_list.push_back(paramInfoExtrinsic(state, camera_id));
-        params_list.push_back(paramInfoLandmark(state, landmark_id));
         params_list.push_back(paramInfoTd(state, camera_id));
         return params_list;
     }
+
+    static LandmarkTwoFrameOneCamResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+        FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id, bool enable_depth_mea) {
+            auto * info = new LandmarkTwoFrameOneCamResInfo();
+            info->frame_ida = frame_ida;
+            info->frame_idb = frame_idb;
+            info->landmark_id = landmark_id;
+            info->camera_id = camera_id;
+            info->cost_function = cost_function;
+            info->loss_function = loss_function;
+            info->enable_depth_mea = enable_depth_mea;
+            return info;
+    }
 };
 
-class LandmarkTwoFrameTwoCamResInfoTD : public ResidualInfo {
+class LandmarkTwoFrameTwoCamResInfo : public ResidualInfo {
 public:
     FrameIdType frame_ida;
     FrameIdType frame_idb;
     LandmarkIdType landmark_id;
     int camera_id_a;
     int camera_id_b;
-    LandmarkTwoFrameTwoCamResInfoTD():ResidualInfo(ResidualType::LandmarkTwoFrameTwoCamResidualTD) {}
+    LandmarkTwoFrameTwoCamResInfo():ResidualInfo(ResidualType::LandmarkTwoFrameTwoCamResidual) {}
     // virtual void Evaluate(D2EstimatorState * state) override;
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         if (params->remove_base_when_margin_remote == 0) {
@@ -204,9 +202,21 @@ public:
         params_list.push_back(paramInfoTd(state, camera_id_a));
         return params_list;
     }
+    static LandmarkTwoFrameTwoCamResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+        FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b) {
+        auto * info = new LandmarkTwoFrameTwoCamResInfo();
+        info->frame_ida = frame_ida;
+        info->frame_idb = frame_idb;
+        info->landmark_id = landmark_id;
+        info->camera_id_a = camera_id_a;
+        info->camera_id_b = camera_id_b;
+        info->cost_function = cost_function;
+        info->loss_function = loss_function;
+        return info;
+    }
 };
 
-class LandmarkTwoFrameTwoCamResDistribInfoTD : public ResidualInfo {
+class LandmarkTwoDroneTwoCamResInfo : public ResidualInfo {
 public:
     int drone_ida;
     int drone_idb;
@@ -216,7 +226,7 @@ public:
     int camera_id_a;
     int camera_id_b;
 
-    LandmarkTwoFrameTwoCamResDistribInfoTD(): ResidualInfo(ResidualType::LandmarkTwoFrameTwoCamDistribResidualTD) {}
+    LandmarkTwoDroneTwoCamResInfo(): ResidualInfo(ResidualType::LandmarkTwoDroneTwoCamResidual) {}
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         if (params->remove_base_when_margin_remote == 0) {
             return frame_id.find(frame_ida) != frame_id.end();
@@ -236,15 +246,30 @@ public:
         params_list.push_back(paramInfoRelativeCoor(state, drone_idb));
         return params_list;
     }
+
+    static LandmarkTwoDroneTwoCamResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+        FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b, int drone_ida, int drone_idb) {
+        auto * info = new LandmarkTwoDroneTwoCamResInfo();
+        info->frame_ida = frame_ida;
+        info->frame_idb = frame_idb;
+        info->landmark_id = landmark_id;
+        info->camera_id_a = camera_id_a;
+        info->camera_id_b = camera_id_b;
+        info->drone_ida = drone_ida;
+        info->drone_idb = drone_idb;
+        info->cost_function = cost_function;
+        info->loss_function = loss_function;
+        return info;
+    }
 };
 
-class LandmarkOneFrameTwoCamResInfoTD : public ResidualInfo {
+class LandmarkOneFrameTwoCamResInfo : public ResidualInfo {
 public:
     FrameIdType frame_ida;
     LandmarkIdType landmark_id;
     int camera_id_a;
     int camera_id_b;
-    LandmarkOneFrameTwoCamResInfoTD():ResidualInfo(ResidualType::LandmarkOneFrameTwoCamResidualTD) {}
+    LandmarkOneFrameTwoCamResInfo():ResidualInfo(ResidualType::LandmarkOneFrameTwoCamResidual) {}
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         return frame_id.find(frame_ida) != frame_id.end();
     }
@@ -255,6 +280,18 @@ public:
         params_list.push_back(paramInfoLandmark(state, landmark_id));
         params_list.push_back(paramInfoTd(state, camera_id_a));
         return params_list;
+    }
+
+    static LandmarkOneFrameTwoCamResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+        FrameIdType frame_ida, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b) {
+        auto * info = new LandmarkOneFrameTwoCamResInfo();
+        info->frame_ida = frame_ida;
+        info->landmark_id = landmark_id;
+        info->camera_id_a = camera_id_a;
+        info->camera_id_b = camera_id_b;
+        info->cost_function = cost_function;
+        info->loss_function = loss_function;
+        return info;
     }
 };
 
@@ -274,6 +311,14 @@ public:
         params_list.push_back(paramInfoSpeedBias(state, frame_idb));
         return params_list;
     }
+    static ImuResInfo * create(ceres::CostFunction * cost_function,  FrameIdType frame_ida, FrameIdType frame_idb) {
+        auto * info = new ImuResInfo();
+        info->frame_ida = frame_ida;
+        info->frame_idb = frame_idb;
+        info->cost_function = cost_function;
+        info->loss_function = nullptr;
+        return info;
+    }
 };
 
 class DepthResInfo : public ResidualInfo {
@@ -287,6 +332,15 @@ public:
     virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
         std::vector<ParamInfo> params_list{paramInfoLandmark(state, landmark_id)};
         return params_list;
+    }
+    static DepthResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+        FrameIdType frame_ida, LandmarkIdType landmark_id) {
+        auto * info = new DepthResInfo();
+        info->base_frame_id = frame_ida;
+        info->landmark_id = landmark_id;
+        info->cost_function = cost_function;
+        info->loss_function = loss_function;
+        return info;
     }
 };
 
