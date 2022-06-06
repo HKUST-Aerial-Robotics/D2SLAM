@@ -37,10 +37,9 @@ template <typename Derived>
 static Eigen::Quaternion<typename Derived::Scalar> positify(const Eigen::QuaternionBase<Derived> &q)
 {
     //printf("a: %f %f %f %f", q.w(), q.x(), q.y(), q.z());
-    //Eigen::Quaternion<typename Derived::Scalar> p(-q.w(), -q.x(), -q.y(), -q.z());
+    Eigen::Quaternion<typename Derived::Scalar> p(-q.w(), -q.x(), -q.y(), -q.z());
     //printf("b: %f %f %f %f", p.w(), p.x(), p.y(), p.z());
-    //return q.template w() >= (typename Derived::Scalar)(0.0) ? q : Eigen::Quaternion<typename Derived::Scalar>(-q.w(), -q.x(), -q.y(), -q.z());
-    return q;
+    return q.template w() >= (typename Derived::Scalar)(0.0) ? q : p;
 }
 
 template <typename Derived>
@@ -167,6 +166,25 @@ void removeRows(Matrix<Derived, Dynamic, 1>& matrix, unsigned int rowToRemove, u
     matrix.conservativeResize(numRows,1);
 }
 
+template <typename Derived>
+Quaternion<Derived> averageQuaterions(std::vector<Quaternion<Derived>> quats) {
+    Matrix<Derived, 4, 4> M = Matrix4d::Zero();
+    for (auto & q : quats) {
+       Vector4d v = q.coeffs(); 
+       M += v*v.transpose();
+    }
+    SelfAdjointEigenSolver<Matrix<Derived, 4, 4>> solver;
+    solver.compute(M);
+    Matrix<Derived, 4, 1> eigenvector = solver.eigenvectors().rightCols(1);
+    Quaternion<Derived> q(eigenvector(3), eigenvector(1), eigenvector(2), eigenvector(0));
+    // Matrix<Derived, 1, Dynamic> eigenvalues = solver.eigenvalues();
+    // for (int i = 0; i < eigenvalues.size(); i ++ ) {
+    //     printf("%f, %f %f %f %f\n", solver.eigenvalues()(i), 
+    //         solver.eigenvectors()(0,i), solver.eigenvectors()(1,i), solver.eigenvectors()(2,i), solver.eigenvectors()(3,i));
+    // }
+    // printf("return q w %f xyz %f %f %f\n", q.w(), q.x(), q.y(), q.z());
+    return q;
+}
 
 }
 }
