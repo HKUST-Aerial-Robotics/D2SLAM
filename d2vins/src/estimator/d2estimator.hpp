@@ -35,7 +35,7 @@ protected:
     bool tryinitFirstPose(VisualImageDescArray & frame);
     void addFrame(VisualImageDescArray & _frame);
     void addFrameRemote(const VisualImageDescArray & _frame);
-    void solve();
+    void solveNonDistrib();
     void setupImuFactors();
     void setupLandmarkFactors();
     void addIMUFactor(FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* _pre_integration);

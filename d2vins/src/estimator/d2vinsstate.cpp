@@ -102,6 +102,7 @@ VINSFrame & D2EstimatorState::lastFrame() {
 }
 
 std::set<int> D2EstimatorState::availableDrones() const { 
+    //Should return only has common landmarks.
     return all_drones;
 }
 

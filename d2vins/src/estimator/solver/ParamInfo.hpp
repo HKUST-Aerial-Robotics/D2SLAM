@@ -13,6 +13,10 @@ enum ParamsType {
     LANDMARK,
 };
 
+inline bool IsSE3(ParamsType type) {
+    return type == POSE || type == REL_COOR || type == EXTRINSIC;
+}
+
 struct ParamInfo {
     double * pointer = nullptr;
     double * data_copied = nullptr;

@@ -8,7 +8,7 @@
 using namespace Eigen;
 
 namespace D2VINS {
-
+struct ConsensusSolverConfig;
 struct D2VINSConfig {
     //Inputs
     std::string imu_topic;
@@ -66,7 +66,10 @@ struct D2VINSConfig {
     double depth_sqrt_inf = 20.0;
     double max_depth_to_fuse = 5.;
     double min_depth_to_fuse = 0.3;
+
+    //Solver
     ceres::Solver::Options ceres_options;
+    ConsensusSolverConfig * consensus_config = nullptr;
 
     //Outlier rejection
     int perform_outlier_rejection_num = 50;

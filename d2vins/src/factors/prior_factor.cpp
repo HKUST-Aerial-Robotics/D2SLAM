@@ -50,10 +50,11 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
             dx.segment(idx, size) = x - x0;
         } else {
             dx.segment<3>(idx + 0) = x.head<3>() - x0.head<3>();
-            dx.segment<3>(idx + 3) = 2.0 * Utility::positify(Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5))).vec();
-            if (!((Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5))).w() >= 0))
+            Eigen::Quaterniond qerr = Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5));
+            dx.segment<3>(idx + 3) = 2.0 * Utility::positify(qerr).vec();
+            if (!(qerr.w() >= 0))
             {
-                dx.segment<3>(idx + 3) = 2.0 * -Utility::positify(Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5))).vec();
+                dx.segment<3>(idx + 3) = 2.0 * -Utility::positify(qerr).vec();
             }
         }
     }

@@ -28,7 +28,7 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     std::queue<D2Common::VisualImageDescArray> viokf_queue;
     std::mutex queue_lock;
     std::mutex esti_lock;
-    ros::Timer estimator_timer;
+    ros::Timer estimator_timer, solver_timer;
     std::thread th;
 protected:
     virtual void frameCallback(const D2Common::VisualImageDescArray & viokf) override {
@@ -50,6 +50,11 @@ protected:
             loop_detector->processImageArray(frame_desc);
         }
     }
+    void distriburedTimerCallback(const ros::TimerEvent & event) {
+        Guard guard(esti_lock);
+        estimator->solveinDistributedMode();
+    }
+
     void timerCallback(const ros::TimerEvent & event) {
         if (!viokf_queue.empty()) {
             if (viokf_queue.size() > params->warn_pending_frames) {
@@ -87,11 +92,14 @@ public:
         estimator->init(nh);
         imu_sub  = nh.subscribe(params->imu_topic, 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
         estimator_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::timerCallback, this);
-        th = std::thread([&] {
-            while(0 == d2vins_net->lcmHandle()) {
+        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+            solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
         }
-        ROS_INFO("D2VINS node initialized. Ready to start.");
-    });
+        th = std::thread([&] {
+                while(0 == d2vins_net->lcmHandle()) {
+            }
+            ROS_INFO("D2VINS node initialized. Ready to start.");
+        });
     }
 };
 

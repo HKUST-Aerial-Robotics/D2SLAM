@@ -12,6 +12,7 @@
 #include "../factors/pose_local_parameterization.h"
 #include <d2frontend/utils.h>
 #include "marginalization/marginalization.hpp"
+#include "solver/ConsensusSolver.hpp"
 
 namespace D2VINS {
 
@@ -232,7 +233,7 @@ void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
     addFrameRemote(frame);
     if (params->estimation_mode == D2VINSConfig::SERVER_MODE && state.size(frame.drone_id) >= params->min_solve_frames) {
         state.clearFrame();
-        solve();
+        solveNonDistrib();
     }
 }
 
@@ -254,7 +255,7 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
 
     addFrame(_frame);
     if (state.size() >= params->min_solve_frames && params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        solve();
+        solveNonDistrib();
     } else {
         //Presolve only for initialization.
         state.preSolve(remote_imu_bufs);
@@ -321,13 +322,15 @@ bool D2Estimator::isMain() const {
 }
 
 void D2Estimator::solveinDistributedMode() {
+    if (state.size() < params->min_solve_frames) {
+        return;
+    }
+
     relative_frame_is_used.clear();
     for (auto & drone_id : state.availableDrones()) {
         relative_frame_is_used[drone_id] = false;
     }
-}
 
-void D2Estimator::solve() {
     if (marginalizer!=nullptr) {
         delete marginalizer;
     }
@@ -339,9 +342,67 @@ void D2Estimator::solve() {
     if (solver != nullptr) {
         delete solver;
     }
-    if (params->estimation_mode < D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        solver = new BaseSolverWrapper(&state);
+    
+    solver = new ConsensusSolver(&state, *params->consensus_config);
+
+    setupImuFactors();
+    setupLandmarkFactors();
+    setupPriorFactor();
+    setStateProperties();
+
+    ceres::Solver::Summary summary = solver->solve();
+    state.syncFromState();
+
+    //Now do some statistics
+    static double sum_time = 0;
+    static double sum_iteration = 0;
+    static double sum_cost = 0;
+    sum_time += summary.total_time_in_seconds;
+    sum_iteration += summary.num_successful_steps + summary.num_unsuccessful_steps;
+    sum_cost += summary.final_cost;
+
+    if (params->enable_perf_output) {
+        std::cout << summary.BriefReport() << std::endl;
+        printf("[D2VINS::solveinDistributedMode] average time %.1fms, average time of iter: %.1fms, average iteration %.3f, average cost %.3f\n", 
+            sum_time*1000/solve_count, sum_time*1000/sum_iteration, sum_iteration/solve_count, sum_cost/solve_count);
     }
+
+    auto last_odom = state.lastFrame().odom;
+    printf("[D2VINS::solveinDistributedMode] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
+        current_landmark_num, last_odom.toStr().c_str(), state.td*1000, summary.total_time_in_seconds*1000);
+
+    // Reprogation
+    for (auto drone_id : state.availableDrones()) {
+        auto _imu = imubuf.back(state.lastFrame(drone_id).stamp + state.td);
+        last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
+    }
+
+    visual.postSolve();
+
+    if (params->debug_print_states || params->debug_print_sldwin) {
+        state.printSldWin();
+    }
+
+    if (summary.termination_type == ceres::FAILURE)  {
+        std::cout << summary.message << std::endl;
+        exit(1);
+    }
+}
+
+void D2Estimator::solveNonDistrib() {
+    if (marginalizer!=nullptr) {
+        delete marginalizer;
+    }
+    marginalizer = new Marginalizer(&state);
+    state.setMarginalizer(marginalizer);
+    solve_count ++;
+    state.preSolve(remote_imu_bufs);
+    used_camera_sets.clear(); 
+    if (solver != nullptr) {
+        delete solver;
+    }
+    
+    solver = new BaseSolverWrapper(&state);
 
     setupImuFactors();
     setupLandmarkFactors();

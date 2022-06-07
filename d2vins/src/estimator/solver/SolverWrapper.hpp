@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include "ParamInfo.hpp"
 #include "ResidualInfo.hpp"

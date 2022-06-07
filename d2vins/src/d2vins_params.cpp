@@ -2,6 +2,7 @@
 #include <d2common/integration_base.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
+#include "estimator/solver/ConsensusSolver.hpp"
 
 using namespace D2Common;
 
@@ -110,6 +111,15 @@ void D2VINSConfig::init(const std::string & config_file) {
     ceres_options.trust_region_strategy_type = ceres::DOGLEG;
     ceres_options.max_solver_time_in_seconds = solver_time;
     ceres_options.max_num_iterations = fsSettings["max_num_iterations"];
+
+    consensus_config = new ConsensusSolverConfig;
+    consensus_config->ceres_options.linear_solver_type = ceres::DENSE_SCHUR;
+    consensus_config->ceres_options.num_threads = 1;
+    consensus_config->ceres_options.trust_region_strategy_type = ceres::DOGLEG;
+    consensus_config->ceres_options.max_solver_time_in_seconds = solver_time;
+    consensus_config->ceres_options.max_num_iterations = fsSettings["local_substeps"];
+    consensus_config->max_steps = fsSettings["consensus_max_steps"];
+    consensus_config->self_id = self_id;
 }
 
 }

@@ -55,6 +55,7 @@ add_library(${PROJECT_NAME}_estimator
   src/estimator/marginalization/marginalization.cpp
   src/estimator/solver/ResidualInfo.cpp
   src/estimator/solver/BaseSolverWrapper.cpp
+  src/estimator/solver/ConsensusSolver.cpp
   src/factors/projectionTwoFrameOneCamFactor.cpp
   src/factors/projectionTwoFrameOneCamDepthFactor.cpp
   src/factors/projectionTwoFrameTwoCamFactor.cpp
