@@ -77,6 +77,7 @@ public:
     const VINSFrame & lastFrame() const;
     VINSFrame & lastFrame();
     size_t size() const;
+    bool hasDrone(int drone_id) const;
     std::set<int> availableDrones() const;
     VINSFrame & getFrame(int drone_id, int index);
     Swarm::Pose getEstimatedPose(int drone_id, int index) const;

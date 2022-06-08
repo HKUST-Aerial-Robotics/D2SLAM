@@ -13,6 +13,7 @@ using D2Common::VisualImageDescArray;
 namespace D2VINS {
 class Marginalizer;
 class D2VINSNet;
+class SyncDataReceiver;
 struct DistributedVinsData;
 
 enum SyncSignal {
@@ -39,10 +40,12 @@ protected:
     std::map<int, bool> relative_frame_is_used;
     int self_id;
     int frame_count = 0;
+    int64_t solve_token = 0;
     D2Visualization visual;
     std::set<int> ready_drones;
     bool ready_to_start = false;
     std::map<FrameIdType, int> keyframe_measurements;
+    SyncDataReceiver * sync_data_receiver = nullptr;
     
     //Internal functions
     bool tryinitFirstPose(VisualImageDescArray & frame);
@@ -52,7 +55,6 @@ protected:
     void setupImuFactors();
     void setupLandmarkFactors();
     void addIMUFactor(FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* _pre_integration);
-    void setStateProperties();
     void setupPriorFactor();
     std::pair<bool, Swarm::Pose> initialFramePnP(const VisualImageDescArray & frame, 
         const Swarm::Pose & initial_pose);
@@ -64,8 +66,9 @@ protected:
 
     //Multi-drone functions
     void onDistributedVinsData(const DistributedVinsData & dist_data);
-    void onSyncSignal(int drone_id, int signal);
+    void onSyncSignal(int drone_id, int signal, int64_t token);
 public:
+    void setStateProperties();
     D2Estimator(int drone_id);
     void inputImu(IMUData data);
     bool inputImage(VisualImageDescArray & frame);
@@ -80,7 +83,7 @@ public:
 
     //Multi-drone comm protocol
     void sendDistributedVinsData(const DistributedVinsData & data);
-    void sendSyncSignal(SyncSignal data);
+    void sendSyncSignal(SyncSignal data, int64_t token);
     bool readyForStart();
 };
 }

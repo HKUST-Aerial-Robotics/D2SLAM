@@ -121,6 +121,8 @@ void D2VINSConfig::init(const std::string & config_file) {
     consensus_config->ceres_options.max_num_iterations = fsSettings["local_substeps"];
     consensus_config->max_steps = fsSettings["consensus_max_steps"];
     consensus_config->self_id = self_id;
+    consensus_config->timout_wait_sync = fsSettings["timout_wait_sync"];
+
 }
 
 }

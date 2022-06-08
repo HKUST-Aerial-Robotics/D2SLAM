@@ -209,6 +209,9 @@ Swarm::Pose D2EstimatorState::getPwik(int drone_id) const {
 }
 
 double * D2EstimatorState::getPwikState(int drone_id) const {
+    if (P_w_ik_state.find(drone_id) == P_w_ik_state.end()) {
+        std::cout << "P_w_ik_state not found for drone " << drone_id << std::endl;
+    }
     return P_w_ik_state.at(drone_id);
 }
 
@@ -481,6 +484,10 @@ bool D2EstimatorState::hasFrame(FrameIdType frame_id) const {
 
 bool D2EstimatorState::hasCamera(CamIdType frame_id) const {
     return extrinsic.find(frame_id) != extrinsic.end();
+}
+
+bool D2EstimatorState::hasDrone(int drone_id) const {
+    return all_drones.find(drone_id) != all_drones.end();
 }
 
 void D2EstimatorState::printSldWin() const {

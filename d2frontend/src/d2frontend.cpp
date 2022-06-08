@@ -12,12 +12,12 @@
 #include <mutex>
 #include <swarm_msgs/node_frame.h>
 
-#define BACKWARD_HAS_DW 1
-#include <backward.hpp>
-namespace backward
-{
-    backward::SignalHandling sh;
-}
+// #define BACKWARD_HAS_DW 1
+// #include <backward.hpp>
+// namespace backward
+// {
+//     backward::SignalHandling sh;
+// }
 
 namespace D2FrontEnd {
 typedef std::lock_guard<std::mutex> lock_guard;

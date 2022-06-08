@@ -8,14 +8,16 @@ class ResidualInfo;
 class D2EstimatorState;
 class SolverWrapper {
 protected:
-    ceres::Problem problem;
+    ceres::Problem * problem = nullptr;
     D2EstimatorState * state;
 public:
-    SolverWrapper(D2EstimatorState * _state): state(_state) {}
+    SolverWrapper(D2EstimatorState * _state): state(_state) {
+        problem = new ceres::Problem();
+    }
     virtual void addResidual(ResidualInfo*residual_info) = 0;
     virtual ceres::Solver::Summary solve() = 0;
     ceres::Problem & getProblem() {
-        return problem;
+        return *problem;
     }
 };
 

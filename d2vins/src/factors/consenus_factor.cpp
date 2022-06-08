@@ -16,16 +16,21 @@ bool ConsenusPoseFactor::Evaluate(double const *const *parameters, double *resid
     Eigen::Map<Eigen::Vector3d> T_err(residuals);
     Eigen::Map<Eigen::Vector3d> theta_err(residuals + 3);
     
-    auto R_ref_inv = q_ref.toRotationMatrix().transpose();
+    Matrix3d R_ref_inv = q_ref.toRotationMatrix().transpose();
 
     Eigen::Quaterniond q_err = Utility::positify(q_ref.inverse() * q_local);
     theta_err = 2.0 * q_err.vec();
     theta_err = q_sqrt_info * (theta_err - theta_tilde);
     T_err = T_sqrt_info*(R_ref_inv*(T_local - t_ref) - t_tilde);
-    // std::cout << "t_ref" << t_ref.transpose() << std::endl;
-    // std::cout << "T_local" << T_local.transpose() << std::endl;
-    // std::cout << "t_tilde" << t_tilde.transpose() << std::endl;
-    // std::cout << "T_err" << T_err.transpose() << std::endl;
+    if (T_err.hasNaN()) {
+        std::cout << "q_ref" << q_ref.coeffs().transpose() << std::endl;
+        std::cout << "t_ref" << t_ref.transpose() << std::endl;
+        std::cout << "T_local" << T_local.transpose() << std::endl;
+        std::cout << "t_tilde" << t_tilde.transpose() << std::endl;
+        std::cout << "T_err" << T_err.transpose() << std::endl;
+        std::cout << "T_sqrt_info\n" << T_sqrt_info << std::endl;
+        std::cout << "R_ref_inv\n" << R_ref_inv << std::endl;
+    }
     if (jacobians) {
         //Fill in jacobians...
         Eigen::Map<Eigen::Matrix<double, 6, 7, Eigen::RowMajor>> jacobian_pose_local(jacobians[0]);

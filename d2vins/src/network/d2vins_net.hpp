@@ -16,11 +16,11 @@ class D2VINSNet {
     lcm::LCM lcm;
 public:
     std::function<void(DistributedVinsData)> DistributedVinsData_callback;
-    std::function<void(int, int)> DistributedSync_callback;
+    std::function<void(int, int, int64_t)> DistributedSync_callback;
     D2VINSNet(D2Estimator * _estimator, std::string lcm_uri);
     void pubSlidingWindow();
     void sendDistributedVinsData(const DistributedVinsData & data);
-    void sendSyncSignal(int signal);
+    void sendSyncSignal(int signal, int64_t token);
     void receiveSyncSignal(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
                 const DistributedSync_t* msg);

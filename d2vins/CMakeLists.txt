@@ -57,6 +57,7 @@ add_library(${PROJECT_NAME}_estimator
   src/estimator/solver/ParamInfo.cpp
   src/estimator/solver/BaseSolverWrapper.cpp
   src/estimator/solver/ConsensusSolver.cpp
+  src/estimator/solver/ConsensusSync.cpp
   src/factors/projectionTwoFrameOneCamFactor.cpp
   src/factors/projectionTwoFrameOneCamDepthFactor.cpp
   src/factors/projectionTwoFrameTwoCamFactor.cpp

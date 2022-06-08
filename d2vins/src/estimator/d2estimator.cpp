@@ -14,11 +14,14 @@
 #include "marginalization/marginalization.hpp"
 #include "solver/ConsensusSolver.hpp"
 #include "../network/d2vins_net.hpp"
+#include "solver/ConsensusSync.hpp"
 
 namespace D2VINS {
 
 D2Estimator::D2Estimator(int drone_id):
-    self_id(drone_id), state(drone_id) {}
+    self_id(drone_id), state(drone_id) {
+        sync_data_receiver = new SyncDataReceiver;
+}
 
 void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
     state.init(params->camera_extrinsics, params->td_initial);
@@ -38,8 +41,8 @@ void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
     vinsnet->DistributedVinsData_callback = [&](DistributedVinsData msg) {
         onDistributedVinsData(msg);
     };
-    vinsnet->DistributedSync_callback = [&](int drone_id, int signal) {
-        onSyncSignal(drone_id, signal);
+    vinsnet->DistributedSync_callback = [&](int drone_id, int signal, int64_t token) {
+        onSyncSignal(drone_id, signal, token);
     };
 }
 
@@ -114,7 +117,9 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
 
 void D2Estimator::addFrame(VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
-    margined_landmarks = state.clearFrame();
+    if (!params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        margined_landmarks = state.clearFrame();
+    }
     auto & last_frame = state.lastFrame();
     auto ret = imubuf.periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
     auto _imu = ret.first;
@@ -292,7 +297,6 @@ void D2Estimator::setStateProperties() {
                     problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
                 }
             }
-            
         }
     } else {
         for (size_t i = 0; i < state.size(); i ++) {
@@ -347,11 +351,10 @@ bool D2Estimator::isMain() const {
 }
 
 void D2Estimator::onDistributedVinsData(const DistributedVinsData & dist_data) {
-    printf("Received DistributedVinsData\n");
-    static_cast<ConsensusSolver *>(solver)->onDistributedVinsData(dist_data);
+    sync_data_receiver->add(dist_data);
 }
 
-void D2Estimator::onSyncSignal(int drone_id, int signal) {
+void D2Estimator::onSyncSignal(int drone_id, int signal, int64_t token) {
     if (signal == DSolverReady) {
         ready_drones.insert(drone_id);
         if (params->verbose) {
@@ -360,6 +363,7 @@ void D2Estimator::onSyncSignal(int drone_id, int signal) {
     }
     if (signal == DSolverStart) {
         ready_to_start = true;
+        solve_token = token;
     }
     if (isMain() && ready_drones.size() == state.availableDrones().size()) {
         ready_to_start = true;
@@ -373,8 +377,8 @@ void D2Estimator::sendDistributedVinsData(const DistributedVinsData & data) {
     vinsnet->sendDistributedVinsData(data);
 }
 
-void D2Estimator::sendSyncSignal(SyncSignal data) {
-    vinsnet->sendSyncSignal((int) data);
+void D2Estimator::sendSyncSignal(SyncSignal data, int64_t token) {
+    vinsnet->sendSyncSignal((int) data, token);
 }
 
 bool D2Estimator::readyForStart() {
@@ -395,6 +399,8 @@ void D2Estimator::solveinDistributedMode() {
         relative_frame_is_used[drone_id] = false;
     }
 
+    margined_landmarks = state.clearFrame();
+
     if (marginalizer!=nullptr) {
         delete marginalizer;
     }
@@ -406,31 +412,29 @@ void D2Estimator::solveinDistributedMode() {
     if (this->solver != nullptr) {
         delete this->solver;
     }
-    
-    ConsensusSolver * solver = new ConsensusSolver(&state, *params->consensus_config);
-    this->solver = solver;
-    setupImuFactors();
-    setupLandmarkFactors();
-    setupPriorFactor();
-    setStateProperties();
-    
+
     ready_drones = std::set<int>{self_id};
     if (params->verbose) {
         printf("[D2VINS::D2Estimator@%d] ready, wait for start signal...\n", self_id);
     }
     while(!readyForStart()) {
-       sendSyncSignal(SyncSignal::DSolverReady);
+       sendSyncSignal(SyncSignal::DSolverReady, -1);
        usleep(100);
     }
     if (isMain()) {
-        sendSyncSignal(SyncSignal::DSolverStart);
+        solve_token += 1;
+        sendSyncSignal(SyncSignal::DSolverStart, solve_token);
     }
     if (params->verbose) {
         printf("[D2VINS::D2Estimator@%d] All drones read start solving...\n", self_id);
     }
     ready_to_start = false;
-    // printf("Print SLd win before solve: \n");
-    // state.printSldWin();
+        
+    ConsensusSolver * solver = new ConsensusSolver(this, &state, sync_data_receiver, *params->consensus_config, solve_token);
+    this->solver = solver;
+    setupImuFactors();
+    setupLandmarkFactors();
+    setupPriorFactor();
     
     ceres::Solver::Summary summary = solver->solve();
     state.syncFromState();
@@ -596,10 +600,10 @@ void D2Estimator::setupLandmarkFactors() {
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
             if (lm.solver_id == -1 && lm.drone_id != self_id) {
                 // This is a internal only remote landmark
-                // continue;
+                continue;
             }
             if (lm.solver_id > 0 && lm.solver_id != self_id) {
-                // continue;
+                continue;
             }
         }
         LandmarkPerFrame firstObs = lm.track[0];
@@ -676,7 +680,9 @@ void D2Estimator::setupLandmarkFactors() {
                 marginalizer->addResidualInfo(info);
             }
             keyframe_measurements[lm_per_frame.frame_id] ++;
-            solver->getProblem().SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
+            if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+                solver->getProblem().SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
+            }
         }
     }
     //Check the measurements number of each keyframe
@@ -686,10 +692,12 @@ void D2Estimator::setupLandmarkFactors() {
             printf("\033[0;31m[D2VINS::D2Estimator] frame_id %ld has only %d measurements\033[0m\n Related landmarks:\n", 
                 frame_id, it.second);
             std::vector<LandmarkPerId> related_landmarks = state.getRelatedLandmarks(frame_id);
-            for (auto lm : related_landmarks) {
-                printf("Landmark %ld tracks %ld flag %d\n", lm.landmark_id, lm.track.size(), lm.flag);
+            if (params->verbose) {
+                for (auto lm : related_landmarks) {
+                    printf("Landmark %ld tracks %ld flag %d\n", lm.landmark_id, lm.track.size(), lm.flag);
+                }
+                printf("====================");
             }
-            printf("====================");
         }
     }
     if (params->verbose) {

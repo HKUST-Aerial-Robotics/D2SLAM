@@ -25,11 +25,12 @@ void D2VINSNet::pubSlidingWindow() {
     lcm.publish("SYNC_SLDWIN", &sld_win);
 }
 
-void D2VINSNet::sendSyncSignal(int signal) {
+void D2VINSNet::sendSyncSignal(int signal, int64_t token) {
     DistributedSync_t sync_signal;
     sync_signal.drone_id = params->self_id;
     sync_signal.sync_signal = signal;
     sync_signal.timestamp = toLCMTime(ros::Time::now());
+    sync_signal.solver_token = token;
     lcm.publish("SYNC_SIGNAL", &sync_signal);
 }
 
@@ -39,7 +40,7 @@ void D2VINSNet::receiveSyncSignal(const lcm::ReceiveBuffer* rbuf,
     if (msg->drone_id == params->self_id) {
         return;
     }
-    DistributedSync_callback(msg->drone_id, msg->sync_signal);
+    DistributedSync_callback(msg->drone_id, msg->sync_signal, msg->solver_token);
 }
 
 void D2VINSNet::onSldWinReceived(const lcm::ReceiveBuffer* rbuf,
