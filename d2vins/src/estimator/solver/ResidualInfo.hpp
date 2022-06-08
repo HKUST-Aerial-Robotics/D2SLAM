@@ -118,53 +118,6 @@ public:
     }
 };
 
-class LandmarkTwoDroneTwoCamResInfo : public ResidualInfo {
-public:
-    int drone_ida;
-    int drone_idb;
-    FrameIdType frame_ida;
-    FrameIdType frame_idb;
-    LandmarkIdType landmark_id;
-    int camera_id_a;
-    int camera_id_b;
-
-    LandmarkTwoDroneTwoCamResInfo(): ResidualInfo(ResidualType::LandmarkTwoDroneTwoCamResidual) {}
-    bool relavant(const std::set<FrameIdType> & frame_id) const override {
-        if (params->remove_base_when_margin_remote == 0) {
-            return frame_id.find(frame_ida) != frame_id.end();
-        }
-        return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
-    }
-
-    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
-        std::vector<ParamInfo> params_list;
-        params_list.push_back(ParamInfo::createFramePose(state, frame_ida));
-        params_list.push_back(ParamInfo::createFramePose(state, frame_idb));
-        params_list.push_back(ParamInfo::createExtrinsic(state, camera_id_a));
-        params_list.push_back(ParamInfo::createExtrinsic(state, camera_id_b));
-        params_list.push_back(ParamInfo::createLandmark(state, landmark_id));
-        params_list.push_back(ParamInfo::createTd(state, camera_id_a));
-        params_list.push_back(ParamInfo::createRelativeCoor(state, drone_ida));
-        params_list.push_back(ParamInfo::createRelativeCoor(state, drone_idb));
-        return params_list;
-    }
-
-    static LandmarkTwoDroneTwoCamResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
-        FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b, int drone_ida, int drone_idb) {
-        auto * info = new LandmarkTwoDroneTwoCamResInfo();
-        info->frame_ida = frame_ida;
-        info->frame_idb = frame_idb;
-        info->landmark_id = landmark_id;
-        info->camera_id_a = camera_id_a;
-        info->camera_id_b = camera_id_b;
-        info->drone_ida = drone_ida;
-        info->drone_idb = drone_idb;
-        info->cost_function = cost_function;
-        info->loss_function = loss_function;
-        return info;
-    }
-};
-
 class LandmarkOneFrameTwoCamResInfo : public ResidualInfo {
 public:
     FrameIdType frame_ida;

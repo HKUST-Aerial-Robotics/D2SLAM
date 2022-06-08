@@ -62,6 +62,9 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
     }
     auto q0 = Utility::g2R(_imubuf.mean_acc());
     auto last_odom = Swarm::Odometry(frame.stamp, Swarm::Pose(q0, Vector3d::Zero()));
+    if (self_id == 2) {
+        last_odom.pose().pos() = Vector3d(-2.211280897191351402e-01, -1.554325476433378317e-01, 7.782800089007002597e-03);
+    }
 
     //Easily use the average value as gyrobias now
     //Also the ba with average acc - g
@@ -306,15 +309,6 @@ void D2Estimator::setStateProperties() {
         for (auto it: keyframe_measurements) {
             if (state.getFramebyId(it.first).drone_id != self_id) {
                 problem.SetParameterization(state.getPoseState(it.first), pose_local_param);
-            }
-        }
-        for (auto & drone_id : state.availableDrones()) {
-            if (relative_frame_is_used[drone_id]) {
-                if (drone_id == self_id) {
-                    problem.SetParameterBlockConstant(state.getPwikState(drone_id));
-                } else {
-                    problem.SetParameterization(state.getPwikState(drone_id), pose_local_param);
-                }
             }
         }
     }
@@ -657,21 +651,11 @@ void D2Estimator::setupLandmarkFactors() {
                         firstObs.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
                     residual_count++;
                 } else {
-                    if (firstFrame.drone_id != frame1.drone_id && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-                        auto f_td = new ProjectionTwoDroneTwoCamFactor(mea0, mea1, firstObs.velocity, 
+                    auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                         lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
-                        relative_frame_is_used[firstFrame.drone_id] = true;
-                        relative_frame_is_used[frame1.drone_id] = true;
-                        info = LandmarkTwoDroneTwoCamResInfo::create(f_td, loss_function, firstObs.frame_id, lm_per_frame.frame_id, lm_id, 
-                            firstObs.camera_id, lm_per_frame.camera_id, firstFrame.drone_id, frame1.drone_id);
-                        residual_count++;
-                    } else {
-                        auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
-                            lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
-                        info = LandmarkTwoFrameTwoCamResInfo::create(f_td, loss_function, firstObs.frame_id, lm_per_frame.frame_id, lm_id, 
-                            firstObs.camera_id, lm_per_frame.camera_id);
-                        residual_count++;
-                    }
+                    info = LandmarkTwoFrameTwoCamResInfo::create(f_td, loss_function, firstObs.frame_id, lm_per_frame.frame_id, lm_id, 
+                        firstObs.camera_id, lm_per_frame.camera_id);
+                    residual_count++;
                 }
                 used_camera_sets.insert(lm_per_frame.camera_id);
             }

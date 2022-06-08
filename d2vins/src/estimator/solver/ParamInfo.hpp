@@ -28,7 +28,6 @@ struct ParamInfo {
     FrameIdType id;
     ParamInfo() {}
     static ParamInfo createFramePose(D2EstimatorState * state, FrameIdType id);
-    static ParamInfo createRelativeCoor(D2EstimatorState * state, int drone_id);
     static ParamInfo createExtrinsic(D2EstimatorState * state, int camera_id);
     static ParamInfo createLandmark(D2EstimatorState * state, int landmark_id);
     static ParamInfo createSpeedBias(D2EstimatorState * state, FrameIdType id);

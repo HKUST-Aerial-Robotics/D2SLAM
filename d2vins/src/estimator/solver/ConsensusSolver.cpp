@@ -175,7 +175,7 @@ void ConsensusSolver::updateGlobal() {
 ceres::Solver::Summary ConsensusSolver::solveLocalStep() {
     ceres::Solver::Summary summary;
     ceres::Solve(config.ceres_options, problem, &summary);
-    // std::cout << summary.FullReport() << std::endl;
+    std::cout << summary.BriefReport() << std::endl;
 
     //sync pointers to remote_params.
     for (auto it: consenus_params) {
@@ -202,13 +202,6 @@ ceres::Solver::Summary ConsensusSolver::solveLocalStep() {
         dist_data.cam_ids.emplace_back(cam_id);
         dist_data.extrinsic.emplace_back(Swarm::Pose(pointer));
     }
-    for (auto drone_id: state->availableDrones()) {
-        auto pointer = state->getPwikState(drone_id);
-        if (drone_id != self_id) {
-            dist_data.remote_drone_ids.emplace_back(drone_id);
-            dist_data.relative_coordinates.emplace_back(Swarm::Pose(pointer));
-        }
-    }
     dist_data.stamp = ros::Time::now().toSec();
     dist_data.drone_id = self_id;
     dist_data.solver_token = solver_token;
@@ -233,16 +226,6 @@ void ConsensusSolver::updateWithDistributedVinsData(const DistributedVinsData & 
             auto pointer = state->getExtrinsicState(cam_id);
             remote_params[pointer][dist_data.drone_id] = VectorXd(POSE_SIZE);
             dist_data.extrinsic[i].to_vector(remote_params[pointer][dist_data.drone_id].data());
-        }
-    }
-
-    for (int i = 0; i < dist_data.remote_drone_ids.size(); i++) {
-        auto drone_id = dist_data.remote_drone_ids[i];
-        if (drone_id == self_id && state->hasDrone(drone_id)) {
-            auto pointer = state->getPwikState(dist_data.drone_id);
-            remote_params[pointer][dist_data.drone_id] = VectorXd(POSE_SIZE);
-            auto inv_pose = dist_data.relative_coordinates[i].inverse();
-            inv_pose.to_vector(remote_params[pointer][dist_data.drone_id].data());
         }
     }
 

@@ -16,19 +16,6 @@ ParamInfo ParamInfo::createFramePose(D2EstimatorState * state, FrameIdType id) {
     return info;
 }
 
-ParamInfo ParamInfo::createRelativeCoor(D2EstimatorState * state, int drone_id) {
-    ParamInfo info;
-    info.pointer = state->getPwikState(drone_id);
-    info.index = -1;
-    info.size = POSE_SIZE;
-    info.eff_size = POSE_EFF_SIZE;
-    info.type = REL_COOR;
-    info.id = drone_id;
-    info.data_copied = new state_type[info.size];
-    memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
-    return info;
-}
-
 ParamInfo ParamInfo::createExtrinsic(D2EstimatorState * state, int camera_id) {
     ParamInfo info;
     info.pointer = state->getExtrinsicState(camera_id);

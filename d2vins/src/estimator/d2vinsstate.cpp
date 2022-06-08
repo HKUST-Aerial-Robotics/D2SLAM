@@ -17,11 +17,6 @@ D2EstimatorState::D2EstimatorState(int _self_id):
     if (params->estimation_mode != D2VINSConfig::SERVER_MODE) {
         all_drones.insert(self_id);
     }
-    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        P_w_iks[self_id] = Swarm::Pose::Identity();
-        P_w_ik_state[self_id] = new state_type[POSE_SIZE];
-        P_w_iks[self_id].to_vector(P_w_ik_state[self_id]);
-    }
 }
 
 std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
@@ -204,17 +199,6 @@ Swarm::Pose D2EstimatorState::getExtrinsic(CamIdType cam_id) const {
     return extrinsic.at(cam_id);
 }
 
-Swarm::Pose D2EstimatorState::getPwik(int drone_id) const {
-    return P_w_iks.at(drone_id);
-}
-
-double * D2EstimatorState::getPwikState(int drone_id) const {
-    if (P_w_ik_state.find(drone_id) == P_w_ik_state.end()) {
-        std::cout << "P_w_ik_state not found for drone " << drone_id << std::endl;
-    }
-    return P_w_ik_state.at(drone_id);
-}
-
 PriorFactor * D2EstimatorState::getPrior() const {
     return prior_factor;
 }
@@ -367,13 +351,6 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
                 addCamera(img.extrinsic, img.camera_index, img.camera_id);
             }
         }
-        if (P_w_iks.find(_frame.drone_id) == P_w_iks.end()) {
-            auto P_w_ik = _frame.odom.pose() * _frame.initial_ego_pose.inverse();
-            P_w_iks[_frame.drone_id] = P_w_ik;
-            P_w_ik_state[_frame.drone_id] = new state_type[POSE_SIZE];
-            P_w_ik.to_vector(P_w_ik_state[_frame.drone_id]);
-            printf("\033[0;32m[D2VINS::D2EstimatorState%d] Added %d->%d transform %s\033[0m\n", self_id, _frame.drone_id, self_id, P_w_ik.toStr().c_str());
-        }
     } else {
         sld_wins[self_id].emplace_back(frame);
     }
@@ -382,8 +359,7 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
     _frame_spd_Bias_state[frame->frame_id] = new state_type[FRAME_SPDBIAS_SIZE];
     if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && _frame.drone_id != self_id) {
         //In this mode, the estimate state is always ego-motion, and the bias is not been estimated on remote
-        auto ego_i = P_w_iks[_frame.drone_id].inverse()* _frame.odom.pose();
-        ego_i.to_vector(_frame_pose_state[frame->frame_id]);
+        _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
     } else {
         frame->toVector(_frame_pose_state[frame->frame_id], _frame_spd_Bias_state[frame->frame_id]);
     }
@@ -399,17 +375,6 @@ void D2EstimatorState::syncFromState() {
     const Guard lock(state_lock);
     //copy state buffer to structs.
     //First sync the poses
-    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        //Sync the transformation of frames.
-        for (auto it: P_w_iks) {
-            auto drone_id = it.first;
-            if (drone_id == self_id) {
-                continue;
-            }
-            auto & P_w_ik = it.second;
-            P_w_iks[drone_id].from_vector(P_w_ik_state[drone_id]);
-        }
-    }
 
     for (auto it : _frame_pose_state) {
         auto frame_id = it.first;
@@ -418,8 +383,7 @@ void D2EstimatorState::syncFromState() {
         }
         auto frame = frame_db.at(frame_id);
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
-            Swarm::Pose ego_i(it.second);
-            frame->odom.pose() = P_w_iks[frame->drone_id] * ego_i;
+            frame->odom.pose() = Swarm::Pose(it.second);
         }else {
             frame->fromVector(it.second, _frame_spd_Bias_state.at(frame_id));
         }
@@ -494,7 +458,6 @@ void D2EstimatorState::printSldWin() const {
     const Guard lock(state_lock);
     for (auto it : sld_wins) {
         printf("=========SLDWIN@drone%d=========\n", it.first);
-        printf("Relative Frame %d->%d : %s\n", it.first, self_id, getPwik(it.first).toStr().c_str());
         for (int i = 0; i < it.second.size(); i ++) {
             printf("index %d frame_id %ld frame: %s\n", i, it.second[i]->frame_id, it.second[i]->toStr().c_str());
         }
