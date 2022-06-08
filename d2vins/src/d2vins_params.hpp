@@ -99,6 +99,9 @@ struct D2VINSConfig {
     //Initialial states
     std::vector<Swarm::Pose> camera_extrinsics;
     double td_initial = 0.0;
+    
+    //Comm
+    std::string lcm_uri;
 
     void init(const std::string & config_file);
 };

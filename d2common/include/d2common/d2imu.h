@@ -7,6 +7,7 @@
 #include <swarm_msgs/swarm_lcm_converter.hpp>
 
 namespace D2Common {
+typedef std::lock_guard<std::recursive_mutex> Guard;
 
 struct VINSFrame;
 
@@ -52,8 +53,6 @@ protected:
     //Search [i0, i1)
     size_t searchClosest(double t, int i0, int i1) const;
     IMUBuffer slice(int i0, int i1) const;
-
-    typedef std::lock_guard<std::recursive_mutex> Guard;
     mutable std::recursive_mutex buf_lock;
 public:
     std::vector<IMUData> buf;

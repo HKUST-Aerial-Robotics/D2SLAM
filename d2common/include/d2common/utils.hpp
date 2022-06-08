@@ -169,6 +169,9 @@ void removeRows(Matrix<Derived, Dynamic, 1>& matrix, unsigned int rowToRemove, u
 template <typename Derived>
 Quaternion<Derived> averageQuaterions(std::vector<Quaternion<Derived>> quats) {
     Matrix<Derived, 4, 4> M = Matrix4d::Zero();
+    if (quats.size() == 1) {
+        return quats[0];
+    }
     for (auto & q : quats) {
        Vector4d v = q.coeffs(); 
        M += v*v.transpose();
@@ -176,13 +179,7 @@ Quaternion<Derived> averageQuaterions(std::vector<Quaternion<Derived>> quats) {
     SelfAdjointEigenSolver<Matrix<Derived, 4, 4>> solver;
     solver.compute(M);
     Matrix<Derived, 4, 1> eigenvector = solver.eigenvectors().rightCols(1);
-    Quaternion<Derived> q(eigenvector(3), eigenvector(1), eigenvector(2), eigenvector(0));
-    // Matrix<Derived, 1, Dynamic> eigenvalues = solver.eigenvalues();
-    // for (int i = 0; i < eigenvalues.size(); i ++ ) {
-    //     printf("%f, %f %f %f %f\n", solver.eigenvalues()(i), 
-    //         solver.eigenvectors()(0,i), solver.eigenvectors()(1,i), solver.eigenvectors()(2,i), solver.eigenvectors()(3,i));
-    // }
-    // printf("return q w %f xyz %f %f %f\n", q.w(), q.x(), q.y(), q.z());
+    Quaternion<Derived> q(eigenvector(3), eigenvector(0), eigenvector(1), eigenvector(2));
     return q;
 }
 

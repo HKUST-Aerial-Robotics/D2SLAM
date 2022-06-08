@@ -50,6 +50,7 @@ protected:
             loop_detector->processImageArray(frame_desc);
         }
     }
+    
     void distriburedTimerCallback(const ros::TimerEvent & event) {
         Guard guard(esti_lock);
         estimator->solveinDistributedMode();
@@ -88,18 +89,19 @@ public:
         initParams(nh);
         Init(nh);
         estimator = new D2Estimator(params->self_id);
-        d2vins_net = new D2VINSNet(estimator);
-        estimator->init(nh);
+        d2vins_net = new D2VINSNet(estimator, params->lcm_uri);
+        estimator->init(nh, d2vins_net);
         imu_sub  = nh.subscribe(params->imu_topic, 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
         estimator_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::timerCallback, this);
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
             solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
         }
         th = std::thread([&] {
-                while(0 == d2vins_net->lcmHandle()) {
+            ROS_INFO("Starting d2vins_net lcm.");
+            while(0 == d2vins_net->lcmHandle()) {
             }
-            ROS_INFO("D2VINS node initialized. Ready to start.");
         });
+        ROS_INFO("D2VINS node %d initialized. Ready to start.", params->self_id);
     }
 };
 

@@ -195,7 +195,7 @@ namespace D2VINS
             }
             if (jacobians[7])
             {
-                Eigen::Map<Eigen::Matrix<double, 2, 7, Eigen::RowMajor>> jacobian_w_j_k(jacobians[6]);
+                Eigen::Map<Eigen::Matrix<double, 2, 7, Eigen::RowMajor>> jacobian_w_j_k(jacobians[7]);
                 Eigen::Matrix<double, 3, 6> jaco_w_j_k;
                 jaco_w_j_k.leftCols<3>() = J_w_j;
                 jaco_w_j_k.rightCols<3>() = J_w_j * R_w_j_k * Utility::skewSymmetric(pts_w);

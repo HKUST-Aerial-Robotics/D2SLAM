@@ -1,13 +1,36 @@
 #pragma once
 #include <ceres/ceres.h>
 #include "SolverWrapper.hpp"
+#include "ParamInfo.hpp"
+#include <swarm_msgs/lcm_gen/DistributedVinsData_t.hpp>
+#include <swarm_msgs/Pose.h>
+#include <mutex>
 
 namespace D2VINS {
+class D2Estimator;
+class D2EstimatorState;
+typedef std::lock_guard<std::recursive_mutex> Guard;
+
+struct DistributedVinsData {
+    double stamp;
+    int drone_id;
+    std::vector<FrameIdType> frame_ids;
+    std::vector<Swarm::Pose> frame_poses;
+    std::vector<CamIdType> cam_ids;
+    std::vector<Swarm::Pose> extrinsic;
+    std::vector<int> remote_drone_ids;
+    std::vector<Swarm::Pose> relative_coordinates;
+    DistributedVinsData();
+    DistributedVinsData(const DistributedVinsData_t & msg);
+    DistributedVinsData_t toLCM() const;
+};
+
 struct ConsensusSolverConfig {
     int max_steps = 2;
     ceres::Solver::Options ceres_options;
     bool is_sync = true;
     int self_id = 0;
+    int main_id = 1;
 };
 
 struct ConsenusParamState {
@@ -44,13 +67,13 @@ protected:
     double rho_T = 0.1;
     double rho_theta = 0.1;
     int self_id = 0;
+    std::set<int> data_received;
+    std::recursive_mutex buf_lock;
 public:
     ConsensusSolver(D2EstimatorState * _state, ConsensusSolverConfig _config): 
         SolverWrapper(_state), config(_config),
         self_id(config.self_id)
-    {
-        printf("ConsensusSolver: self_id: %d\n", self_id);
-    }
+    {}
     virtual void addResidual(ResidualInfo*residual_info) override;
     ceres::Solver::Summary solve() override;
     ceres::Solver::Summary solveLocalStep();
@@ -58,5 +81,6 @@ public:
     void updateTilde();
     void waitForSync();
     void updateGlobal();
+    void onDistributedVinsData(const DistributedVinsData & dist_data);
 };
 }

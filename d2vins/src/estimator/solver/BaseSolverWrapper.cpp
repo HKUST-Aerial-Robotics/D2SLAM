@@ -1,4 +1,5 @@
 #include "SolverWrapper.hpp"
+#include "ResidualInfo.hpp"
 
 namespace D2VINS {
 void BaseSolverWrapper::addResidual(ResidualInfo*residual_info) {

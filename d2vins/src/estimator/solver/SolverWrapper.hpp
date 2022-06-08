@@ -1,12 +1,11 @@
 #pragma once
 
 #include <iostream>
-#include "ParamInfo.hpp"
-#include "ResidualInfo.hpp"
 #include <ceres/ceres.h>
-#include "../d2vinsstate.hpp"
 
 namespace D2VINS {
+class ResidualInfo;
+class D2EstimatorState;
 class SolverWrapper {
 protected:
     ceres::Problem problem;

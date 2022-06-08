@@ -3,7 +3,6 @@
 #include "utils.hpp"
 #include <swarm_msgs/Odometry.h>
 #include "d2imu.h"
-
 namespace D2Common {
 class IntegrationBase;
 struct VINSFrame {
@@ -33,7 +32,5 @@ struct VINSFrame {
 
     void fromVector(state_type * _pose, state_type * _spd_bias);
 };
-
-
-    
+   
 }

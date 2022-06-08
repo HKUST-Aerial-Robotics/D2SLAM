@@ -117,6 +117,20 @@ const VINSFrame & D2EstimatorState::getFrame(int drone_id, int index) const {
 }
 
 
+Swarm::Pose D2EstimatorState::getEstimatedPose(int drone_id, int index) const {
+    return getFrame(drone_id, index).odom.pose();
+}
+
+Swarm::Pose D2EstimatorState::getEstimatedPose(FrameIdType frame_id) const {
+    auto drone_id = getFrame(frame_id).drone_id;
+    return getFramebyId(frame_id).odom.pose();
+}
+
+Swarm::Odometry D2EstimatorState::getEstimatedOdom(FrameIdType frame_id) const {
+    auto drone_id = getFrame(frame_id).drone_id;
+    return getFramebyId(frame_id).odom;
+}
+
 VINSFrame & D2EstimatorState::firstFrame(int drone_id) {
     const Guard lock(state_lock);
     assert(sld_wins.at(drone_id).size() > 0 && "SLDWIN size must > 1 to call D2EstimatorState::firstFrame()");
@@ -355,6 +369,7 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
             P_w_iks[_frame.drone_id] = P_w_ik;
             P_w_ik_state[_frame.drone_id] = new state_type[POSE_SIZE];
             P_w_ik.to_vector(P_w_ik_state[_frame.drone_id]);
+            printf("\033[0;32m[D2VINS::D2EstimatorState%d] Added %d->%d transform %s\033[0m\n", self_id, _frame.drone_id, self_id, P_w_ik.toStr().c_str());
         }
     } else {
         sld_wins[self_id].emplace_back(frame);
@@ -460,10 +475,19 @@ bool D2EstimatorState::hasLandmark(LandmarkIdType id) const {
     return lmanager.hasLandmark(id);
 }
 
+bool D2EstimatorState::hasFrame(FrameIdType frame_id) const {
+    return frame_db.find(frame_id) != frame_db.end();
+}
+
+bool D2EstimatorState::hasCamera(CamIdType frame_id) const {
+    return extrinsic.find(frame_id) != extrinsic.end();
+}
+
 void D2EstimatorState::printSldWin() const {
     const Guard lock(state_lock);
     for (auto it : sld_wins) {
         printf("=========SLDWIN@drone%d=========\n", it.first);
+        printf("Relative Frame %d->%d : %s\n", it.first, self_id, getPwik(it.first).toStr().c_str());
         for (int i = 0; i < it.second.size(); i ++) {
             printf("index %d frame_id %ld frame: %s\n", i, it.second[i]->frame_id, it.second[i]->toStr().c_str());
         }

@@ -14,6 +14,7 @@ void initParams(ros::NodeHandle & nh) {
     std::string vins_config_path;
     nh.param<std::string>("vins_config_path", vins_config_path, "");
     nh.param<bool>("verbose", params->verbose, false);
+    nh.param<std::string>("lcm_uri", params->lcm_uri, "udpm://224.0.0.251:7667?ttl=1");
     params->init(vins_config_path);
 }
 

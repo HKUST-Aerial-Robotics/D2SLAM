@@ -84,6 +84,10 @@ void D2Visualization::postSolve() {
         for (int i = 0; i < state.size(drone_id); i ++) {
             auto & frame = state.getFrame(drone_id, i);
             CamIdType camera_id = *state.getAvailableCameraIds().begin();
+            auto frame_pose = frame.odom.pose();
+            if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+                
+            }
             auto cam_pose = frame.odom.pose()*state.getExtrinsic(camera_id);
             cam_visual.addPose(cam_pose.pos(), cam_pose.att(), drone_colors[drone_id], display_alpha);
         }

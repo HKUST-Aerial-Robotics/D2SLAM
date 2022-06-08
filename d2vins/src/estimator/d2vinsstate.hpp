@@ -3,6 +3,8 @@
 #include <d2common/d2vinsframe.h>
 
 using namespace Eigen;
+using namespace D2Common;
+
 namespace D2VINS {
 class Marginalizer;
 class PriorFactor;
@@ -42,6 +44,7 @@ public:
     //Get states
     double * getPoseState(FrameIdType frame_id) const;
     int getPoseIndex(FrameIdType frame_id) const;
+    bool hasFrame(FrameIdType frame_id) const;
     double * getExtrinsicState(int i) const;
     double * getSpdBiasState(FrameIdType frame_id) const;
     double * getLandmarkState(LandmarkIdType landmark_id) const;
@@ -63,6 +66,7 @@ public:
     std::vector<LandmarkPerId> clearFrame();
     void addFrame(const VisualImageDescArray & images, const VINSFrame & _frame);
     void addCamera(const Swarm::Pose & pose, int camera_index, int camera_id=-1);
+    bool hasCamera(CamIdType frame_id) const;
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
 
     //Frame access    
@@ -75,6 +79,9 @@ public:
     size_t size() const;
     std::set<int> availableDrones() const;
     VINSFrame & getFrame(int drone_id, int index);
+    Swarm::Pose getEstimatedPose(int drone_id, int index) const;
+    Swarm::Pose getEstimatedPose(FrameIdType frame_id) const;
+    Swarm::Odometry getEstimatedOdom(FrameIdType frame_id) const;
     const VINSFrame & getFrame(int drone_id, int index) const;
     VINSFrame & firstFrame(int drone_id);
     const VINSFrame &  lastFrame(int drone_id) const;

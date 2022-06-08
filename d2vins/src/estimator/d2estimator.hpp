@@ -12,6 +12,15 @@ using D2Common::VisualImageDescArray;
 
 namespace D2VINS {
 class Marginalizer;
+class D2VINSNet;
+struct DistributedVinsData;
+
+enum SyncSignal {
+    DSolverAbort = 0,
+    DSolverReady,
+    DSolverStart
+};
+
 class D2Estimator {
 protected:
     //Internal states
@@ -22,6 +31,7 @@ protected:
     std::map<int, Swarm::Odometry> last_prop_odom; //last imu propagation odometry
     Marginalizer * marginalizer = nullptr;
     SolverWrapper * solver = nullptr;
+    D2VINSNet * vinsnet = nullptr;
     int solve_count = 0;
     int current_landmark_num = 0;
     std::set<int> used_camera_sets;
@@ -30,6 +40,9 @@ protected:
     int self_id;
     int frame_count = 0;
     D2Visualization visual;
+    std::set<int> ready_drones;
+    bool ready_to_start = false;
+    std::map<FrameIdType, int> keyframe_measurements;
     
     //Internal functions
     bool tryinitFirstPose(VisualImageDescArray & frame);
@@ -47,6 +60,11 @@ protected:
     void addRemoteImuBuf(int drone_id, const IMUBuffer & imu_buf);
     bool isLocalFrame(FrameIdType frame_id) const;
     bool isMain() const;
+    bool updated = false;
+
+    //Multi-drone functions
+    void onDistributedVinsData(const DistributedVinsData & dist_data);
+    void onSyncSignal(int drone_id, int signal);
 public:
     D2Estimator(int drone_id);
     void inputImu(IMUData data);
@@ -56,8 +74,13 @@ public:
     Swarm::Odometry getImuPropagation() const;
     Swarm::Odometry getOdometry() const;
     Swarm::Odometry getOdometry(int drone_id) const;
-    void init(ros::NodeHandle & nh);
+    void init(ros::NodeHandle & nh, D2VINSNet * net);
     D2EstimatorState & getState();
     std::vector<LandmarkPerId> getMarginedLandmarks() const;
+
+    //Multi-drone comm protocol
+    void sendDistributedVinsData(const DistributedVinsData & data);
+    void sendSyncSignal(SyncSignal data);
+    bool readyForStart();
 };
 }

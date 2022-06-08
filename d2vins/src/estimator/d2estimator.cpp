@@ -13,13 +13,14 @@
 #include <d2frontend/utils.h>
 #include "marginalization/marginalization.hpp"
 #include "solver/ConsensusSolver.hpp"
+#include "../network/d2vins_net.hpp"
 
 namespace D2VINS {
 
 D2Estimator::D2Estimator(int drone_id):
     self_id(drone_id), state(drone_id) {}
 
-void D2Estimator::init(ros::NodeHandle & nh) {
+void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
     state.init(params->camera_extrinsics, params->td_initial);
     ProjectionTwoFrameOneCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionOneFrameTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
@@ -33,6 +34,13 @@ void D2Estimator::init(ros::NodeHandle & nh) {
         Swarm::Pose ext = state.getExtrinsic(cam_id);
         printf("[D2VINS::D2Estimator] extrinsic %d: %s\n", cam_id, ext.toStr().c_str());
     }
+    vinsnet = net;
+    vinsnet->DistributedVinsData_callback = [&](DistributedVinsData msg) {
+        onDistributedVinsData(msg);
+    };
+    vinsnet->DistributedSync_callback = [&](int drone_id, int signal) {
+        onSyncSignal(drone_id, signal);
+    };
 }
 
 void D2Estimator::inputImu(IMUData data) {
@@ -100,7 +108,7 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
     bool success = cv::solvePnPRansac(pts3d, pts2d, K, D, rvec, t, true, params->pnp_iteratives,  3, 0.99,  inliers);
     auto pose_cam = D2FrontEnd::PnPRestoCamPose(rvec, t);
     auto pose_imu = pose_cam*image.extrinsic.inverse();
-    // printf("[D2VINS::D2Estimator] PnP initial %s final %s points %d\n", pose.toStr().c_str(), pose_imu.toStr().c_str(), pts3d.size());
+    printf("[D2VINS::D2Estimator@%d] PnP initial %s final %s points %d\n", self_id, pose_cam.toStr().c_str(), pose_imu.toStr().c_str(), pts3d.size());
     return std::make_pair(success, pose_imu);
 }
 
@@ -190,8 +198,8 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
             vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
         }
         auto ego_last = last_frame.initial_ego_pose;
-        auto ego_cur = _frame.pose_drone;
-        auto pred_cur_pose = last_frame.odom.pose() * ego_last.inverse()*ego_cur;
+        auto pose_local_cur = _frame.pose_drone;
+        auto pred_cur_pose = last_frame.odom.pose() * ego_last.inverse()*pose_local_cur;
         if (params->verbose) {
             printf("[D2VINS::D2Estimator] Initial remoteframe %ld@drone%d with ego-motion: %s\n",
                 _frame.frame_id, r_drone_id, pred_cur_pose.toStr().c_str());
@@ -204,7 +212,8 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
         if (!pnp_init.first) {
             //Use IMU
             if (params->verbose) {
-                printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed for remote %d@%d.\033[0m\n", _frame.frame_id, _frame.drone_id);
+                printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed for remote %d@%d. will not add\033[0m\n", _frame.frame_id, _frame.drone_id);
+                return;
             }
         } else {
             if (params->verbose) {
@@ -235,6 +244,7 @@ void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
         state.clearFrame();
         solveNonDistrib();
     }
+    updated = true;
 }
 
 bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
@@ -262,6 +272,7 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     }
     addSldWinToFrame(_frame);
     frame_count ++;
+    updated = true;
     return true;
 }
 
@@ -272,19 +283,33 @@ void D2Estimator::setStateProperties() {
     ceres::Problem & problem = solver->getProblem();
     auto pose_local_param = new PoseLocalParameterization;
     //set LocalParameterization
-    for (auto & drone_id : state.availableDrones()) {
-        if (state.size(drone_id) > 0) {
-            for (size_t i = 0; i < state.size(drone_id); i ++) {
-                auto frame_a = state.getFrame(drone_id, i);
-                problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
+    if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        //In server mode and solve all mode. All remote poses should be set to parameterzation
+        for (auto & drone_id : state.availableDrones()) {
+            if (state.size(drone_id) > 0) {
+                for (size_t i = 0; i < state.size(drone_id); i ++) {
+                    auto frame_a = state.getFrame(drone_id, i);
+                    problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
+                }
+            }
+            
+        }
+    } else {
+        for (size_t i = 0; i < state.size(); i ++) {
+            auto frame_a = state.getFrame(i);
+            problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
+        }
+        for (auto it: keyframe_measurements) {
+            if (state.getFramebyId(it.first).drone_id != self_id) {
+                problem.SetParameterization(state.getPoseState(it.first), pose_local_param);
             }
         }
-        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        for (auto & drone_id : state.availableDrones()) {
             if (relative_frame_is_used[drone_id]) {
                 if (drone_id == self_id) {
                     problem.SetParameterBlockConstant(state.getPwikState(drone_id));
                 } else {
-                        problem.SetParameterization(state.getPwikState(drone_id), pose_local_param);
+                    problem.SetParameterization(state.getPwikState(drone_id), pose_local_param);
                 }
             }
         }
@@ -321,10 +346,49 @@ bool D2Estimator::isMain() const {
     return self_id == 1; //Temp code/
 }
 
+void D2Estimator::onDistributedVinsData(const DistributedVinsData & dist_data) {
+    printf("Received DistributedVinsData\n");
+    static_cast<ConsensusSolver *>(solver)->onDistributedVinsData(dist_data);
+}
+
+void D2Estimator::onSyncSignal(int drone_id, int signal) {
+    if (signal == DSolverReady) {
+        ready_drones.insert(drone_id);
+        if (params->verbose) {
+            // printf("[D2VINS::D2Estimator@%d] Drone %d is ready. Currently ready drone %ld\n", self_id, drone_id, ready_drones.size());
+        }
+    }
+    if (signal == DSolverStart) {
+        ready_to_start = true;
+    }
+    if (isMain() && ready_drones.size() == state.availableDrones().size()) {
+        ready_to_start = true;
+        if (params->verbose) {
+            // printf("[D2VINS::D2Estimator@%d] All drones are ready. Main will start the optimization\n", self_id);
+        }
+    }
+}
+
+void D2Estimator::sendDistributedVinsData(const DistributedVinsData & data) {
+    vinsnet->sendDistributedVinsData(data);
+}
+
+void D2Estimator::sendSyncSignal(SyncSignal data) {
+    vinsnet->sendSyncSignal((int) data);
+}
+
+bool D2Estimator::readyForStart() {
+    if (state.availableDrones().size() == 1) {
+        return true;
+    }
+    return ready_to_start;
+}
+
 void D2Estimator::solveinDistributedMode() {
-    if (state.size() < params->min_solve_frames) {
+    if (state.size() < params->min_solve_frames || !updated) {
         return;
     }
+    updated = false;
 
     relative_frame_is_used.clear();
     for (auto & drone_id : state.availableDrones()) {
@@ -339,17 +403,35 @@ void D2Estimator::solveinDistributedMode() {
     solve_count ++;
     state.preSolve(remote_imu_bufs);
     used_camera_sets.clear(); 
-    if (solver != nullptr) {
-        delete solver;
+    if (this->solver != nullptr) {
+        delete this->solver;
     }
     
-    solver = new ConsensusSolver(&state, *params->consensus_config);
-
+    ConsensusSolver * solver = new ConsensusSolver(&state, *params->consensus_config);
+    this->solver = solver;
     setupImuFactors();
     setupLandmarkFactors();
     setupPriorFactor();
     setStateProperties();
-
+    
+    ready_drones = std::set<int>{self_id};
+    if (params->verbose) {
+        printf("[D2VINS::D2Estimator@%d] ready, wait for start signal...\n", self_id);
+    }
+    while(!readyForStart()) {
+       sendSyncSignal(SyncSignal::DSolverReady);
+       usleep(100);
+    }
+    if (isMain()) {
+        sendSyncSignal(SyncSignal::DSolverStart);
+    }
+    if (params->verbose) {
+        printf("[D2VINS::D2Estimator@%d] All drones read start solving...\n", self_id);
+    }
+    ready_to_start = false;
+    // printf("Print SLd win before solve: \n");
+    // state.printSldWin();
+    
     ceres::Solver::Summary summary = solver->solve();
     state.syncFromState();
 
@@ -387,6 +469,7 @@ void D2Estimator::solveinDistributedMode() {
         std::cout << summary.message << std::endl;
         exit(1);
     }
+    // exit(0);
 }
 
 void D2Estimator::solveNonDistrib() {
@@ -504,7 +587,7 @@ void D2Estimator::setupLandmarkFactors() {
     current_landmark_num = lms.size();
     auto loss_function = new ceres::HuberLoss(1.0);    
     int residual_count = 0;
-    std::map<FrameIdType, int> keyframe_measurements;
+    keyframe_measurements.clear();
     if (params->verbose) {
         printf("[D2VINS::setupLandmarkFactors] %d landmarks\n", lms.size());
     }
@@ -513,12 +596,10 @@ void D2Estimator::setupLandmarkFactors() {
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
             if (lm.solver_id == -1 && lm.drone_id != self_id) {
                 // This is a internal only remote landmark
-                printf("[D2VINS::setupLandmarkFactors] skip remote landmark %d solver_id %ld drone_id %ld\n", lm_id, lm.solver_id, lm.drone_id);
-                continue;
+                // continue;
             }
             if (lm.solver_id > 0 && lm.solver_id != self_id) {
-                printf("[D2VINS::setupLandmarkFactors] skip remote landmark %d solver_id %ld drone_id %ld\n", lm_id, lm.solver_id, lm.drone_id);
-                continue;
+                // continue;
             }
         }
         LandmarkPerFrame firstObs = lm.track[0];
@@ -650,5 +731,4 @@ D2EstimatorState & D2Estimator::getState() {
 bool D2Estimator::isLocalFrame(FrameIdType frame_id) const {
     return state.getFramebyId(frame_id).drone_id == self_id;
 }
-
 }

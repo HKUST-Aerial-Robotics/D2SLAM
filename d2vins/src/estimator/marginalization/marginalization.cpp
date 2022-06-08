@@ -1,4 +1,5 @@
 #include "marginalization.hpp"
+#include "../d2vinsstate.hpp"
 #include <d2common/utils.hpp>
 #include "../../factors/prior_factor.h"
 #include "../../factors/imu_factor.h"
