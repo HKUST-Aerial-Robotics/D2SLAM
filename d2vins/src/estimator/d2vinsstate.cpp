@@ -251,10 +251,13 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
     if (params->enable_marginalization && clear_key_frames.size() > 0) {
         //At this time, non-keyframes is also removed, so add them to remove set to avoid pointer issue.
         clear_key_frames.insert(clear_frames.begin(), clear_frames.end());
-        if (prior_factor!=nullptr) {
-            delete prior_factor;
+        auto prior_return = marginalizer->marginalize(clear_key_frames);
+        if (prior_return!=nullptr) {
+            if (prior_factor!=nullptr) {
+                delete prior_factor;
+            }
+            prior_factor = prior_return;
         }
-        prior_factor = marginalizer->marginalize(clear_key_frames);
     }
     if (prior_factor != nullptr) {
         std::vector<ParamInfo> keeps = prior_factor->getKeepParams();
@@ -262,7 +265,6 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
             if (clear_frames.find(p.id)!=clear_frames.end()) {
                 if (params->verbose)
                     printf("[D2EstimatorState::clearFrame] Removed Frame %ld in prior is removed from prior\n", p.id);
-                std::cout << std::endl;
                 prior_factor->removeFrame(p.id);
             }
         }

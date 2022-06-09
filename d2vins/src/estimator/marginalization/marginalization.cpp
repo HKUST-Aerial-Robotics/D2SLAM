@@ -136,7 +136,10 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     auto eff_residual_size = filterResiduals();
     
     sortParams(); //sort the parameters
-    
+    if (keep_block_size == 0 || remove_state_dim == 0) {
+        printf("\033[0;31m[D2VINS::Marginalizer::marginalize] keep_block_size=%d remove_state_dim%d\033[0m\n", keep_block_size, remove_state_dim);
+        return nullptr;
+    }
     int keep_state_dim = total_eff_state_dim - remove_state_dim;
     TicToc tt;
     SparseMat J(eff_residual_size, total_eff_state_dim);
@@ -145,10 +148,6 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     VectorXd g = J.transpose()*b; //Ignore -b here and also in prior_factor.cpp toJacRes to reduce compuation
     if (params->enable_perf_output) {
         printf("[D2VINS::Marginalizer::marginalize] JtJ cost %.1fms\n", tt.toc());
-    }
-    if (keep_block_size == 0 || remove_state_dim == 0) {
-        printf("\033[0;31m[D2VINS::Marginalizer::marginalize] keep_block_size=%d remove_state_dim%d\033[0m\n", keep_block_size, remove_state_dim);
-        return nullptr;
     }
     std::vector<ParamInfo> keep_params_list(params_list.begin(), params_list.begin() + keep_block_size);
     //Compute the schur complement, by sparse LLT.
