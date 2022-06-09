@@ -19,6 +19,9 @@ struct ConsensusSolverConfig {
     int self_id = 0;
     int main_id = 1;
     double timout_wait_sync = 100;
+    double rho_landmark = 0.0;
+    double rho_frame_T = 0.1;
+    double rho_frame_theta = 0.1;
 };
 
 struct ConsenusParamState {
@@ -62,12 +65,17 @@ protected:
     int iteration_count = 0;
 
     void updateWithDistributedVinsData(const DistributedVinsData & dist_data);
+    void broadcastDistributedVinsData();
 public:
     ConsensusSolver(D2Estimator * _estimator, D2EstimatorState * _state, SyncDataReceiver * _receiver, 
             ConsensusSolverConfig _config, int _solver_token): 
         estimator(_estimator), SolverWrapper(_state), receiver(_receiver), config(_config), 
         self_id(config.self_id), solver_token(_solver_token)
-    {}
+    {
+        rho_landmark = config.rho_landmark;
+        rho_T = config.rho_frame_T;
+        rho_theta = config.rho_frame_theta;
+    }
 
     virtual void addResidual(ResidualInfo*residual_info) override;
     ceres::Solver::Summary solve() override;

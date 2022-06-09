@@ -443,13 +443,13 @@ void D2Estimator::solveinDistributedMode() {
 
     if (params->enable_perf_output) {
         std::cout << summary.BriefReport() << std::endl;
-        printf("[D2VINS::solveinDistributedMode] average time %.1fms, average time of iter: %.1fms, average iteration %.3f, average cost %.3f\n", 
-            sum_time*1000/solve_count, sum_time*1000/sum_iteration, sum_iteration/solve_count, sum_cost/solve_count);
+        printf("[D2VINS::solveinDistributedMode@%d] average time %.1fms, average time of iter: %.1fms, average iteration %.3f, average cost %.3f\n", 
+            self_id, sum_time*1000/solve_count, sum_time*1000/sum_iteration, sum_iteration/solve_count, sum_cost/solve_count);
     }
 
     auto last_odom = state.lastFrame().odom;
-    printf("[D2VINS::solveinDistributedMode] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
-        current_landmark_num, last_odom.toStr().c_str(), state.td*1000, summary.total_time_in_seconds*1000);
+    printf("[D2VINS::solveinDistributedMode@%d] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
+        self_id, current_landmark_num, last_odom.toStr().c_str(), state.td*1000, summary.total_time_in_seconds*1000);
 
     // Reprogation
     for (auto drone_id : state.availableDrones()) {
@@ -676,16 +676,16 @@ void D2Estimator::setupLandmarkFactors() {
             printf("\033[0;31m[D2VINS::D2Estimator] frame_id %ld has only %d measurements\033[0m\n Related landmarks:\n", 
                 frame_id, it.second);
             std::vector<LandmarkPerId> related_landmarks = state.getRelatedLandmarks(frame_id);
-            if (params->verbose) {
-                for (auto lm : related_landmarks) {
-                    printf("Landmark %ld tracks %ld flag %d\n", lm.landmark_id, lm.track.size(), lm.flag);
-                }
-                printf("====================");
-            }
+            // if (params->verbose) {
+            //     for (auto lm : related_landmarks) {
+            //         printf("Landmark %ld tracks %ld flag %d\n", lm.landmark_id, lm.track.size(), lm.flag);
+            //     }
+            //     printf("====================");
+            // }
         }
     }
     if (params->verbose) {
-        printf("[D2VINS::setupLandmarkFactors] %d residuals\n", lms.size());
+        printf("[D2VINS::setupLandmarkFactors@%d] %d residuals\n", self_id, lms.size());
     }
 }
 

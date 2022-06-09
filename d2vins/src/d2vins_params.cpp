@@ -113,6 +113,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     ceres_options.max_solver_time_in_seconds = solver_time;
     ceres_options.max_num_iterations = fsSettings["max_num_iterations"];
 
+    //Consenus Solver
     consensus_config = new ConsensusSolverConfig;
     consensus_config->ceres_options.linear_solver_type = ceres::DENSE_SCHUR;
     consensus_config->ceres_options.num_threads = 1;
@@ -122,6 +123,9 @@ void D2VINSConfig::init(const std::string & config_file) {
     consensus_config->max_steps = fsSettings["consensus_max_steps"];
     consensus_config->self_id = self_id;
     consensus_config->timout_wait_sync = fsSettings["timout_wait_sync"];
+    consensus_config->rho_landmark = fsSettings["rho_landmark"];
+    consensus_config->rho_frame_T = fsSettings["rho_frame_T"];
+    consensus_config->rho_frame_theta = fsSettings["rho_frame_theta"];
 
 }
 

@@ -27,6 +27,7 @@ ceres::Solver::Summary ConsensusSolver::solve() {
     ceres::Solver::Summary summary;
     for (int i = 0; i < config.max_steps; i++) {
         //If sync mode.
+        broadcastDistributedVinsData();
         if (config.is_sync) {
             problem = new ceres::Problem();
             for (auto residual_info : residuals) {
@@ -38,11 +39,9 @@ ceres::Solver::Summary ConsensusSolver::solve() {
                     problem->SetParameterLowerBound(it.first, 0, params->min_inv_dep);
                 }
             }
-            if (i > 0) {
-                waitForSync(); 
-                updateGlobal();
-                updateTilde();
-            }
+            waitForSync(); 
+            updateGlobal();
+            updateTilde();
             estimator->setStateProperties();
         }
         summary = solveLocalStep();
@@ -58,7 +57,7 @@ void ConsensusSolver::waitForSync() {
     std::vector<DistributedVinsData> sync_datas;
     while (tic.toc() < config.timout_wait_sync) {
         //Wait for remote data
-        auto ret = receiver->retrive(solver_token, iteration_count - 1);
+        auto ret = receiver->retrive(solver_token, iteration_count);
         sync_datas.insert(sync_datas.end(), ret.begin(), ret.end());
         usleep(100);
         if (ret.size() == state->availableDrones().size() - 1) {
@@ -99,11 +98,10 @@ void ConsensusSolver::updateTilde() {
             auto & tilde = consenus_param.param_tilde;
             tilde += pose_err.tangentSpace();
             // printf("update tilde %d:\n", paraminfo.id);
-            // std::cout << "pose_global" << pose_global.toStr() << std::endl;
-            // std::cout << "pose_local" << pose_local.toStr() << std::endl;
-            // std::cout << "pose_err" << pose_err.toStr() << std::endl;
-            // std::cout << "tilde" << tilde.transpose() << std::endl << std::endl;
-            auto factor = new ConsenusPoseFactor(pose_local.pos(), pose_local.att(), 
+            printf("[updateTilde%d] frame %d pose_local %s pose_global %s tilde :", self_id, 
+                    paraminfo.id, pose_local.toStr().c_str(), pose_global.toStr().c_str());
+            std::cout << "tilde" << tilde.transpose() << std::endl << std::endl;
+            auto factor = new ConsenusPoseFactor(pose_global.pos(), pose_global.att(), 
                 tilde.segment<3>(0), tilde.segment<3>(3), rho_T, rho_theta);
             problem->AddResidualBlock(factor, nullptr, pointer);
         } else {
@@ -114,6 +112,9 @@ void ConsensusSolver::updateTilde() {
             tilde += x_local - x_global;
             MatrixXd A(paraminfo.size, paraminfo.size);
             A.setIdentity();
+            if (paraminfo.type == LANDMARK) {
+                A *= rho_landmark;
+            }
             auto factor = new ceres::NormalPrior(A, x_global - tilde);
             problem->AddResidualBlock(factor, nullptr, pointer);
         }
@@ -177,6 +178,10 @@ ceres::Solver::Summary ConsensusSolver::solveLocalStep() {
     ceres::Solve(config.ceres_options, problem, &summary);
     std::cout << summary.BriefReport() << std::endl;
 
+    return summary;
+}
+
+void ConsensusSolver::broadcastDistributedVinsData() {
     //sync pointers to remote_params.
     for (auto it: consenus_params) {
         auto pointer = it.first;
@@ -191,23 +196,22 @@ ceres::Solver::Summary ConsensusSolver::solveLocalStep() {
     }
 
     DistributedVinsData dist_data;
-    for (size_t i = 0; i < state->size(); i ++) {
-        auto frame = state->getFrame(i);
-        auto pointer = state->getPoseState(frame.frame_id);
-        dist_data.frame_ids.emplace_back(frame.frame_id);
-        dist_data.frame_poses.emplace_back(Swarm::Pose(pointer));
-    }
-    for (auto cam_id : state->getAvailableCameraIds()) {
-        auto pointer = state->getExtrinsicState(cam_id);
-        dist_data.cam_ids.emplace_back(cam_id);
-        dist_data.extrinsic.emplace_back(Swarm::Pose(pointer));
+    for (auto it: all_estimating_params) {
+        auto pointer = it.first;
+        auto param = it.second;
+        if (param.type == POSE) {
+            dist_data.frame_ids.emplace_back(param.id);
+            dist_data.frame_poses.emplace_back(Swarm::Pose(pointer));
+        } else if (param.type == EXTRINSIC) {
+            dist_data.cam_ids.emplace_back(param.id);
+            dist_data.extrinsic.emplace_back(Swarm::Pose(pointer));
+        }
     }
     dist_data.stamp = ros::Time::now().toSec();
     dist_data.drone_id = self_id;
     dist_data.solver_token = solver_token;
     dist_data.iteration_count = iteration_count;
     estimator->sendDistributedVinsData(dist_data);
-    return summary;
 }
 
 void ConsensusSolver::updateWithDistributedVinsData(const DistributedVinsData & dist_data) {
@@ -217,6 +221,10 @@ void ConsensusSolver::updateWithDistributedVinsData(const DistributedVinsData & 
             auto pointer = state->getPoseState(frame_id);
             remote_params[pointer][dist_data.drone_id] = VectorXd(POSE_SIZE);
             dist_data.frame_poses[i].to_vector(remote_params[pointer][dist_data.drone_id].data());
+            Swarm::Pose local(pointer);
+            printf("[updateWithDistributedVinsData%d]pose id %d remote %s local %s\n", self_id, frame_id, 
+                dist_data.frame_poses[i].toStr().c_str(),
+                local.toStr().c_str());
         }
     }
 

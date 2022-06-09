@@ -87,7 +87,7 @@ target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}_MSCKF
   ${PROJECT_NAME}_estimator
   ${CERES_LIBRARIES}
-  # dw
+  dw
   lcm
 )
 

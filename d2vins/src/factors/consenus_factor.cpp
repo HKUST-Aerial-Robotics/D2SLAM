@@ -18,10 +18,10 @@ bool ConsenusPoseFactor::Evaluate(double const *const *parameters, double *resid
     
     Matrix3d R_ref_inv = q_ref.toRotationMatrix().transpose();
 
-    Eigen::Quaterniond q_err = Utility::positify(q_ref.inverse() * q_local);
+    Eigen::Quaterniond q_err = q_ref.inverse() * q_local;
     theta_err = 2.0 * q_err.vec();
-    theta_err = q_sqrt_info * (theta_err - theta_tilde);
-    T_err = T_sqrt_info*(R_ref_inv*(T_local - t_ref) - t_tilde);
+    theta_err = q_sqrt_info * (theta_err + theta_tilde);
+    T_err = T_sqrt_info*(R_ref_inv*(T_local - t_ref) + t_tilde);
     if (T_err.hasNaN()) {
         std::cout << "q_ref" << q_ref.coeffs().transpose() << std::endl;
         std::cout << "t_ref" << t_ref.transpose() << std::endl;
