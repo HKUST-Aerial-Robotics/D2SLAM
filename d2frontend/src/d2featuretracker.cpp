@@ -133,10 +133,10 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, bool skip_who
                     //     remote_lm.landmark_id, local_to_remote[local_lm.landmark_id][frame.drone_id], local_lm.landmark_id, frame.camera_id);
                     local_to_remote[local_lm.landmark_id][frame.drone_id] = remote_lm.landmark_id;
                     remote_lm.landmark_id = local_lm.landmark_id;
-                    if (remote_lm.stamp_discover < local_lm.stamp_discover) {
-                        remote_lm.solver_id = frame.drone_id;
-                    } else {
+                    if (_config.double_counting_common_feature || local_lm.stamp_discover < remote_lm.stamp_discover) {
                         remote_lm.solver_id = params->self_id;
+                    } else {
+                        remote_lm.solver_id = frame.drone_id;
                     }
                     // printf("[D2FeatureTracker::trackRemote] landmark %ld will solve by %ld\n",
                     //         remote_lm.landmark_id, remote_lm.solver_id);

@@ -25,6 +25,7 @@ struct D2FTConfig {
     double ransacReprojThreshold = 10;
     double max_pts_velocity_time=0.3;
     int remote_min_match_num = 30;
+    bool double_counting_common_feature = false;
     std::string output_folder = "/root/output/";
 };
 

@@ -359,6 +359,7 @@ void D2Estimator::onSyncSignal(int drone_id, int signal, int64_t token) {
         //First drone start or claim non dist
         ready_to_start = true;
         solve_token = token;
+        printf("[D2Estimator::onSyncSignal@%d] Start signal received from %d.\n", self_id, drone_id);
     }
     if (isMain() && ready_drones.size() == state.availableDrones().size()) {
         ready_to_start = true;
@@ -381,6 +382,13 @@ bool D2Estimator::readyForStart() {
         return true;
     }
     return ready_to_start;
+}
+
+void D2Estimator::waitForStart() {
+    while(!readyForStart()) {
+        sendSyncSignal(SyncSignal::DSolverReady, -1);
+        usleep(100);
+    }
 }
 
 void D2Estimator::resetMarginalizer() {
@@ -415,10 +423,7 @@ void D2Estimator::solveinDistributedMode() {
         if (params->verbose) {
             printf("[D2VINS::D2Estimator@%d] ready, wait for start signal...\n", self_id);
         }
-        while(!readyForStart()) {
-            sendSyncSignal(SyncSignal::DSolverReady, -1);
-            usleep(100);
-        }
+        waitForStart();
         if (isMain()) {
             solve_token += 1;
             sendSyncSignal(SyncSignal::DSolverStart, solve_token);

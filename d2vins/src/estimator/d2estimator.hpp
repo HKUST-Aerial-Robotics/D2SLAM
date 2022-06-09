@@ -70,6 +70,7 @@ protected:
     //Multi-drone functions
     void onDistributedVinsData(const DistributedVinsData & dist_data);
     void onSyncSignal(int drone_id, int signal, int64_t token);
+    void waitForStart();
 public:
     void setStateProperties();
     D2Estimator(int drone_id);

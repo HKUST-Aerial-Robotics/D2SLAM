@@ -69,6 +69,7 @@ namespace D2FrontEnd {
         ftconfig->check_homography = (int) fsSettings["check_homography"];
         ftconfig->enable_lk_optical_flow = (int) fsSettings["enable_lk_optical_flow"];
         ftconfig->remote_min_match_num = fsSettings["remote_min_match_num"];
+        ftconfig->double_counting_common_feature = (int) fsSettings["double_counting_common_feature"];
         vlad_threshold = fsSettings["vlad_threshold"];
         nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
