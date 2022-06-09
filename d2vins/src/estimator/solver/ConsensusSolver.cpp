@@ -53,7 +53,9 @@ ceres::Solver::Summary ConsensusSolver::solve() {
 void ConsensusSolver::waitForSync() {
     //Wait for all remote drone to publish result.
     TicToc tic;
-    printf("[ConsensusSolver::waitForSync@%d] token %d iteration %d\n", self_id, solver_token, iteration_count - 1);
+    if (params->verbose) {
+        printf("[ConsensusSolver::waitForSync@%d] token %d iteration %d\n", self_id, solver_token, iteration_count - 1);
+    }
     std::vector<DistributedVinsData> sync_datas;
     while (tic.toc() < config.timout_wait_sync) {
         //Wait for remote data
@@ -67,8 +69,10 @@ void ConsensusSolver::waitForSync() {
     for (auto data: sync_datas) {
         updateWithDistributedVinsData(data);
     }
-    printf("[ConsensusSolver::waitForSync@%d] receive finsish %ld/%ld time %.1f/%.1fms\n", 
-            self_id, sync_datas.size() + 1, state->availableDrones().size(), tic.toc(), config.timout_wait_sync);
+    if (params->verbose) {
+        printf("[ConsensusSolver::waitForSync@%d] receive finsish %ld/%ld time %.1f/%.1fms\n", 
+                self_id, sync_datas.size() + 1, state->availableDrones().size(), tic.toc(), config.timout_wait_sync);
+    }
 }
 
 void ConsensusSolver::updateTilde() {
@@ -175,8 +179,6 @@ void ConsensusSolver::updateGlobal() {
 ceres::Solver::Summary ConsensusSolver::solveLocalStep() {
     ceres::Solver::Summary summary;
     ceres::Solve(config.ceres_options, problem, &summary);
-    std::cout << summary.BriefReport() << std::endl;
-
     return summary;
 }
 
@@ -221,9 +223,6 @@ void ConsensusSolver::updateWithDistributedVinsData(const DistributedVinsData & 
             remote_params[pointer][dist_data.drone_id] = VectorXd(POSE_SIZE);
             dist_data.frame_poses[i].to_vector(remote_params[pointer][dist_data.drone_id].data());
             Swarm::Pose local(pointer);
-            // printf("[updateWithDistributedVinsData%d]pose id %d remote %s local %s\n", self_id, frame_id, 
-            //     dist_data.frame_poses[i].toStr().c_str(),
-            //     local.toStr().c_str());
         }
     }
 
@@ -236,9 +235,10 @@ void ConsensusSolver::updateWithDistributedVinsData(const DistributedVinsData & 
         }
     }
 
-    //Consenus Pwik
-    printf("[ConsensusSolver::updateWithDistributedVinsData@%d] of drone %ld: solver token %ld iteration %ld\n",
-        self_id, dist_data.drone_id, dist_data.solver_token, dist_data.iteration_count);
+    if (params->verbose) {
+        printf("[ConsensusSolver::updateWithDistributedVinsData@%d] of drone %ld: solver token %ld iteration %ld\n",
+            self_id, dist_data.drone_id, dist_data.solver_token, dist_data.iteration_count);
+    }
 }
 
 }

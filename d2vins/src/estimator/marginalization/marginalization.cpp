@@ -132,6 +132,11 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     params_list.clear();
     _params.clear();
     //We first remove all factors that does not evolved frame
+    if (params->verbose) {
+        for (auto frame_id: remove_frame_ids) {
+            printf("[D2VINS::Marginalizer::marginalize] remove frame %d\n", frame_id);
+        }
+    }
 
     auto eff_residual_size = filterResiduals();
     

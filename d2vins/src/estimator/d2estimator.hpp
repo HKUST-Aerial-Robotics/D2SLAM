@@ -19,7 +19,8 @@ struct DistributedVinsData;
 enum SyncSignal {
     DSolverAbort = 0,
     DSolverReady,
-    DSolverStart
+    DSolverStart,
+    DSolverNonDist
 };
 
 class D2Estimator {
@@ -46,6 +47,7 @@ protected:
     bool ready_to_start = false;
     std::map<FrameIdType, int> keyframe_measurements;
     SyncDataReceiver * sync_data_receiver = nullptr;
+    bool updated = false;
     
     //Internal functions
     bool tryinitFirstPose(VisualImageDescArray & frame);
@@ -62,7 +64,8 @@ protected:
     void addRemoteImuBuf(int drone_id, const IMUBuffer & imu_buf);
     bool isLocalFrame(FrameIdType frame_id) const;
     bool isMain() const;
-    bool updated = false;
+    void resetMarginalizer();
+    bool hasCommonLandmarkMeasurments();
 
     //Multi-drone functions
     void onDistributedVinsData(const DistributedVinsData & dist_data);

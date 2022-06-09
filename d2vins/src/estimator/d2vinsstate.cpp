@@ -456,12 +456,16 @@ bool D2EstimatorState::hasDrone(int drone_id) const {
     return all_drones.find(drone_id) != all_drones.end();
 }
 
-void D2EstimatorState::printSldWin() const {
+void D2EstimatorState::printSldWin(const std::map<FrameIdType, int> & keyframe_measurments) const {
     const Guard lock(state_lock);
     for (auto it : sld_wins) {
         printf("=========SLDWIN@drone%d=========\n", it.first);
         for (int i = 0; i < it.second.size(); i ++) {
-            printf("index %d frame_id %ld frame: %s\n", i, it.second[i]->frame_id, it.second[i]->toStr().c_str());
+            int num_mea = 0;
+            if (keyframe_measurments.find(it.second[i]->frame_id) != keyframe_measurments.end()) {
+                num_mea = keyframe_measurments.at(it.second[i]->frame_id);
+            }
+            printf("index %d frame_id %ld measurements %d frame: %s\n", i, it.second[i]->frame_id, num_mea, it.second[i]->toStr().c_str());
         }
         printf("========================\n");
     }

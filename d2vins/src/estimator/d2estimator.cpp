@@ -349,13 +349,14 @@ void D2Estimator::onDistributedVinsData(const DistributedVinsData & dist_data) {
 }
 
 void D2Estimator::onSyncSignal(int drone_id, int signal, int64_t token) {
-    if (signal == DSolverReady) {
+    if (signal == DSolverReady || signal==DSolverNonDist) {
         ready_drones.insert(drone_id);
         if (params->verbose) {
             // printf("[D2VINS::D2Estimator@%d] Drone %d is ready. Currently ready drone %ld\n", self_id, drone_id, ready_drones.size());
         }
     }
-    if (signal == DSolverStart) {
+    if (signal == DSolverStart || (signal==DSolverNonDist && drone_id == 1)) {
+        //First drone start or claim non dist
         ready_to_start = true;
         solve_token = token;
     }
@@ -382,6 +383,14 @@ bool D2Estimator::readyForStart() {
     return ready_to_start;
 }
 
+void D2Estimator::resetMarginalizer() {
+    if (marginalizer!=nullptr) {
+        delete marginalizer;
+    }
+    marginalizer = new Marginalizer(&state);
+    state.setMarginalizer(marginalizer);
+}
+
 void D2Estimator::solveinDistributedMode() {
     if (state.size() < params->min_solve_frames || !updated) {
         return;
@@ -392,14 +401,8 @@ void D2Estimator::solveinDistributedMode() {
     for (auto & drone_id : state.availableDrones()) {
         relative_frame_is_used[drone_id] = false;
     }
-
     margined_landmarks = state.clearFrame();
-
-    if (marginalizer!=nullptr) {
-        delete marginalizer;
-    }
-    marginalizer = new Marginalizer(&state);
-    state.setMarginalizer(marginalizer);
+    resetMarginalizer();
     solve_count ++;
     state.preSolve(remote_imu_bufs);
     used_camera_sets.clear(); 
@@ -407,25 +410,30 @@ void D2Estimator::solveinDistributedMode() {
         delete this->solver;
     }
 
-    ready_drones = std::set<int>{self_id};
-    if (params->verbose) {
-        printf("[D2VINS::D2Estimator@%d] ready, wait for start signal...\n", self_id);
+    if (true || hasCommonLandmarkMeasurments()) {
+        ready_drones = std::set<int>{self_id};
+        if (params->verbose) {
+            printf("[D2VINS::D2Estimator@%d] ready, wait for start signal...\n", self_id);
+        }
+        while(!readyForStart()) {
+            sendSyncSignal(SyncSignal::DSolverReady, -1);
+            usleep(100);
+        }
+        if (isMain()) {
+            solve_token += 1;
+            sendSyncSignal(SyncSignal::DSolverStart, solve_token);
+        }
+        if (params->verbose) {
+            printf("[D2VINS::D2Estimator@%d] All drones read start solving...\n", self_id);
+        }
+        ready_to_start = false;
+        solver = new ConsensusSolver(this, &state, sync_data_receiver, *params->consensus_config, solve_token);
+    } else {
+        //Claim not use a distribured solver.
+        sendSyncSignal(SyncSignal::DSolverNonDist, solve_token);
+        solver = new BaseSolverWrapper(&state);
     }
-    while(!readyForStart()) {
-       sendSyncSignal(SyncSignal::DSolverReady, -1);
-       usleep(100);
-    }
-    if (isMain()) {
-        solve_token += 1;
-        sendSyncSignal(SyncSignal::DSolverStart, solve_token);
-    }
-    if (params->verbose) {
-        printf("[D2VINS::D2Estimator@%d] All drones read start solving...\n", self_id);
-    }
-    ready_to_start = false;
-        
-    ConsensusSolver * solver = new ConsensusSolver(this, &state, sync_data_receiver, *params->consensus_config, solve_token);
-    this->solver = solver;
+
     setupImuFactors();
     setupLandmarkFactors();
     setupPriorFactor();
@@ -460,7 +468,7 @@ void D2Estimator::solveinDistributedMode() {
     visual.postSolve();
 
     if (params->debug_print_states || params->debug_print_sldwin) {
-        state.printSldWin();
+        state.printSldWin(keyframe_measurements);
     }
 
     if (summary.termination_type == ceres::FAILURE)  {
@@ -471,11 +479,7 @@ void D2Estimator::solveinDistributedMode() {
 }
 
 void D2Estimator::solveNonDistrib() {
-    if (marginalizer!=nullptr) {
-        delete marginalizer;
-    }
-    marginalizer = new Marginalizer(&state);
-    state.setMarginalizer(marginalizer);
+    resetMarginalizer();
     solve_count ++;
     state.preSolve(remote_imu_bufs);
     used_camera_sets.clear(); 
@@ -525,7 +529,7 @@ void D2Estimator::solveNonDistrib() {
     visual.postSolve();
 
     if (params->debug_print_states || params->debug_print_sldwin) {
-        state.printSldWin();
+        state.printSldWin(keyframe_measurements);
     }
 
     if (summary.termination_type == ceres::FAILURE)  {
@@ -578,6 +582,25 @@ void D2Estimator::setupImuFactors() {
             }
         }
     }
+}
+
+bool D2Estimator::hasCommonLandmarkMeasurments() {
+    auto lms = state.availableLandmarkMeasurements();
+    for (auto lm : lms) {
+        if (lm.solver_id == -1 && lm.drone_id != self_id) {
+            // This is a internal only remote landmark
+            continue;
+        }
+        if (lm.solver_id > 0 && lm.solver_id != self_id) {
+            continue;
+        }
+            for (auto i = 0; i < lm.track.size(); i++) {
+                if (state.getFramebyId(lm.track[i].frame_id).drone_id != self_id) {
+                    return true;
+            }
+        }
+    }
+    return false;
 }
 
 void D2Estimator::setupLandmarkFactors() {

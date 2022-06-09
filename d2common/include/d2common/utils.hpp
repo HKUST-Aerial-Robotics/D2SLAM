@@ -79,6 +79,9 @@ static Eigen::SparseMatrix<Derived> inverse(const Eigen::SparseMatrix<Derived> &
     I.setIdentity();
     Eigen::SimplicialLLT<Eigen::SparseMatrix<Derived>> solver;
     solver.compute(A);
+    if (solver.info() != Eigen::Success) {
+        std::cout << "Solve A LLT failed!!! A:\n" << A << std::endl;
+    }
     assert(solver.info() == Eigen::Success && "LLT failed");
     Eigen::SparseMatrix<Derived> A_inv = solver.solve(I);
     return A_inv;

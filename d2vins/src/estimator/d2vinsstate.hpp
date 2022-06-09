@@ -90,7 +90,7 @@ public:
     void preSolve(const std::map<int, IMUBuffer> & remote_imu_bufs);
 
     //Debug
-    void printSldWin() const;
+    void printSldWin(const std::map<FrameIdType, int> & keyframe_measurments) const;
 
     void setMarginalizer(Marginalizer * _marginalizer) {
         marginalizer = _marginalizer;
