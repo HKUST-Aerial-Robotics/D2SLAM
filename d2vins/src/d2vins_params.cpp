@@ -15,6 +15,7 @@ void initParams(ros::NodeHandle & nh) {
     nh.param<std::string>("vins_config_path", vins_config_path, "");
     nh.param<bool>("verbose", params->verbose, false);
     nh.param<std::string>("lcm_uri", params->lcm_uri, "udpm://224.0.0.251:7667?ttl=1");
+    nh.param<int>("self_id", params->self_id, 0);
     params->init(vins_config_path);
 }
 
@@ -69,7 +70,6 @@ void D2VINSConfig::init(const std::string & config_file) {
     always_fixed_first_pose = (int) fsSettings["always_fixed_first_pose"];
 
     //Multi-drone
-    self_id = fsSettings["self_id"];
     estimation_mode = (ESTIMATION_MODE) (int) fsSettings["estimation_mode"];
 
     //Initialiazation
@@ -126,6 +126,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     consensus_config->rho_landmark = fsSettings["rho_landmark"];
     consensus_config->rho_frame_T = fsSettings["rho_frame_T"];
     consensus_config->rho_frame_theta = fsSettings["rho_frame_theta"];
+    consensus_config->relaxation_alpha = fsSettings["relaxation_alpha"];
 
 }
 

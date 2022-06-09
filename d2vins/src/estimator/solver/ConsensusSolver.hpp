@@ -22,6 +22,7 @@ struct ConsensusSolverConfig {
     double rho_landmark = 0.0;
     double rho_frame_T = 0.1;
     double rho_frame_theta = 0.1;
+    double relaxation_alpha = 0.6;
 };
 
 struct ConsenusParamState {

@@ -89,34 +89,33 @@ void ConsensusSolver::updateTilde() {
             }
             auto factor = new ceres::NormalPrior(A, prior_ref);
             problem->AddResidualBlock(factor, nullptr, pointer);
-        }
-        if (IsSE3(paraminfo.type)) {
-            //Is SE(3) pose.
-            Swarm::Pose pose_global(consenus_param.param_global.data());
-            Swarm::Pose pose_local(pointer);
-            Swarm::Pose pose_err = Swarm::Pose::DeltaPose(pose_global, pose_local);
-            auto & tilde = consenus_param.param_tilde;
-            tilde += pose_err.tangentSpace();
-            // printf("update tilde %d:\n", paraminfo.id);
-            printf("[updateTilde%d] frame %d pose_local %s pose_global %s tilde :", self_id, 
-                    paraminfo.id, pose_local.toStr().c_str(), pose_global.toStr().c_str());
-            std::cout << "tilde" << tilde.transpose() << std::endl << std::endl;
-            auto factor = new ConsenusPoseFactor(pose_global.pos(), pose_global.att(), 
-                tilde.segment<3>(0), tilde.segment<3>(3), rho_T, rho_theta);
-            problem->AddResidualBlock(factor, nullptr, pointer);
         } else {
-            //Is euclidean.
-            VectorXd x_global = consenus_param.param_global;
-            Eigen::Map<VectorXd> x_local(pointer, consenus_param.global_size);
-            auto & tilde = consenus_param.param_tilde;
-            tilde += x_local - x_global;
-            MatrixXd A(paraminfo.size, paraminfo.size);
-            A.setIdentity();
-            if (paraminfo.type == LANDMARK) {
-                A *= rho_landmark;
+            if (IsSE3(paraminfo.type)) {
+                //Is SE(3) pose.
+                Swarm::Pose pose_global(consenus_param.param_global.data());
+                Swarm::Pose pose_local(pointer);
+                Swarm::Pose pose_err = Swarm::Pose::DeltaPose(pose_global, pose_local);
+                auto & tilde = consenus_param.param_tilde;
+                tilde += (1+config.relaxation_alpha) * pose_err.tangentSpace();
+                // printf("update tilde %d:\n", paraminfo.id);
+                // printf("[updateTilde%d] frame %d pose_local %s pose_global %s tilde :", self_id, 
+                //         paraminfo.id, pose_local.toStr().c_str(), pose_global.toStr().c_str());
+                // std::cout << "tilde" << tilde.transpose() << std::endl << std::endl;
+                auto factor = new ConsenusPoseFactor(pose_global.pos(), pose_global.att(), 
+                    tilde.segment<3>(0), tilde.segment<3>(3), rho_T, rho_theta);
+                problem->AddResidualBlock(factor, nullptr, pointer);
+            } else {
+                //Is euclidean.
+                printf("[updateTilde] unknow param type %d id %d", paraminfo.type, paraminfo.id);
+                VectorXd x_global = consenus_param.param_global;
+                Eigen::Map<VectorXd> x_local(pointer, consenus_param.global_size);
+                auto & tilde = consenus_param.param_tilde;
+                tilde += x_local - x_global;
+                MatrixXd A(paraminfo.size, paraminfo.size);
+                A.setIdentity();
+                auto factor = new ceres::NormalPrior(A, x_global - tilde);
+                problem->AddResidualBlock(factor, nullptr, pointer);
             }
-            auto factor = new ceres::NormalPrior(A, x_global - tilde);
-            problem->AddResidualBlock(factor, nullptr, pointer);
         }
     }
 }
@@ -222,9 +221,9 @@ void ConsensusSolver::updateWithDistributedVinsData(const DistributedVinsData & 
             remote_params[pointer][dist_data.drone_id] = VectorXd(POSE_SIZE);
             dist_data.frame_poses[i].to_vector(remote_params[pointer][dist_data.drone_id].data());
             Swarm::Pose local(pointer);
-            printf("[updateWithDistributedVinsData%d]pose id %d remote %s local %s\n", self_id, frame_id, 
-                dist_data.frame_poses[i].toStr().c_str(),
-                local.toStr().c_str());
+            // printf("[updateWithDistributedVinsData%d]pose id %d remote %s local %s\n", self_id, frame_id, 
+            //     dist_data.frame_poses[i].toStr().c_str(),
+            //     local.toStr().c_str());
         }
     }
 
