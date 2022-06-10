@@ -24,6 +24,7 @@ protected:
     int remove_state_dim = 0;
     int total_eff_state_dim = 0;
     int keep_block_size = 0;
+    void showDeltaXofschurComplement(std::vector<ParamInfo> keep_params_list, const SparseMatrix<double> & A, const Matrix<double, Dynamic, 1> & b);
 public:
     Marginalizer(D2EstimatorState * _state): state(_state) {}
     void addResidualInfo(ResidualInfo* info);

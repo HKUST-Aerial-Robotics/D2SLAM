@@ -125,6 +125,16 @@ void Marginalizer::covarianceEstimation(const SparseMat & H) {
     }
 }
 
+void Marginalizer::showDeltaXofschurComplement(std::vector<ParamInfo> keep_params_list, const SparseMatrix<double> & A, const Matrix<double, Dynamic, 1> & b) {
+    Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> solver;
+    solver.compute(A);
+    VectorXd _b = solver.solve(b);
+    for (auto & param : keep_params_list) {
+        printf("param id %d type %d size %d \n", param.id, param.type, param.size);
+        std::cout << "A^-1.b:" << _b.segment(param.index, param.eff_size).transpose() << std::endl;
+    }
+}
+
 PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
     TicToc tic;
     remove_frame_ids = _remove_frame_ids;
@@ -164,6 +174,7 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
             printf("[D2VINS::Marginalizer::marginalize] schurComplement cost %.1fms\n", tt.toc());
         }
         prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
+        showDeltaXofschurComplement(keep_params_list, Ab.first, Ab.second);
     } else {
         auto Ab = Utility::schurComplement(H.toDense(), g, keep_state_dim);
         prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
@@ -178,11 +189,7 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
         Utility::writeMatrixtoFile(params->output_folder + "/H.txt", MatrixXd(H));
         Utility::writeMatrixtoFile(params->output_folder + "/g.txt", MatrixXd(g));
     }
-    // for (auto & param : keep_params_list) {
-    //     printf("param id %d type %d size %d \n", param.id, param.type, param.size);
-    //     std::cout << "H:\n" << H.block(param.index, 0, param.eff_size, total_eff_state_dim) << std::endl;
-    //     std::cout << "g:" << g.segment(param.index, param.eff_size).transpose() << std::endl;
-    // }
+   
     if (prior->hasNan()) {
         printf("\033[0;31m[D2VINS::Marginalizer::marginalize] prior has nan\033[0m\n");
         return nullptr;
@@ -211,8 +218,10 @@ void Marginalizer::sortParams() {
         auto & _param = _params.at(params_list[i].pointer);
         _param.index = total_eff_state_dim;
         total_eff_state_dim += _param.eff_size;
-        // printf("Param %p type %d size %d index %d cul_param_size %d is remove %d\n",
-        //         params_list[i].pointer, _param.type, _param.size, _param.index, total_eff_state_dim, _param.is_remove);
+        if (!_param.is_remove) {
+            printf("Param %p type %d id %d size %d index %d cul_param_size %d is remove %d\n",
+                params_list[i].pointer, _param.type, _param.id, _param.size, _param.index, total_eff_state_dim, _param.is_remove);
+        }
         if (_param.is_remove) {
             remove_state_dim += _param.eff_size;
         } else {

@@ -36,9 +36,7 @@ protected:
     D2VINSNet * vinsnet = nullptr;
     int solve_count = 0;
     int current_landmark_num = 0;
-    std::set<int> used_camera_sets;
     std::vector<LandmarkPerId> margined_landmarks;
-    std::map<int, bool> relative_frame_is_used;
     int self_id;
     int frame_count = 0;
     int64_t solve_token = 0;

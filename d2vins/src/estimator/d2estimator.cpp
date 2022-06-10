@@ -291,33 +291,27 @@ void D2Estimator::setStateProperties() {
     ceres::Problem & problem = solver->getProblem();
     auto pose_local_param = new PoseLocalParameterization;
     //set LocalParameterization
-    if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        //In server mode and solve all mode. All remote poses should be set to parameterzation
-        for (auto & drone_id : state.availableDrones()) {
-            if (state.size(drone_id) > 0) {
-                for (size_t i = 0; i < state.size(drone_id); i ++) {
-                    auto frame_a = state.getFrame(drone_id, i);
-                    problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
+    for (auto & drone_id : state.availableDrones()) {
+        if (state.size(drone_id) > 0) {
+            for (size_t i = 0; i < state.size(drone_id); i ++) {
+                auto frame_a = state.getFrame(drone_id, i);
+                auto pointer = state.getPoseState(frame_a.frame_id);
+                if (problem.HasParameterBlock(pointer)) {
+                    problem.SetParameterization(pointer, pose_local_param);
                 }
-            }
-        }
-    } else {
-        for (size_t i = 0; i < state.size(); i ++) {
-            auto frame_a = state.getFrame(i);
-            problem.SetParameterization(state.getPoseState(frame_a.frame_id), pose_local_param);
-        }
-        for (auto it: keyframe_measurements) {
-            if (state.getFramebyId(it.first).drone_id != self_id) {
-                problem.SetParameterization(state.getPoseState(it.first), pose_local_param);
             }
         }
     }
 
-    for (auto cam_id: used_camera_sets) {
+    for (auto cam_id: state.getAvailableCameraIds()) {
+        auto pointer = state.getExtrinsicState(cam_id);
+        if (!problem.HasParameterBlock(pointer)) {
+            continue;
+        }
         if (!params->estimate_extrinsic || state.size() < params->max_sld_win_size) {
+            //printf("[D2Estimator::setStateProperties@%d] set camera %d to fixed \n", self_id, cam_id);
             problem.SetParameterBlockConstant(state.getExtrinsicState(cam_id));
         } else {
-            // problem.SetManifold(state.getExtrinsicState(cam_id), pose_manifold);
             problem.SetParameterization(state.getExtrinsicState(cam_id), pose_local_param);
         }
     }
@@ -405,15 +399,10 @@ void D2Estimator::solveinDistributedMode() {
     }
     updated = false;
 
-    relative_frame_is_used.clear();
-    for (auto & drone_id : state.availableDrones()) {
-        relative_frame_is_used[drone_id] = false;
-    }
     margined_landmarks = state.clearFrame();
     resetMarginalizer();
     solve_count ++;
     state.preSolve(remote_imu_bufs);
-    used_camera_sets.clear(); 
     if (this->solver != nullptr) {
         delete this->solver;
     }
@@ -487,7 +476,6 @@ void D2Estimator::solveNonDistrib() {
     resetMarginalizer();
     solve_count ++;
     state.preSolve(remote_imu_bufs);
-    used_camera_sets.clear(); 
     if (solver != nullptr) {
         delete solver;
     }
@@ -670,7 +658,6 @@ void D2Estimator::setupLandmarkFactors() {
                     firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, enable_depth_mea);
                 residual_count++;
                 keyframe_measurements[lm_per_frame.frame_id] ++;
-                used_camera_sets.insert(firstObs.camera_id);
             } else {
                 if (lm_per_frame.frame_id == firstObs.frame_id) {
                     auto f_td = new ProjectionOneFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
@@ -685,7 +672,6 @@ void D2Estimator::setupLandmarkFactors() {
                         firstObs.camera_id, lm_per_frame.camera_id);
                     residual_count++;
                 }
-                used_camera_sets.insert(lm_per_frame.camera_id);
             }
             if (info != nullptr) {
                 solver->addResidual(info);
