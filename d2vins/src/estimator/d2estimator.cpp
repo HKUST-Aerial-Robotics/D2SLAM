@@ -411,23 +411,27 @@ void D2Estimator::solveinDistributedMode() {
     state.preSolve(remote_imu_bufs);
     solver->reset();
 
-    if (true || hasCommonLandmarkMeasurments()) {
-        ready_drones = std::set<int>{self_id};
-        if (params->verbose) {
-            printf("[D2VINS::D2Estimator@%d] ready, wait for start signal...\n", self_id);
+    if (params->consensus_sync_to_start) {
+        if (true || hasCommonLandmarkMeasurments()) {
+            ready_drones = std::set<int>{self_id};
+            if (params->verbose) {
+                printf("[D2VINS::D2Estimator@%d] ready, wait for start signal...\n", self_id);
+            }
+            waitForStart();
+            if (isMain()) {
+                solve_token += 1;
+                sendSyncSignal(SyncSignal::DSolverStart, solve_token);
+            }
+            if (params->verbose) {
+                printf("[D2VINS::D2Estimator@%d] All drones read start solving...\n", self_id);
+            }
+            ready_to_start = false;
+        } else {
+            //Claim not use a distribured solver.
+            sendSyncSignal(SyncSignal::DSolverNonDist, solve_token);
         }
-        waitForStart();
-        if (isMain()) {
-            solve_token += 1;
-            sendSyncSignal(SyncSignal::DSolverStart, solve_token);
-        }
-        if (params->verbose) {
-            printf("[D2VINS::D2Estimator@%d] All drones read start solving...\n", self_id);
-        }
-        ready_to_start = false;
     } else {
-        //Claim not use a distribured solver.
-        sendSyncSignal(SyncSignal::DSolverNonDist, solve_token);
+        printf("[D2VINS::D2Estimator@%d] async solve...\n", self_id);
     }
 
     setupImuFactors();

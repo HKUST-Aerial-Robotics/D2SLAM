@@ -70,6 +70,7 @@ struct D2VINSConfig {
     //Solver
     ceres::Solver::Options ceres_options;
     ConsensusSolverConfig * consensus_config = nullptr;
+    bool consensus_sync_to_start = true;
 
     //Outlier rejection
     int perform_outlier_rejection_num = 50;

@@ -128,6 +128,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     consensus_config->rho_frame_theta = fsSettings["rho_frame_theta"];
     consensus_config->relaxation_alpha = fsSettings["relaxation_alpha"];
     consensus_config->sync_with_main = (int) fsSettings["consensus_sync_with_main"];
+    consensus_sync_to_start = (int) fsSettings["consensus_sync_to_start"];
 
 }
 
