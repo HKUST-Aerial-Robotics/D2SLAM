@@ -2,8 +2,11 @@
 #include <swarm_msgs/Pose.h>
 #include <swarm_msgs/lcm_gen/DistributedVinsData_t.hpp>
 #include <d2common/d2basetypes.h>
+#include <mutex>
 
 using namespace D2Common;
+
+typedef std::lock_guard<std::recursive_mutex> Guard;
 
 namespace D2VINS {
 struct DistributedVinsData {
@@ -23,9 +26,12 @@ struct DistributedVinsData {
 };
 
 class SyncDataReceiver {
-public:
+protected:
+    std::recursive_mutex sync_data_recv_lock;
     std::vector<DistributedVinsData> sync_datas;
+public:
     void add(const DistributedVinsData & data);
     std::vector<DistributedVinsData> retrive(int64_t token, int iteration_count);
+    std::vector<DistributedVinsData> retrive_all();
 };
 }

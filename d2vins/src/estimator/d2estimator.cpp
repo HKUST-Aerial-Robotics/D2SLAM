@@ -44,6 +44,12 @@ void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
     vinsnet->DistributedSync_callback = [&](int drone_id, int signal, int64_t token) {
         onSyncSignal(drone_id, signal, token);
     };
+
+    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        solver = new ConsensusSolver(this, &state, sync_data_receiver, *params->consensus_config, solve_token);
+    } else {
+        solver = new BaseSolverWrapper(&state);
+    }
 }
 
 void D2Estimator::inputImu(IMUData data) {
@@ -403,9 +409,7 @@ void D2Estimator::solveinDistributedMode() {
     resetMarginalizer();
     solve_count ++;
     state.preSolve(remote_imu_bufs);
-    if (this->solver != nullptr) {
-        delete this->solver;
-    }
+    solver->reset();
 
     if (true || hasCommonLandmarkMeasurments()) {
         ready_drones = std::set<int>{self_id};
@@ -421,11 +425,9 @@ void D2Estimator::solveinDistributedMode() {
             printf("[D2VINS::D2Estimator@%d] All drones read start solving...\n", self_id);
         }
         ready_to_start = false;
-        solver = new ConsensusSolver(this, &state, sync_data_receiver, *params->consensus_config, solve_token);
     } else {
         //Claim not use a distribured solver.
         sendSyncSignal(SyncSignal::DSolverNonDist, solve_token);
-        solver = new BaseSolverWrapper(&state);
     }
 
     setupImuFactors();
@@ -476,12 +478,7 @@ void D2Estimator::solveNonDistrib() {
     resetMarginalizer();
     solve_count ++;
     state.preSolve(remote_imu_bufs);
-    if (solver != nullptr) {
-        delete solver;
-    }
-    
-    solver = new BaseSolverWrapper(&state);
-
+    solver->reset();
     setupImuFactors();
     setupLandmarkFactors();
     setupPriorFactor();

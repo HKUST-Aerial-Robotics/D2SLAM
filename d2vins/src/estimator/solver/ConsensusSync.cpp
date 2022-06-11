@@ -46,10 +46,12 @@ DistributedVinsData_t DistributedVinsData::toLCM() const {
 }
 
 void SyncDataReceiver::add(const DistributedVinsData & data) {
+    const Guard lock(sync_data_recv_lock);
     sync_datas.emplace_back(data);
 }
 
 std::vector<DistributedVinsData> SyncDataReceiver::retrive(int64_t token, int iteration_count) {
+    const Guard lock(sync_data_recv_lock);
     std::vector<DistributedVinsData> datas;
     for (auto it = sync_datas.begin(); it != sync_datas.end(); ) {
         if (it->solver_token == token && it->iteration_count == iteration_count) {
@@ -61,4 +63,12 @@ std::vector<DistributedVinsData> SyncDataReceiver::retrive(int64_t token, int it
     }
     return datas;
 }
+
+std::vector<DistributedVinsData> SyncDataReceiver::retrive_all() {
+    const Guard lock(sync_data_recv_lock);
+    std::vector<DistributedVinsData> datas = sync_datas;
+    sync_datas.clear();
+    return datas;
+}
+
 }

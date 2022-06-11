@@ -8,6 +8,47 @@ import argparse
 from numpy.linalg import norm
 import scipy.stats as stats
 from utils import *
+from scipy.interpolate import interp1d
+
+class Trajectory:
+    def __init__(self, t, pos, quat):
+        self.t = t
+        self.pos = pos
+        self.quat = quat
+        self.ypr = numpy.apply_along_axis(quat2eulers_arr, 1, quat)
+        self.interp()
+
+    def interp(self):
+        self.pos_func = interp1d(self.t, self.pos, axis=0,bounds_error=False,fill_value="extrapolate")
+        self.ypr_func = interp1d(self.t, self.ypr, axis=0,bounds_error=False,fill_value="extrapolate")
+    
+    def length(self, t=10000000):
+        mask = self.t < t
+        dp = np.diff(self.pos[mask], axis=0)
+        length = np.sum(np.linalg.norm(dp,axis=1))
+        return length
+    
+    def resample_ypr(self, t):
+        return self.ypr_func(t)
+    
+    def resample_pos(self, t):
+        return self.pos_func(t)
+
+def read_path_from_csv(path, t0=None):
+    arr = np.loadtxt(path)
+    t = arr[:, 0]
+    if t0 is None:
+        t0 = t[0]
+    t = t - t0
+    pos = arr[:, 1:4]
+    quat = arr[:, 4:]
+    return Trajectory(t, pos, quat), t0
+
+def read_paths(folder, nodes, prefix="d2vins", t0=None):
+    ret = {}
+    for drone_id in nodes:
+        ret[drone_id], t0 = read_path_from_csv(f"{folder}/{prefix}_{drone_id}.csv", t0)
+    return ret, t0
 
 def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="/home/xuhao/output/", id_map = None, figsize=(6, 6), plot_each=True):
     fig = plt.figure("Traj2", figsize=figsize)
@@ -428,7 +469,7 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
             # print(f"{i}by{main_id}",end="\t")
             # print(f"{ate_fused:3.3f}\t{rmse_angular_fused*180/pi:3.3f}°\t{rmse_yaw_fused*180/pi:3.3f}°\t{rmse_pitch_fused*180/pi:3.3f}°\t{rmse_roll_fused*180/pi:3.3f}°\t{rmse_x:3.3f},{rmse_y:3.3f},{rmse_z:3.3f}\t{fused_cov_x:.1e},{fused_cov_y:.1e},{fused_cov_z:.1e}\t{fused_yaw_cov_per_meter:.1e}rad/m\t\t{ate_path:3.3f}\t{rmse_angular_path*180/pi:3.3f}°\t|\t",end="")
             output_table.append([
-                f"{i}by{main_id}",f"{poses_fused[i].length():.1f}m", f"{ate_fused:3.3f}", f"{rmse_angular_fused*180/pi:3.3f}", f"{fused_cov_x:.1e}",f"{fused_cov_y:.1e}",f"{fused_cov_z:.1e}",f"{ate_path:3.3f}",f"{rmse_angular_path*180/pi:3.3f}°"
+                f"{i}by{main_id}",f"{poses_fused[i].length(dte):.1f}m", f"{ate_fused:3.3f}", f"{rmse_angular_fused*180/pi:3.3f}", f"{fused_cov_x:.1e}",f"{fused_cov_y:.1e}",f"{fused_cov_z:.1e}",f"{ate_path:3.3f}",f"{rmse_angular_path*180/pi:3.3f}°"
             ])
 
         if show:

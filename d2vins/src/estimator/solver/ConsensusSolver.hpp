@@ -9,8 +9,6 @@
 namespace D2VINS {
 class D2Estimator;
 class D2EstimatorState;
-typedef std::lock_guard<std::recursive_mutex> Guard;
-
 
 struct ConsensusSolverConfig {
     int max_steps = 2;
@@ -23,6 +21,7 @@ struct ConsensusSolverConfig {
     double rho_frame_T = 0.1;
     double rho_frame_theta = 0.1;
     double relaxation_alpha = 0.6;
+    bool sync_with_main = true;
 };
 
 struct ConsenusParamState {
@@ -59,7 +58,6 @@ protected:
     double rho_T = 0.1;
     double rho_theta = 0.1;
     int self_id = 0;
-    std::recursive_mutex sync_data_recv_lock;
     D2Estimator * estimator;
     SyncDataReceiver * receiver;
     int solver_token;
@@ -78,12 +76,15 @@ public:
         rho_theta = config.rho_frame_theta;
     }
 
+    void reset() override;
+
     virtual void addResidual(ResidualInfo*residual_info) override;
     ceres::Solver::Summary solve() override;
     ceres::Solver::Summary solveLocalStep();
     void addParam(const ParamInfo & param_info);
     void updateTilde();
     void waitForSync();
+    void receiveAll();
     void updateGlobal();
 };
 }

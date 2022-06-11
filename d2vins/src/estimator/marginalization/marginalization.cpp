@@ -218,10 +218,10 @@ void Marginalizer::sortParams() {
         auto & _param = _params.at(params_list[i].pointer);
         _param.index = total_eff_state_dim;
         total_eff_state_dim += _param.eff_size;
-        if (!_param.is_remove) {
-            printf("Param %p type %d id %d size %d index %d cul_param_size %d is remove %d\n",
-                params_list[i].pointer, _param.type, _param.id, _param.size, _param.index, total_eff_state_dim, _param.is_remove);
-        }
+        // if (!_param.is_remove) {
+        //     printf("Param %p type %d id %d size %d index %d cul_param_size %d is remove %d\n",
+        //         params_list[i].pointer, _param.type, _param.id, _param.size, _param.index, total_eff_state_dim, _param.is_remove);
+        // }
         if (_param.is_remove) {
             remove_state_dim += _param.eff_size;
         } else {

@@ -13,6 +13,17 @@ void ConsensusSolver::addResidual(ResidualInfo*residual_info) {
     residuals.push_back(residual_info);
 }
 
+void ConsensusSolver::reset() {
+    delete problem;
+    problem = new ceres::Problem();
+    consenus_params.clear();
+    all_estimating_params.clear();
+    residuals.clear();
+    if (config.sync_with_main) {
+        remote_params.clear();
+    }
+}
+
 void ConsensusSolver::addParam(const ParamInfo & param_info) {
     if (all_estimating_params.find(param_info.pointer) != all_estimating_params.end()) {
         return;
@@ -39,7 +50,11 @@ ceres::Solver::Summary ConsensusSolver::solve() {
                     problem->SetParameterLowerBound(it.first, 0, params->min_inv_dep);
                 }
             }
-            waitForSync(); 
+            if (config.sync_with_main) {
+                waitForSync(); 
+            } else {
+                receiveAll();
+            }
             updateGlobal();
             updateTilde();
             estimator->setStateProperties();
@@ -47,7 +62,19 @@ ceres::Solver::Summary ConsensusSolver::solve() {
         summary = solveLocalStep();
         iteration_count++;
     }
+    broadcastDistributedVinsData();
     return summary;
+}
+
+void ConsensusSolver::receiveAll() {
+    std::vector<DistributedVinsData> sync_datas = receiver->retrive_all();
+    for (auto data: sync_datas) {
+        updateWithDistributedVinsData(data);
+    }
+    if (params->verbose) {
+        printf("[ConsensusSolver::receiveAll@%d] token %d iteration %d receive finsish %ld/%ld\n",
+                self_id, solver_token, iteration_count, sync_datas.size(), state->availableDrones().size());
+    }
 }
 
 void ConsensusSolver::waitForSync() {
@@ -125,7 +152,6 @@ void ConsensusSolver::updateTilde() {
 }
 
 void ConsensusSolver::updateGlobal() {
-    const Guard lock(sync_data_recv_lock);
     //Assmue all drone's information has been received.
     for (auto it : all_estimating_params) {
         auto pointer = it.first;

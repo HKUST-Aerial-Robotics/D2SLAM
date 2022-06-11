@@ -19,6 +19,10 @@ public:
     ceres::Problem & getProblem() {
         return *problem;
     }
+    virtual void reset() {
+        delete problem;
+        problem = new ceres::Problem();
+    }
 };
 
 class BaseSolverWrapper : public SolverWrapper {
