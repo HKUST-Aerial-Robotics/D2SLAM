@@ -45,6 +45,7 @@ void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
         onSyncSignal(drone_id, signal, token);
     };
 
+    imu_bufs[self_id] = IMUBuffer();
     if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
         solver = new ConsensusSolver(this, &state, sync_data_receiver, *params->consensus_config, solve_token);
     } else {
@@ -53,7 +54,7 @@ void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
 }
 
 void D2Estimator::inputImu(IMUData data) {
-    imubuf.add(data);
+    imu_bufs[self_id].add(data);
     if (!initFirstPoseFlag) {
         return;
     }
@@ -61,7 +62,7 @@ void D2Estimator::inputImu(IMUData data) {
 }
 
 bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
-    auto ret = imubuf.periodIMU(-1, frame.stamp + state.getTd(frame.drone_id));
+    auto ret = imu_bufs[self_id].periodIMU(-1, frame.stamp + state.getTd(frame.drone_id));
     auto _imubuf = ret.first;
     if (_imubuf.size() < params->init_imu_num) {
         return false;
@@ -126,11 +127,11 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
 
 void D2Estimator::addFrame(VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
-    if (!params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+    if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
         margined_landmarks = state.clearFrame();
     }
     auto & last_frame = state.lastFrame();
-    auto ret = imubuf.periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
+    auto ret = imu_bufs[self_id].periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
     auto _imu = ret.first;
     auto index = ret.second;
     if (fabs(_imu.size()/(_frame.stamp - last_frame.stamp) - params->IMU_FREQ) > 15) {
@@ -168,11 +169,11 @@ void D2Estimator::addFrame(VisualImageDescArray & _frame) {
 }
 
 void D2Estimator::addRemoteImuBuf(int drone_id, const IMUBuffer & imu_) {
-    if (remote_imu_bufs.find(drone_id) == remote_imu_bufs.end()) {
-        remote_imu_bufs[drone_id] = imu_;
-        printf("[D2Estimator::addRemoteImuBuf] Assign imu buf to drone %d cur_size %d\n", drone_id, remote_imu_bufs[drone_id].size());
+    if (imu_bufs.find(drone_id) == imu_bufs.end()) {
+        imu_bufs[drone_id] = imu_;
+        printf("[D2Estimator::addRemoteImuBuf] Assign imu buf to drone %d cur_size %d\n", drone_id, imu_bufs[drone_id].size());
     } else {
-        auto & _imu_buf = remote_imu_bufs.at(drone_id);
+        auto & _imu_buf = imu_bufs.at(drone_id);
         auto t_last = _imu_buf.t_last;
         bool add_first = true;
         for (size_t i = 0; i < imu_.size(); i++) {
@@ -199,7 +200,7 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
     if (state.size(r_drone_id) > 0 ) {
         auto last_frame = state.lastFrame(r_drone_id);
         if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || params->estimation_mode == D2VINSConfig::SERVER_MODE) {
-            auto & imu_buf = remote_imu_bufs.at(_frame.drone_id);
+            auto & imu_buf = imu_bufs.at(_frame.drone_id);
             auto ret = imu_buf.periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
             auto _imu = ret.first;
             if (fabs(_imu.size()/(_frame.stamp - last_frame.stamp) - params->IMU_FREQ) > 15) {
@@ -258,20 +259,19 @@ void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
         state.clearFrame();
         solveNonDistrib();
     }
-    updated = true;
 }
 
 bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     //We MUST make sure this function is running by only one thread.
     //It is not thread safe.
     if(!initFirstPoseFlag) {
-        printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imubuf.size());
+        printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imu_bufs.size());
         initFirstPoseFlag = tryinitFirstPose(_frame);
         return initFirstPoseFlag;
     }
 
     double t_imu_frame = _frame.stamp + state.td;
-    while (!imubuf.available(t_imu_frame)) {
+    while (!imu_bufs[self_id].available(t_imu_frame)) {
         //Wait for IMU
         usleep(2000);
         printf("[D2VINS::D2Estimator] wait for imu...\n");
@@ -282,7 +282,7 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
         solveNonDistrib();
     } else {
         //Presolve only for initialization.
-        state.preSolve(remote_imu_bufs);
+        state.preSolve(imu_bufs);
     }
     addSldWinToFrame(_frame);
     frame_count ++;
@@ -408,7 +408,7 @@ void D2Estimator::solveinDistributedMode() {
     margined_landmarks = state.clearFrame();
     resetMarginalizer();
     solve_count ++;
-    state.preSolve(remote_imu_bufs);
+    state.preSolve(imu_bufs);
     solver->reset();
 
     if (params->consensus_sync_to_start) {
@@ -422,8 +422,9 @@ void D2Estimator::solveinDistributedMode() {
                 solve_token += 1;
                 sendSyncSignal(SyncSignal::DSolverStart, solve_token);
             }
+            static_cast<ConsensusSolver*>(solver)->setToken(solve_token);
             if (params->verbose) {
-                printf("[D2VINS::D2Estimator@%d] All drones read start solving...\n", self_id);
+                printf("[D2VINS::D2Estimator@%d] All drones read start solving token %d...\n", self_id, solve_token);
             }
             ready_to_start = false;
         } else {
@@ -461,7 +462,7 @@ void D2Estimator::solveinDistributedMode() {
 
     // Reprogation
     for (auto drone_id : state.availableDrones()) {
-        auto _imu = imubuf.back(state.lastFrame(drone_id).stamp + state.td);
+        auto _imu = imu_bufs[self_id].back(state.lastFrame(drone_id).stamp + state.td);
         last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
     }
 
@@ -481,7 +482,7 @@ void D2Estimator::solveinDistributedMode() {
 void D2Estimator::solveNonDistrib() {
     resetMarginalizer();
     solve_count ++;
-    state.preSolve(remote_imu_bufs);
+    state.preSolve(imu_bufs);
     solver->reset();
     setupImuFactors();
     setupLandmarkFactors();
@@ -516,7 +517,7 @@ void D2Estimator::solveNonDistrib() {
 
     // Reprogation
     for (auto drone_id : state.availableDrones()) {
-        auto _imu = imubuf.back(state.lastFrame(drone_id).stamp + state.td);
+        auto _imu = imu_bufs[self_id].back(state.lastFrame(drone_id).stamp + state.td);
         last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
     }
 

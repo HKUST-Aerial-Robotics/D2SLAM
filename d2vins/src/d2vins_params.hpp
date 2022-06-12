@@ -22,6 +22,7 @@ struct D2VINSConfig {
 
     //Sensor frequency
     double IMU_FREQ = 400.0;
+    double IMAGE_FREQ = 20.0;
     int camera_num = 1; // number of cameras;
     int frame_step = 3; //step of frame to use in backend.
     
@@ -71,6 +72,7 @@ struct D2VINSConfig {
     ceres::Solver::Options ceres_options;
     ConsensusSolverConfig * consensus_config = nullptr;
     bool consensus_sync_to_start = true;
+    int consensus_trigger_time_err_us = 50;
 
     //Outlier rejection
     int perform_outlier_rejection_num = 50;

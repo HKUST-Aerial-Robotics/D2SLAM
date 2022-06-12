@@ -86,5 +86,8 @@ public:
     void waitForSync();
     void receiveAll();
     void updateGlobal();
+    void setToken(int token) {
+        solver_token = token;
+    }
 };
 }

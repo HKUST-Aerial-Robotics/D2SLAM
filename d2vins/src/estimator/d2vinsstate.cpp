@@ -237,6 +237,23 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
         }
     }
 
+    // auto & self_sld_win = sld_wins[self_id];
+    // int remove_local_num = 0;
+    // int remove_index_from_tail = self_sld_win.size() - 2;
+    // int remove_index_from_head = 0;
+    // while (self_sld_win.size() - remove_local_num > params->max_sld_win_size) {
+    //     if (remove_index_from_tail > 0 && !self_sld_win[remove_index_from_tail]->is_keyframe) {
+    //         //If last frame is not keyframe then remove it.
+    //         clear_frames.insert(self_sld_win[remove_index_from_tail]->frame_id);
+    //         remove_index_from_tail --;
+    //         remove_local_num++;
+    //     } else {
+    //         clear_key_frames.insert(self_sld_win[remove_index_from_head]->frame_id);
+    //         clear_frames.insert(self_sld_win[remove_index_from_head]->frame_id);
+    //         remove_index_from_head ++;
+    //         remove_local_num++;
+    //     }
+    // }
     auto & self_sld_win = sld_wins[self_id];
     if (self_sld_win.size() >= params->min_solve_frames) {
         if (!self_sld_win[self_sld_win.size() - 1]->is_keyframe) {
@@ -251,12 +268,14 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
     if (params->enable_marginalization && clear_key_frames.size() > 0) {
         //At this time, non-keyframes is also removed, so add them to remove set to avoid pointer issue.
         clear_key_frames.insert(clear_frames.begin(), clear_frames.end());
-        auto prior_return = marginalizer->marginalize(clear_key_frames);
-        if (prior_return!=nullptr) {
-            if (prior_factor!=nullptr) {
-                delete prior_factor;
+        if (marginalizer != nullptr) {
+            auto prior_return = marginalizer->marginalize(clear_key_frames);
+            if (prior_return!=nullptr) {
+                if (prior_factor!=nullptr) {
+                    delete prior_factor;
+                }
+                prior_factor = prior_return;
             }
-            prior_factor = prior_return;
         }
     }
     if (prior_factor != nullptr) {
@@ -311,14 +330,31 @@ void D2EstimatorState::updateSldwin(int drone_id, const std::vector<FrameIdType>
 }
 
 void D2EstimatorState::updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs) {
-    if (params->estimation_mode != D2VINSConfig::SOLVE_ALL_MODE && params->estimation_mode != D2VINSConfig::SERVER_MODE) {
+    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS || 
+        params->estimation_mode == D2VINSConfig::SINGLE_DRONE_MODE) {
+        auto & _sld_win = sld_wins[self_id];
+        for (size_t i = 0; i < _sld_win.size() - 1; i ++) {
+            auto frame_a = _sld_win[i];
+            auto frame_b = _sld_win[i+1];
+            if (frame_b->prev_frame_id != frame_a->frame_id) {
+                //Update IMU factor.
+                auto td = getTd(frame_a->drone_id);
+                auto ret = remote_imu_bufs.at(self_id).periodIMU(frame_a->imu_buf_index, frame_b->stamp + td);
+                auto _imu_buf = ret.first;
+                frame_b->pre_integrations = new IntegrationBase(_imu_buf, frame_a->Ba, frame_a->Bg);
+                frame_b->prev_frame_id = frame_a->frame_id;
+                frame_b->imu_buf_index = ret.second;
+                if (fabs(_imu_buf.size()/(frame_b->stamp - frame_a->stamp) - params->IMU_FREQ) > 10) {
+                    printf("\033[0;31m[D2VINS::D2Estimator] Remote IMU error freq: %.3f in updateRemoteSldIMU \033[0m\n", 
+                        _imu_buf.size()/(frame_b->stamp - frame_a->stamp));
+                }
+            }
+        }
         return;
     }
     for (auto & _it : sld_wins) {
         auto drone_id = _it.first;
         auto & _sld_win = _it.second;
-        if (drone_id == self_id || _sld_win.size() <=1 )
-            continue;
         for (size_t i = 0; i < _sld_win.size() - 1; i ++) {
             auto frame_a = _sld_win[i];
             auto frame_b = _sld_win[i+1];

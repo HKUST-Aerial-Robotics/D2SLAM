@@ -28,8 +28,7 @@ protected:
     //Internal states
     bool initFirstPoseFlag = false;   
     D2EstimatorState state;
-    IMUBuffer imubuf;
-    std::map<int, IMUBuffer> remote_imu_bufs;
+    std::map<int, IMUBuffer> imu_bufs;
     std::map<int, Swarm::Odometry> last_prop_odom; //last imu propagation odometry
     Marginalizer * marginalizer = nullptr;
     SolverWrapper * solver = nullptr;
