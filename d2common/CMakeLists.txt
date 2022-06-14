@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(Ceres REQUIRED)
 
 catkin_package(
  INCLUDE_DIRS include
@@ -35,6 +36,10 @@ include_directories(
 add_library(${PROJECT_NAME}
   src/d2imu.cpp
   src/d2vinsframe.cpp
+  src/solver/BaseParamResInfo.cpp
+  src/solver/BaseSolverWrapper.cpp
+  src/solver/ConsensusSolver.cpp
+  src/solver/consenus_factor.cpp
 )
 
 ## Add cmake target dependencies of the library
@@ -49,6 +54,7 @@ add_executable(${PROJECT_NAME}_test
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
+  ${CERES_LIBRARIES}
 )
 
 target_link_libraries(${PROJECT_NAME}_test 

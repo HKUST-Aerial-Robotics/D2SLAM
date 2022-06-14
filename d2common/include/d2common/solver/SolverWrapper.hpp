@@ -2,16 +2,17 @@
 
 #include <iostream>
 #include <ceres/ceres.h>
+#include <d2common/d2state.hpp>
 
-namespace D2VINS {
+namespace D2Common {
 class ResidualInfo;
 class D2EstimatorState;
 class SolverWrapper {
 protected:
     ceres::Problem * problem = nullptr;
-    D2EstimatorState * state;
+    D2State * state;
 public:
-    SolverWrapper(D2EstimatorState * _state): state(_state) {
+    SolverWrapper(D2State * _state): state(_state) {
         problem = new ceres::Problem();
     }
     virtual void addResidual(ResidualInfo*residual_info) = 0;
@@ -25,9 +26,12 @@ public:
     }
 };
 
-class BaseSolverWrapper : public SolverWrapper {
+class CeresSolver : public SolverWrapper {
+protected:
+    ceres::Solver::Options options;
 public:
-    BaseSolverWrapper(D2EstimatorState * _state): SolverWrapper(_state)  {}
+    CeresSolver(D2State * _state, ceres::Solver::Options _options): 
+            SolverWrapper(_state), options(_options)  {}
     virtual void addResidual(ResidualInfo*residual_info) override;
     ceres::Solver::Summary solve() override;
 };

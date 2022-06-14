@@ -2,7 +2,6 @@
 #include <swarm_msgs/swarm_lcm_converter.hpp>
 
 namespace D2VINS {
-    
 DistributedVinsData::DistributedVinsData(const DistributedVinsData_t & msg):
     stamp(toROSTime(msg.timestamp).toSec()), drone_id(msg.drone_id), solver_token(msg.solver_token),
     iteration_count(msg.iteration_count)
@@ -45,30 +44,5 @@ DistributedVinsData_t DistributedVinsData::toLCM() const {
     return msg;
 }
 
-void SyncDataReceiver::add(const DistributedVinsData & data) {
-    const Guard lock(sync_data_recv_lock);
-    sync_datas.emplace_back(data);
-}
-
-std::vector<DistributedVinsData> SyncDataReceiver::retrive(int64_t token, int iteration_count) {
-    const Guard lock(sync_data_recv_lock);
-    std::vector<DistributedVinsData> datas;
-    for (auto it = sync_datas.begin(); it != sync_datas.end(); ) {
-        if (it->solver_token == token && it->iteration_count == iteration_count) {
-            datas.emplace_back(*it);
-            it = sync_datas.erase(it);
-        } else {
-            it++;
-        }
-    }
-    return datas;
-}
-
-std::vector<DistributedVinsData> SyncDataReceiver::retrive_all() {
-    const Guard lock(sync_data_recv_lock);
-    std::vector<DistributedVinsData> datas = sync_datas;
-    sync_datas.clear();
-    return datas;
-}
 
 }

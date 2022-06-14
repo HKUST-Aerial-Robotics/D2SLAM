@@ -4,10 +4,12 @@
 #include <d2common/d2basetypes.h>
 
 using namespace D2Common;
+namespace D2Common {
+struct ParamInfo;
+};
 // This is devied from VINS-Mono
 namespace D2VINS
 {
-struct ParamInfo;
 
 std::pair<MatrixXd, VectorXd> toJacRes(const SparseMat & A, const VectorXd & b);
 std::pair<MatrixXd, VectorXd> toJacRes(const MatrixXd & A, const VectorXd & b);

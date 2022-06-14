@@ -1,7 +1,6 @@
 #include "d2vins_net.hpp"
 #include "../estimator/d2estimator.hpp"
 #include <swarm_msgs/swarm_lcm_converter.hpp>
-#include "../estimator/solver/ConsensusSolver.hpp"
 
 namespace D2VINS {
 D2VINSNet::D2VINSNet(D2Estimator * _estimator, std::string _lcm_uri): 

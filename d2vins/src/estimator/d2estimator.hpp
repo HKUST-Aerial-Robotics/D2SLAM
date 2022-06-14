@@ -5,7 +5,8 @@
 #include <swarm_msgs/Odometry.h>
 #include <ceres/ceres.h>
 #include "../visualization/visualization.hpp"
-#include "solver/SolverWrapper.hpp"
+#include <d2common/solver/SolverWrapper.hpp>
+#include "solver/ConsensusSync.hpp"
 
 using namespace Eigen;
 using D2Common::VisualImageDescArray;
@@ -13,7 +14,6 @@ using D2Common::VisualImageDescArray;
 namespace D2VINS {
 class Marginalizer;
 class D2VINSNet;
-class SyncDataReceiver;
 struct DistributedVinsData;
 
 enum SyncSignal {
@@ -45,6 +45,7 @@ protected:
     std::map<FrameIdType, int> keyframe_measurements;
     SyncDataReceiver * sync_data_receiver = nullptr;
     bool updated = false;
+    std::set<LandmarkIdType> used_landmarks;
     
     //Internal functions
     bool tryinitFirstPose(VisualImageDescArray & frame);

@@ -1,7 +1,7 @@
 #pragma once
 #include <ceres/ceres.h>
 
-namespace D2VINS {
+namespace D2Common {
 class ConsenusPoseFactor : public ceres::SizedCostFunction<6, 7> {
     Eigen::Matrix<double, 3, 3> q_sqrt_info;
     Eigen::Matrix<double, 3, 3> T_sqrt_info;

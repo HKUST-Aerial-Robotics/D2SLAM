@@ -12,7 +12,7 @@
 #include "../factors/pose_local_parameterization.h"
 #include <d2frontend/utils.h>
 #include "marginalization/marginalization.hpp"
-#include "solver/ConsensusSolver.hpp"
+#include "solver/VINSConsenusSolver.hpp"
 #include "../network/d2vins_net.hpp"
 #include "solver/ConsensusSync.hpp"
 
@@ -47,9 +47,9 @@ void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
 
     imu_bufs[self_id] = IMUBuffer();
     if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        solver = new ConsensusSolver(this, &state, sync_data_receiver, *params->consensus_config, solve_token);
+        solver = new D2VINSConsensusSolver(this, &state, sync_data_receiver, *params->consensus_config, solve_token);
     } else {
-        solver = new BaseSolverWrapper(&state);
+        solver = new CeresSolver(&state, params->ceres_options);
     }
 }
 
@@ -320,6 +320,15 @@ void D2Estimator::setStateProperties() {
         } else {
             problem.SetParameterization(state.getExtrinsicState(cam_id), pose_local_param);
         }
+    }
+
+    for (auto lm_id: used_landmarks) {
+        auto pointer = state.getLandmarkState(lm_id);
+        if (!problem.HasParameterBlock(pointer)) {
+            continue;
+        }
+        //Set minimun landmark distance
+        problem.SetParameterLowerBound(pointer, 0, params->min_inv_dep);
     }
 
     if (!params->estimate_td || state.size() < params->max_sld_win_size) {
@@ -599,6 +608,7 @@ bool D2Estimator::hasCommonLandmarkMeasurments() {
 }
 
 void D2Estimator::setupLandmarkFactors() {
+    used_landmarks.clear();
     auto lms = state.availableLandmarkMeasurements();
     current_landmark_num = lms.size();
     auto loss_function = new ceres::HuberLoss(1.0);    
@@ -632,6 +642,7 @@ void D2Estimator::setupLandmarkFactors() {
             marginalizer->addResidualInfo(info);
             solver->addResidual(info);
             residual_count++;
+            used_landmarks.insert(lm_id);
         }
         for (auto i = 1; i < lm.track.size(); i++) {
             auto lm_per_frame = lm.track[i];
@@ -678,6 +689,7 @@ void D2Estimator::setupLandmarkFactors() {
             if (info != nullptr) {
                 solver->addResidual(info);
                 marginalizer->addResidualInfo(info);
+                used_landmarks.insert(lm_id);
             }
             keyframe_measurements[lm_per_frame.frame_id] ++;
             if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {

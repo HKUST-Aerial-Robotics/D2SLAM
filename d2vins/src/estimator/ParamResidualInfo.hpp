@@ -1,44 +1,20 @@
 #pragma once
 #include <d2common/d2vinsframe.h>
 #include <ceres/ceres.h>
-#include "../../d2vins_params.hpp"
-#include "ParamInfo.hpp"
+#include "../d2vins_params.hpp"
+#include <d2common/solver/BaseParamResInfo.hpp>
+#include "d2vinsstate.hpp"
+
+using namespace D2Common;
 
 namespace D2VINS {
 class PriorFactor;
-enum ResidualType {
-    NONE, // 0
-    IMUResidual, // 1
-    LandmarkTwoFrameOneCamResidual, // 2
-    LandmarkTwoFrameTwoCamResidual, // 3
-    LandmarkTwoDroneTwoCamResidual, // 4
-    LandmarkOneFrameTwoCamResidual, // 5
-    PriorResidual, // 7
-    DepthResidual // 8
-};
 
-class ResidualInfo {
-public:
-    ResidualType residual_type;
-    ceres::CostFunction * cost_function = nullptr;
-    ceres::LossFunction * loss_function = nullptr;
-    std::vector<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> jacobians; //Jacobian of each parameter blocks
-    VectorXd residuals;
-    ResidualInfo(ResidualType type) : residual_type(type) {} 
-    virtual void Evaluate(D2EstimatorState * state);
-    virtual bool relavant(const std::set<FrameIdType> & frame_id) const = 0;
-    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const = 0;
-    virtual std::vector<state_type*> paramsPointerList(D2EstimatorState * state) const {
-        std::vector<state_type*> params;
-        for (auto info : paramsList(state)) {
-            params.push_back(info.pointer);
-        }
-        return params;
-    }
-    int residualSize() const {
-        return cost_function->num_residuals();
-    }
-};
+ParamInfo createFramePose(D2EstimatorState * state, FrameIdType id);
+ParamInfo createExtrinsic(D2EstimatorState * state, int camera_id);
+ParamInfo createLandmark(D2EstimatorState * state, int landmark_id, bool inv_dep_param = true);
+ParamInfo createSpeedBias(D2EstimatorState * state, FrameIdType id);
+ParamInfo createTd(D2EstimatorState * state, int camera_id);
 
 class LandmarkTwoFrameOneCamResInfo : public ResidualInfo {
 public:
@@ -55,13 +31,14 @@ public:
         }
         return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
     }
-    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
+    virtual std::vector<ParamInfo> paramsList(D2State * state) const override {
         std::vector<ParamInfo> params_list;
-        params_list.push_back(ParamInfo::createFramePose(state, frame_ida));
-        params_list.push_back(ParamInfo::createFramePose(state, frame_idb));
-        params_list.push_back(ParamInfo::createExtrinsic(state, camera_id));
-        params_list.push_back(ParamInfo::createLandmark(state, landmark_id));
-        params_list.push_back(ParamInfo::createTd(state, camera_id));
+        auto _state = static_cast<D2EstimatorState*>(state);
+        params_list.push_back(createFramePose(_state, frame_ida));
+        params_list.push_back(createFramePose(_state, frame_idb));
+        params_list.push_back(createExtrinsic(_state, camera_id));
+        params_list.push_back(createLandmark(_state, landmark_id));
+        params_list.push_back(createTd(_state, camera_id));
         return params_list;
     }
 
@@ -94,14 +71,15 @@ public:
         }
         return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
     }
-    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
+    virtual std::vector<ParamInfo> paramsList(D2State * state) const override {
         std::vector<ParamInfo> params_list;
-        params_list.push_back(ParamInfo::createFramePose(state, frame_ida));
-        params_list.push_back(ParamInfo::createFramePose(state, frame_idb));
-        params_list.push_back(ParamInfo::createExtrinsic(state, camera_id_a));
-        params_list.push_back(ParamInfo::createExtrinsic(state, camera_id_b));
-        params_list.push_back(ParamInfo::createLandmark(state, landmark_id));
-        params_list.push_back(ParamInfo::createTd(state, camera_id_a));
+        auto _state = static_cast<D2EstimatorState*>(state);
+        params_list.push_back(createFramePose(_state, frame_ida));
+        params_list.push_back(createFramePose(_state, frame_idb));
+        params_list.push_back(createExtrinsic(_state, camera_id_a));
+        params_list.push_back(createExtrinsic(_state, camera_id_b));
+        params_list.push_back(createLandmark(_state, landmark_id));
+        params_list.push_back(createTd(_state, camera_id_a));
         return params_list;
     }
     static LandmarkTwoFrameTwoCamResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
@@ -128,12 +106,13 @@ public:
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         return frame_id.find(frame_ida) != frame_id.end();
     }
-    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
+    virtual std::vector<ParamInfo> paramsList(D2State * state) const override {
         std::vector<ParamInfo> params_list;
-        params_list.push_back(ParamInfo::createExtrinsic(state, camera_id_a));
-        params_list.push_back(ParamInfo::createExtrinsic(state, camera_id_b));
-        params_list.push_back(ParamInfo::createLandmark(state, landmark_id));
-        params_list.push_back(ParamInfo::createTd(state, camera_id_a));
+        auto _state = static_cast<D2EstimatorState*>(state);
+        params_list.push_back(createExtrinsic(_state, camera_id_a));
+        params_list.push_back(createExtrinsic(_state, camera_id_b));
+        params_list.push_back(createLandmark(_state, landmark_id));
+        params_list.push_back(createTd(_state, camera_id_a));
         return params_list;
     }
 
@@ -158,12 +137,13 @@ public:
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
     }
-    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
+    virtual std::vector<ParamInfo> paramsList(D2State * state) const override {
         std::vector<ParamInfo> params_list;
-        params_list.push_back(ParamInfo::createFramePose(state, frame_ida));
-        params_list.push_back(ParamInfo::createSpeedBias(state, frame_ida));
-        params_list.push_back(ParamInfo::createFramePose(state, frame_idb));
-        params_list.push_back(ParamInfo::createSpeedBias(state, frame_idb));
+        auto _state = static_cast<D2EstimatorState*>(state);
+        params_list.push_back(createFramePose(_state, frame_ida));
+        params_list.push_back(createSpeedBias(_state, frame_ida));
+        params_list.push_back(createFramePose(_state, frame_idb));
+        params_list.push_back(createSpeedBias(_state, frame_idb));
         return params_list;
     }
     static ImuResInfo * create(ceres::CostFunction * cost_function,  FrameIdType frame_ida, FrameIdType frame_idb) {
@@ -184,8 +164,9 @@ public:
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         return frame_id.find(base_frame_id) != frame_id.end();
     }
-    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override {
-        std::vector<ParamInfo> params_list{ParamInfo::createLandmark(state, landmark_id)};
+    virtual std::vector<ParamInfo> paramsList(D2State * state) const override {
+        auto _state = static_cast<D2EstimatorState*>(state);
+        std::vector<ParamInfo> params_list{createLandmark(_state, landmark_id)};
         return params_list;
     }
     static DepthResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
@@ -204,7 +185,7 @@ class PriorResInfo : public ResidualInfo {
     std::set<state_type*> params_set;
 public:
     PriorResInfo(PriorFactor * _factor);
-    virtual std::vector<ParamInfo> paramsList(D2EstimatorState * state) const override;
+    virtual std::vector<ParamInfo> paramsList(D2State * state) const override;
     bool relavant(const std::set<FrameIdType> & frame_ids) const override;
     static PriorResInfo * create(PriorFactor * _factor) {
         auto * info = new PriorResInfo(_factor);

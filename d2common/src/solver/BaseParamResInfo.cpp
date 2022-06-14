@@ -1,8 +1,7 @@
-#include "ResidualInfo.hpp"
-#include "../../factors/prior_factor.h"
+#include <d2common/solver/BaseParamResInfo.hpp>
 
-namespace D2VINS {
-void ResidualInfo::Evaluate(D2EstimatorState * state) {
+namespace D2Common {
+void ResidualInfo::Evaluate(D2State * state) {
     auto param_infos = paramsList(state);
     std::vector<state_type*> params;
     for (auto info : param_infos) {
@@ -52,20 +51,4 @@ void ResidualInfo::Evaluate(D2EstimatorState * state) {
         residuals *= residual_scaling_;
     }
 }
-
-PriorResInfo::PriorResInfo(PriorFactor * _factor)
-    :ResidualInfo(PriorResidual) {
-    cost_function = _factor;
-    factor = _factor;
-}
-
-bool PriorResInfo::relavant(const std::set<FrameIdType> & frame_ids) const {
-    //Prior relavant to all frames.
-    return true;
-}
-
-std::vector<ParamInfo> PriorResInfo::paramsList(D2EstimatorState * state) const {
-    return factor->getKeepParams();
-}
-
 }

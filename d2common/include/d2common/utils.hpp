@@ -3,11 +3,12 @@
 #include <Eigen/Eigen>
 #include <swarm_msgs/Pose.h>
 #include <fstream>
-
+#include <mutex>
 using namespace Eigen;
 
 namespace D2Common {
 namespace Utility {
+typedef std::lock_guard<std::recursive_mutex> Guard;
 inline Quaterniond g2R(const Vector3d &g)
 {
     Vector3d ng1 = g.normalized();

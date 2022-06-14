@@ -1,9 +1,25 @@
-#include "ParamInfo.hpp"
-#include "../d2vinsstate.hpp"
-#include "../../d2vins_params.hpp"
+#include "ParamResidualInfo.hpp"
+#include "d2vinsstate.hpp"
+#include "../factors/prior_factor.h"
 
 namespace D2VINS {
-ParamInfo ParamInfo::createFramePose(D2EstimatorState * state, FrameIdType id) {
+
+PriorResInfo::PriorResInfo(PriorFactor * _factor)
+    :ResidualInfo(PriorResidual) {
+    cost_function = _factor;
+    factor = _factor;
+}
+
+bool PriorResInfo::relavant(const std::set<FrameIdType> & frame_ids) const {
+    //Prior relavant to all frames.
+    return true;
+}
+
+std::vector<ParamInfo> PriorResInfo::paramsList(D2State * state) const {
+    return factor->getKeepParams();
+}
+
+ParamInfo createFramePose(D2EstimatorState * state, FrameIdType id) {
     ParamInfo info;
     info.pointer = state->getPoseState(id);
     info.index = -1;
@@ -16,7 +32,7 @@ ParamInfo ParamInfo::createFramePose(D2EstimatorState * state, FrameIdType id) {
     return info;
 }
 
-ParamInfo ParamInfo::createExtrinsic(D2EstimatorState * state, int camera_id) {
+ParamInfo createExtrinsic(D2EstimatorState * state, int camera_id) {
     ParamInfo info;
     info.pointer = state->getExtrinsicState(camera_id);
     info.index = -1;
@@ -29,11 +45,11 @@ ParamInfo ParamInfo::createExtrinsic(D2EstimatorState * state, int camera_id) {
     return info;
 }
 
-ParamInfo ParamInfo::createLandmark(D2EstimatorState * state, int landmark_id) {
+ParamInfo createLandmark(D2EstimatorState * state, int landmark_id, bool inv_dep_param) {
     ParamInfo info;
     info.pointer = state->getLandmarkState(landmark_id);
     info.index = -1;
-    if (params->landmark_param == D2VINS::D2VINSConfig::LM_INV_DEP) {
+    if (inv_dep_param) {
         info.size = INV_DEP_SIZE;
         info.eff_size = INV_DEP_SIZE;
     } else {
@@ -47,7 +63,7 @@ ParamInfo ParamInfo::createLandmark(D2EstimatorState * state, int landmark_id) {
     return info;
 }
 
-ParamInfo ParamInfo::createSpeedBias(D2EstimatorState * state, FrameIdType id) {
+ParamInfo createSpeedBias(D2EstimatorState * state, FrameIdType id) {
     ParamInfo info;
     info.pointer = state->getSpdBiasState(id);
     info.index = -1;
@@ -60,7 +76,7 @@ ParamInfo ParamInfo::createSpeedBias(D2EstimatorState * state, FrameIdType id) {
     return info;
 }
 
-ParamInfo ParamInfo::createTd(D2EstimatorState * state, int camera_id) {
+ParamInfo createTd(D2EstimatorState * state, int camera_id) {
     ParamInfo info;
     info.pointer = state->getTdState(camera_id);
     info.index = -1;
@@ -72,4 +88,5 @@ ParamInfo ParamInfo::createTd(D2EstimatorState * state, int camera_id) {
     memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
     return info;
 }
+
 }

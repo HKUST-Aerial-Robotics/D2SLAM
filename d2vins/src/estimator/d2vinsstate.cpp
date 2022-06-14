@@ -11,7 +11,7 @@ using D2Common::generateCameraId;
 namespace D2VINS {
 
 D2EstimatorState::D2EstimatorState(int _self_id):
-    self_id(_self_id)
+    D2State(_self_id)
 {
     sld_wins[self_id] = std::vector<VINSFrame*>();
     if (params->estimation_mode != D2VINSConfig::SERVER_MODE) {
@@ -94,11 +94,6 @@ const VINSFrame & D2EstimatorState::lastFrame() const {
 
 VINSFrame & D2EstimatorState::lastFrame() {
     return lastFrame(self_id);
-}
-
-std::set<int> D2EstimatorState::availableDrones() const { 
-    //Should return only has common landmarks.
-    return all_drones;
 }
 
 VINSFrame & D2EstimatorState::getFrame(int drone_id, int index) {
@@ -486,10 +481,6 @@ bool D2EstimatorState::hasFrame(FrameIdType frame_id) const {
 
 bool D2EstimatorState::hasCamera(CamIdType frame_id) const {
     return extrinsic.find(frame_id) != extrinsic.end();
-}
-
-bool D2EstimatorState::hasDrone(int drone_id) const {
-    return all_drones.find(drone_id) != all_drones.end();
 }
 
 void D2EstimatorState::printSldWin(const std::map<FrameIdType, int> & keyframe_measurments) const {

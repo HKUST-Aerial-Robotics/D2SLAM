@@ -2,7 +2,7 @@
 #include <d2common/integration_base.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
-#include "estimator/solver/ConsensusSolver.hpp"
+#include <d2common/solver/ConsensusSolver.hpp>
 
 using namespace D2Common;
 

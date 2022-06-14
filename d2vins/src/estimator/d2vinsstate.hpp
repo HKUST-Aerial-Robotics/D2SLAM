@@ -1,5 +1,6 @@
 #pragma once
 #include "landmark_manager.hpp"
+#include <d2common/d2state.hpp>
 #include <d2common/d2vinsframe.h>
 
 using namespace Eigen;
@@ -8,11 +9,10 @@ using namespace D2Common;
 namespace D2VINS {
 class Marginalizer;
 class PriorFactor;
-class D2EstimatorState {
+class D2EstimatorState : public D2State {
 protected:
     std::map<int, std::vector<VINSFrame*>> sld_wins;
     std::map<int, std::vector<FrameIdType>> latest_remote_sld_wins;
-    std::set<int> all_drones;
     std::map<FrameIdType, VINSFrame*> frame_db;
     std::map<FrameIdType, int> frame_indices;
     D2LandmarkManager lmanager;
@@ -29,9 +29,7 @@ protected:
     void updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs);
     Marginalizer * marginalizer = nullptr;
     PriorFactor * prior_factor = nullptr;
-    int self_id;
 
-    typedef std::lock_guard<std::recursive_mutex> Guard;
     mutable std::recursive_mutex state_lock;
 public:
     state_type td = 0.0;
@@ -73,8 +71,6 @@ public:
     const VINSFrame & lastFrame() const;
     VINSFrame & lastFrame();
     size_t size() const;
-    bool hasDrone(int drone_id) const;
-    std::set<int> availableDrones() const;
     VINSFrame & getFrame(int drone_id, int index);
     Swarm::Pose getEstimatedPose(int drone_id, int index) const;
     Swarm::Pose getEstimatedPose(FrameIdType frame_id) const;

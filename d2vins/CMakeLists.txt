@@ -53,10 +53,8 @@ add_library(${PROJECT_NAME}_estimator
   src/estimator/landmark_manager.cpp
   src/estimator/d2vinsstate.cpp
   src/estimator/marginalization/marginalization.cpp
-  src/estimator/solver/ResidualInfo.cpp
-  src/estimator/solver/ParamInfo.cpp
-  src/estimator/solver/BaseSolverWrapper.cpp
-  src/estimator/solver/ConsensusSolver.cpp
+  src/estimator/ParamResidualInfo.cpp
+  src/estimator/solver/VINSConsenusSolver.cpp
   src/estimator/solver/ConsensusSync.cpp
   src/factors/projectionTwoFrameOneCamFactor.cpp
   src/factors/projectionTwoFrameOneCamDepthFactor.cpp
@@ -65,7 +63,6 @@ add_library(${PROJECT_NAME}_estimator
   src/factors/ProjectionTwoDroneTwoCamFactor.cpp
   src/factors/prior_factor.cpp
   src/factors/pose_local_parameterization.cpp
-  src/factors/consenus_factor.cpp
   src/network/d2vins_net.cpp
 )
 

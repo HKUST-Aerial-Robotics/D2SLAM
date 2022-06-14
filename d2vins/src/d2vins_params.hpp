@@ -7,8 +7,10 @@
 #define UNIT_SPHERE_ERROR
 using namespace Eigen;
 
-namespace D2VINS {
+namespace D2Common {
 struct ConsensusSolverConfig;
+};
+namespace D2VINS {
 struct D2VINSConfig {
     //Inputs
     std::string imu_topic;
@@ -70,7 +72,7 @@ struct D2VINSConfig {
 
     //Solver
     ceres::Solver::Options ceres_options;
-    ConsensusSolverConfig * consensus_config = nullptr;
+    D2Common::ConsensusSolverConfig * consensus_config = nullptr;
     bool consensus_sync_to_start = true;
     int consensus_trigger_time_err_us = 50;
 

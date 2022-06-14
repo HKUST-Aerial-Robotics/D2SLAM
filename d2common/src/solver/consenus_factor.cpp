@@ -1,7 +1,7 @@
-#include "consenus_factor.h"
+#include <d2common/solver/consenus_factor.h>
 #include <d2common/utils.hpp>
-using namespace D2Common;
-namespace D2VINS {
+
+namespace D2Common {
 ConsenusPoseFactor::ConsenusPoseFactor(Eigen::Vector3d _t_ref, Eigen::Quaterniond _q_ref, 
         Eigen::Vector3d _t_tilde, Eigen::Vector3d _theta_tilde, double rho_T, double rho_theta):
     t_ref(_t_ref), q_ref(_q_ref), t_tilde(_t_tilde), theta_tilde(_theta_tilde)

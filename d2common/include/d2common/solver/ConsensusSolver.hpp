@@ -1,14 +1,11 @@
 #pragma once
 #include <ceres/ceres.h>
-#include "SolverWrapper.hpp"
-#include "ParamInfo.hpp"
+#include "BaseParamResInfo.hpp"
 #include <swarm_msgs/Pose.h>
 #include <mutex>
-#include "ConsensusSync.hpp"
+#include "SolverWrapper.hpp"
 
-namespace D2VINS {
-class D2Estimator;
-class D2EstimatorState;
+namespace D2Common {
 
 struct ConsensusSolverConfig {
     int max_steps = 2;
@@ -22,6 +19,7 @@ struct ConsensusSolverConfig {
     double rho_frame_theta = 0.1;
     double relaxation_alpha = 0.6;
     bool sync_with_main = true;
+    bool verbose = false;
 };
 
 struct ConsenusParamState {
@@ -47,6 +45,7 @@ struct ConsenusParamState {
     }
 };
 
+
 class ConsensusSolver : public SolverWrapper {
 protected:
     ConsensusSolverConfig config;
@@ -58,18 +57,17 @@ protected:
     double rho_T = 0.1;
     double rho_theta = 0.1;
     int self_id = 0;
-    D2Estimator * estimator;
-    SyncDataReceiver * receiver;
     int solver_token;
     int iteration_count = 0;
 
-    void updateWithDistributedVinsData(const DistributedVinsData & dist_data);
-    void broadcastDistributedVinsData();
+    virtual void broadcastData() = 0;
+    virtual void receiveAll() = 0;
+    virtual void setStateProperties() = 0;
+    virtual void waitForSync() = 0;
+
 public:
-    ConsensusSolver(D2Estimator * _estimator, D2EstimatorState * _state, SyncDataReceiver * _receiver, 
-            ConsensusSolverConfig _config, int _solver_token): 
-        estimator(_estimator), SolverWrapper(_state), receiver(_receiver), config(_config), 
-        self_id(config.self_id), solver_token(_solver_token)
+    ConsensusSolver(D2State * _state, ConsensusSolverConfig _config, int _solver_token): 
+        SolverWrapper(_state), config(_config), self_id(config.self_id), solver_token(_solver_token)
     {
         rho_landmark = config.rho_landmark;
         rho_T = config.rho_frame_T;
@@ -83,11 +81,11 @@ public:
     ceres::Solver::Summary solveLocalStep();
     void addParam(const ParamInfo & param_info);
     void updateTilde();
-    void waitForSync();
-    void receiveAll();
     void updateGlobal();
     void setToken(int token) {
         solver_token = token;
     }
+    
+
 };
 }
