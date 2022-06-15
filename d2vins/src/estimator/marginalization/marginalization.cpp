@@ -174,7 +174,7 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
             printf("[D2VINS::Marginalizer::marginalize] schurComplement cost %.1fms\n", tt.toc());
         }
         prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
-        showDeltaXofschurComplement(keep_params_list, Ab.first, Ab.second);
+        // showDeltaXofschurComplement(keep_params_list, Ab.first, Ab.second);
     } else {
         auto Ab = Utility::schurComplement(H.toDense(), g, keep_state_dim);
         prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
