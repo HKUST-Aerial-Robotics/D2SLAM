@@ -76,6 +76,7 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
     first_frame.is_keyframe = true;
     first_frame.odom = last_odom;
     first_frame.imu_buf_index = ret.second;
+    first_frame.reference_frame_id = state.getReferenceFrameId();
 
     state.addFrame(frame, first_frame);
     
@@ -160,6 +161,7 @@ void D2Estimator::addFrame(VisualImageDescArray & _frame) {
     _frame.pose_drone = frame.odom.pose();
     _frame.Ba = frame.Ba;
     _frame.Bg = frame.Bg;
+    _frame.reference_frame_id = frame.reference_frame_id;
 
     if (params->verbose || params->debug_print_states) {
         printf("[D2VINS::D2Estimator] Initialize VINSFrame with %d: %s\n", 
@@ -238,7 +240,7 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
                 auto P_w_ki = _frame.pose_drone * pnp_init.second.inverse();
                 P_w_ki.set_yaw_only();
                 state.moveAllPoses(_frame.reference_frame_id, P_w_ki);
-                printf("[D2VINS::D2Estimator] Merge map to remote %d@%d RP: %s\n", 
+                printf("[D2VINS::D2Estimator] Merge map to reference frame %d@%d RP: %s\n", 
                     _frame.reference_frame_id, _frame.drone_id, P_w_ki.toStr().c_str());
             } else {
                 vinsframe.odom.pose() = pnp_init.second;
