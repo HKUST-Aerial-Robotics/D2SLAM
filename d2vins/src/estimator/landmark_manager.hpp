@@ -27,6 +27,7 @@ public:
     bool hasLandmark(LandmarkIdType landmark_id) const;
     void outlierRejection(const D2EstimatorState * state);
     std::vector<LandmarkPerId> getRelatedLandmarks(FrameIdType frame_id) const;
+    void moveByPose(const Swarm::Pose & delta_pose);
 };
 
 }

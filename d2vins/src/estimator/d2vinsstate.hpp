@@ -13,10 +13,8 @@ class D2EstimatorState : public D2State {
 protected:
     std::map<int, std::vector<VINSFrame*>> sld_wins;
     std::map<int, std::vector<FrameIdType>> latest_remote_sld_wins;
-    std::map<FrameIdType, VINSFrame*> frame_db;
     std::map<FrameIdType, int> frame_indices;
     D2LandmarkManager lmanager;
-    std::map<FrameIdType, state_type*> _frame_pose_state;
     std::map<FrameIdType, state_type*> _frame_spd_Bias_state;
     std::map<CamIdType, state_type*> _camera_extrinsic_state;
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
@@ -30,7 +28,6 @@ protected:
     Marginalizer * marginalizer = nullptr;
     PriorFactor * prior_factor = nullptr;
 
-    mutable std::recursive_mutex state_lock;
 public:
     state_type td = 0.0;
     D2EstimatorState(int _self_id);
@@ -38,9 +35,7 @@ public:
     void init(std::vector<Swarm::Pose> _extrinsic, double _td);
 
     //Get states
-    double * getPoseState(FrameIdType frame_id) const;
     int getPoseIndex(FrameIdType frame_id) const;
-    bool hasFrame(FrameIdType frame_id) const;
     double * getExtrinsicState(int i) const;
     double * getSpdBiasState(FrameIdType frame_id) const;
     double * getLandmarkState(LandmarkIdType landmark_id) const;
@@ -62,11 +57,11 @@ public:
     void addCamera(const Swarm::Pose & pose, int camera_index, int camera_id=-1);
     bool hasCamera(CamIdType frame_id) const;
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
+    virtual void moveAllPoses(int new_ref_frame_id, const Swarm::Pose & delta_pose) override;
 
     //Frame access    
     VINSFrame & getFrame(int index);
     const VINSFrame & getFrame(int index) const;
-    const VINSFrame & getFramebyId(int frame_id) const;
     VINSFrame & firstFrame();
     const VINSFrame & lastFrame() const;
     VINSFrame & lastFrame();
@@ -84,6 +79,7 @@ public:
     //Solving process
     void syncFromState();
     void preSolve(const std::map<int, IMUBuffer> & remote_imu_bufs);
+    void repropagateIMU();
 
     //Debug
     void printSldWin(const std::map<FrameIdType, int> & keyframe_measurments) const;

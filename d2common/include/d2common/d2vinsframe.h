@@ -9,6 +9,7 @@ struct VINSFrame {
     double stamp = 0;
     FrameIdType frame_id = -1;
     int drone_id = -1;
+    int reference_frame_id = -1; //For which the frame is reference at. Initially, this should be drone_id. After map merge, this should be main id.
     bool is_keyframe = false;
     Swarm::Odometry odom;
     Swarm::Pose initial_ego_pose; //Only effective if this keyframe is from remote
@@ -31,6 +32,8 @@ struct VINSFrame {
     void toVector(state_type * _pose, state_type * _spd_bias) const;
 
     void fromVector(state_type * _pose, state_type * _spd_bias);
+
+    void moveByPose(int new_ref_frame_id, const Swarm::Pose & delta_pose);
 };
    
 }

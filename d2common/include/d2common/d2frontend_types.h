@@ -209,6 +209,7 @@ struct VisualImageDesc {
 
 struct VisualImageDescArray {
     int drone_id = 0;
+    int reference_frame_id = -1;
     FrameIdType frame_id;
     double stamp;
     std::vector<VisualImageDesc> images;
@@ -253,6 +254,7 @@ struct VisualImageDescArray {
         prevent_adding_db = img_desc.prevent_adding_db;
         drone_id = img_desc.drone_id;
         stamp = img_desc.header.stamp.toSec();
+        reference_frame_id = img_desc.reference_frame_id;
         pose_drone = Swarm::Pose(img_desc.pose_drone);
         for (auto & _img: img_desc.images) {
             images.emplace_back(_img);
@@ -263,6 +265,7 @@ struct VisualImageDescArray {
         frame_id(img_desc.frame_id),
         prevent_adding_db(img_desc.prevent_adding_db),
         drone_id(img_desc.drone_id),
+        reference_frame_id(img_desc.reference_frame_id),
         is_keyframe(img_desc.is_keyframe),
         Ba(img_desc.Ba.x, img_desc.Ba.y, img_desc.Ba.z),
         Bg(img_desc.Bg.x, img_desc.Bg.y, img_desc.Bg.z),
@@ -287,6 +290,7 @@ struct VisualImageDescArray {
         ret.header.stamp = ros::Time(stamp);
         ret.landmark_num = landmarkNum();
         ret.pose_drone = pose_drone.to_ros_pose();
+        ret.reference_frame_id = reference_frame_id;
         for (auto & _img: images) {
             ret.images.emplace_back(_img.toROS());
         }
@@ -318,6 +322,7 @@ struct VisualImageDescArray {
         ret.sld_win_status.timestamp = ret.timestamp;
         ret.sld_win_status.drone_id = ret.drone_id;
         ret.sld_win_status.frame_ids = sld_win_status;
+        ret.reference_frame_id = reference_frame_id;
         for (int i = 0; i < imu_buf.size(); i ++) {
             ret.imu_buf.emplace_back(imu_buf[i].toLCM());
         }

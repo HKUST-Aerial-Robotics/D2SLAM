@@ -52,6 +52,16 @@ FrameIdType D2LandmarkManager::getLandmarkBaseFrame(LandmarkIdType landmark_id) 
     return landmark_db.at(landmark_id).track[0].frame_id;
 }
 
+void D2LandmarkManager::moveByPose(const Swarm::Pose & delta_pose) {
+    const Guard lock(state_lock);
+    for (auto it: landmark_db) {
+        auto & lm = it.second;
+        if (lm.flag != LandmarkFlag::UNINITIALIZED) {
+            lm.position = delta_pose * lm.position;
+        }
+    }
+}
+
 void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2EstimatorState * state) {
     const Guard lock(state_lock);
     LandmarkPerFrame lm_first;

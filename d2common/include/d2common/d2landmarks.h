@@ -35,7 +35,7 @@ struct LandmarkPerFrame {
     LandmarkFlag flag = UNINITIALIZED;
     cv::Point2f pt2d;
     Eigen::Vector3d pt3d_norm; //[x, y, 1]
-    Eigen::Vector3d pt3d;  //Note this is initialized by frontend and will not be modified by estimator.
+    Eigen::Vector3d pt3d;  //Note this is initialized by frontend in cam frame and will not be modified by estimator.
     Eigen::Vector3d velocity;
     double depth = -1;
     double cur_td = 0.0;

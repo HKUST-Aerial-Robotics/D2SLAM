@@ -8,6 +8,7 @@ VINSFrame::VINSFrame(const VisualImageDescArray & frame, const IMUBuffer & buf, 
     frame_id(frame.frame_id),
     drone_id(frame.drone_id),
     is_keyframe(frame.is_keyframe),
+    reference_frame_id(frame.reference_frame_id),
     odom(frame.stamp), Ba(prev_frame.Ba), Bg(prev_frame.Bg),
     prev_frame_id(prev_frame.frame_id),
     initial_ego_pose(frame.pose_drone) {
@@ -21,6 +22,7 @@ VINSFrame::VINSFrame(const VisualImageDescArray & frame, const std::pair<IMUBuff
     stamp(frame.stamp),
     frame_id(frame.frame_id),
     drone_id(frame.drone_id),
+    reference_frame_id(frame.reference_frame_id),
     is_keyframe(frame.is_keyframe),
     odom(frame.stamp), Ba(prev_frame.Ba), Bg(prev_frame.Bg),
     prev_frame_id(prev_frame.frame_id),
@@ -36,6 +38,7 @@ VINSFrame::VINSFrame(const VisualImageDescArray & frame, const Vector3d & _Ba, c
         stamp(frame.stamp),
         frame_id(frame.frame_id),
         drone_id(frame.drone_id),
+        reference_frame_id(frame.reference_frame_id),
         is_keyframe(frame.is_keyframe),
         initial_ego_pose(frame.pose_drone),
         odom(frame.stamp), Ba(_Ba), Bg(_Bg) {
@@ -48,12 +51,18 @@ VINSFrame::VINSFrame(const VisualImageDescArray & frame):
         stamp(frame.stamp),
         frame_id(frame.frame_id),
         drone_id(frame.drone_id),
+        reference_frame_id(frame.reference_frame_id),
         is_keyframe(frame.is_keyframe),
         initial_ego_pose(frame.pose_drone),
         odom(frame.stamp), Ba(0, 0., 0.), Bg(0., 0., 0.) {
     if (t0 == 0) {
         t0 = stamp;
     }
+}
+
+void VINSFrame::moveByPose(int new_ref_frame_id, const Swarm::Pose & delta_pose) {
+    reference_frame_id = new_ref_frame_id;
+    odom.moveByPose(delta_pose);
 }
 
 

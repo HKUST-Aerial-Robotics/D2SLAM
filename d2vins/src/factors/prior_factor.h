@@ -2,6 +2,7 @@
 #include <ceres/ceres.h>
 #include <Eigen/Eigen>
 #include <d2common/d2basetypes.h>
+#include <swarm_msgs/Pose.h>
 
 using namespace D2Common;
 namespace D2Common {
@@ -51,6 +52,7 @@ public:
     void removeFrame(int frame_id);
     int getEffParamsDim() const;
     bool hasNan() const;
+    void moveByPose(const Swarm::Pose & delta_pose);
 };
 
 }

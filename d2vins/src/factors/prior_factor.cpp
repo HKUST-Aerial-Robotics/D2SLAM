@@ -85,6 +85,22 @@ std::vector<state_type*> PriorFactor::getKeepParamsPointers() const {
     return pointers;
 }
 
+void PriorFactor::moveByPose(const Swarm::Pose & delta_pose) {
+    for (auto & info : keep_params_list) {
+        if (info.type == ParamsType::POSE) {
+            //Move the poses in x0
+            Swarm::Pose pose0(info.data_copied);
+            pose0 = delta_pose * pose0;
+            pose0.to_vector(info.data_copied);
+        }
+        if (info.type == ParamsType::SPEED_BIAS) {
+            //Move the velocity
+            Eigen::Map<Vector3d> speed(info.data_copied);
+            speed = delta_pose.att() * speed;
+        }
+    }
+}
+
 std::vector<ParamInfo> PriorFactor::getKeepParams() const {
     return keep_params_list;
 }

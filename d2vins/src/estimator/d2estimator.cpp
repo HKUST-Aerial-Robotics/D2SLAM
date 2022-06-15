@@ -69,9 +69,6 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
     }
     auto q0 = Utility::g2R(_imubuf.mean_acc());
     auto last_odom = Swarm::Odometry(frame.stamp, Swarm::Pose(q0, Vector3d::Zero()));
-    if (self_id == 2) {
-        last_odom.pose().pos() = Vector3d(-2.211280897191351402e-01, -1.554325476433378317e-01, 7.782800089007002597e-03);
-    }
 
     //Easily use the average value as gyrobias now
     //Also the ba with average acc - g
@@ -87,6 +84,7 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
     printf("[D2VINS::D2Estimator] Gyro bias: %.3f %.3f %.3f\n", first_frame.Bg.x(), first_frame.Bg.y(), first_frame.Bg.z());
     printf("[D2VINS::D2Estimator] Acc  bias: %.3f %.3f %.3f\033[0m\n\n", first_frame.Ba.x(), first_frame.Ba.y(), first_frame.Ba.z());
 
+    frame.reference_frame_id = state.getReferenceFrameId();
     frame.pose_drone = first_frame.odom.pose();
     frame.Ba = first_frame.Ba;
     frame.Bg = first_frame.Bg;
@@ -154,6 +152,7 @@ void D2Estimator::addFrame(VisualImageDescArray & _frame) {
         frame.odom = odom_imu;
     }
     frame.odom.stamp = _frame.stamp;
+    frame.reference_frame_id = state.getReferenceFrameId();
     state.addFrame(_frame, frame);
 
     //Assign IMU and initialization to VisualImageDescArray for broadcasting.
@@ -233,6 +232,15 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
         } else {
             if (params->verbose) {
                 printf("\033[0;32m[D2VINS::D2Estimator] Initial first remoteframe@drone%d with PnP: %s\033[0m\n", r_drone_id, pnp_init.second.toStr().c_str());
+            }
+            if (_frame.reference_frame_id < state.getReferenceFrameId()) {
+                //In this case, we merge the current map to the remote.
+                auto P_w_ki = _frame.pose_drone * pnp_init.second.inverse();
+                P_w_ki.set_yaw_only();
+                state.moveAllPoses(_frame.reference_frame_id, P_w_ki);
+                printf("[D2VINS::D2Estimator] Merge map to remote %d@%d RP: %s\n", 
+                    _frame.reference_frame_id, _frame.drone_id, P_w_ki.toStr().c_str());
+            } else {
                 vinsframe.odom.pose() = pnp_init.second;
             }
         }

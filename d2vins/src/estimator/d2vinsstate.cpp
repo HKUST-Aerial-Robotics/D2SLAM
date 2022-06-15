@@ -75,13 +75,6 @@ const VINSFrame & D2EstimatorState::getFrame(int index) const {
     return getFrame(self_id, index);
 }
 
-const VINSFrame & D2EstimatorState::getFramebyId(int frame_id) const {
-    if (frame_db.find(frame_id) == frame_db.end()) {
-        printf("\033[0;31m[D2EstimatorState::getFramebyId] Frame %d not found in database\033[0m\n", frame_id);
-        assert(true && "Frame not found in database");
-    }
-    return *frame_db.at(frame_id);
-}
 
 
 VINSFrame & D2EstimatorState::firstFrame() {
@@ -150,15 +143,6 @@ size_t D2EstimatorState::size(int drone_id) const {
 int D2EstimatorState::getPoseIndex(FrameIdType frame_id) const {
     const Guard lock(state_lock);
     return frame_indices.at(frame_id);
-}
-
-double * D2EstimatorState::getPoseState(FrameIdType frame_id) const {
-    const Guard lock(state_lock);
-    if (_frame_pose_state.find(frame_id) == _frame_pose_state.end()) {
-        printf("\033[0;31m[D2VINS::D2EstimatorState] frame %ld not found\033[0m\n", frame_id);
-        assert(false && "Frame not found");
-    }
-    return _frame_pose_state.at(frame_id);
 }
 
 double * D2EstimatorState::getTdState(int drone_id) {
@@ -426,7 +410,10 @@ void D2EstimatorState::syncFromState() {
         extrinsic.at(cam_id).from_vector(_camera_extrinsic_state.at(cam_id));
     }
     lmanager.syncState(this);
+    repropagateIMU();
+}
 
+void D2EstimatorState::repropagateIMU() {
     if (sld_wins[self_id].size() > 1) {
         for (size_t i = 0; i < sld_wins[self_id].size() - 1; i ++) {
             auto frame_a = sld_wins[self_id][i];
@@ -434,7 +421,6 @@ void D2EstimatorState::syncFromState() {
             frame_b->pre_integrations->repropagate(frame_a->Ba, frame_a->Bg);
         }
     }
-
     if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
         for (auto it : sld_wins) {
             if (it.first == self_id) {
@@ -446,6 +432,20 @@ void D2EstimatorState::syncFromState() {
                 frame_b->pre_integrations->repropagate(frame_a->Ba, frame_a->Bg);
             }
         }
+    }
+}
+
+void D2EstimatorState::moveAllPoses(int new_ref_frame_id, const Swarm::Pose & delta_pose) {
+    reference_frame_id = new_ref_frame_id;
+    for (auto it: frame_db) {
+        auto frame_id = it.first;
+        auto & frame = it.second;
+        frame->moveByPose(new_ref_frame_id, delta_pose);
+        frame->toVector(_frame_pose_state.at(frame_id), _frame_spd_Bias_state.at(frame_id));
+    }
+    lmanager.moveByPose(delta_pose);
+    if (prior_factor != nullptr) {
+        prior_factor->moveByPose(delta_pose);
     }
 }
 
@@ -473,10 +473,6 @@ std::vector<LandmarkPerId> D2EstimatorState::getRelatedLandmarks(FrameIdType fra
 
 bool D2EstimatorState::hasLandmark(LandmarkIdType id) const {
     return lmanager.hasLandmark(id);
-}
-
-bool D2EstimatorState::hasFrame(FrameIdType frame_id) const {
-    return frame_db.find(frame_id) != frame_db.end();
 }
 
 bool D2EstimatorState::hasCamera(CamIdType frame_id) const {
