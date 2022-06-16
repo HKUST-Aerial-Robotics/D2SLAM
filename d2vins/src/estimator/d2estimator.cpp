@@ -235,7 +235,7 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
             if (params->verbose) {
                 printf("\033[0;32m[D2VINS::D2Estimator] Initial first remoteframe@drone%d with PnP: %s\033[0m\n", r_drone_id, pnp_init.second.toStr().c_str());
             }
-            if (_frame.reference_frame_id < state.getReferenceFrameId()) {
+            if (_frame.reference_frame_id < state.getReferenceFrameId() && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
                 //In this case, we merge the current map to the remote.
                 auto P_w_ki = _frame.pose_drone * pnp_init.second.inverse();
                 P_w_ki.set_yaw_only();

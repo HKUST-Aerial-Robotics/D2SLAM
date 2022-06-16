@@ -6,6 +6,10 @@ import numpy as np
 from math import *
 from geometry_msgs.msg import PoseStamped
 import rospy
+from cv_bridge import CvBridge
+import cv2 as cv
+import argparse
+from sensor_msgs.msg import CompressedImage
 
 def quat2eulers(w, x, y, z):
     r = atan2(2 * (w * x + y * z),
@@ -18,10 +22,13 @@ def yaw_rotate_vec(yaw, vec):
     Re = rotation_matrix(yaw, [0, 0, 1])[0:3, 0:3]
     return np.transpose(np.dot(Re, np.transpose(vec)))
 
-def generate_bagname(bag):
+def generate_bagname(bag, comp=False):
     from pathlib import Path
     p = Path(bag)
-    bagname = p.stem + "-sync-calib.bag"
+    if comp:
+        bagname = p.stem + "-sync-comp.bag"
+    else:
+        bagname = p.stem + "-sync.bag"
     output_bag = p.parents[0].joinpath(bagname)
     # output_bag = "/home/xuhao/Dropbox/data/d2slam/tum_datasets/" + bagname
     return output_bag
@@ -33,15 +40,44 @@ def generate_groundtruthname(bag):
     output_bag = p.parents[0].joinpath(bagname)
     return output_bag
 
-if __name__ == "__main__":
-    bags = sys.argv[1:]
+def get_time0(bag):
     for topic, msg, t in rosbag.Bag(bags[0]).read_messages():
-        t0 = t
-        break
+        return t
+
+def get_pose0(bag):
     for topic, msg, t in rosbag.Bag(bags[0]).read_messages():
         if topic == "/vrpn_client/raw_transform":
-            pose0 = msg
-            break
+            quat0 = msg.transform.rotation
+            pos0 = msg.transform.translation
+            y0, p0, r0 = quat2eulers(quat0.w, quat0.x, quat0.y, quat0.z)
+            pos0 = np.array([pos0.x, pos0.y, pos0.z])
+            q_calib = quaternion_from_euler(0, 0, -y0)
+            # ypr = 
+            print(f"Will use {t0} as start yaw0 {y0} pos0 {pos0} qcalib {q_calib}")
+            return pos0, q_calib, y0
+
+def compress_image_msg(msg):
+    img16 = bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+    cv_image = (img16/256).astype('uint8')
+    comp_img = CompressedImage()
+    comp_img.header = msg.header
+    comp_img.format = "mono8; jpeg compressed"
+    succ, _data = cv.imencode(".jpg", cv_image, encode_param)
+    comp_img.data = _data.flatten().tolist()
+    return comp_img, cv_image
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('bags', metavar='bags', type=str, nargs='+',
+                    help='bags to be synchronized')
+    parser.add_argument('-c', '--comp', action='store_true', help='compress the image topics')
+    parser.add_argument('-q', '--quality', type=int, default=90, help='quality of the compressed image')
+    parser.add_argument('-s', '--show', action='store_true', help='compress the image topics')
+    args = parser.parse_args()
+    bags = args.bags
+    t0 = get_time0(bags[0])
+    pos0, q_calib, y0 = get_pose0(bags[0])
+
     dts = {}
     for bag in bags[1:]:
         print("parse bag", bag)
@@ -49,17 +85,13 @@ if __name__ == "__main__":
             print(f"Bag {bag} start at {t.to_sec()}")
             dts[bag] = t0 - t
             break
-    quat0 = pose0.transform.rotation
-    pos0 = pose0.transform.translation
-    y0, p0, r0 = quat2eulers(quat0.w, quat0.x, quat0.y, quat0.z)
-    pos0 = np.array([pos0.x, pos0.y, pos0.z])
-    q_calib = quaternion_from_euler(0, 0, -y0)
-    # ypr = 
-    print(f"Will use {t0} as start yaw0 {y0} pos0 {pos0} qcalib {q_calib}")
 
     print(dts)
+    image_topics = {"/cam0/image_raw", "/cam1/image_raw"}
+    bridge = CvBridge()
+    encode_param = [int(cv.IMWRITE_JPEG_QUALITY), args.quality]
     for bag in bags:
-        output_bag = generate_bagname(bag)
+        output_bag = generate_bagname(bag, args.comp)
         print("Write bag to", output_bag)
         if bag not in dts:
             _dt = rospy.Duration(0)
@@ -73,6 +105,16 @@ if __name__ == "__main__":
             for topic, msg, t in rosbag.Bag(bag).read_messages():
                 if msg._has_header:
                     msg.header.stamp = msg.header.stamp + _dt
+                if msg._type == "sensor_msgs/Image" and args.comp:
+                    #compress image
+                    # msg.data = msg.data.tobytes()
+                    # outbag.write(topic, msg, t + _dt)
+                    comp_img, cv_image = compress_image_msg(msg)
+                    outbag.write(topic+"/compressed", comp_img, t + _dt )
+                    if args.show:
+                        cv.imshow(topic, cv_image)
+                        cv.waitKey(1)
+                    continue
                 outbag.write(topic, msg, t + _dt )
                 if topic == "/vrpn_client/raw_transform":
                     posestamp = PoseStamped()
