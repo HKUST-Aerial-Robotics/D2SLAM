@@ -77,7 +77,7 @@ protected:
                 ret = estimator->inputImage(viokf);
             }
             if (ret && D2FrontEnd::params->enable_network) {
-                loop_net->broadcastVisualImageDescArray(viokf);
+                // loop_net->broadcastVisualImageDescArray(viokf);
             }
         }
     }

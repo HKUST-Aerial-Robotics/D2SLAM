@@ -26,7 +26,6 @@ std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
     if (params->verbose) {
         printf("[D2VSIN::D2EstimatorState] remove frame %ld\n", frame_id);
     }
-    delete sld_wins[self_id][index];
     sld_wins[self_id].erase(sld_wins[self_id].begin() + index);
     return removeFrameById(frame_id);
 }
@@ -37,6 +36,12 @@ std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(FrameIdType frame_i
         printf("[D2VSIN::D2EstimatorState] remove frame %ld remove base %d\n", frame_id, remove_base);
     }
     auto ret = lmanager.popFrame(frame_id, remove_base);
+    auto _frame = frame_db.at(frame_id);
+    if (_frame->pre_integrations) {
+        delete _frame->pre_integrations;
+    }
+
+    delete _frame;
     frame_db.erase(frame_id);
     delete _frame_pose_state.at(frame_id);
     delete _frame_spd_Bias_state.at(frame_id);
@@ -328,6 +333,9 @@ void D2EstimatorState::updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_
                 auto td = getTd(frame_a->drone_id);
                 auto ret = remote_imu_bufs.at(self_id).periodIMU(frame_a->imu_buf_index, frame_b->stamp + td);
                 auto _imu_buf = ret.first;
+                if (frame_b->pre_integrations != nullptr) {
+                    delete frame_b->pre_integrations;
+                }
                 frame_b->pre_integrations = new IntegrationBase(_imu_buf, frame_a->Ba, frame_a->Bg);
                 frame_b->prev_frame_id = frame_a->frame_id;
                 frame_b->imu_buf_index = ret.second;
@@ -353,6 +361,9 @@ void D2EstimatorState::updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_
                 frame_b->pre_integrations = new IntegrationBase(_imu_buf, frame_a->Ba, frame_a->Bg);
                 frame_b->prev_frame_id = frame_a->frame_id;
                 frame_b->imu_buf_index = ret.second;
+                if (frame_b->pre_integrations != nullptr) {
+                    delete frame_b->pre_integrations;
+                }
                 if (fabs(_imu_buf.size()/(frame_b->stamp - frame_a->stamp) - params->IMU_FREQ) > 10) {
                     printf("\033[0;31m[D2VINS::D2Estimator] Remote IMU error freq: %.3f in updateRemoteSldIMU \033[0m\n", 
                         _imu_buf.size()/(frame_b->stamp - frame_a->stamp));

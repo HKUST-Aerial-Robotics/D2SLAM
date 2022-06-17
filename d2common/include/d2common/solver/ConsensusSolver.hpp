@@ -49,7 +49,6 @@ struct ConsenusParamState {
 class ConsensusSolver : public SolverWrapper {
 protected:
     ConsensusSolverConfig config;
-    std::vector<ResidualInfo*> residuals;
     std::map<state_type*, ParamInfo> all_estimating_params;
     std::map<state_type*, ConsenusParamState> consenus_params;
     std::map<state_type*, std::map<int, VectorXd>> remote_params;

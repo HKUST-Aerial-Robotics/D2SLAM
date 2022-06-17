@@ -8,12 +8,11 @@ void ConsensusSolver::addResidual(ResidualInfo*residual_info) {
     for (auto param: residual_info->paramsList(state)) {
         addParam(param);
     }
-    residuals.push_back(residual_info);
+    SolverWrapper::addResidual(residual_info);
 }
 
 void ConsensusSolver::reset() {
-    delete problem;
-    problem = new ceres::Problem();
+    SolverWrapper::reset();
     consenus_params.clear();
     all_estimating_params.clear();
     residuals.clear();

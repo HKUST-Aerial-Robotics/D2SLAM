@@ -11,11 +11,14 @@ class SolverWrapper {
 protected:
     ceres::Problem * problem = nullptr;
     D2State * state;
+    std::vector<ResidualInfo*> residuals;
 public:
     SolverWrapper(D2State * _state): state(_state) {
         problem = new ceres::Problem();
     }
-    virtual void addResidual(ResidualInfo*residual_info) = 0;
+    virtual void addResidual(ResidualInfo*residual_info) {
+        residuals.push_back(residual_info);
+    }
     virtual ceres::Solver::Summary solve() = 0;
     ceres::Problem & getProblem() {
         return *problem;
@@ -23,6 +26,10 @@ public:
     virtual void reset() {
         delete problem;
         problem = new ceres::Problem();
+        for (auto residual : residuals) {
+            delete residual;
+        }
+        residuals.clear();
     }
 };
 

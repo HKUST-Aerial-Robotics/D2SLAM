@@ -8,6 +8,7 @@ void CeresSolver::addResidual(ResidualInfo*residual_info) {
     problem->AddResidualBlock(residual_info->cost_function,
                              residual_info->loss_function,
                              pointers);
+    SolverWrapper::addResidual(residual_info);
 }
 
 ceres::Solver::Summary CeresSolver::solve() {

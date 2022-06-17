@@ -94,7 +94,6 @@ int Marginalizer::filterResiduals() {
             }
             it++;
         } else {
-            delete *it;
             it = residual_info_list.erase(it);
         }
     }
