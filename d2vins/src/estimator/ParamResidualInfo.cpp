@@ -27,8 +27,8 @@ ParamInfo createFramePose(D2EstimatorState * state, FrameIdType id) {
     info.eff_size = POSE_EFF_SIZE;
     info.type = POSE;
     info.id = id;
-    info.data_copied = new state_type[info.size];
-    memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
+    info.data_copied.resize(info.size);
+    memcpy(info.data_copied.data(), info.pointer, sizeof(state_type) * info.size);
     return info;
 }
 
@@ -40,8 +40,8 @@ ParamInfo createExtrinsic(D2EstimatorState * state, int camera_id) {
     info.eff_size = POSE_EFF_SIZE;
     info.type = EXTRINSIC;
     info.id = camera_id;
-    info.data_copied = new state_type[info.size];
-    memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
+    info.data_copied.resize(info.size);
+    memcpy(info.data_copied.data(), info.pointer, sizeof(state_type) * info.size);
     return info;
 }
 
@@ -58,8 +58,8 @@ ParamInfo createLandmark(D2EstimatorState * state, int landmark_id, bool inv_dep
     }
     info.type = LANDMARK;
     info.id = landmark_id;
-    info.data_copied = new state_type[info.size];
-    memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
+    info.data_copied.resize(info.size);
+    memcpy(info.data_copied.data(), info.pointer, sizeof(state_type) * info.size);
     return info;
 }
 
@@ -71,8 +71,8 @@ ParamInfo createSpeedBias(D2EstimatorState * state, FrameIdType id) {
     info.eff_size = FRAME_SPDBIAS_SIZE;
     info.type = SPEED_BIAS;
     info.id = id;
-    info.data_copied = new state_type[info.size];
-    memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
+    info.data_copied.resize(info.size);
+    memcpy(info.data_copied.data(), info.pointer, sizeof(state_type) * info.size);
     return info;
 }
 
@@ -84,8 +84,8 @@ ParamInfo createTd(D2EstimatorState * state, int camera_id) {
     info.eff_size = TD_SIZE;
     info.type = TD;
     info.id = camera_id;
-    info.data_copied = new state_type[info.size];
-    memcpy(info.data_copied, info.pointer, sizeof(state_type) * info.size);
+    info.data_copied.resize(info.size);
+    memcpy(info.data_copied.data(), info.pointer, sizeof(state_type) * info.size);
     return info;
 }
 

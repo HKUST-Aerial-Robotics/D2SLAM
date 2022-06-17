@@ -18,8 +18,8 @@ inline bool IsSE3(ParamsType type) {
 }
 
 struct ParamInfo {
-    double * pointer = nullptr;
-    double * data_copied = nullptr;
+    state_type * pointer = nullptr;
+    Matrix<state_type, -1, 1> data_copied;
     int index = -1;
     int size = 0;
     int eff_size = 0; //This is size on tangent space.

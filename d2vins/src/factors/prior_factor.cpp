@@ -44,7 +44,7 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals, d
         int size = info.size; //Use norminal size instead of tangent space size here.
         int idx = info.index;
         Eigen::Map<const Eigen::VectorXd> x(parameters[i], size);
-        Eigen::Map<const Eigen::VectorXd> x0(info.data_copied, size);
+        Eigen::Map<const Eigen::VectorXd> x0(info.data_copied.data(), size);
         // std::cout << "idx" << idx << "type" << info.type <<"size" << size  << "keep_eff_param_dim" <<keep_eff_param_dim<< std::endl;
         if (info.type != POSE && info.type != EXTRINSIC) {
             dx.segment(idx, size) = x - x0;
@@ -89,13 +89,13 @@ void PriorFactor::moveByPose(const Swarm::Pose & delta_pose) {
     for (auto & info : keep_params_list) {
         if (info.type == ParamsType::POSE) {
             //Move the poses in x0
-            Swarm::Pose pose0(info.data_copied);
+            Swarm::Pose pose0(info.data_copied.data());
             pose0 = delta_pose * pose0;
-            pose0.to_vector(info.data_copied);
+            pose0.to_vector(info.data_copied.data());
         }
         if (info.type == ParamsType::SPEED_BIAS) {
             //Move the velocity
-            Eigen::Map<Vector3d> speed(info.data_copied);
+            Eigen::Map<Vector3d> speed(info.data_copied.data());
             speed = delta_pose.att() * speed;
         }
     }
