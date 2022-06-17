@@ -181,7 +181,7 @@ void D2Estimator::addRemoteImuBuf(int drone_id, const IMUBuffer & imu_) {
             if (imu_[i].t > t_last) {
                 if (add_first) {
                     if ((imu_[i].t - t_last)  > params->max_imu_time_err) {
-                        printf("\033[0;31m[D2VINS::D2Estimator] Add remote imu buffer %d: dt %.2fms\033[0m\\n", drone_id, (imu_[i].t - t_last)*1000);
+                        printf("\033[0;31m[D2VINS::D2Estimator] Add remote imu buffer %d: dt %.2fms\033[0m\n", drone_id, (imu_[i].t - t_last)*1000);
                     }
                     add_first = false;
                 }
@@ -324,12 +324,12 @@ void D2Estimator::setStateProperties() {
         if (!problem.HasParameterBlock(pointer)) {
             continue;
         }
-        if (!params->estimate_extrinsic || state.size() < params->max_sld_win_size) {
-            //printf("[D2Estimator::setStateProperties@%d] set camera %d to fixed \n", self_id, cam_id);
+        int drone_id = state.getCameraBelonging(cam_id);
+        if (!params->estimate_extrinsic || state.size(drone_id) < params->max_sld_win_size - 1) {
+            // printf("[D2Estimator::setStateProperties@%d] set camera %d to fixed sld_size %d/%d \n", self_id, cam_id, state.size(drone_id), params->max_sld_win_size - 1);
             problem.SetParameterBlockConstant(state.getExtrinsicState(cam_id));
-        } else {
-            problem.SetParameterization(state.getExtrinsicState(cam_id), pose_local_param);
         }
+        problem.SetParameterization(state.getExtrinsicState(cam_id), pose_local_param);
     }
 
     for (auto lm_id: used_landmarks) {
@@ -345,19 +345,14 @@ void D2Estimator::setStateProperties() {
         problem.SetParameterBlockConstant(state.getTdState(self_id));
     }
 
-    if (!state.getPrior() || params->always_fixed_first_pose) {
+    if (!state.getPrior() || params->always_fixed_first_pose || !state.marginalizeSelf()) {
         if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
-            problem.SetParameterBlockConstant(state.getPoseState(state.firstFrame().frame_id));
-        } else {
-            //Set first drone pose as fixed (whatever it is).
-            if (state.availableDrones().size() > 0) {
-                auto drone_id = *state.availableDrones().begin();
+            for (auto drone_id : state.availableDrones()) {
                 problem.SetParameterBlockConstant(state.getPoseState(state.firstFrame(drone_id).frame_id));
             }
         }
     }
 }
-
 
 bool D2Estimator::isMain() const {
     return self_id == 1; //Temp code/

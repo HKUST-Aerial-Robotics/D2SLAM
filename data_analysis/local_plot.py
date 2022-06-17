@@ -218,7 +218,7 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
         if poses_vo is not None:
             pass
         else:
-            output_table = [["Relative", "EST RMSE: Pos", "Ang", "BIAS: Pos", "Ang"]]
+            output_table = [["Relative", "EST RMSE: Pos (XYZ)", "POS", "Ang", "BIAS: Pos", "Ang"]]
     avg_rmse = 0
     avg_rmse_yaw = 0.0
     
@@ -263,7 +263,7 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
             rmse_x = RMSE(dp_gt[mask,0] , dp_fused[mask,0])
             rmse_y = RMSE(dp_gt[mask,1] , dp_fused[mask,1])
             rmse_z = RMSE(dp_gt[mask,2] , dp_fused[mask,2])
-
+            rmse_pos = ATE_POS(dp_gt[mask], dp_fused[mask])
             avg_rmse += ATE_POS(dp_gt[mask], dp_fused[mask])
             avg_rmse_yaw += rmse_yaw
 
@@ -272,7 +272,7 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
                     pass
                 else:
                     output_table.append([
-                        f"{main_id}->{target_id}", f"{rmse_x:3.3f},{rmse_y:3.3f},{rmse_z:3.3f}", f"{rmse_yaw*180/pi:3.2f}°", 
+                        f"{main_id}->{target_id}", f"{rmse_x:3.3f},{rmse_y:3.3f},{rmse_z:3.3f}", f"{rmse_pos:3.3f}", f"{rmse_yaw*180/pi:3.2f}°", 
                         f"{np.mean(dp_gt[mask,0] - dp_fused[mask,0]):3.3f},{np.mean(dp_gt[mask,1] - dp_fused[mask,1]):+3.3f},{np.mean(dp_gt[mask,2] - dp_fused[mask,2]):+3.3f}", 
                         f"{np.mean(dyaw_gt - dyaw_fused)*180/3.14:+3.2f}°"
                     ])

@@ -48,12 +48,12 @@ std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(FrameIdType frame_i
 void D2EstimatorState::init(std::vector<Swarm::Pose> _extrinsic, double _td) {
     for (int i = 0; i < _extrinsic.size(); i ++) {
         auto pose = _extrinsic[i];
-        addCamera(pose, i);
+        addCamera(pose, i, self_id);
     }
     td = _td;
 }
 
-void D2EstimatorState::addCamera(const Swarm::Pose & pose, int camera_index, int camera_id) {
+void D2EstimatorState::addCamera(const Swarm::Pose & pose, int camera_index, int drone_id, CamIdType camera_id) {
     if (camera_id < 0) {
         camera_id = generateCameraId(self_id, camera_index);
     }
@@ -61,6 +61,7 @@ void D2EstimatorState::addCamera(const Swarm::Pose & pose, int camera_index, int
     pose.to_vector(_p);
     _camera_extrinsic_state[camera_id] = _p;
     extrinsic[camera_id] = pose;
+    camera_drone[camera_id] = drone_id;
 }
 
 size_t D2EstimatorState::size() const {
@@ -195,6 +196,10 @@ std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements() con
     return lmanager.availableMeasurements();
 }
 
+int D2EstimatorState::getCameraBelonging(CamIdType cam_id) const {
+    return camera_drone.at(cam_id);
+}
+
 std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
     const Guard lock(state_lock);
     std::vector<LandmarkPerId> ret;
@@ -239,6 +244,9 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
             //If last frame is not keyframe then remove it.
             clear_frames.insert(self_sld_win[self_sld_win.size() - 1]->frame_id);
         } else if (self_sld_win.size() >= params->max_sld_win_size) {
+            if (self_sld_win[0]->drone_id == self_id) {
+                marginalized_self_first = true;
+            }
             clear_key_frames.insert(self_sld_win[0]->frame_id);
             clear_frames.insert(self_sld_win[0]->frame_id);
         }
@@ -365,7 +373,7 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
         for (auto & img : images.images) {
             if (extrinsic.find(img.camera_id) == extrinsic.end()) {
                 printf("[D2VINS::D2EstimatorState] Adding extrinsic of camera %d from drone@%d\n", img.camera_id, _frame.drone_id);
-                addCamera(img.extrinsic, img.camera_index, img.camera_id);
+                addCamera(img.extrinsic, img.camera_index, images.drone_id, img.camera_id);
             }
         }
     } else {

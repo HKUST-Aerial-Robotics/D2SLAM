@@ -17,6 +17,7 @@ protected:
     D2LandmarkManager lmanager;
     std::map<FrameIdType, state_type*> _frame_spd_Bias_state;
     std::map<CamIdType, state_type*> _camera_extrinsic_state;
+    std::map<CamIdType, int> camera_drone;
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
 
     std::vector<LandmarkPerId> popFrame(int index);
@@ -27,6 +28,7 @@ protected:
     void updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs);
     Marginalizer * marginalizer = nullptr;
     PriorFactor * prior_factor = nullptr;
+    bool marginalized_self_first = false;
 
 public:
     state_type td = 0.0;
@@ -50,11 +52,12 @@ public:
     std::vector<LandmarkPerId> getRelatedLandmarks(FrameIdType frame_id) const;
     LandmarkPerId & getLandmarkbyId(LandmarkIdType id);
     bool hasLandmark(LandmarkIdType id) const;
+    int getCameraBelonging(CamIdType cam_id) const;
 
     //Frame operations
     std::vector<LandmarkPerId> clearFrame();
     void addFrame(const VisualImageDescArray & images, const VINSFrame & _frame);
-    void addCamera(const Swarm::Pose & pose, int camera_index, int camera_id=-1);
+    void addCamera(const Swarm::Pose & pose, int camera_index, int drone_id, CamIdType camera_id=-1);
     bool hasCamera(CamIdType frame_id) const;
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
     virtual void moveAllPoses(int new_ref_frame_id, const Swarm::Pose & delta_pose) override;
@@ -83,6 +86,9 @@ public:
 
     //Debug
     void printSldWin(const std::map<FrameIdType, int> & keyframe_measurments) const;
+    bool marginalizeSelf() const {
+        return marginalized_self_first;
+    }
 
     void setMarginalizer(Marginalizer * _marginalizer) {
         marginalizer = _marginalizer;
