@@ -61,6 +61,7 @@ public:
     int residualSize() const {
         return cost_function->num_residuals();
     }
+    virtual ~ResidualInfo(){}
 };
 
 }

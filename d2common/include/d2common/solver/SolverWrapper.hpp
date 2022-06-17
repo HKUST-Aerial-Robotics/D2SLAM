@@ -3,6 +3,7 @@
 #include <iostream>
 #include <ceres/ceres.h>
 #include <d2common/d2state.hpp>
+#include <d2common/solver/BaseParamResInfo.hpp>
 
 namespace D2Common {
 class ResidualInfo;

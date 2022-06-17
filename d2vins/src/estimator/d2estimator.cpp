@@ -501,7 +501,6 @@ void D2Estimator::solveNonDistrib() {
     setupLandmarkFactors();
     setupPriorFactor();
     setStateProperties();
-
     ceres::Solver::Summary summary = solver->solve();
     state.syncFromState();
 
