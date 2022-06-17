@@ -7,7 +7,7 @@ namespace D2FrontEnd {
 #define WIN_SIZE cv::Size(21, 21)
 
 bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
-    const Guard lock(state_lock);
+    const Guard lock(track_lock);
     bool iskeyframe = false;
     frame_count ++;
     TrackReport report;
@@ -34,7 +34,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     }
 
     report.ft_time = tic.toc();
-
+    // printf("[D2FeatureTracker::trackLocalFrames] Landmark mem : %.1fkB\n", (lmanager->total_lm_per_frame_num*sizeof(LandmarkPerFrame))/1024.0/1024.0);
     if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
             draw(frames.images[0], frames.images[1], iskeyframe, report);
@@ -48,7 +48,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
 }
 
 bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
-    const Guard lock(state_lock);
+    const Guard lock(track_lock);
     bool matched = false;
     frame_count ++;
     TrackReport report;
@@ -363,23 +363,10 @@ LandmarkPerFrame D2FeatureTracker::createLKLandmark(const VisualImageDesc & fram
     return lm;
 }
 
-int LandmarkManager::addLandmark(const LandmarkPerFrame & lm) {
-    auto _id = count + MAX_FEATURE_NUM*params->self_id;
-    count ++;
-    landmark_db[_id] = lm;
-    return _id;
-}
-
-void LandmarkManager::updateLandmark(const LandmarkPerFrame & lm) {
-    if (landmark_db.find(lm.landmark_id) == landmark_db.end()) {
-        landmark_db[lm.landmark_id] = lm;
-    } else {
-        landmark_db.at(lm.landmark_id).add(lm);
-    }
-    assert(lm.landmark_id >= 0 && "landmark id must > 0");
-}
-
 void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
+    if (current_keyframe.frame_id == frames.frame_id) {
+        return;
+    }
     keyframe_count ++;
     for (auto & frame: frames.images) {
         for (unsigned int i = 0; i < frame.landmarkNum(); i++) {
@@ -394,6 +381,9 @@ void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
                 lmanager->updateLandmark(frame.landmarks[i]);
             }
         }
+    }
+    if (current_keyframe.frame_id >= 0) {
+        lmanager->popFrame(current_keyframe.frame_id);
     }
     current_keyframe = frames;
 }

@@ -210,7 +210,7 @@ struct VisualImageDesc {
 struct VisualImageDescArray {
     int drone_id = 0;
     int reference_frame_id = -1;
-    FrameIdType frame_id;
+    FrameIdType frame_id = -1;
     double stamp;
     std::vector<VisualImageDesc> images;
     std::vector<FrameIdType> sld_win_status;
@@ -245,10 +245,6 @@ struct VisualImageDescArray {
 
     VisualImageDescArray() {}
     
-    ~VisualImageDescArray() {
-        // std::cout << "destorying  VisualImageDescArray " << frame_id << std::endl;
-    }
-
     VisualImageDescArray(const swarm_msgs::ImageArrayDescriptor & img_desc) {
         frame_id = img_desc.msg_id;
         prevent_adding_db = img_desc.prevent_adding_db;

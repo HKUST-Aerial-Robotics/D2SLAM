@@ -14,7 +14,6 @@ void D2LandmarkManager::addKeyframe(const VisualImageDescArray & images, double 
                 //Do not use unmatched features.
                 continue;
             }
-            related_landmarks[images.frame_id].insert(lm.landmark_id);
             lm.cur_td = td;
             updateLandmark(lm);
             if (landmark_state.find(lm.landmark_id) == landmark_state.end()) {
@@ -261,37 +260,6 @@ void D2LandmarkManager::syncState(const D2EstimatorState * state) {
     }
 }
 
-std::vector<LandmarkPerId> D2LandmarkManager::popFrame(FrameIdType frame_id, bool pop_base) {
-    const Guard lock(state_lock);
-    //Returning margined landmarks
-    std::vector<LandmarkPerId> margined_landmarks;
-    if (related_landmarks.find(frame_id) == related_landmarks.end()) {
-        return margined_landmarks;
-    }
-    auto _landmark_ids = related_landmarks[frame_id];
-    for (auto _id : _landmark_ids) {
-        auto & lm = landmark_db.at(_id);
-        if (pop_base) {
-            if (related_landmarks.find(lm.base_frame_id)!=related_landmarks.end()) {
-                related_landmarks.at(lm.base_frame_id).erase(lm.landmark_id);
-            }
-            if (lm.base_frame_id != frame_id) {
-                // printf("[D2VINS::D2LandmarkManager] popFrame base_frame_id %ld != frame_id %ld\n", lm.base_frame_id, frame_id);
-            }
-            lm.popBaseFrame();
-        }
-        auto _size = lm.popFrame(frame_id);
-        if (_size == 0) {
-            //Remove this landmark.
-            margined_landmarks.emplace_back(lm);
-            landmark_db.erase(_id);
-            landmark_state.erase(_id);
-        }
-    }
-    related_landmarks.erase(frame_id);
-    return margined_landmarks;
-}
-
 std::vector<LandmarkPerId> D2LandmarkManager::getInitializedLandmarks() const {
     const Guard lock(state_lock);
     std::vector<LandmarkPerId> lm_per_frame_vec;
@@ -326,6 +294,11 @@ std::vector<LandmarkPerId> D2LandmarkManager::getRelatedLandmarks(FrameIdType fr
 bool D2LandmarkManager::hasLandmark(LandmarkIdType landmark_id) const {
     const Guard lock(state_lock);
     return landmark_db.find(landmark_id) != landmark_db.end();
+}
+
+void D2LandmarkManager::removeLandmark(const LandmarkIdType & id) {
+    landmark_db.erase(id);
+    landmark_state.erase(id);
 }
 
 double triangulatePoint3DPts(std::vector<Swarm::Pose> poses, std::vector<Vector3d> &points, Vector3d &point_3d) {

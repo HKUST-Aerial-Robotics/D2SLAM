@@ -112,7 +112,8 @@
 			"__nullptr": "cpp",
 			"__bit_reference": "cpp",
 			"__locale": "cpp",
-			"locale": "cpp"
+			"locale": "cpp",
+			"__string": "cpp"
 		}
 	}
 }

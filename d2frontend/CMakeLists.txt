@@ -76,6 +76,7 @@ add_library(libd2frontend
   src/d2frontend.cpp
   src/d2featuretracker.cpp
   src/loop_utils.cpp
+  src/d2landmark_manager.cpp
 )
 
 add_library(${PROJECT_NAME}_nodelet

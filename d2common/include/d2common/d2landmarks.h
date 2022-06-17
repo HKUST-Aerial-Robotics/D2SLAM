@@ -2,7 +2,9 @@
 #include <ros/ros.h>
 #include <swarm_msgs/Landmark.h>
 #include <swarm_msgs/lcm_gen/Landmark_t.hpp>
+#include <opencv2/opencv.hpp>
 #include "d2basetypes.h"
+#include <swarm_msgs/swarm_lcm_converter.hpp>
 
 namespace D2Common {
 enum LandmarkFlag {

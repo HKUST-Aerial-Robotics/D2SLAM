@@ -8,8 +8,6 @@
 
 using namespace Eigen;
 
-#define MAX_FEATURE_NUM 10000000
-
 namespace D2FrontEnd {
 struct D2FTConfig {
     bool show_feature_id = true;
@@ -84,7 +82,7 @@ class D2FeatureTracker {
     std::unordered_map<LandmarkIdType, LandmarkIdType> remote_to_local; // Remote landmark id to local;
     std::unordered_map<LandmarkIdType, std::unordered_map<int, LandmarkIdType>> local_to_remote; // local landmark id to remote drone and id;
     typedef std::lock_guard<std::recursive_mutex> Guard;
-    mutable std::recursive_mutex state_lock;
+    mutable std::recursive_mutex track_lock;
 public:
     D2FeatureTracker(D2FTConfig config):
         _config(config)
