@@ -11,14 +11,14 @@ void ResidualInfo::Evaluate(D2State * state) {
     //This function is from VINS.
     residuals.resize(cost_function->num_residuals());
     std::vector<int> blk_sizes = cost_function->parameter_block_sizes();
-    double ** raw_jacobians = new double *[blk_sizes.size()];
+    std::vector<double *> raw_jacobians(blk_sizes.size());
     jacobians.resize(blk_sizes.size());
     for (int i = 0; i < static_cast<int>(blk_sizes.size()); i++) {
         jacobians[i].resize(cost_function->num_residuals(), blk_sizes[i]);
         jacobians[i].setZero();
         raw_jacobians[i] = jacobians[i].data();
     }
-    cost_function->Evaluate(params.data(), residuals.data(), raw_jacobians);
+    cost_function->Evaluate(params.data(), residuals.data(), raw_jacobians.data());
     if (loss_function)
     {
         double residual_scaling_, alpha_sq_norm_;

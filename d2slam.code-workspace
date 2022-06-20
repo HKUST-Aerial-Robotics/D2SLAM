@@ -26,6 +26,9 @@
 		},
 		{
 			"path": "../swarm_msgs/swarm_msgs"
+		},
+		{
+			"path": "../../../source/ceres-solver"
 		}
 	],
 	"settings": {

@@ -37,7 +37,17 @@ ceres::Solver::Summary ConsensusSolver::solve() {
         //If sync mode.
         broadcastData();
         if (config.is_sync) {
-            problem = new ceres::Problem();
+            if (problem != nullptr) {
+                delete problem;
+            }
+            ceres::Problem::Options problem_options;
+            if (i != config.max_steps - 1) {
+                problem_options.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+                problem_options.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+                problem_options.local_parameterization_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+                problem_options.manifold_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+            }
+            problem = new ceres::Problem(problem_options);
             for (auto residual_info : residuals) {
                 problem->AddResidualBlock(residual_info->cost_function, residual_info->loss_function,
                     residual_info->paramsPointerList(state));
