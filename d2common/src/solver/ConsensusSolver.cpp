@@ -36,31 +36,29 @@ ceres::Solver::Summary ConsensusSolver::solve() {
     for (int i = 0; i < config.max_steps; i++) {
         //If sync mode.
         broadcastData();
-        if (config.is_sync) {
-            if (problem != nullptr) {
-                delete problem;
-            }
-            ceres::Problem::Options problem_options;
-            if (i != config.max_steps - 1) {
-                problem_options.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-                problem_options.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-                problem_options.local_parameterization_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-                problem_options.manifold_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-            }
-            problem = new ceres::Problem(problem_options);
-            for (auto residual_info : residuals) {
-                problem->AddResidualBlock(residual_info->cost_function, residual_info->loss_function,
-                    residual_info->paramsPointerList(state));
-            }
-            if (config.sync_with_main) {
-                waitForSync(); 
-            } else {
-                receiveAll();
-            }
-            updateGlobal();
-            updateTilde();
-            setStateProperties();
+        if (problem != nullptr) {
+            delete problem;
         }
+        ceres::Problem::Options problem_options;
+        if (i != config.max_steps - 1) {
+            problem_options.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+            problem_options.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+            problem_options.local_parameterization_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+            problem_options.manifold_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+        }
+        problem = new ceres::Problem(problem_options);
+        for (auto residual_info : residuals) {
+            problem->AddResidualBlock(residual_info->cost_function, residual_info->loss_function,
+                residual_info->paramsPointerList(state));
+        }
+        if (config.sync_with_main) {
+            waitForSync(); 
+        } else {
+            receiveAll();
+        }
+        updateGlobal();
+        updateTilde();
+        setStateProperties();
         summary = solveLocalStep();
         iteration_count++;
     }

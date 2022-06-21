@@ -345,11 +345,15 @@ void D2Estimator::setStateProperties() {
     }
 
     if (!state.getPrior() || params->always_fixed_first_pose || !state.marginalizeSelf()) {
-        if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
-            for (auto drone_id : state.availableDrones()) {
-                problem.SetParameterBlockConstant(state.getPoseState(state.firstFrame(drone_id).frame_id));
-            }
-        }
+        printf("[D2Estimator::setStateProperties] Will set every first frame as fixed\n");
+        // for (auto drone_id : state.availableDrones()) {
+        //     problem.SetParameterBlockConstant(
+        //             state.getPoseState(state.firstFrame(drone_id).frame_id));
+        // }
+        problem.SetParameterBlockConstant(
+            state.getPoseState(state.firstFrame(self_id).frame_id));
+    } else {
+        printf("[D2Estimator::setStateProperties] getPrior enabled, will not set first frame as fixed\n");
     }
 }
 
