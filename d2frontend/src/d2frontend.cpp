@@ -139,9 +139,10 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     vframearry.prevent_adding_db = !is_keyframe;
     vframearry.is_keyframe = is_keyframe;
     received_image = true;
-
+    if (!params->show) {
+        vframearry.releaseRawImages();
+    }
     frameCallback(vframearry);
-
     if (is_keyframe) {
         if (params->enable_loop) {
             lock_guard guard(loop_lock);

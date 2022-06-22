@@ -724,6 +724,14 @@ void D2Estimator::setupLandmarkFactors() {
     }
 }
 
+const std::map<LandmarkIdType, LandmarkPerId> & D2Estimator::getLandmarkDB() const {
+    return state.getLandmarkDB();
+}
+
+const std::vector<VINSFrame*> & D2Estimator::getSelfSldWin() const {
+    return state.getSldWin(self_id);
+}
+
 void D2Estimator::setupPriorFactor() {
     auto prior_factor = state.getPrior();
     if (prior_factor != nullptr) {

@@ -24,5 +24,8 @@ public:
     }
     std::vector<LandmarkPerId> popFrame(FrameIdType frame_id, bool pop_base=false); //If pop base, we will remove the related landmarks' base frame.
     virtual void removeLandmark(const LandmarkIdType & id);
+    const std::map<LandmarkIdType, LandmarkPerId> & getLandmarkDB() const {
+        return landmark_db;
+    }
 };
 }

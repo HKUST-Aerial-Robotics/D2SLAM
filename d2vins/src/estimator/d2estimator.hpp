@@ -87,5 +87,7 @@ public:
     void sendDistributedVinsData(const DistributedVinsData & data);
     void sendSyncSignal(SyncSignal data, int64_t token);
     bool readyForStart();
+    const std::map<LandmarkIdType, LandmarkPerId> & getLandmarkDB() const;
+    const std::vector<VINSFrame*> & getSelfSldWin() const;
 };
 }

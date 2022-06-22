@@ -37,7 +37,7 @@ struct LoopDetectorConfig {
 
 class LoopDetector {
     LoopDetectorConfig _config;
-
+    std::map<LandmarkIdType, LandmarkPerId> landmark_db;
 protected:
     faiss::IndexFlatIP local_index;
     faiss::IndexFlatIP remote_index;
@@ -58,48 +58,22 @@ protected:
         std::vector<cv::Mat> img_new, std::vector<cv::Mat> img_old, LoopEdge & ret, bool init_mode=false);
 
     bool computeCorrespondFeatures(const VisualImageDesc & new_img_desc, const VisualImageDesc & old_img_desc, 
-        std::vector<cv::Point2f> &new_norm_2d,
         std::vector<cv::Point3f> &new_3d,
         std::vector<int> &new_idx,
         std::vector<cv::Point2f> &old_norm_2d,
-        std::vector<cv::Point3f> &old_3d,
         std::vector<int> &old_idx
     );
 
-    bool computeCorrespondFeatures(const VisualImageDescArray & new_img_desc, const VisualImageDescArray & old_img_desc, 
-        int main_dir_new,
-        int main_dir_old,
-        std::vector<cv::Point2f> &new_norm_2d,
+    bool computeCorrespondFeaturesOnImageArray(const VisualImageDescArray & new_img_desc, const VisualImageDescArray & old_img_desc, 
+        int main_dir_new, int main_dir_old,
         std::vector<cv::Point3f> &new_3d,
-        std::vector<std::vector<int>> &new_idx,
         std::vector<cv::Point2f> &old_norm_2d,
-        std::vector<cv::Point3f> &old_3d,
-        std::vector<std::vector<int>> &old_idx,
-        std::vector<int> &dirs_new,
-        std::vector<int> &dirs_old,
         std::map<int, std::pair<int, int>> &index2dirindex_new,
         std::map<int, std::pair<int, int>> &index2dirindex_old
     );
 
-    int computeRelativePose(
-        const std::vector<cv::Point2f> now_norm_2d,
-        const std::vector<cv::Point3f> now_3d,
-
-        const std::vector<cv::Point2f> old_norm_2d,
-        const std::vector<cv::Point3f> old_3d,
-
-        Swarm::Pose old_extrinsic,
-        Swarm::Pose drone_pose_now,
-        Swarm::Pose drone_pose_old,
-        Swarm::Pose & DP_old_to_new,
-        bool init_mode,
-        int drone_id_new, int drone_id_old,
-        std::vector<cv::DMatch> &matches,
-        int &inlier_num
-        );
-
-    int addToDatabase(const VisualImageDescArray & new_fisheye_desc);
-    int addToDatabase(const VisualImageDesc & new_img_desc);
+    int addToDatabase(VisualImageDescArray & new_fisheye_desc);
+    int addToDatabase(VisualImageDesc & new_img_desc);
     VisualImageDescArray & queryDescArrayFromDatabase(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & camera_index_new, int & camera_index_old);
     int queryFromDatabase(const VisualImageDesc & new_img_desc, bool init_mode, bool nonkeyframe, double & distance);
     int queryFromDatabase(const VisualImageDesc & new_img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & distance);
@@ -114,12 +88,19 @@ public:
     std::function<void(LoopEdge &)> on_loop_cb;
     int self_id = -1;
     LoopDetector(int self_id, const LoopDetectorConfig & config);
-    void processImageArray(const VisualImageDescArray & img_des);
+    void processImageArray(VisualImageDescArray & img_des);
     void onLoopConnection(LoopEdge & loop_conn);
     LoopCam * loop_cam = nullptr;
     cv::Mat decode_image(const VisualImageDesc & _img_desc);
+    void updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPerId> & vins_landmark_db);
+    void updatebySldWin(const std::vector<VINSFrame*> sld_win);
 
     int databaseSize() const;
 
 };
+    
+int computeRelativePose(const std::vector<cv::Point3f> lm_positions_a, const std::vector<cv::Point2f> lm_2d_norm_b,
+        Swarm::Pose extrinsic_b, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a,
+        bool init_mode, std::vector<cv::DMatch> &matches, int &inlier_num, bool is_4dof);
+
 }

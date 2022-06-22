@@ -58,6 +58,8 @@ protected:
     void distriburedTimerCallback(const ros::TimerEvent & event) {
         Guard guard(esti_lock);
         estimator->solveinDistributedMode();
+        loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
+        loop_detector->updatebySldWin(estimator->getSelfSldWin());
     }
 
     void timerCallback(const ros::TimerEvent & event) {
@@ -75,6 +77,12 @@ protected:
             {
                 Guard guard(esti_lock);
                 ret = estimator->inputImage(viokf);
+                if (params->estimation_mode == D2VINSConfig::SINGLE_DRONE_MODE || 
+                        params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+                    //Update the loop detector with landmarks and poses
+                    loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
+                    loop_detector->updatebySldWin(estimator->getSelfSldWin());
+                }
             }
             if (ret && D2FrontEnd::params->enable_network) {
                 loop_net->broadcastVisualImageDescArray(viokf);
@@ -98,7 +106,8 @@ protected:
             if (err < allow_err) {
                 // printf("call err %ld us\n", err);
                 Guard guard(esti_lock);
-                estimator->solveinDistributedMode();
+                ros::TimerEvent e;
+                distriburedTimerCallback(e);
             } else {
                 if (duration_us - usec%duration_us > 2*allow_err) {
                     usleep(duration_us - usec%duration_us - 2*allow_err);

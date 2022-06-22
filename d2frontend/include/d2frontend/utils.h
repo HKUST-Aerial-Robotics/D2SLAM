@@ -53,4 +53,5 @@ class TicToc
   private:
     std::chrono::time_point<std::chrono::system_clock> start, end;
 };
+cv::Point2f rotate_pt_norm2d(cv::Point2f pt, Eigen::Quaterniond q);
 }

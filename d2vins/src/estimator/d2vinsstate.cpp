@@ -513,4 +513,8 @@ void D2EstimatorState::printSldWin(const std::map<FrameIdType, int> & keyframe_m
     }
 }
 
+const std::vector<VINSFrame*> & D2EstimatorState::getSldWin(int drone_id) const {
+    return sld_wins.at(self_id);
+}
+
 }

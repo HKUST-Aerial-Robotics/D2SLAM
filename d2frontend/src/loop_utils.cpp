@@ -172,4 +172,19 @@ Eigen::VectorXf load_csv_vec_eigen(std::string csv) {
     return result;
 }
 
+cv::Point2f rotate_pt_norm2d(cv::Point2f pt, Eigen::Quaterniond q) {
+    Eigen::Vector3d pt3d(pt.x, pt.y, 1);
+    pt3d = q * pt3d;
+
+    if (pt3d.z() < 1e-3 && pt3d.z() > 0) {
+        pt3d.z() = 1e-3;
+    }
+
+    if (pt3d.z() > -1e-3 && pt3d.z() < 0) {
+        pt3d.z() = -1e-3;
+    }
+
+    return cv::Point2f(pt3d.x()/ pt3d.z(), pt3d.y()/pt3d.z());
+}
+
 }

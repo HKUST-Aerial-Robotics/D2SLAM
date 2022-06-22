@@ -97,6 +97,11 @@ struct VisualImageDesc {
         return size;
     }
     
+    void releaseRawImage() {
+        raw_image.release();
+        raw_depth_image.release();
+    }
+    
     VisualImageDesc() {}
 
     void syncIds(int _drone_id, FrameIdType _frame_id) {
@@ -241,6 +246,12 @@ struct VisualImageDescArray {
             num += img.spLandmarkNum();
         }
         return num;
+    }
+
+    void releaseRawImages() {
+        for (auto & img : images) {
+            img.releaseRawImage();
+        }
     }
 
     VisualImageDescArray() {}

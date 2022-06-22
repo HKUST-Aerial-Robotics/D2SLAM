@@ -1,6 +1,7 @@
 #include <d2frontend/loop_detector.h>
 #include <chrono> 
 #include <d2frontend/utils.h>
+#include <d2common/d2vinsframe.h>
 
 using namespace std::chrono; 
 
@@ -8,7 +9,8 @@ using namespace std::chrono;
 #define MAX_LOOP_ID 100000000
 
 namespace D2FrontEnd {
-void LoopDetector::processImageArray(const VisualImageDescArray & flatten_desc) {
+
+void LoopDetector::processImageArray(VisualImageDescArray & flatten_desc) {
     TicToc tt;
     static double t_sum = 0;
     static int t_count = 0;
@@ -150,7 +152,7 @@ cv::Mat LoopDetector::decode_image(const VisualImageDesc & _img_desc) {
     return ret;
 }
 
-int LoopDetector::addToDatabase(const VisualImageDescArray & new_fisheye_desc) {
+int LoopDetector::addToDatabase(VisualImageDescArray & new_fisheye_desc) {
     for (size_t i = 0; i < new_fisheye_desc.images.size(); i++) {
         auto & img_desc = new_fisheye_desc.images[i];
         if (img_desc.spLandmarkNum() > 0 && img_desc.image_desc.size() > 0) {
@@ -162,12 +164,12 @@ int LoopDetector::addToDatabase(const VisualImageDescArray & new_fisheye_desc) {
         if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             break;
         }
+        keyframe_database[new_fisheye_desc.frame_id] = new_fisheye_desc;
     }
-    keyframe_database[new_fisheye_desc.frame_id] = new_fisheye_desc;
     return new_fisheye_desc.frame_id;
 }
 
-int LoopDetector::addToDatabase(const VisualImageDesc & new_img_desc) {
+int LoopDetector::addToDatabase(VisualImageDesc & new_img_desc) {
     if (new_img_desc.drone_id == self_id) {
         local_index.add(1, new_img_desc.image_desc.data());
         return local_index.ntotal - 1;
@@ -272,10 +274,6 @@ VisualImageDescArray & LoopDetector::queryDescArrayFromDatabase(const VisualImag
             best_image_id = id;
         }
 
-        // ROS_INFO("queryFromDatabase(new_img_desc.images.at(camera_index_new) return %d best_image_id %d distance %f/%f", 
-            // id, best_image_id, distance, best_distance);
-
-
         if (best_image_id != -1) {
             int frame_id = imgid2fisheye[best_image_id];
             camera_index_old = imgid2dir[best_image_id];
@@ -319,141 +317,23 @@ bool LoopDetector::checkLoopOdometryConsistency(LoopEdge & loop_conn) const {
     return true;
 }
 
-bool pnp_result_verify(bool pnp_success, bool init_mode, int inliers, double rperr, const Swarm::Pose & DP_old_to_new) {
-    bool success = pnp_success;
-    if (!pnp_success) {
-        return false;
-    }
-
-    if (rperr > RPERR_THRES) {
-        ROS_INFO("[SWARM_LOOP] Check failed on RP error %f", rperr*57.3);
-        return false;
-    }   
-
-    auto &_config = (*params->loopdetectorconfig);
-
-    if (init_mode) {
-        success = (inliers >= _config.INIT_MODE_MIN_LOOP_NUM) && fabs(DP_old_to_new.yaw()) < ACCEPT_LOOP_YAW_RAD && DP_old_to_new.pos().norm() < MAX_LOOP_DIS;            
-    } else {
-        success = (inliers >= _config.MIN_LOOP_NUM) && fabs(DP_old_to_new.yaw()) < ACCEPT_LOOP_YAW_RAD && DP_old_to_new.pos().norm() < MAX_LOOP_DIS;
-    }        
-
-    return success;
-}
-
-
-double RPerror(const Swarm::Pose & p_drone_old_in_new, const Swarm::Pose & drone_pose_old, const Swarm::Pose & drone_pose_now) {
-    Swarm::Pose DP_old_to_new_6d =  Swarm::Pose::DeltaPose(p_drone_old_in_new, drone_pose_now, false);
-    Swarm::Pose Prediect_new_in_old_Pose = drone_pose_old * DP_old_to_new_6d;
-    auto AttNew_in_old = Prediect_new_in_old_Pose.att().normalized();
-    auto AttNew_in_new = drone_pose_now.att().normalized();
-    auto dyaw = quat2eulers(AttNew_in_new).z() - quat2eulers(AttNew_in_old).z();
-    AttNew_in_old = Eigen::AngleAxisd(dyaw, Eigen::Vector3d::UnitZ())*AttNew_in_old;
-    auto RPerr = (quat2eulers(AttNew_in_old) - quat2eulers(AttNew_in_new)).norm();
-    // std::cout << "New In Old" << quat2eulers(AttNew_in_old) << std::endl;
-    // std::cout << "New In New"  << quat2eulers(AttNew_in_new);
-    // std::cout << "Estimate RP error" <<  (quat2eulers(AttNew_in_old) - quat2eulers(AttNew_in_new))*57.3 << std::endl;
-    // std::cout << "Estimate RP error2" <<  quat2eulers( (AttNew_in_old.inverse()*AttNew_in_new).normalized())*57.3 << std::endl;
-    return RPerr;
-}
-
- 
-
-int LoopDetector::computeRelativePose(
-        const std::vector<cv::Point2f> matched_2d_norm_now,
-        const std::vector<cv::Point3f> matched_3d_now,
-        const std::vector<cv::Point2f> matched_2d_norm_old,
-        const std::vector<cv::Point3f> matched_3d_old,
-        Swarm::Pose old_extrinsic,
-        Swarm::Pose drone_pose_now,
-        Swarm::Pose drone_pose_old,
-        Swarm::Pose & DP_old_to_new,
-        bool init_mode,
-        int drone_id_new, int drone_id_old,
-        std::vector<cv::DMatch> &matches,
-        int &inlier_num) {
-        //Compute PNP
-    // ROS_INFO("Matched features %ld", matched_2d_norm_old.size());
-    cv::Mat K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0);
-
-    cv::Mat r, rvec, rvec2, t, t2, D, tmp_r;
-    cv::Mat inliers;
-
-
-    Swarm::Pose initial_old_drone_pose = drone_pose_old;
-    Swarm::Pose initial_old_cam_pose = initial_old_drone_pose * old_extrinsic;
-    // Swarm::Pose old_cam_in_new_initial = drone_pose_now.inverse() * initial_old_cam_pose;
-    // Swarm::Pose old_drone_to_new_initial = drone_pose_old.inverse() * drone_pose_now;
-    // std::cout << "OLD to new initial" << std::endl;
-    // old_drone_to_new_initial.print();
-    // PnPInitialFromCamPose(initial_old_cam_pose, rvec, t);
-    
-    int iteratives = 100;
-
-    if (init_mode) {
-        iteratives = 1000;
-    }
-
-    bool success = solvePnPRansac(matched_3d_now, matched_2d_norm_old, K, D, rvec, t, false,   
-        iteratives,  3, 0.99,  inliers);
-
-    auto p_cam_old_in_new = PnPRestoCamPose(rvec, t);
-    auto p_drone_old_in_new = p_cam_old_in_new*(old_extrinsic.to_isometry().inverse());
-    
-    if (!success) {
-        return 0;
-    }
-
-    DP_old_to_new =  Swarm::Pose::DeltaPose(p_drone_old_in_new, drone_pose_now, _config.is_4dof);
-    
-    auto RPerr = RPerror(p_drone_old_in_new, drone_pose_old, drone_pose_now);
-
-    success = pnp_result_verify(success, init_mode, inliers.rows, RPerr, DP_old_to_new);
-
-    ROS_INFO("[SWARM_LOOP] DPose %s PnPRansac %d inlines %d/%d, dyaw %f dpos %f. Geometry Check %f", DP_old_to_new.toStr().c_str(), success, inliers.rows, matched_2d_norm_old.size(), fabs(DP_old_to_new.yaw())*57.3, DP_old_to_new.pos().norm(), RPerr);
-    inlier_num = inliers.rows;
-
-    for (int i = 0; i < inlier_num; i++) {
-        matches.push_back(cv::DMatch(inliers.at<int>(i, 0), inliers.at<int>(i, 0), 0));
-    }
-    return success;
-}
-
-cv::Point2f rotate_pt_norm2d(cv::Point2f pt, Eigen::Quaterniond q) {
-    Eigen::Vector3d pt3d(pt.x, pt.y, 1);
-    pt3d = q * pt3d;
-
-    if (pt3d.z() < 1e-3 && pt3d.z() > 0) {
-        pt3d.z() = 1e-3;
-    }
-
-    if (pt3d.z() > -1e-3 && pt3d.z() < 0) {
-        pt3d.z() = -1e-3;
-    }
-
-    return cv::Point2f(pt3d.x()/ pt3d.z(), pt3d.y()/pt3d.z());
-}
-
 //Note! here the norms are both projected to main dir's unit sphere.
-bool LoopDetector::computeCorrespondFeatures(const VisualImageDescArray & new_frame_desc,
+bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescArray & new_frame_desc,
     const VisualImageDescArray & old_frame_desc, 
     int main_dir_new,
     int main_dir_old,
-    std::vector<cv::Point2f> &new_norm_2d,
     std::vector<cv::Point3f> &new_3d,
-    std::vector<std::vector<int>> &new_idx,
     std::vector<cv::Point2f> &old_norm_2d,
-    std::vector<cv::Point3f> &old_3d,
-    std::vector<std::vector<int>> &old_idx,
-    std::vector<int> &dirs_new,
-    std::vector<int> &dirs_old,
     std::map<int, std::pair<int, int>> &index2dirindex_new,
     std::map<int, std::pair<int, int>> &index2dirindex_old
 ) {
-    //For each VisualImageDescArray, there must be 4 frames
-    //However, due to the transmission and parameter, some may be empty.
-    // We will only matched the frame which isn't empty
-
+    std::vector<cv::Point2f> new_norm_2d;
+    std::vector<std::vector<int>> new_idx;
+    std::vector<cv::Point3f> old_3d;
+    std::vector<std::vector<int>> old_idx;
+    std::vector<int> dirs_new;
+    std::vector<int> dirs_old;
+    
     printf("computeCorrespondFeatures on main dir [%d(drone%d): %d(drone%d)]: ",
         main_dir_old, old_frame_desc.drone_id,
         main_dir_new, new_frame_desc.drone_id
@@ -500,11 +380,9 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDescArray & new_fr
             computeCorrespondFeatures(
                 new_frame_desc.images.at(dir_new),
                 old_frame_desc.images.at(dir_old),
-                _new_norm_2d,
                 _new_3d,
                 _new_idx,
                 _old_norm_2d,
-                _old_3d,
                 _old_idx
             );
             ROS_INFO("[SWARM_LOOP] computeCorrespondFeatures on camera_index %d:%d gives %d common features", dir_old, dir_new, _new_3d.size());
@@ -524,20 +402,31 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDescArray & new_fr
         Swarm::Pose _extrinsic_new(new_frame_desc.images[dir_new].extrinsic);
         Swarm::Pose _extrinsic_old(old_frame_desc.images[dir_old].extrinsic);
 
-        Eigen::Quaterniond dq_new = main_quat_new.inverse() * _extrinsic_new.att();
-        Eigen::Quaterniond dq_old = main_quat_old.inverse() * _extrinsic_old.att();
-
-        for (size_t id = 0; id < _old_norm_2d.size(); id++) {
-            auto pt = _old_norm_2d[id];
-            // std::cout << "PT " << pt << " ROTATED " << rotate_pt_norm2d(pt, dq_old) << std::endl;
-            index2dirindex_old[old_norm_2d.size()] = std::make_pair(dir_old, _old_idx[id]);
-            old_norm_2d.push_back(rotate_pt_norm2d(pt, dq_old));
-        }
-
-        for (size_t id = 0; id < _new_norm_2d.size(); id++) {
-            auto pt = _new_norm_2d[id];
-            index2dirindex_new[new_norm_2d.size()] = std::make_pair(dir_new, _new_idx[id]);
-            new_norm_2d.push_back(rotate_pt_norm2d(pt, dq_new));
+        if (params->camera_configuration == STEREO_FISHEYE) {
+            Eigen::Quaterniond dq_new = main_quat_new.inverse() * _extrinsic_new.att();
+            Eigen::Quaterniond dq_old = main_quat_old.inverse() * _extrinsic_old.att();
+            for (size_t id = 0; id < _old_norm_2d.size(); id++) {
+                auto pt = _old_norm_2d[id];
+                // std::cout << "PT " << pt << " ROTATED " << rotate_pt_norm2d(pt, dq_old) << std::endl;
+                index2dirindex_old[old_norm_2d.size()] = std::make_pair(dir_old, _old_idx[id]);
+                old_norm_2d.push_back(rotate_pt_norm2d(pt, dq_old));
+            }
+            for (size_t id = 0; id < _new_norm_2d.size(); id++) {
+                auto pt = _new_norm_2d[id];
+                index2dirindex_new[new_norm_2d.size()] = std::make_pair(dir_new, _new_idx[id]);
+                new_norm_2d.push_back(rotate_pt_norm2d(pt, dq_new));
+            }
+        } else if (params->camera_configuration == STEREO_PINHOLE || params->camera_configuration == PINHOLE_DEPTH) {
+            for (size_t id = 0; id < _old_norm_2d.size(); id++) {
+                auto pt = _old_norm_2d[id];
+                index2dirindex_old[old_norm_2d.size()] = std::make_pair(dir_old, _old_idx[id]);
+                old_norm_2d.push_back(pt);
+            }
+            for (size_t id = 0; id < _new_norm_2d.size(); id++) {
+                auto pt = _new_norm_2d[id];
+                index2dirindex_new[new_norm_2d.size()] = std::make_pair(dir_new, _new_idx[id]);
+                new_norm_2d.push_back(pt);
+            }
         }
     }
 
@@ -549,11 +438,9 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDescArray & new_fr
 }
 
 bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & new_img_desc, const VisualImageDesc & old_img_desc, 
-        std::vector<cv::Point2f> &new_norm_2d,
         std::vector<cv::Point3f> &new_3d,
         std::vector<int> &new_idx,
         std::vector<cv::Point2f> &old_norm_2d,
-        std::vector<cv::Point3f> &old_3d,
         std::vector<int> &old_idx) {
     // ROS_INFO("[SWARM_LOOP](LoopDetector::computeCorrespondFeatures) %d %d ", new_img_desc.spLandmarkNum(), new_img_desc.landmark_descriptor.size());
     assert(new_img_desc.spLandmarkNum() * FEATURE_DESC_SIZE == new_img_desc.landmark_descriptor.size() && "Desciptor size of new img desc must equal to to landmarks*256!!!");
@@ -572,9 +459,7 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & new_img_des
     std::vector<cv::DMatch> _matches;
     std::vector<unsigned char> mask;
     bfmatcher.match(desc_now, desc_old, _matches);
-    printf("[SWARM_LOOP] matches: %d\n", _matches.size());
 
-#ifdef USE_FUNDMENTAL
     std::vector<cv::Point2f> old_2d, new_2d;
     for (auto match : _matches) {
         int now_id = match.queryIdx;
@@ -585,13 +470,13 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & new_img_des
 
             new_idx.push_back(now_id);
             old_idx.push_back(old_id);
-
-            new_3d.push_back(toCV(_now_lms[now_id].pt3d));
-            Vector2d pt2d = _now_lms[now_id].pt3d_norm.head<2>();
-            new_norm_2d.push_back(toCV(pt2d));
+            auto landmark_id = _now_lms[now_id].landmark_id;
+            if (landmark_db.find(landmark_id) == landmark_db.end()) {
+                ROS_ERROR("[SWARM_LOOP] landmark_id %d not found in landmark_db", landmark_id);
+            }
+            new_3d.push_back(toCV(landmark_db.at(landmark_id).position));
 
             Vector2d pt2d_old = _now_lms[now_id].pt3d_norm.head<2>();
-            old_3d.push_back(toCV(_old_lms[old_id].pt3d));
             old_norm_2d.push_back(toCV(pt2d_old));
         }
     }
@@ -600,37 +485,12 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & new_img_des
         cv::findHomography(old_2d, new_2d, cv::RANSAC, 3, mask);
         reduceVector(new_idx, mask);
         reduceVector(old_idx, mask);
-
         reduceVector(new_3d, mask);
-        reduceVector(new_norm_2d, mask);
-
-        reduceVector(old_3d, mask);
         reduceVector(old_norm_2d, mask);
     } else {
         return false;
     }
-
     return true;
-#else
-    for (auto match : _matches) {
-        int now_id = match.queryIdx;
-        int old_id = match.trainIdx;
-        if (match.distance < DETECTOR_MATCH_THRES && new_img_desc.landmarks_flag[now_id]) {
-
-            new_idx.push_back(now_id);
-            old_idx.push_back(old_id);
-
-            new_3d.push_back(_now_3d[now_id]);
-            new_norm_2d.push_back(_now_norm_2d[now_id]);
-
-            old_3d.push_back(_old_3d[old_id]);
-            old_norm_2d.push_back(_old_norm_2d[old_id]);
-        } else {
-            // printf("Give up distance too high %f\n", match.distance);
-        }
-    }
-    return true;
-#endif
 }
 
 //Require 3d points of new frame and 2d point of old frame
@@ -650,56 +510,40 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & new_frame_desc, cons
 
     double told = old_frame_desc.stamp - t0;
     double tnew = new_frame_desc.stamp - t0;
-    ROS_INFO("Compute loop drone %d(dir %d)->%d(dir %d) t %f->%f(%f) msgid %d->%d landmarks %d:%d. Init %d", 
-        old_frame_desc.drone_id, main_dir_old, new_frame_desc.drone_id, main_dir_new,
+    ROS_INFO("[LoopDetector::computeLoop@%d] Compute loop drone %d(dir %d)->%d(dir %d) t %f->%f(%f) msgid %d->%d landmarks %d:%d. Init %d", 
+        self_id, old_frame_desc.drone_id, main_dir_old, new_frame_desc.drone_id, main_dir_new,
         told, tnew, tnew - told,
         old_frame_desc.frame_id, new_frame_desc.frame_id,
         old_frame_desc.spLandmarkNum(),
         new_frame_desc.spLandmarkNum(),
         init_mode);
 
-    std::vector<cv::Point2f> new_norm_2d;
-    std::vector<cv::Point3f> new_3d;
-    std::vector<std::vector<int>> new_idx;
+    std::vector<cv::Point3f> new_3d, old_3d;
     std::vector<cv::Point2f> old_norm_2d;
-    std::vector<cv::Point3f> old_3d;
-    std::vector<std::vector<int>> old_idx;
     std::vector<int> dirs_new;
-    std::vector<int> dirs_old;
     Swarm::Pose DP_old_to_new;
     std::vector<cv::DMatch> matches;
     std::map<int, std::pair<int, int>> index2dirindex_old;
     std::map<int, std::pair<int, int>> index2dirindex_new;
     int inlier_num = 0;
     
-    success = computeCorrespondFeatures(new_frame_desc, old_frame_desc, 
-        main_dir_new, main_dir_old,
-        new_norm_2d, new_3d, new_idx,
-        old_norm_2d, old_3d, old_idx, dirs_new, dirs_old, 
-        index2dirindex_new, index2dirindex_old);
+    success = computeCorrespondFeaturesOnImageArray(new_frame_desc, old_frame_desc, 
+        main_dir_new, main_dir_old, new_3d, old_norm_2d, index2dirindex_new, index2dirindex_old);
     
     if(success) {
-        if (new_norm_2d.size() > _config.MIN_LOOP_NUM || (init_mode && new_norm_2d.size() > _config.INIT_MODE_MIN_LOOP_NUM)) {
+        if (new_3d.size() > _config.MIN_LOOP_NUM || (init_mode && new_3d.size() > _config.INIT_MODE_MIN_LOOP_NUM)) {
             success = computeRelativePose(
-                    new_norm_2d, new_3d, 
-                    old_norm_2d, old_3d,
-                    Swarm::Pose(old_frame_desc.images[main_dir_old].extrinsic),
-                    Swarm::Pose(new_frame_desc.pose_drone),
-                    Swarm::Pose(old_frame_desc.pose_drone),
-                    DP_old_to_new,
-                    init_mode,
-                    new_frame_desc.drone_id,
-                    old_frame_desc.drone_id,
-                    matches,
-                    inlier_num
-            );
+                    new_3d, old_norm_2d,
+                    old_frame_desc.images[main_dir_old].extrinsic,
+                    new_frame_desc.pose_drone, old_frame_desc.pose_drone,
+                    DP_old_to_new, init_mode, matches, inlier_num, _config.is_4dof);
         } else {
-            ROS_INFO("Too less common feature %ld, will give up", new_norm_2d.size());
+            ROS_INFO("[LoopDetector::computeLoop@%d]Too less common feature %ld, will give up", self_id, new_3d.size());
             success = false;
         }
     } 
     else {
-        ROS_INFO("computeCorrespondFeatures failed");
+        ROS_INFO("[LoopDetector::computeLoop@%d] computeCorrespondFeatures failed", self_id);
         success = false;
     }
 
@@ -715,7 +559,7 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & new_frame_desc, cons
             }
         } 
 
-        for (size_t i = 0; i < new_norm_2d.size(); i ++) {
+        for (size_t i = 0; i < new_3d.size(); i ++) {
             int old_pt_id = index2dirindex_old[i].second;
             int old_dir_id = index2dirindex_old[i].first;
 
@@ -849,6 +693,24 @@ void LoopDetector::onLoopConnection(LoopEdge & loop_conn) {
     on_loop_cb(loop_conn);
 }
 
+void LoopDetector::updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPerId> & vins_landmark_db) {
+    for (auto it : vins_landmark_db) {
+        auto landmark_id = it.first;
+        if (landmark_db.find(landmark_id) == landmark_db.end()) {
+            landmark_db[landmark_id] = it.second;
+        }
+    }
+}
+
+void LoopDetector::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
+    for (auto frame : sld_win) {
+        auto frame_id = frame->frame_id;
+        if (keyframe_database.find(frame_id) != keyframe_database.end()) {
+            keyframe_database.at(frame_id).pose_drone = frame->odom.pose();
+        }
+    }
+}
+
 LoopDetector::LoopDetector(int _self_id, const LoopDetectorConfig & config):
         self_id(_self_id),
         _config(config),
@@ -856,4 +718,70 @@ LoopDetector::LoopDetector(int _self_id, const LoopDetectorConfig & config):
         remote_index(DEEP_DESC_SIZE), 
     ego_motion_traj(_self_id, true, _config.pos_covariance_per_meter, _config.yaw_covariance_per_meter) {
 }
+
+bool pnp_result_verify(bool pnp_success, bool init_mode, int inliers, double rperr, const Swarm::Pose & DP_old_to_new) {
+    bool success = pnp_success;
+    if (!pnp_success) {
+        return false;
+    }
+    if (rperr > RPERR_THRES) {
+        ROS_INFO("[SWARM_LOOP] Check failed on RP error %f", rperr*57.3);
+        return false;
+    }   
+    auto &_config = (*params->loopdetectorconfig);
+    if (init_mode) {
+        success = (inliers >= _config.INIT_MODE_MIN_LOOP_NUM) && fabs(DP_old_to_new.yaw()) < ACCEPT_LOOP_YAW_RAD && DP_old_to_new.pos().norm() < MAX_LOOP_DIS;            
+    } else {
+        success = (inliers >= _config.MIN_LOOP_NUM) && fabs(DP_old_to_new.yaw()) < ACCEPT_LOOP_YAW_RAD && DP_old_to_new.pos().norm() < MAX_LOOP_DIS;
+    }        
+    return success;
+}
+
+double RPerror(const Swarm::Pose & p_drone_old_in_new, const Swarm::Pose & drone_pose_old, const Swarm::Pose & drone_pose_now) {
+    Swarm::Pose DP_old_to_new_6d =  Swarm::Pose::DeltaPose(p_drone_old_in_new, drone_pose_now, false);
+    Swarm::Pose Prediect_new_in_old_Pose = drone_pose_old * DP_old_to_new_6d;
+    auto AttNew_in_old = Prediect_new_in_old_Pose.att().normalized();
+    auto AttNew_in_new = drone_pose_now.att().normalized();
+    auto dyaw = quat2eulers(AttNew_in_new).z() - quat2eulers(AttNew_in_old).z();
+    AttNew_in_old = Eigen::AngleAxisd(dyaw, Eigen::Vector3d::UnitZ())*AttNew_in_old;
+    auto RPerr = (quat2eulers(AttNew_in_old) - quat2eulers(AttNew_in_new)).norm();
+    return RPerr;
+}
+
+int computeRelativePose(const std::vector<cv::Point3f> lm_positions_a, const std::vector<cv::Point2f> lm_2d_norm_b,
+        Swarm::Pose extrinsic_b, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a,
+        bool init_mode, std::vector<cv::DMatch> &matches, int &inlier_num, bool is_4dof) {
+        //Compute PNP
+    // ROS_INFO("Matched features %ld", matched_2d_norm_old.size());
+    cv::Mat K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0);
+    cv::Mat r, rvec, rvec2, t, t2, D, tmp_r;
+    cv::Mat inliers;
+
+    int iteratives = 100;
+    if (init_mode) {
+        iteratives = 1000;
+    }
+
+    bool success = solvePnPRansac(lm_positions_a, lm_2d_norm_b, K, D, rvec, t, false,   
+        iteratives,  3, 0.99,  inliers);
+    auto p_cam_old_in_new = PnPRestoCamPose(rvec, t);
+    auto p_drone_old_in_new = p_cam_old_in_new*(extrinsic_b.to_isometry().inverse());
+    if (!success) {
+        return 0;
+    }
+    DP_b_to_a =  Swarm::Pose::DeltaPose(p_drone_old_in_new, drone_pose_a, is_4dof);
+    auto RPerr = RPerror(p_drone_old_in_new, drone_pose_b, drone_pose_a);
+    success = pnp_result_verify(success, init_mode, inliers.rows, RPerr, DP_b_to_a);
+    ROS_INFO("[SWARM_LOOP] DPose %s PnPRansac %d inlines %d/%d, dyaw %f dpos %f. Geometry Check %f",
+        DP_b_to_a.toStr().c_str(), success, inliers.rows, lm_2d_norm_b.size(), 
+        fabs(DP_b_to_a.yaw())*57.3, DP_b_to_a.pos().norm(), RPerr);
+    inlier_num = inliers.rows;
+
+    for (int i = 0; i < inlier_num; i++) {
+        matches.push_back(cv::DMatch(inliers.at<int>(i, 0), inliers.at<int>(i, 0), 0));
+    }
+    return success;
+}
+
+
 }

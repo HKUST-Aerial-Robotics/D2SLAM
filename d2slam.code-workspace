@@ -117,7 +117,9 @@
 			"__locale": "cpp",
 			"locale": "cpp",
 			"__string": "cpp",
-			"ios": "cpp"
+			"ios": "cpp",
+			"any": "cpp",
+			"scoped_allocator": "cpp"
 		}
 	}
 }

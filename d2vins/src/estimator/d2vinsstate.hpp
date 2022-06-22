@@ -61,6 +61,7 @@ public:
     bool hasCamera(CamIdType frame_id) const;
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
     virtual void moveAllPoses(int new_ref_frame_id, const Swarm::Pose & delta_pose) override;
+    const std::vector<VINSFrame*> & getSldWin(int drone_id) const;
 
     //Frame access    
     VINSFrame & getFrame(int index);
@@ -92,6 +93,9 @@ public:
 
     void setMarginalizer(Marginalizer * _marginalizer) {
         marginalizer = _marginalizer;
+    }
+    const std::map<LandmarkIdType, LandmarkPerId> & getLandmarkDB() const {
+        return lmanager.getLandmarkDB();
     }
 };
 }
