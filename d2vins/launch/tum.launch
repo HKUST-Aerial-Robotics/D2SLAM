@@ -11,10 +11,9 @@
     <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640.onnx" />
     <arg name="config" default="$(find d2vins)/../config/tum/tum_single.yaml" />
     <arg name="max_freq" default="1.0" />
-    <arg name="match_index_dist" default="50" />
+    <arg name="match_index_dist" default="100" />
     <arg name="output_path" default="/home/dji/output/" />
     <arg name="min_loop_feature_num" default="20" />
-    <arg name="init_loop_min_feature_num" default="20" />
     <arg name="nonkeyframe_waitsec" default="5.0" />
     <arg name="inter_drone_init_frames" default="3" />
     <arg name="enable_loop" default="false" />
@@ -64,7 +63,6 @@
         <param name="match_index_dist" value="$(arg match_index_dist)" type="int" />
         <param name="nonkeyframe_waitsec" value="$(arg nonkeyframe_waitsec)" type="double" />
         <param name="min_loop_feature_num" value="$(arg min_loop_feature_num)" type="int" />
-        <param name="init_loop_min_feature_num" value="$(arg init_loop_min_feature_num)" type="int" />
         <param name="max_freq" value="$(arg max_freq)" type="double" />
         <param name="inter_drone_init_frames" value="$(arg inter_drone_init_frames)" type="int" />
         <param name="vins_config_path" value="$(arg config)" type="string" />

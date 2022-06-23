@@ -143,11 +143,12 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
         vframearry.releaseRawImages();
     }
     frameCallback(vframearry);
-    if (is_keyframe) {
-        if (params->enable_loop) {
-            lock_guard guard(loop_lock);
-            loop_queue.push(vframearry);
-        }
+}
+
+void D2Frontend::addToLoopQueue(const VisualImageDescArray & viokf) {
+    if (params->enable_loop) {
+        lock_guard guard(loop_lock);
+        loop_queue.push(viokf);
     }
 }
 

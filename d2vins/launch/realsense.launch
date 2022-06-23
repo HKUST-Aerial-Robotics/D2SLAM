@@ -16,7 +16,6 @@
     <arg name="match_index_dist" default="50" />
     <arg name="output_path" default="/home/dji/output/" />
     <arg name="min_loop_feature_num" default="20" />
-    <arg name="init_loop_min_feature_num" default="20" />
     <arg name="nonkeyframe_waitsec" default="5.0" />
     <arg name="inter_drone_init_frames" default="3" />
     <arg name="enable_loop" default="true" />
@@ -66,7 +65,6 @@
         <param name="match_index_dist" value="$(arg match_index_dist)" type="int" />
         <param name="nonkeyframe_waitsec" value="$(arg nonkeyframe_waitsec)" type="double" />
         <param name="min_loop_feature_num" value="$(arg min_loop_feature_num)" type="int" />
-        <param name="init_loop_min_feature_num" value="$(arg init_loop_min_feature_num)" type="int" />
         <param name="max_freq" value="$(arg max_freq)" type="double" />
         <param name="inter_drone_init_frames" value="$(arg inter_drone_init_frames)" type="int" />
         <param name="vins_config_path" value="$(arg vins_config_path)" type="string" />

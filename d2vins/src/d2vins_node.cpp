@@ -77,12 +77,11 @@ protected:
             {
                 Guard guard(esti_lock);
                 ret = estimator->inputImage(viokf);
-                if (params->estimation_mode == D2VINSConfig::SINGLE_DRONE_MODE || 
-                        params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
-                    //Update the loop detector with landmarks and poses
-                    loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
-                    loop_detector->updatebySldWin(estimator->getSelfSldWin());
+                if (viokf.is_keyframe) {
+                    addToLoopQueue(viokf);
                 }
+                loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
+                loop_detector->updatebySldWin(estimator->getSelfSldWin());
             }
             if (ret && D2FrontEnd::params->enable_network) {
                 loop_net->broadcastVisualImageDescArray(viokf);

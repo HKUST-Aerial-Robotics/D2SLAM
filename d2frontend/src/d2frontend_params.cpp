@@ -81,13 +81,11 @@ namespace D2FrontEnd {
         //Loop detector
         nh.param<bool>("enable_loop", enable_loop, true);
         nh.param<bool>("is_4dof", loopdetectorconfig->is_4dof, true);
-        nh.param<int>("init_loop_min_feature_num", loopdetectorconfig->INIT_MODE_MIN_LOOP_NUM, 10);
         nh.param<int>("match_index_dist", loopdetectorconfig->MATCH_INDEX_DIST, 10);
         nh.param<int>("min_loop_feature_num", loopdetectorconfig->MIN_LOOP_NUM, 15);
         nh.param<int>("min_match_per_dir", loopdetectorconfig->MIN_MATCH_PRE_DIR, 15);
         nh.param<int>("inter_drone_init_frames", loopdetectorconfig->inter_drone_init_frames, 50);
         nh.param<double>("query_thres", loopdetectorconfig->INNER_PRODUCT_THRES, 0.6);
-        nh.param<double>("init_query_thres", loopdetectorconfig->INIT_MODE_PRODUCT_THRES, 0.3);
         nh.param<double>("detector_match_thres", loopdetectorconfig->DETECTOR_MATCH_THRES, 0.9);
         nh.param<double>("odometry_consistency_threshold", loopdetectorconfig->odometry_consistency_threshold, 2.0);
         nh.param<double>("pos_covariance_per_meter", loopdetectorconfig->pos_covariance_per_meter, 0.01);

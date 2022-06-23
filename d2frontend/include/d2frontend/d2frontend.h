@@ -73,6 +73,8 @@ protected:
     void processStereoframe(const StereoFrame & stereoframe);
     void loopTimerCallback(const ros::TimerEvent & event);
 
+    void addToLoopQueue(const VisualImageDescArray & viokf);
+
     ros::Subscriber camera_sub;
     ros::Subscriber viokeyframe_sub;
     ros::Subscriber odometry_sub;

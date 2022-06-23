@@ -23,16 +23,15 @@ struct LoopDetectorConfig {
     double loop_cov_pos;
     double loop_cov_ang;
     double INNER_PRODUCT_THRES;
-    double INIT_MODE_PRODUCT_THRES;//INIT mode we can accept this inner product as similar
     double DETECTOR_MATCH_THRES;
     int inter_drone_init_frames;
     bool DEBUG_NO_REJECT;
     double odometry_consistency_threshold;
-    int INIT_MODE_MIN_LOOP_NUM; //Init mode we accepte this inlier number
     int MIN_LOOP_NUM;
     bool is_4dof;
     double pos_covariance_per_meter;
     double yaw_covariance_per_meter;
+    bool enable_homography_test = false;
 };
 
 class LoopDetector {
@@ -42,7 +41,7 @@ protected:
     faiss::IndexFlatIP local_index;
     faiss::IndexFlatIP remote_index;
 
-    std::map<int, int64_t> imgid2fisheye;
+    std::map<int, int64_t> index_to_frame_id;
     std::map<int, int> imgid2dir;
     std::map<int, std::map<int, int>> inter_drone_loop_count;
 
@@ -53,9 +52,9 @@ protected:
     double t0 = -1;
     int loop_count = 0;
     
-    bool computeLoop(const VisualImageDescArray & new_fisheye_desc, const VisualImageDescArray & old_fisheye_desc,
-        int main_dir_new, int main_dir_old,
-        std::vector<cv::Mat> img_new, std::vector<cv::Mat> img_old, LoopEdge & ret, bool init_mode=false);
+    //Use 3D points from frame a.
+    bool computeLoop(const VisualImageDescArray & fisheye_desc_a, const VisualImageDescArray & fisheye_desc_b,
+        int main_dir_a, int main_dir_b, LoopEdge & ret);
 
     bool computeCorrespondFeatures(const VisualImageDesc & new_img_desc, const VisualImageDesc & old_img_desc, 
         std::vector<cv::Point3f> &new_3d,
@@ -65,24 +64,28 @@ protected:
     );
 
     bool computeCorrespondFeaturesOnImageArray(const VisualImageDescArray & new_img_desc, const VisualImageDescArray & old_img_desc, 
-        int main_dir_new, int main_dir_old,
-        std::vector<cv::Point3f> &new_3d,
-        std::vector<cv::Point2f> &old_norm_2d,
-        std::map<int, std::pair<int, int>> &index2dirindex_new,
-        std::map<int, std::pair<int, int>> &index2dirindex_old
+        int main_dir_a, int main_dir_b,
+        std::vector<cv::Point3f> &lm_pos_a,
+        std::vector<cv::Point2f> &lm_norm_2d_b,
+        std::vector<std::pair<int, int>> &dirindex_new,
+        std::vector<std::pair<int, int>> &dirindex_old
     );
 
     int addToDatabase(VisualImageDescArray & new_fisheye_desc);
     int addToDatabase(VisualImageDesc & new_img_desc);
-    VisualImageDescArray & queryDescArrayFromDatabase(const VisualImageDescArray & new_img_desc, bool init_mode, bool nonkeyframe, int & camera_index_new, int & camera_index_old);
-    int queryFromDatabase(const VisualImageDesc & new_img_desc, bool init_mode, bool nonkeyframe, double & distance);
-    int queryFromDatabase(const VisualImageDesc & new_img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & distance);
+    VisualImageDescArray & queryDescArrayFromDatabase(const VisualImageDescArray & new_img_desc, int & camera_index_new, int & camera_index_old);
+    int queryFrameIndexFromDatabase(const VisualImageDesc & new_img_desc, double & distance);
+    int queryIndexFromDatabase(const VisualImageDesc & new_img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & distance);
 
 
     std::set<int> all_nodes;
 
     bool checkLoopOdometryConsistency(LoopEdge & loop_conn) const;
     Swarm::DroneTrajectory ego_motion_traj;
+
+    void drawMatched(const VisualImageDescArray & fisheye_desc_a, const VisualImageDescArray & fisheye_desc_b,
+            int main_dir_a, int main_dir_b, std::vector<int> inliers, bool success, int inlier_num, Swarm::Pose DP_b_to_a,
+            std::vector<std::pair<int, int>> index2dirindex_a, std::vector<std::pair<int, int>> index2dirindex_b);
 
 public:
     std::function<void(LoopEdge &)> on_loop_cb;
@@ -101,6 +104,6 @@ public:
     
 int computeRelativePose(const std::vector<cv::Point3f> lm_positions_a, const std::vector<cv::Point2f> lm_2d_norm_b,
         Swarm::Pose extrinsic_b, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a,
-        bool init_mode, std::vector<cv::DMatch> &matches, int &inlier_num, bool is_4dof);
+        std::vector<int> &inliers, bool is_4dof);
 
 }
