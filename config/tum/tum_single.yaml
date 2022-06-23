@@ -125,6 +125,7 @@ g_norm: 9.805         # gravity magnitude
 
 #Loop Closure Detection
 netvlad_IP_thres: 0.8
+enable_homography_test: 1
 
 #outputs
 output_path: "/root/output/"

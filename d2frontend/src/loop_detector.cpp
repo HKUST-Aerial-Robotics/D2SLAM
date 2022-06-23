@@ -522,14 +522,9 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
 
         if (checkLoopOdometryConsistency(ret)) {
             loop_count ++;
-            ROS_INFO("[SWARM_LOOP] Loop %ld Detected %d->%d dt %3.3fs DPos %4.3f %4.3f %4.3f Dyaw %3.2fdeg inliers %d. Will publish\n",
-                ret.id,
-                ret.drone_id_a, ret.drone_id_b,
-                (ret.ts_b - ret.ts_a).toSec(),
-                DP_old_to_new.pos().x(), DP_old_to_new.pos().y(), DP_old_to_new.pos().z(),
-                DP_old_to_new.yaw()*57.3,
-                ret.pnp_inlier_num
-            );
+            ROS_INFO("[SWARM_LOOP] Loop %ld Detected %d->%d dt %3.3fs DPose %s inliers %d. Will publish\n",
+                ret.id, ret.drone_id_a, ret.drone_id_b, (ret.ts_b - ret.ts_a).toSec(),
+                DP_old_to_new.toStr().c_str(), ret.pnp_inlier_num);
 
             int new_d_id = frame_array_a.drone_id;
             int old_d_id = frame_array_b.drone_id;
@@ -614,9 +609,7 @@ void LoopDetector::drawMatched(const VisualImageDescArray & frame_array_a,
             frame_array_b.drone_id, frame_array_a.drone_id, dt, inlier_num);
         cv::putText(show, title, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
 
-        sprintf(title, "T %.2f %.2f %.2f YPR %.1f %.1f %.1f", 
-            DP_b_to_a.pos().x(), DP_b_to_a.pos().y(), DP_b_to_a.pos().z(),
-            ypr.z(), ypr.y(), ypr.x());
+        sprintf(title, "%s", DP_b_to_a.toStr().c_str());
         cv::putText(show, title, cv::Point2f(20, 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
         sprintf(title, "%d<->%d", 
             frame_array_b.frame_id,
