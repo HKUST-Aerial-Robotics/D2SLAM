@@ -22,7 +22,7 @@ struct LoopDetectorConfig {
     int MIN_MATCH_PRE_DIR;
     double loop_cov_pos;
     double loop_cov_ang;
-    double INNER_PRODUCT_THRES;
+    double netvlad_IP_thres;
     double DETECTOR_MATCH_THRES;
     int inter_drone_init_frames;
     bool DEBUG_NO_REJECT;
@@ -53,29 +53,22 @@ protected:
     int loop_count = 0;
     
     //Use 3D points from frame a.
-    bool computeLoop(const VisualImageDescArray & fisheye_desc_a, const VisualImageDescArray & fisheye_desc_b,
+    bool computeLoop(const VisualImageDescArray & frame_array_a, const VisualImageDescArray & frame_array_b,
         int main_dir_a, int main_dir_b, LoopEdge & ret);
 
     bool computeCorrespondFeatures(const VisualImageDesc & new_img_desc, const VisualImageDesc & old_img_desc, 
-        std::vector<cv::Point3f> &new_3d,
-        std::vector<int> &new_idx,
-        std::vector<cv::Point2f> &old_norm_2d,
-        std::vector<int> &old_idx
-    );
+        Point3fVector &lm_pos_a, std::vector<int> &idx_a, Point2fVector &lm_norm_2d_b, std::vector<int> &idx_b);
 
-    bool computeCorrespondFeaturesOnImageArray(const VisualImageDescArray & new_img_desc, const VisualImageDescArray & old_img_desc, 
-        int main_dir_a, int main_dir_b,
-        std::vector<cv::Point3f> &lm_pos_a,
-        std::vector<cv::Point2f> &lm_norm_2d_b,
-        std::vector<std::pair<int, int>> &dirindex_new,
-        std::vector<std::pair<int, int>> &dirindex_old
-    );
+    bool computeCorrespondFeaturesOnImageArray(const VisualImageDescArray & frame_array_a,
+        const VisualImageDescArray & frame_array_b, int main_dir_a, int main_dir_b,
+        Point3fVector &lm_pos_a, Point2fVector &lm_norm_2d_b, std::vector<std::pair<int, int>> &index2dirindex_a,
+        std::vector<std::pair<int, int>> &index2dirindex_b);
 
     int addToDatabase(VisualImageDescArray & new_fisheye_desc);
     int addToDatabase(VisualImageDesc & new_img_desc);
-    VisualImageDescArray & queryDescArrayFromDatabase(const VisualImageDescArray & new_img_desc, int & camera_index_new, int & camera_index_old);
-    int queryFrameIndexFromDatabase(const VisualImageDesc & new_img_desc, double & distance);
-    int queryIndexFromDatabase(const VisualImageDesc & new_img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & distance);
+    bool queryDescArrayFromDatabase(const VisualImageDescArray & new_img_desc, VisualImageDescArray & ret, int & camera_index_new, int & camera_index_old);
+    int queryFrameIndexFromDatabase(const VisualImageDesc & new_img_desc, double & similarity);
+    int queryIndexFromDatabase(const VisualImageDesc & new_img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & similarity);
 
 
     std::set<int> all_nodes;
@@ -102,7 +95,7 @@ public:
 
 };
     
-int computeRelativePose(const std::vector<cv::Point3f> lm_positions_a, const std::vector<cv::Point2f> lm_2d_norm_b,
+int computeRelativePose(const Point3fVector lm_positions_a, const Point2fVector lm_2d_norm_b,
         Swarm::Pose extrinsic_b, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a,
         std::vector<int> &inliers, bool is_4dof);
 

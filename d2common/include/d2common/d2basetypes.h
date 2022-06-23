@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <Eigen/Eigen>
+#include <opencv2/opencv.hpp>
 
 #define POSE_SIZE 7
 #define POSE_EFF_SIZE 6
@@ -16,4 +17,6 @@ typedef int64_t LandmarkIdType;
 typedef int32_t CamIdType;
 typedef double state_type;
 typedef SparseMatrix<state_type> SparseMat;
+typedef std::vector<cv::Point3f> Point3fVector;
+typedef std::vector<cv::Point2f> Point2fVector;
 };

@@ -82,11 +82,12 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
 
 TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, bool skip_whole_frame_match) {
     TrackReport report;
+    if (current_keyframes.size() == 0) {
+        printf("[D2FeatureTracker::trackRemote] waiting for initialization.\n");
+        return report;
+    }
+    auto & current_keyframe = current_keyframes.back();
     if (!skip_whole_frame_match) {
-        if (current_keyframe.images.size() == 0) {
-            printf("[D2FeatureTracker::trackRemote] waiting for initialization.\n");
-            return report;
-        }
         if (frame.image_desc.size() < NETVLAD_DESC_SIZE) {
             printf("[D2FeatureTracker::trackRemote] Warn: no vaild frame.image_desc.size() frame_id %ld ", frame.frame_id);
             return report;
@@ -165,7 +166,8 @@ void D2FeatureTracker::cvtRemoteLandmarkId(VisualImageDesc & frame) const {
 
 TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
     TrackReport report;
-    if (current_keyframe.images.size() > 0 && current_keyframe.frame_id != frame.frame_id) {
+    if (current_keyframes.size() > 0 && current_keyframes.back().frame_id != frame.frame_id) {
+        auto & current_keyframe = current_keyframes.back();
         //Then current keyframe has been assigned, feature tracker by LK.
         auto & previous = current_keyframe.images[frame.camera_index];
         auto prev_pts = previous.landmarks2D();
@@ -239,7 +241,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
         //When computing parallex, we go to last keyframe
         bool find_in_keyframe = false;
         for (auto & lm_per_frame : track) {
-            if (lm_per_frame.frame_id == current_keyframe.frame_id) {
+            if (current_keyframes.size() > 0 && lm_per_frame.frame_id == current_keyframes.back().frame_id) {
                 prev_lm = lm_per_frame;
                 find_in_keyframe = true;
                 break;
@@ -329,7 +331,7 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
 }
 
 bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
-    int prev_num = current_keyframe.landmarkNum();
+    int prev_num = current_keyframes.size() > 0 ? current_keyframes.back().landmarkNum(): 0;
     if (report.meanParallex() > 0.5) {
         printf("[D2FeatureTracker] unexcepted mean parallex %f\n", report.meanParallex());
         exit(0);
@@ -339,6 +341,10 @@ bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
         prev_num < _config.last_track_thres ||
         report.unmatched_num > _config.new_feature_thres*prev_num || //Unmatched is assumed to be new
         report.meanParallex() > _config.parallex_thres) { //Attenion, if mismatch this will be big
+        if (params->verbose) {
+            printf("[D2FeatureTracker] keyframe_count: %d, long_track_num: %d, prev_num:%d, unmatched_num: %d, parallex: %f\n", 
+                keyframe_count, report.long_track_num, prev_num, report.unmatched_num, report.meanParallex());
+        }
             return true;
     }
     return false;
@@ -364,7 +370,7 @@ LandmarkPerFrame D2FeatureTracker::createLKLandmark(const VisualImageDesc & fram
 }
 
 void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
-    if (current_keyframe.frame_id == frames.frame_id) {
+    if (current_keyframes.size() > 0 && current_keyframes.back().frame_id == frames.frame_id) {
         return;
     }
     keyframe_count ++;
@@ -382,16 +388,17 @@ void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
             }
         }
     }
-    if (current_keyframe.frame_id >= 0) {
-        lmanager->popFrame(current_keyframe.frame_id);
-    }
-    current_keyframe = frames;
+    // if (current_keyframe.frame_id >= 0) {
+    //     lmanager->popFrame(current_keyframe.frame_id);
+    // }
+    current_keyframes.emplace_back(frames);
 }
 
 cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right, bool is_remote) const {
     // ROS_INFO("Drawing ... %d", keyframe_count);
     cv::Mat img = frame.raw_image;
     int width = img.cols;
+    auto & current_keyframe = current_keyframes.back();
     if (is_remote) {
         img = cv::imdecode(frame.image, cv::IMREAD_UNCHANGED);
         width = img.cols;

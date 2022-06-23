@@ -62,14 +62,6 @@ void LoopDetector::processImageArray(VisualImageDescArray & flatten_desc) {
     }
 
     if (flatten_desc.spLandmarkNum() >= _config.MIN_LOOP_NUM) {
-        bool init_mode = false;
-        if (drone_id != self_id) {
-            init_mode = true;
-            if (inter_drone_loop_count[drone_id][self_id] >= _config.inter_drone_init_frames) {
-                init_mode = false;
-            }
-        }
-
         //Initialize images for visualization
         if (params->show) {
             std::vector<cv::Mat> imgs;
@@ -98,14 +90,13 @@ void LoopDetector::processImageArray(VisualImageDescArray & flatten_desc) {
 
         bool success = false;
 
-        if (databaseSize() > _config.MATCH_INDEX_DIST || init_mode || drone_id != self_id) {
-
-            ROS_INFO("[SWARM_LOOP] Querying image from database size %d init_mode %d nonkeyframe %d", databaseSize(), init_mode, flatten_desc.prevent_adding_db);
+        if (databaseSize() > _config.MATCH_INDEX_DIST || drone_id != self_id) {
             int camera_index = 1;
             int camera_index_old = -1;
-            VisualImageDescArray & _old_fisheye_img = queryDescArrayFromDatabase(flatten_desc, camera_index, camera_index_old);
+            VisualImageDescArray _old_fisheye_img;
+            bool success = queryDescArrayFromDatabase(flatten_desc, _old_fisheye_img, camera_index, camera_index_old);
             auto stop = high_resolution_clock::now(); 
-            if (camera_index_old >= 0 ) {
+            if (success) {
                 swarm_msgs::LoopEdge ret;
                 if (_old_fisheye_img.drone_id == self_id) {
                     success = computeLoop(_old_fisheye_img, flatten_desc, camera_index_old, camera_index, ret);
@@ -173,21 +164,22 @@ int LoopDetector::addToDatabase(VisualImageDesc & new_img_desc) {
 }
 
 
-int LoopDetector::queryFrameIndexFromDatabase(const VisualImageDesc & img_desc, double & distance) {
-    double thres = _config.INNER_PRODUCT_THRES;
+int LoopDetector::queryFrameIndexFromDatabase(const VisualImageDesc & img_desc, double & similarity) {
+    double thres = _config.netvlad_IP_thres;
     int ret = -1;
     if (img_desc.drone_id == self_id) {
         //Then this is self drone
-        ret = queryIndexFromDatabase(img_desc, remote_index, true, thres, _config.MATCH_INDEX_DIST, distance);
+        ret = queryIndexFromDatabase(img_desc, remote_index, true, thres, _config.MATCH_INDEX_DIST, similarity);
         if (ret < 0)
-            ret = queryIndexFromDatabase(img_desc, local_index, false, thres, _config.MATCH_INDEX_DIST, distance);
+            ret = queryIndexFromDatabase(img_desc, local_index, false, thres, _config.MATCH_INDEX_DIST, similarity);
     } else {
-        ret = queryIndexFromDatabase(img_desc, local_index, false, thres, _config.MATCH_INDEX_DIST, distance);
+        ret = queryIndexFromDatabase(img_desc, local_index, false, thres, _config.MATCH_INDEX_DIST, similarity);
     }
     return ret;
 }
 
-int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & distance) {
+int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss::IndexFlatIP & index, bool remote_db, 
+        double thres, int max_index, double & similarity) {
     float distances[1000] = {0};
     faiss::Index::idx_t labels[1000];
 
@@ -223,7 +215,7 @@ int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss
         if (labels[i] <= index.ntotal - max_index && distances[i] > thres) {
             //Is same id, max index make sense
             k = i;
-            thres = distance = distances[i];
+            thres = similarity = distances[i];
             return return_frame_id;
         }
     }
@@ -233,10 +225,10 @@ int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss
 }
 
 
-VisualImageDescArray & LoopDetector::queryDescArrayFromDatabase(const VisualImageDescArray & new_img_desc,
-    int & camera_index_new, int & camera_index_old) {
-    double best_distance = -1;
-    int best_image_id = -1;
+bool LoopDetector::queryDescArrayFromDatabase(const VisualImageDescArray & new_img_desc,
+    VisualImageDescArray & ret, int & camera_index_new, int & camera_index_old) {
+    double best_similarity = -1;
+    int best_image_index = -1;
     //Strict use camera_index 1 now
     camera_index_new = 0;
     if (loop_cam->getCameraConfiguration() == CameraConfig::STEREO_FISHEYE) {
@@ -252,25 +244,26 @@ VisualImageDescArray & LoopDetector::queryDescArrayFromDatabase(const VisualImag
     }
 
     if (new_img_desc.images[camera_index_new].spLandmarkNum() > 0) {
-        double distance = -1;
-        int id = queryFrameIndexFromDatabase(new_img_desc.images.at(camera_index_new), distance);
-        if (id != -1 && distance > best_distance) {
-            best_image_id = id;
+        double similarity = -1;
+        int index = queryFrameIndexFromDatabase(new_img_desc.images.at(camera_index_new), similarity);
+        if (index != -1 && similarity > best_similarity) {
+            best_image_index = index;
+            best_similarity = similarity;
         }
 
-        if (best_image_id != -1) {
-            int frame_id = index_to_frame_id[best_image_id];
-            camera_index_old = imgid2dir[best_image_id];
-            ROS_INFO("[SWARM_LOOP] Query image: frame_id %d index %d drone %d with camera %d dist %f", 
-                frame_id, best_image_id, keyframe_database[frame_id].drone_id, camera_index_old, distance);
-            return keyframe_database[frame_id];
+        if (best_image_index != -1) {
+            int frame_id = index_to_frame_id[best_image_index];
+            camera_index_old = imgid2dir[best_image_index];
+            ROS_INFO("[SWARM_LOOP] Query image for %ld: ret frame_id %d index %d drone %d with camera %d similarity %f", 
+                new_img_desc.frame_id, frame_id, best_image_index, keyframe_database[frame_id].drone_id, camera_index_old, best_similarity);
+            ret = keyframe_database[frame_id];
+            return true;
         }
     }
 
     camera_index_old = -1;
-    VisualImageDescArray ret;
     ret.frame_id = -1;
-    return ret;
+    return false;
 }
 
 
@@ -304,14 +297,9 @@ bool LoopDetector::checkLoopOdometryConsistency(LoopEdge & loop_conn) const {
 //Note! here the norms are both projected to main dir's unit sphere.
 //index2dirindex store the dir and the index of the point
 bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescArray & frame_array_a,
-    const VisualImageDescArray & frame_array_b, 
-    int main_dir_a,
-    int main_dir_b,
-    std::vector<cv::Point3f> &lm_pos_a,
-    std::vector<cv::Point2f> &lm_norm_2d_b,
-    std::vector<std::pair<int, int>> &index2dirindex_a,
-    std::vector<std::pair<int, int>> &index2dirindex_b
-) {
+    const VisualImageDescArray & frame_array_b, int main_dir_a, int main_dir_b,
+    Point3fVector &lm_pos_a, Point2fVector &lm_norm_2d_b, std::vector<std::pair<int, int>> &index2dirindex_a,
+    std::vector<std::pair<int, int>> &index2dirindex_b) {
     std::vector<int> dirs_a;
     std::vector<int> dirs_b;
     
@@ -345,10 +333,10 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
     for (size_t i = 0; i < dirs_a.size(); i++) {
         int dir_a = dirs_a[i];
         int dir_b = dirs_b[i];
-        std::vector<cv::Point2f> lm_norm_2d_a;
-        std::vector<cv::Point3f> _lm_pos_a;
+        Point2fVector lm_norm_2d_a;
+        Point3fVector _lm_pos_a;
         std::vector<int> _idx_a;
-        std::vector<cv::Point2f> _lm_norm_2d_b;
+        Point2fVector _lm_norm_2d_b;
         std::vector<int> _idx_b;
 
         if (dir_a < frame_array_a.images.size() && dir_b < frame_array_b.images.size()) {
@@ -395,10 +383,7 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
 }
 
 bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & new_img_desc, const VisualImageDesc & old_img_desc, 
-        std::vector<cv::Point3f> &lm_pos_a,
-        std::vector<int> &idx_a,
-        std::vector<cv::Point2f> &lm_norm_2d_b,
-        std::vector<int> &idx_b) {
+        Point3fVector &lm_pos_a, std::vector<int> &idx_a, Point2fVector &lm_norm_2d_b, std::vector<int> &idx_b) {
     // ROS_INFO("[SWARM_LOOP](LoopDetector::computeCorrespondFeatures) %d %d ", new_img_desc.spLandmarkNum(), new_img_desc.landmark_descriptor.size());
     assert(new_img_desc.spLandmarkNum() * FEATURE_DESC_SIZE == new_img_desc.landmark_descriptor.size() && "Desciptor size of new img desc must equal to to landmarks*256!!!");
     assert(old_img_desc.spLandmarkNum() * FEATURE_DESC_SIZE == old_img_desc.landmark_descriptor.size() && "Desciptor size of old img desc must equal to to landmarks*256!!!");
@@ -417,7 +402,7 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & new_img_des
     std::vector<unsigned char> mask;
     bfmatcher.match(desc_now, desc_old, _matches);
 
-    std::vector<cv::Point2f> old_2d, new_2d;
+    Point2fVector old_2d, new_2d;
     for (auto match : _matches) {
         int now_id = match.queryIdx;
         int old_id = match.trainIdx;
@@ -479,8 +464,8 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
         self_id, frame_array_b.frame_id, frame_array_b.drone_id, main_dir_b, frame_array_a.frame_id, frame_array_a.drone_id, main_dir_a,
         t_b, t_a, t_a - t_b, frame_array_b.spLandmarkNum(), frame_array_a.spLandmarkNum());
 
-    std::vector<cv::Point3f> lm_pos_a, lm_pos_b;
-    std::vector<cv::Point2f> lm_norm_2d_b;
+    Point3fVector lm_pos_a, lm_pos_b;
+    Point2fVector lm_norm_2d_b;
     std::vector<int> dirs_a;
     Swarm::Pose DP_old_to_new;
     std::vector<int> inliers;
@@ -684,8 +669,8 @@ void LoopDetector::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
 LoopDetector::LoopDetector(int _self_id, const LoopDetectorConfig & config):
         self_id(_self_id),
         _config(config),
-        local_index(DEEP_DESC_SIZE), 
-        remote_index(DEEP_DESC_SIZE), 
+        local_index(NETVLAD_DESC_SIZE), 
+        remote_index(NETVLAD_DESC_SIZE), 
     ego_motion_traj(_self_id, true, _config.pos_covariance_per_meter, _config.yaw_covariance_per_meter) {
 }
 
@@ -714,7 +699,7 @@ double RPerror(const Swarm::Pose & p_drone_old_in_new, const Swarm::Pose & drone
     return RPerr;
 }
 
-int computeRelativePose(const std::vector<cv::Point3f> lm_positions_a, const std::vector<cv::Point2f> lm_2d_norm_b,
+int computeRelativePose(const Point3fVector lm_positions_a, const Point2fVector lm_2d_norm_b,
         Swarm::Pose extrinsic_b, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a, std::vector<int> &inliers, bool is_4dof) {
         //Compute PNP
     // ROS_INFO("Matched features %ld", matched_2d_norm_old.size());

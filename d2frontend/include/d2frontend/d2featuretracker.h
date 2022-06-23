@@ -59,7 +59,7 @@ struct LKImageInfo {
 
 class D2FeatureTracker {
     D2FTConfig _config;
-    VisualImageDescArray current_keyframe;
+    std::vector<VisualImageDescArray> current_keyframes;
     LandmarkManager * lmanager = nullptr;
     int keyframe_count = 0;
     int frame_count = 0;

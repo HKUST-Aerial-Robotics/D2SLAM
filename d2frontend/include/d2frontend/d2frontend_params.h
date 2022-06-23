@@ -19,7 +19,6 @@
 
 #define USE_DEEPNET
 
-#define DEEP_DESC_SIZE 1024
 #define NETVLAD_DESC_SIZE 4096
 
 #define SEARCH_NEAREST_NUM 5

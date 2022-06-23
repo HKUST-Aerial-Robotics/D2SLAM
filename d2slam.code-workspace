@@ -119,7 +119,8 @@
 			"__string": "cpp",
 			"ios": "cpp",
 			"any": "cpp",
-			"scoped_allocator": "cpp"
+			"scoped_allocator": "cpp",
+			"*.txx": "cpp"
 		}
 	}
 }
