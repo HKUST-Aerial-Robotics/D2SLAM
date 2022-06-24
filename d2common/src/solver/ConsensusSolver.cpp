@@ -135,6 +135,10 @@ void ConsensusSolver::updateGlobal() {
                 Swarm::Pose pose_(remote_params.at(pointer).at(drone_id).data());
                 poses.emplace_back(pose_);
             }
+            if (poses.size() == 0) {
+                printf("\033[0;31m[ConsensusSolver::updateGlobal] Error: no remote pose found for %d type %d.\033[0m\n",
+                    paraminfo.id, paraminfo.type);
+            }
             auto pose_global = Swarm::Pose::averagePoses(poses);
             pose_global.to_vector(consenus_params[pointer].param_global.data());
         } else {
