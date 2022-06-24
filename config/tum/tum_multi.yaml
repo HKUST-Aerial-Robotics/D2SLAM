@@ -121,6 +121,9 @@ acc_w: 0.002         # accelerometer bias random work noise standard deviation. 
 gyr_w: 0.0004       # gyroscope bias random work noise standard deviation.     #4.0e-5
 g_norm: 9.805         # gravity magnitude
 
+#Loop Closure Detection
+netvlad_IP_thres: 0.8
+enable_homography_test: 0
 
 #outputs
 output_path: "/root/output/"
