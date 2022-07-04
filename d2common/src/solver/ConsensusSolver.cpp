@@ -108,6 +108,11 @@ void ConsensusSolver::updateTilde() {
                 tilde += x_local - x_global;
                 MatrixXd A(paraminfo.size, paraminfo.size);
                 A.setIdentity();
+                if (paraminfo.type == LANDMARK) {
+                   A *= rho_landmark;
+                } else {
+                    //Not implement yet
+                }
                 auto factor = new ceres::NormalPrior(A, x_global - tilde);
                 problem->AddResidualBlock(factor, nullptr, pointer);
             }

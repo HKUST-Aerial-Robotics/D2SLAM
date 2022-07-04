@@ -6,7 +6,6 @@
 #include "SolverWrapper.hpp"
 
 namespace D2Common {
-
 struct ConsensusSolverConfig {
     int max_steps = 2;
     ceres::Solver::Options ceres_options;
@@ -61,9 +60,12 @@ protected:
 
     virtual void broadcastData() = 0;
     virtual void receiveAll() = 0;
-    virtual void setStateProperties() = 0;
     virtual void waitForSync() = 0;
-
+    ceres::Solver::Summary solveLocalStep();
+    void updateTilde();
+    void updateGlobal();
+    void addParam(const ParamInfo & param_info);
+    
 public:
     ConsensusSolver(D2State * _state, ConsensusSolverConfig _config, int _solver_token): 
         SolverWrapper(_state), config(_config), self_id(config.self_id), solver_token(_solver_token)
@@ -77,10 +79,6 @@ public:
 
     virtual void addResidual(ResidualInfo*residual_info) override;
     ceres::Solver::Summary solve() override;
-    ceres::Solver::Summary solveLocalStep();
-    void addParam(const ParamInfo & param_info);
-    void updateTilde();
-    void updateGlobal();
     void setToken(int token) {
         solver_token = token;
     }

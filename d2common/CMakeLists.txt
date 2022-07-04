@@ -40,6 +40,7 @@ add_library(${PROJECT_NAME}
   src/solver/BaseSolverWrapper.cpp
   src/solver/ConsensusSolver.cpp
   src/solver/consenus_factor.cpp
+  src/solver/ARock.cpp
 )
 
 ## Add cmake target dependencies of the library

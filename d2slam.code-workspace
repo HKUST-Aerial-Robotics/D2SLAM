@@ -13,6 +13,10 @@
 			"path": "d2common"
 		},
 		{
+			"name": "d2pgo",
+			"path": "d2pgo"
+		},
+		{
 			"name": "D2SLAM",
 			"path": "."
 		},
@@ -25,10 +29,20 @@
 			"path": "../../../data"
 		},
 		{
+			"name": "swarm_msgs",
 			"path": "../swarm_msgs/swarm_msgs"
 		},
 		{
+			"name": "ceres-solver",
 			"path": "../../../source/ceres-solver"
+		},
+		{
+			"name": "omnimvs-pytorch",
+			"path": "../../../develop/omnimvs-pytorch"
+		},
+		{
+			"name": "sphere-stereo",
+			"path": "../../../develop/sphere-stereo"
 		}
 	],
 	"settings": {

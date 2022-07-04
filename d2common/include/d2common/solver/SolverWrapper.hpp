@@ -13,6 +13,7 @@ protected:
     ceres::Problem * problem = nullptr;
     D2State * state;
     std::vector<ResidualInfo*> residuals;
+    virtual void setStateProperties() {}
 public:
     SolverWrapper(D2State * _state): state(_state) {
         problem = new ceres::Problem();
