@@ -88,8 +88,10 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des) {
     sum_byte_sent+= byte_sent;
     sum_features+=feature_num;
     count_byte_sent ++;
+    if (params->print_network_status) {
     ROS_INFO("[SWARM_LOOP](%d) BD KF %d LM: %d size %d avgsize %.0f sumkB %.0f avgLM %.0f", count_byte_sent,
             img_desc_header.msg_id, feature_num, byte_sent, ceil(sum_byte_sent/count_byte_sent), sum_byte_sent/1000, ceil(sum_features/count_byte_sent));
+    }
     
     if (send_img) {
         ImageDescriptor_t img_desc_new = img_des;

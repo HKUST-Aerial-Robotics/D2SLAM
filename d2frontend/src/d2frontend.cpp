@@ -259,7 +259,7 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     odometry_sub  = nh.subscribe("/vins_estimator/odometry", 1, &D2Frontend::odometryCallback, this, ros::TransportHints().tcpNoDelay());
     keyframe_odometry_sub  = nh.subscribe("/vins_estimator/keyframe_pose", 1, &D2Frontend::odometryKeyframeCallback, this, ros::TransportHints().tcpNoDelay());
 
-    loopconn_pub = nh.advertise<swarm_msgs::LoopEdge>("loop_connection", 10);
+    loopconn_pub = nh.advertise<swarm_msgs::LoopEdge>("loop", 10);
     
     if (params->enable_sub_remote_frame) {
         ROS_INFO("[SWARM_LOOP] Subscribing remote image from bag");
@@ -269,11 +269,6 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     if (params->enable_pub_remote_frame) {
         remote_image_desc_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("remote_frame_desc", 10);
     }
-
-    if (params->enable_pub_local_frame) {
-        local_image_desc_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("local_frame_desc", 10);
-    }
-    
 
     timer = nh.createTimer(ros::Duration(0.01), [&](const ros::TimerEvent & e) {
         loop_net->scanRecvPackets();

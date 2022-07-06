@@ -27,6 +27,7 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     D2Estimator * estimator = nullptr;
     D2VINSNet * d2vins_net = nullptr;
     ros::Subscriber imu_sub;
+    ros::Publisher frame_pub;
     int frame_count = 0;
     std::queue<D2Common::VisualImageDescArray> viokf_queue;
     std::mutex queue_lock;
@@ -53,6 +54,7 @@ protected:
         if (D2FrontEnd::params->enable_loop) {
             loop_detector->processImageArray(frame_desc);
         }
+        frame_pub.publish(frame_desc.toROS());
     }
     
     void distriburedTimerCallback(const ros::TimerEvent & event) {
@@ -86,6 +88,7 @@ protected:
             if (ret && D2FrontEnd::params->enable_network) {
                 loop_net->broadcastVisualImageDescArray(viokf);
             }
+            frame_pub.publish(viokf.toROS());
         }
     }
 
@@ -116,14 +119,14 @@ protected:
         }
     }
 
-public:
-    D2VINSNode(ros::NodeHandle & nh) {
+    void Init(ros::NodeHandle & nh) {
         initParams(nh);
-        Init(nh);
+        D2Frontend::Init(nh);
         estimator = new D2Estimator(params->self_id);
         d2vins_net = new D2VINSNet(estimator, params->lcm_uri);
         estimator->init(nh, d2vins_net);
-        imu_sub  = nh.subscribe(params->imu_topic, 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
+        frame_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("image_array_desc", 1);
+        imu_sub = nh.subscribe(params->imu_topic, 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
         estimator_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::timerCallback, this);
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
             solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
@@ -134,6 +137,10 @@ public:
             }
         });
         ROS_INFO("D2VINS node %d initialized. Ready to start.", params->self_id);
+    }
+public:
+    D2VINSNode(ros::NodeHandle & nh) {
+        Init(nh);
     }
 };
 

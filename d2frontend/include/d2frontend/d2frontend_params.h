@@ -86,6 +86,7 @@ struct D2FrontendParams {
     bool enable_loop = true;
     bool enable_network = true;
     bool verbose = false;
+    bool print_network_status = false;
 
     bool is_comp_images;
     std::vector<std::string> image_topics, comp_image_topics, depth_topics;

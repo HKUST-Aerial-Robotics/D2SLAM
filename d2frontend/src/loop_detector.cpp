@@ -423,9 +423,6 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
             idx_b.push_back(index_b);
             lm_pos_a.push_back(toCV(landmark_db.at(landmark_id).position));
             lm_norm_2d_b.push_back(toCV(pt2d_norm_b));
-            //print position of a and pt2d of b
-            printf("LM pos %.1f %.1f %.1f norm_2d %.1f %.1f\n", 
-                lm_pos_a.back().x, lm_pos_a.back().y, lm_pos_a.back().z, pt2d_norm_b.x(), pt2d_norm_b.y());
         } else {
             ROS_WARN("[SWARM_LOOP] landmark_id %d is near image plane, give up in current framework", landmark_id);
         }

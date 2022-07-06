@@ -256,12 +256,14 @@ struct VisualImageDescArray {
 
     VisualImageDescArray() {}
     
-    VisualImageDescArray(const swarm_msgs::ImageArrayDescriptor & img_desc) {
-        frame_id = img_desc.msg_id;
-        prevent_adding_db = img_desc.prevent_adding_db;
-        drone_id = img_desc.drone_id;
+    VisualImageDescArray(const swarm_msgs::ImageArrayDescriptor & img_desc):
+        frame_id(img_desc.frame_id),
+        prevent_adding_db(img_desc.prevent_adding_db),
+        drone_id(img_desc.drone_id),
+        reference_frame_id(img_desc.reference_frame_id),
+        is_keyframe(img_desc.is_keyframe)
+    {
         stamp = img_desc.header.stamp.toSec();
-        reference_frame_id = img_desc.reference_frame_id;
         pose_drone = Swarm::Pose(img_desc.pose_drone);
         for (auto & _img: img_desc.images) {
             images.emplace_back(_img);
@@ -291,8 +293,9 @@ struct VisualImageDescArray {
 
     swarm_msgs::ImageArrayDescriptor toROS() const {
         swarm_msgs::ImageArrayDescriptor ret;
-        ret.msg_id = frame_id;
+        ret.frame_id = frame_id;
         ret.prevent_adding_db = prevent_adding_db;
+        ret.is_keyframe = is_keyframe;
         ret.drone_id = drone_id;
         ret.header.stamp = ros::Time(stamp);
         ret.landmark_num = landmarkNum();

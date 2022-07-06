@@ -25,6 +25,8 @@ struct D2PGOConfig {
     PGO_POSE_DOF pgo_pose_dof = PGO_POSE_4D;
     double pos_covariance_per_meter = 4e-3;
     double yaw_covariance_per_meter = 4e-5;
+    int min_solve_size = 2;
+    double min_cov_len = 0.1;
 };
 
 class D2PGO {
@@ -39,6 +41,9 @@ protected:
     void setupEgoMotionFactors(SolverWrapper * solver);
     void setupEgoMotionFactors(SolverWrapper * solver, int drone_id);
     std::set<FrameIdType> used_frames;
+    int used_loops_count;
+    int solve_count = 0;
+    bool updated = false;
 public:
     D2PGO(D2PGOConfig _config):
         config(_config), self_id(_config.self_id), main_id(_config.self_id),
@@ -47,6 +52,7 @@ public:
     void addFrame(const VINSFrame & frame_desc);
     void addLoop(const Swarm::LoopEdge & loop_info);
     void setStateProperties(ceres::Problem & problem);
-    void solve();
+    bool solve();
+    std::map<int, Swarm::DroneTrajectory> getOptimizedTrajs();
 };
 }
