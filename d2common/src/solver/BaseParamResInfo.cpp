@@ -14,6 +14,19 @@ ParamInfo createFramePose(D2State * state, FrameIdType id) {
     return info;
 }
 
+ParamInfo createFramePose4D(D2State * state, FrameIdType id) {
+    ParamInfo info;
+    info.pointer = state->getPoseState(id);
+    info.index = -1;
+    info.size = POSE4D_SIZE;
+    info.eff_size = POSE4D_SIZE;
+    info.type = POSE_4D;
+    info.id = id;
+    info.data_copied.resize(info.size);
+    memcpy(info.data_copied.data(), info.pointer, sizeof(state_type) * info.size);
+    return info;
+}
+
 void ResidualInfo::Evaluate(D2State * state) {
     auto param_infos = paramsList(state);
     std::vector<state_type*> params;

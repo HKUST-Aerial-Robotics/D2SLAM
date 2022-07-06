@@ -12,10 +12,12 @@ protected:
     std::map<FrameIdType, VINSFrame*> frame_db;
     std::map<FrameIdType, state_type*> _frame_pose_state;
     mutable std::recursive_mutex state_lock;
+    bool is_4dof = false;
 public:
-    D2State(int _self_id) :
-        self_id(_self_id), reference_frame_id(_self_id) {
+    D2State(int _self_id, bool _is_4dof = false) :
+        self_id(_self_id), reference_frame_id(_self_id), is_4dof(_is_4dof) {
     }
+
     std::set<int> availableDrones() const {
         return all_drones;
     }
@@ -26,8 +28,13 @@ public:
         auto * frame = new VINSFrame;
         *frame = _frame;
         frame_db[frame->frame_id] = frame;
-        _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
-        _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
+        if (is_4dof) {
+            _frame_pose_state[frame->frame_id] = new state_type[POSE4D_SIZE];
+            _frame.odom.pose().to_vector_xyzyaw(_frame_pose_state[frame->frame_id]);
+        } else {
+            _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
+            _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
+        }
         return frame;
     }
 

@@ -41,6 +41,7 @@ add_library(${PROJECT_NAME}
   src/solver/ConsensusSolver.cpp
   src/solver/consenus_factor.cpp
   src/solver/ARock.cpp
+  src/solver/pose_local_parameterization.cpp
 )
 
 ## Add cmake target dependencies of the library

@@ -13,7 +13,7 @@
 #include <ceres/ceres.h>
 #include <d2common/utils.hpp>
 
-namespace D2VINS {
+namespace D2Common {
 class PoseLocalParameterization : public ceres::LocalParameterization
 {
     virtual bool Plus(const double *x, const double *delta, double *x_plus_delta) const;

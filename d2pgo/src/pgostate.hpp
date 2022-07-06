@@ -10,8 +10,13 @@ protected:
     std::map<int, Swarm::DroneTrajectory> drone_trajs;
 
 public:
-    PGOState(int _self_id) :
-        D2State(_self_id) {
+    PGOState(int _self_id, bool _is_4dof = false) :
+        D2State(_self_id, _is_4dof) {
+        if (is_4dof) {
+            printf("[D2PGO] PGOState: is 4dof\n");
+        } else {
+            printf("[D2PGO] PGOState: is 6dof\n");
+        }
     }
 
     void addFrame(const VINSFrame & _frame) {
@@ -26,6 +31,18 @@ public:
 
     std::vector<VINSFrame*> & getFrames(int drone_id) {
         return drone_frames.at(drone_id);
+    }
+
+    Swarm::DroneTrajectory & getTraj(int drone_id) {
+        return drone_trajs.at(drone_id);
+    }
+
+    FrameIdType headId(int drone_id) {
+        if (drone_frames.find(drone_id) == drone_frames.end() || 
+            drone_frames.at(drone_id).size() == 0) {
+            return -1;
+        }
+        return drone_frames.at(drone_id)[0]->frame_id;
     }
 };
 }

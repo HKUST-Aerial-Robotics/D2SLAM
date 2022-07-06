@@ -6,6 +6,7 @@
 namespace D2Common {
 enum ParamsType {
     POSE = 0,
+    POSE_4D = 0,
     REL_COOR, //Relative cooridinate frame pose (P_w_i_k)
     SPEED_BIAS,
     EXTRINSIC,
@@ -66,5 +67,6 @@ public:
 };
 
 ParamInfo createFramePose(D2State * state, FrameIdType id);
+ParamInfo createFramePose4D(D2State * state, FrameIdType id);
 
 }

@@ -9,7 +9,7 @@
 #include "../factors/projectionOneFrameTwoCamFactor.h"
 #include "../factors/projectionTwoFrameTwoCamFactor.h"
 #include "../factors/ProjectionTwoDroneTwoCamFactor.h"
-#include "../factors/pose_local_parameterization.h"
+#include <d2common/solver/pose_local_parameterization.h>
 #include <d2frontend/utils.h>
 #include "marginalization/marginalization.hpp"
 #include "solver/VINSConsenusSolver.hpp"

@@ -7,9 +7,8 @@
  * you may not use this file except in compliance with the License.
  *******************************************************/
 
-#include "pose_local_parameterization.h"
-using namespace D2Common;
-namespace D2VINS {
+#include <d2common/solver/pose_local_parameterization.h>
+namespace D2Common {
 bool PoseLocalParameterization::Plus(const double *x, const double *delta, double *x_plus_delta) const
 {
     Eigen::Map<const Eigen::Vector3d> _p(x);

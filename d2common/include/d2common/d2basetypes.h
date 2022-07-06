@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 
 #define POSE_SIZE 7
+#define POSE4D_SIZE 4
 #define POSE_EFF_SIZE 6
 #define FRAME_SPDBIAS_SIZE 9
 #define TD_SIZE 1

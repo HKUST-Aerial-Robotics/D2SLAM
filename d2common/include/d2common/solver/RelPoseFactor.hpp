@@ -101,17 +101,24 @@ inline void deltaPose4D(Eigen::Matrix<T, 4, 1> posea,
     yawRotateVec(-posea(3), tmp, dpose.segment<3>(0));
 }
 
-class RelativePoseFactor4d {
+class RelPoseFactor4D {
     Swarm::Pose relative_pose;
     Eigen::Vector3d relative_pos;
     double relative_yaw;
     Eigen::Matrix4d sqrt_inf;
-    RelativePoseFactor4d(const Swarm::Pose & _relative_pose, const Eigen::Matrix4d & _sqrt_inf):
+    RelPoseFactor4D(const Swarm::Pose & _relative_pose, const Eigen::Matrix4d & _sqrt_inf):
         relative_pose(_relative_pose), sqrt_inf(_sqrt_inf) {
         relative_pos = relative_pose.pos();
         relative_yaw = relative_pose.yaw();
     }
-
+    RelPoseFactor4D(const Swarm::Pose & _relative_pose, const Eigen::Matrix3d & _sqrt_inf_pos, double sqrt_info_yaw):
+        relative_pose(_relative_pose) {
+        relative_pos = relative_pose.pos();
+        relative_yaw = relative_pose.yaw();
+        sqrt_inf.setZero();
+        sqrt_inf.block<3, 3>(0, 0) = _sqrt_inf_pos;
+        sqrt_inf(3, 3) = sqrt_info_yaw;
+    }
 public:
     template<typename T>
     bool operator()(const T* const p_a_ptr, const T* const p_b_ptr, T *_residual) const {
@@ -128,8 +135,13 @@ public:
     static ceres::CostFunction* Create(const Swarm::GeneralMeasurement2Drones* _loc) {
         auto loop = static_cast<const Swarm::LoopEdge*>(_loc);
         // std::cout << "Loop" << "sqrt_inf\n" << loop->get_sqrt_information_4d() << std::endl;
-        return new ceres::AutoDiffCostFunction<RelativePoseFactor4d, 4, 4, 4>(
-            new RelativePoseFactor4d(loop->relative_pose, loop->get_sqrt_information_4d()));
+        return new ceres::AutoDiffCostFunction<RelPoseFactor4D, 4, 4, 4>(
+            new RelPoseFactor4D(loop->relative_pose, loop->get_sqrt_information_4d()));
+    }
+
+    static ceres::CostFunction * Create(const Swarm::Pose & _relative_pose, const Eigen::Matrix3d & _sqrt_inf_pos, double sqrt_info_yaw) {
+        return new ceres::AutoDiffCostFunction<RelPoseFactor4D, 4, 4, 4>(
+            new RelPoseFactor4D(_relative_pose, _sqrt_inf_pos, sqrt_info_yaw));
     }
 };
 
@@ -137,23 +149,32 @@ class RelPoseResInfo : public ResidualInfo {
 public:
     FrameIdType frame_ida;
     FrameIdType frame_idb;
+    bool is_4dof = false;
     RelPoseResInfo():ResidualInfo(ResidualType::RelPoseResidual) {}
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
     }
     virtual std::vector<ParamInfo> paramsList(D2State * state) const override {
         std::vector<ParamInfo> params_list;
-        params_list.push_back(createFramePose(state, frame_ida));
-        params_list.push_back(createFramePose(state, frame_idb));
+        if (is_4dof) {
+            params_list.push_back(createFramePose4D(state, frame_ida));
+            params_list.push_back(createFramePose4D(state, frame_idb));
+        } else {
+            params_list.push_back(createFramePose(state, frame_ida));
+            params_list.push_back(createFramePose(state, frame_idb));
+        }
         return params_list;
     }
-    static RelPoseResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function, 
-            FrameIdType frame_ida, FrameIdType frame_idb) {
+
+    static RelPoseResInfo * create(
+            ceres::CostFunction * cost_function, ceres::LossFunction * loss_function, 
+            FrameIdType frame_ida, FrameIdType frame_idb, bool is_4dof=false) {
         auto * info = new RelPoseResInfo();
         info->frame_ida = frame_ida;
         info->frame_idb = frame_idb;
         info->cost_function = cost_function;
         info->loss_function = loss_function;
+        info->is_4dof = is_4dof;
         return info;
     }
 };
