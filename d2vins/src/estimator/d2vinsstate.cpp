@@ -44,9 +44,11 @@ std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(FrameIdType frame_i
     delete _frame;
     frame_db.erase(frame_id);
     delete _frame_pose_state.at(frame_id);
-    delete _frame_spd_Bias_state.at(frame_id);
     _frame_pose_state.erase(frame_id);
-    _frame_spd_Bias_state.erase(frame_id);
+    if (_frame_spd_Bias_state.find(frame_id) != _frame_spd_Bias_state.end()) {
+        delete _frame_spd_Bias_state.at(frame_id);
+        _frame_spd_Bias_state.erase(frame_id);
+    }
     return ret;
 }
 

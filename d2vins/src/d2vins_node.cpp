@@ -10,12 +10,12 @@
 #include <chrono>
 
 using namespace std::chrono;
-// #define BACKWARD_HAS_DW 1
-// #include <backward.hpp>
-// namespace backward
-// {
-//     backward::SignalHandling sh;
-// }
+#define BACKWARD_HAS_DW 1
+#include <backward.hpp>
+namespace backward
+{
+    backward::SignalHandling sh;
+}
 
 using namespace D2VINS;
 using namespace D2Common;
