@@ -2,7 +2,6 @@
 #include "d2frontend/d2frontend_params.h"
 #include "ATen/Parallel.h"
 #include "d2frontend/utils.h"
-#include "swarm_msgs/swarm_types.hpp"
 #include <d2frontend/CNN/superpoint_common.h>
 
 #define USE_PCA

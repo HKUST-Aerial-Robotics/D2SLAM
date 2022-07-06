@@ -134,7 +134,8 @@
 			"ios": "cpp",
 			"any": "cpp",
 			"scoped_allocator": "cpp",
-			"*.txx": "cpp"
+			"*.txx": "cpp",
+			"dense": "cpp"
 		}
 	}
 }

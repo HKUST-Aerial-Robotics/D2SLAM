@@ -20,6 +20,17 @@ public:
         return all_drones;
     }
 
+    VINSFrame * addVINSFrame(const VINSFrame & _frame) {
+        all_drones.insert(_frame.drone_id);
+        const Guard lock(state_lock);
+        auto * frame = new VINSFrame;
+        *frame = _frame;
+        frame_db[frame->frame_id] = frame;
+        _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
+        _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
+        return frame;
+    }
+
     bool hasDrone(int drone_id) const{
         return all_drones.find(drone_id) != all_drones.end();
     }

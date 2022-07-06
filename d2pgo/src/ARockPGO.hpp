@@ -1,3 +1,4 @@
+#pragma once
 #include <d2common/solver/ARock.hpp>
 
 using namespace D2Common;

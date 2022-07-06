@@ -1,6 +1,5 @@
 #include "d2frontend/CNN/tensorrt_generic.h"
 #include "d2frontend/utils.h"
-#include "swarm_msgs/swarm_types.hpp"
 
 using namespace D2FrontEnd;
 using namespace nvinfer1;

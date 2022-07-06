@@ -4,6 +4,8 @@
 #include <swarm_msgs/Pose.h>
 #include <fstream>
 #include <mutex>
+#include <chrono>
+
 using namespace Eigen;
 
 namespace D2Common {
@@ -186,6 +188,26 @@ Quaternion<Derived> averageQuaterions(std::vector<Quaternion<Derived>> quats) {
     Quaternion<Derived> q(eigenvector(3), eigenvector(0), eigenvector(1), eigenvector(2));
     return q;
 }
+
+class TicToc {
+public:
+    TicToc() {
+        tic();
+    }
+
+    void tic() {
+        start = std::chrono::system_clock::now();
+    }
+
+    double toc() {
+        end = std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed_seconds = end - start;
+        return elapsed_seconds.count() * 1000;
+    }
+
+private:
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+};
 
 }
 }

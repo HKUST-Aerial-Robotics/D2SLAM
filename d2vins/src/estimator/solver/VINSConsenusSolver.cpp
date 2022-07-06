@@ -83,7 +83,7 @@ void D2VINSConsensusSolver::updateWithDistributedVinsData(const DistributedVinsD
 
 void D2VINSConsensusSolver::waitForSync() {
     //Wait for all remote drone to publish result.
-    TicToc tic;
+    Utility::TicToc tic;
     if (params->verbose) {
         printf("[ConsensusSolver::waitForSync@%d] token %d iteration %d\n", self_id, solver_token, iteration_count - 1);
     }

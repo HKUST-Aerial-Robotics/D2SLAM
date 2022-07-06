@@ -135,7 +135,7 @@ void Marginalizer::showDeltaXofschurComplement(std::vector<ParamInfo> keep_param
 }
 
 PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids) {
-    TicToc tic;
+    Utility::TicToc tic;
     remove_frame_ids = _remove_frame_ids;
     //Clear previous states
     params_list.clear();
@@ -155,7 +155,7 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
         return nullptr;
     }
     int keep_state_dim = total_eff_state_dim - remove_state_dim;
-    TicToc tt;
+    Utility::TicToc tt;
     SparseMat J(eff_residual_size, total_eff_state_dim);
     auto b = evaluate(J, eff_residual_size, total_eff_state_dim);
     SparseMat H = SparseMatrix<double>(J.transpose())*J;

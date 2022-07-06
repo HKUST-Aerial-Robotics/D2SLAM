@@ -7,7 +7,6 @@
 #include <nav_msgs/Odometry.h>
 #include <mutex>
 #include <swarm_msgs/ImageArrayDescriptor.h>
-#include <swarm_msgs/swarm_types.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <sensor_msgs/CompressedImage.h>
 #include <sensor_msgs/Image.h>

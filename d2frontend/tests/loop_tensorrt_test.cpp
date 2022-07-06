@@ -2,7 +2,6 @@
 #include "d2frontend/d2frontend_params.h"
 #include "d2frontend/CNN/mobilenetvlad_tensorrt.h"
 #include "d2frontend/utils.h"
-#include "swarm_msgs/swarm_types.hpp"
 using namespace Swarm;
 using namespace D2FrontEnd;
 

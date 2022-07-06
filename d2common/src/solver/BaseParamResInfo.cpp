@@ -1,6 +1,19 @@
 #include <d2common/solver/BaseParamResInfo.hpp>
 
 namespace D2Common {
+ParamInfo createFramePose(D2State * state, FrameIdType id) {
+    ParamInfo info;
+    info.pointer = state->getPoseState(id);
+    info.index = -1;
+    info.size = POSE_SIZE;
+    info.eff_size = POSE_EFF_SIZE;
+    info.type = POSE;
+    info.id = id;
+    info.data_copied.resize(info.size);
+    memcpy(info.data_copied.data(), info.pointer, sizeof(state_type) * info.size);
+    return info;
+}
+
 void ResidualInfo::Evaluate(D2State * state) {
     auto param_infos = paramsList(state);
     std::vector<state_type*> params;

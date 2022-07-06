@@ -7,8 +7,8 @@
 #include <d2frontend/loop_cam.h>
 #include <functional>
 #include <swarm_msgs/Pose.h>
-#include <swarm_msgs/swarm_types.hpp>
 #include <faiss/IndexFlat.h>
+#include <swarm_msgs/drone_trajectory.hpp>
 
 using namespace swarm_msgs;
 #define REMOTE_MAGIN_NUMBER 1000000

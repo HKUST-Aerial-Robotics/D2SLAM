@@ -10,7 +10,6 @@ using namespace D2Common;
 namespace D2VINS {
 class PriorFactor;
 
-ParamInfo createFramePose(D2EstimatorState * state, FrameIdType id);
 ParamInfo createExtrinsic(D2EstimatorState * state, int camera_id);
 ParamInfo createLandmark(D2EstimatorState * state, int landmark_id, bool inv_dep_param = true);
 ParamInfo createSpeedBias(D2EstimatorState * state, FrameIdType id);

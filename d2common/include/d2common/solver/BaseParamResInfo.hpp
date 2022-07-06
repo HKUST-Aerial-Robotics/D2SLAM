@@ -37,7 +37,8 @@ enum ResidualType {
     LandmarkTwoDroneTwoCamResidual, // 4
     LandmarkOneFrameTwoCamResidual, // 5
     PriorResidual, // 7
-    DepthResidual // 8
+    DepthResidual, // 8
+    RelPoseResidual //9
 };
 
 class ResidualInfo {
@@ -63,5 +64,7 @@ public:
     }
     virtual ~ResidualInfo(){}
 };
+
+ParamInfo createFramePose(D2State * state, FrameIdType id);
 
 }

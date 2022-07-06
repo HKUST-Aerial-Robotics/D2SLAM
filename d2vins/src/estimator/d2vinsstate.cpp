@@ -376,10 +376,8 @@ void D2EstimatorState::updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_
 
 void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSFrame & _frame) {
     const Guard lock(state_lock);
-    auto * frame = new VINSFrame;
-    *frame = _frame;
+    VINSFrame * frame = addVINSFrame(_frame);
     if (_frame.drone_id != self_id) {
-        all_drones.insert(_frame.drone_id);
         sld_wins[_frame.drone_id].emplace_back(frame);
         for (auto & img : images.images) {
             if (extrinsic.find(img.camera_id) == extrinsic.end()) {
@@ -390,13 +388,11 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
     } else {
         sld_wins[self_id].emplace_back(frame);
     }
-    frame_db[frame->frame_id] = frame;
-    _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
-    _frame_spd_Bias_state[frame->frame_id] = new state_type[FRAME_SPDBIAS_SIZE];
     if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && _frame.drone_id != self_id) {
-        //In this mode, the estimate state is always ego-motion, and the bias is not been estimated on remote
+        //In this mode, the estimate state is always ego-motion and the bias is not been estimated on remote
         _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
     } else {
+        _frame_spd_Bias_state[frame->frame_id] = new state_type[FRAME_SPDBIAS_SIZE];
         frame->toVector(_frame_pose_state[frame->frame_id], _frame_spd_Bias_state[frame->frame_id]);
     }
 

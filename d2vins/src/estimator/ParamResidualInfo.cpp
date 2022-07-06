@@ -19,19 +19,6 @@ std::vector<ParamInfo> PriorResInfo::paramsList(D2State * state) const {
     return factor->getKeepParams();
 }
 
-ParamInfo createFramePose(D2EstimatorState * state, FrameIdType id) {
-    ParamInfo info;
-    info.pointer = state->getPoseState(id);
-    info.index = -1;
-    info.size = POSE_SIZE;
-    info.eff_size = POSE_EFF_SIZE;
-    info.type = POSE;
-    info.id = id;
-    info.data_copied.resize(info.size);
-    memcpy(info.data_copied.data(), info.pointer, sizeof(state_type) * info.size);
-    return info;
-}
-
 ParamInfo createExtrinsic(D2EstimatorState * state, int camera_id) {
     ParamInfo info;
     info.pointer = state->getExtrinsicState(camera_id);
