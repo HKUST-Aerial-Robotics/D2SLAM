@@ -78,7 +78,7 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
         // Swarm::TsType tsa = frame_a->stamp * 1e9;
         // Swarm::TsType tsb = frame_b->stamp * 1e9;
         // auto cov = traj.covariance_between_appro_ts(tsa, tsb);
-        auto relpose6d = Swarm::Pose::DeltaPose(frame_a->odom.pose(), frame_b->odom.pose(), true);
+        auto relpose6d = Swarm::Pose::DeltaPose(frame_a->initial_ego_pose, frame_b->initial_ego_pose, true);
         double len = relpose6d.pos().norm();
         if (len < config.min_cov_len) {
             len = config.min_cov_len;
@@ -89,7 +89,7 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
         cov.block<3, 3>(3, 3) = Matrix3d::Identity()*config.yaw_covariance_per_meter*len;
         Matrix6d sqrt_info = cov.inverse().cwiseAbs().cwiseSqrt();
         if (config.pgo_pose_dof == PGO_POSE_4D) {
-            auto relpose4d = Swarm::Pose::DeltaPose(frame_a->odom.pose(), frame_b->odom.pose(), true);
+            auto relpose4d = Swarm::Pose::DeltaPose(frame_a->initial_ego_pose, frame_b->initial_ego_pose, true);
             auto factor = RelPoseFactor4D::Create(relpose4d, sqrt_info.block<3,3>(0, 0), sqrt_info(5, 5));
             auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id);
             solver->addResidual(res_info);
