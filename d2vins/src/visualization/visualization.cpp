@@ -36,20 +36,43 @@ void D2Visualization::init(ros::NodeHandle & nh, D2Estimator * estimator) {
     imu_prop_pub = nh.advertise<nav_msgs::Odometry>("imu_propagation", 1000);
     path_pub = nh.advertise<nav_msgs::Path>("path", 1000);
     sld_win_pub = nh.advertise<visualization_msgs::MarkerArray>("slding_window", 1000);
+    frame_pub_local = nh.advertise<swarm_msgs::VIOFrame>("frame_local", 1000);
+    frame_pub_remote = nh.advertise<swarm_msgs::VIOFrame>("frame_remote", 1000);
+    for (int i = 0; i < estimator->getState().localCameraExtrinsics().size(); i++) {
+        char topic_name[64] = {0};
+        sprintf(topic_name, "camera_pose_%d", i);
+        camera_pose_pubs.emplace_back(nh.advertise<geometry_msgs::PoseStamped>(topic_name, 1000));
+    }
     _estimator = estimator;
     _nh = &nh;
 }
 
+void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
+    if (frame == nullptr) {
+        return;
+    }
+    //Publish the VINSFrame
+    if (frame->drone_id == params->self_id) {
+        auto exts = _estimator->getState().localCameraExtrinsics();
+        swarm_msgs::VIOFrame msg = frame->toROS(exts);
+        frame_pub_local.publish(msg);
+    } else {
+        swarm_msgs::VIOFrame msg = frame->toROS();
+        frame_pub_remote.publish(msg);
+    }
+}
+
 void D2Visualization::postSolve() {
+    auto & state = _estimator->getState();
     if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
         auto imu_prop = _estimator->getImuPropagation().toRos();
         imu_prop_pub.publish(imu_prop);
     }
-    auto pcl = _estimator->getState().getInitializedLandmarks();
+    auto pcl = state.getInitializedLandmarks();
     pcl_pub.publish(toPointCloud(pcl));
     margined_pcl.publish(toPointCloud(_estimator->getMarginedLandmarks(), true));
 
-    for (auto drone_id: _estimator->getState().availableDrones()) {
+    for (auto drone_id: state.availableDrones()) {
         auto odom = _estimator->getOdometry(drone_id);
         auto odom_ros = odom.toRos();
         if (paths.find(drone_id) != paths.end() && (odom_ros.header.stamp - paths[drone_id].header.stamp).toSec() < 1e-3) {
@@ -72,13 +95,22 @@ void D2Visualization::postSolve() {
         if (drone_id == params->self_id) {
             path_pub.publish(path);
             odom_pub.publish(odom_ros);
+            auto exts = state.localCameraExtrinsics();
+            for (int i = 0; i < exts.size(); i ++) {
+                auto camera_pose = exts[i];
+                auto pose = (odom.pose()*camera_pose).to_ros_pose();
+                geometry_msgs::PoseStamped camera_pose_ros;
+                camera_pose_ros.header = odom_ros.header;
+                camera_pose_ros.header.frame_id = "world";
+                camera_pose_ros.pose = pose;
+                camera_pose_pubs[i].publish(camera_pose_ros);
+            }
         }
         csv_output_files[drone_id] << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << odom.stamp << " " << odom.pose().toStr(true) << std::endl;
         odom_pubs[drone_id].publish(odom_ros);
         path_pubs[drone_id].publish(path);
     }
 
-    auto  & state = _estimator->getState();
     CameraPoseVisualization cam_visual;
     for (auto drone_id: state.availableDrones()) {
         for (int i = 0; i < state.size(drone_id); i ++) {

@@ -124,7 +124,7 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
     return std::make_pair(success, pose_imu);
 }
 
-void D2Estimator::addFrame(VisualImageDescArray & _frame) {
+VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
     if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
         margined_landmarks = state.clearFrame();
@@ -154,7 +154,7 @@ void D2Estimator::addFrame(VisualImageDescArray & _frame) {
     }
     frame.odom.stamp = _frame.stamp;
     frame.reference_frame_id = state.getReferenceFrameId();
-    state.addFrame(_frame, frame);
+    auto frame_ret = state.addFrame(_frame, frame);
 
     //Assign IMU and initialization to VisualImageDescArray for broadcasting.
     _frame.imu_buf = _imu;
@@ -167,6 +167,7 @@ void D2Estimator::addFrame(VisualImageDescArray & _frame) {
         printf("[D2VINS::D2Estimator] Initialize VINSFrame with %d: %s\n", 
             params->init_method, frame.toStr().c_str());
     }
+    return frame_ret;
 }
 
 void D2Estimator::addRemoteImuBuf(int drone_id, const IMUBuffer & imu_) {
@@ -191,7 +192,7 @@ void D2Estimator::addRemoteImuBuf(int drone_id, const IMUBuffer & imu_) {
     }
 }
 
-void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
+VINSFrame * D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
     if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || params->estimation_mode == D2VINSConfig::SERVER_MODE) {
         addRemoteImuBuf(_frame.drone_id, _frame.imu_buf);
     }
@@ -229,7 +230,7 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
             //Use IMU
             if (params->verbose) {
                 printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed for remote %d@%d. will not add\033[0m\n", _frame.frame_id, _frame.drone_id);
-                return;
+                return nullptr;
             }
         } else {
             if (params->verbose) {
@@ -248,11 +249,12 @@ void D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
         }
     }
 
-    state.addFrame(_frame, vinsframe);
+    auto frame_ret = state.addFrame(_frame, vinsframe);
     if (params->verbose || params->debug_print_states) {
         printf("[D2VINS::D2Estimator] Add Remote VINSFrame with %d: %s IMU %d iskeyframe %d/%d\n", 
             _frame.drone_id, vinsframe.toStr().c_str(), _frame.imu_buf.size(), vinsframe.is_keyframe, _frame.is_keyframe);
     }
+    return frame_ret;
 }
 
 void D2Estimator::addSldWinToFrame(VisualImageDescArray & frame) {
@@ -263,11 +265,12 @@ void D2Estimator::addSldWinToFrame(VisualImageDescArray & frame) {
 
 void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
     state.updateSldwin(frame.drone_id, frame.sld_win_status);
-    addFrameRemote(frame);
+    auto frame_ptr = addFrameRemote(frame);
     if (params->estimation_mode == D2VINSConfig::SERVER_MODE && state.size(frame.drone_id) >= params->min_solve_frames) {
         state.clearFrame();
         solveNonDistrib();
     }
+    visual.pubFrame(frame_ptr);
 }
 
 bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
@@ -286,7 +289,7 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
         printf("[D2VINS::D2Estimator] wait for imu...\n");
     }
 
-    addFrame(_frame);
+    auto frame = addFrame(_frame);
     if (state.size() >= params->min_solve_frames && params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
         solveNonDistrib();
     } else {
@@ -296,6 +299,7 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     addSldWinToFrame(_frame);
     frame_count ++;
     updated = true;
+    visual.pubFrame(frame);
     return true;
 }
 
@@ -352,8 +356,6 @@ void D2Estimator::setStateProperties() {
         // }
         problem.SetParameterBlockConstant(
             state.getPoseState(state.firstFrame(self_id).frame_id));
-    } else {
-        printf("[D2Estimator::setStateProperties] getPrior enabled, will not set first frame as fixed\n");
     }
 }
 

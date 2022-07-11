@@ -60,7 +60,6 @@ struct D2FrontendParams {
     std::string OUTPUT_PATH;
     int width;
     int height;
-    double max_freq = 1.0;
     double recv_msg_duration = 0.5;
     double feature_min_dist = 20;
     int total_feature_num = 150;

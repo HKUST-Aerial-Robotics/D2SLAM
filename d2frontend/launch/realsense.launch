@@ -13,7 +13,6 @@
     <!-- <arg name="vins_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/realsense.yaml" /> -->
     <arg name="camera_config_path" default="/home/xuhao/data/realsense/left.yaml" />
     <arg name="vins_config_path" default="/home/xuhao/data/realsense/realsense.yaml" />
-    <arg name="max_freq" default="1.0" />
     <arg name="superpoint_max_num" default="200" />
     <arg name="match_index_dist" default="50" />
     <arg name="output_path" default="/home/dji/output/" />
@@ -67,7 +66,6 @@
         <param name="match_index_dist" value="$(arg match_index_dist)" type="int" />
         <param name="nonkeyframe_waitsec" value="$(arg nonkeyframe_waitsec)" type="double" />
         <param name="min_loop_feature_num" value="$(arg min_loop_feature_num)" type="int" />
-        <param name="max_freq" value="$(arg max_freq)" type="double" />
         <param name="inter_drone_init_frames" value="$(arg inter_drone_init_frames)" type="int" />
         <param name="superpoint_max_num" value="$(arg superpoint_max_num)" type="int" />
         <param name="camera_config_path" value="$(arg camera_config_path)" type="string" />

@@ -17,6 +17,7 @@ protected:
     D2LandmarkManager lmanager;
     std::map<FrameIdType, state_type*> _frame_spd_Bias_state;
     std::map<CamIdType, state_type*> _camera_extrinsic_state;
+    std::vector<CamIdType> local_camera_ids;
     std::map<CamIdType, int> camera_drone;
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
 
@@ -52,13 +53,16 @@ public:
     std::vector<LandmarkPerId> getRelatedLandmarks(FrameIdType frame_id) const;
     LandmarkPerId & getLandmarkbyId(LandmarkIdType id);
     bool hasLandmark(LandmarkIdType id) const;
-    int getCameraBelonging(CamIdType cam_id) const;
 
+    //Camera
+    CamIdType addCamera(const Swarm::Pose & pose, int camera_index, int drone_id, CamIdType camera_id=-1);
+    int getCameraBelonging(CamIdType cam_id) const;
+    bool hasCamera(CamIdType frame_id) const;
+    std::vector<Swarm::Pose> localCameraExtrinsics() const;
+   
     //Frame operations
     std::vector<LandmarkPerId> clearFrame();
-    void addFrame(const VisualImageDescArray & images, const VINSFrame & _frame);
-    void addCamera(const Swarm::Pose & pose, int camera_index, int drone_id, CamIdType camera_id=-1);
-    bool hasCamera(CamIdType frame_id) const;
+    VINSFrame * addFrame(const VisualImageDescArray & images, const VINSFrame & _frame);
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
     virtual void moveAllPoses(int new_ref_frame_id, const Swarm::Pose & delta_pose) override;
     const std::vector<VINSFrame*> & getSldWin(int drone_id) const;

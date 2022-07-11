@@ -24,7 +24,6 @@ namespace D2FrontEnd {
         nh.param<int>("self_id", self_id, -1);
         int _camconfig = fsSettings["camera_configuration"];
         camera_configuration = (CameraConfig) _camconfig;
-        nh.param<double>("max_freq", max_freq, 1.0);
         nh.param<double>("nonkeyframe_waitsec", ACCEPT_NONKEYFRAME_WAITSEC, 5.0);
         nh.param<double>("min_movement_keyframe", min_movement_keyframe, 0.3);
 

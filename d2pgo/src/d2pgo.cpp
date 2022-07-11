@@ -141,7 +141,14 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
     for (auto drone_id : state.availableDrones()) {
         trajs[drone_id] = Swarm::DroneTrajectory(drone_id, false);
         for (auto frame : state.getFrames(drone_id)) {
-            trajs[drone_id].push(frame->stamp, frame->odom.pose(), frame->frame_id);
+            auto pose = frame->odom.pose();
+            if (config.pgo_pose_dof == PGO_POSE_4D) {
+                //Then we need to combine the roll pitch from ego motion
+                Swarm::Pose ego_pose = frame->initial_ego_pose;
+                auto delta_att = ego_pose.att_yaw_only().inverse() * ego_pose.att();
+                pose.att() = pose.att()*delta_att;
+            }
+            trajs[drone_id].push(frame->stamp, pose, frame->frame_id);
         }
     }
     return trajs;

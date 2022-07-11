@@ -49,8 +49,8 @@ protected:
     
     //Internal functions
     bool tryinitFirstPose(VisualImageDescArray & frame);
-    void addFrame(VisualImageDescArray & _frame);
-    void addFrameRemote(const VisualImageDescArray & _frame);
+    VINSFrame * addFrame(VisualImageDescArray & _frame);
+    VINSFrame * addFrameRemote(const VisualImageDescArray & _frame);
     void solveNonDistrib();
     void setupImuFactors();
     void setupLandmarkFactors();

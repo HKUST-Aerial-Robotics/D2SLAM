@@ -3,6 +3,8 @@
 #include "utils.hpp"
 #include <swarm_msgs/Odometry.h>
 #include "d2imu.h"
+#include <swarm_msgs/VIOFrame.h>
+
 namespace D2Common {
 class IntegrationBase;
 struct VINSFrame {
@@ -28,6 +30,8 @@ struct VINSFrame {
     VINSFrame(const VisualImageDescArray & frame);
 
     std::string toStr();
+    swarm_msgs::VIOFrame toROS();
+    swarm_msgs::VIOFrame toROS(const std::vector<Swarm::Pose> & exts);
 
     void toVector(state_type * _pose, state_type * _spd_bias) const;
 

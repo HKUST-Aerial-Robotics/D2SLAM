@@ -55,12 +55,13 @@ std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(FrameIdType frame_i
 void D2EstimatorState::init(std::vector<Swarm::Pose> _extrinsic, double _td) {
     for (int i = 0; i < _extrinsic.size(); i ++) {
         auto pose = _extrinsic[i];
-        addCamera(pose, i, self_id);
+        auto cam_id = addCamera(pose, i, self_id);
+        local_camera_ids.push_back(cam_id);
     }
     td = _td;
 }
 
-void D2EstimatorState::addCamera(const Swarm::Pose & pose, int camera_index, int drone_id, CamIdType camera_id) {
+CamIdType D2EstimatorState::addCamera(const Swarm::Pose & pose, int camera_index, int drone_id, CamIdType camera_id) {
     if (camera_id < 0) {
         camera_id = generateCameraId(self_id, camera_index);
     }
@@ -69,6 +70,15 @@ void D2EstimatorState::addCamera(const Swarm::Pose & pose, int camera_index, int
     _camera_extrinsic_state[camera_id] = _p;
     extrinsic[camera_id] = pose;
     camera_drone[camera_id] = drone_id;
+    return camera_id;
+}
+
+std::vector<Swarm::Pose> D2EstimatorState::localCameraExtrinsics() const {
+    std::vector<Swarm::Pose> ret;
+    for (auto & camera_id : local_camera_ids) {
+        ret.push_back(extrinsic.at(camera_id));
+    }
+    return ret;
 }
 
 size_t D2EstimatorState::size() const {
@@ -376,7 +386,7 @@ void D2EstimatorState::updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_
 }
 
 
-void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSFrame & _frame) {
+VINSFrame * D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSFrame & _frame) {
     const Guard lock(state_lock);
     VINSFrame * frame = addVINSFrame(_frame);
     if (_frame.drone_id != self_id) {
@@ -403,6 +413,7 @@ void D2EstimatorState::addFrame(const VisualImageDescArray & images, const VINSF
         printf("[D2VINS::D2EstimatorState] add frame %ld@%d iskeyframe %d with %d images, current %ld frame\n", 
             images.frame_id, _frame.drone_id, frame->is_keyframe, images.images.size(), sld_wins[self_id].size());
     }
+    return frame;
 }
 
 void D2EstimatorState::syncFromState() {

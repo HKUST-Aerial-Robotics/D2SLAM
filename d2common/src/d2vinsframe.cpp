@@ -81,6 +81,33 @@ std::string VINSFrame::toStr() {
     return std::string(buf);
 }
 
+swarm_msgs::VIOFrame VINSFrame::toROS() {
+    swarm_msgs::VIOFrame msg;
+    msg.header.stamp = ros::Time(stamp);
+    msg.header.frame_id = "world";
+    msg.frame_id = frame_id;
+    msg.drone_id = drone_id;
+    msg.is_keyframe = is_keyframe;
+    msg.reference_frame_id = reference_frame_id;
+    msg.odom = odom.toRos();
+    return msg;
+}
+
+swarm_msgs::VIOFrame VINSFrame::toROS(const std::vector<Swarm::Pose> & exts) {
+    swarm_msgs::VIOFrame msg;
+    msg.header.stamp = ros::Time(stamp);
+    msg.header.frame_id = "world";
+    msg.frame_id = frame_id;
+    msg.drone_id = drone_id;
+    msg.is_keyframe = is_keyframe;
+    msg.reference_frame_id = reference_frame_id;
+    msg.odom = odom.toRos();
+    for (int i = 0; i < exts.size(); i++) {
+        msg.extrinsics.emplace_back(exts[i].to_ros_pose());
+    }
+    return msg;
+}
+
 void VINSFrame::toVector(state_type * _pose, state_type * _spd_bias) const {
     odom.pose().to_vector(_pose);
     _spd_bias[0] = odom.vel().x();
