@@ -13,6 +13,7 @@
 #include <message_filters/time_synchronizer.h>
 #include <d2frontend/utils.h>
 #include "d2common/d2frontend_types.h"
+#include <fstream>
 
 //#include <swarm_loop/HFNetSrv.h>
 

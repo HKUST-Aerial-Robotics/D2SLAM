@@ -222,7 +222,11 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     std::vector<cv::Point2f> n_pts;
     auto cur_all_pts = frame.landmarks2D();
     cur_all_pts.insert(cur_all_pts.end(), cur_lk_pts.begin(), cur_lk_pts.end());
-    detectPoints(frame.raw_image, n_pts, cur_all_pts, params->total_feature_num);
+    if (!frame.raw_image.empty()) {
+        detectPoints(frame.raw_image, n_pts, cur_all_pts, params->total_feature_num);
+    } else {
+        printf("[D2FeatureTracker::trackLK] empty image\n");
+    }
     report.unmatched_num += n_pts.size();
     for (int i = 0; i < cur_lk_pts.size(); i++) {
         auto lm = createLKLandmark(frame, cur_lk_pts[i], cur_lk_ids[i]);
