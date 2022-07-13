@@ -17,6 +17,10 @@
 			"path": "d2pgo"
 		},
 		{
+			"name": "d2comm",
+			"path": "d2comm"
+		},
+		{
 			"name": "D2SLAM",
 			"path": "."
 		},
@@ -37,12 +41,7 @@
 			"path": "../../../source/ceres-solver"
 		},
 		{
-			"name": "omnimvs-pytorch",
-			"path": "../../../develop/omnimvs-pytorch"
-		},
-		{
-			"name": "sphere-stereo",
-			"path": "../../../develop/sphere-stereo"
+			"path": "../TaichiSLAM"
 		}
 	],
 	"settings": {
@@ -135,7 +134,8 @@
 			"any": "cpp",
 			"scoped_allocator": "cpp",
 			"*.txx": "cpp",
-			"dense": "cpp"
+			"dense": "cpp",
+			"__functional_base": "cpp"
 		}
 	}
 }

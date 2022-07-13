@@ -55,18 +55,21 @@
   <build_depend>sensor_msgs</build_depend>
   <build_depend>swarm_msgs</build_depend>
   <build_depend>swarmcomm_msgs</build_depend>
+  <build_depend>d2common</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rosmsg</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
   <build_export_depend>sensor_msgs</build_export_depend>
   <build_export_depend>swarm_msgs</build_export_depend>
   <build_export_depend>swarmcomm_msgs</build_export_depend>
+  <build_export_depend>d2common</build_export_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rosmsg</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>swarm_msgs</exec_depend>
   <exec_depend>swarmcomm_msgs</exec_depend>
+  <exec_depend>d2common</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

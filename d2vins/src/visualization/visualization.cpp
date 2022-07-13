@@ -98,7 +98,7 @@ void D2Visualization::postSolve() {
             auto exts = state.localCameraExtrinsics();
             for (int i = 0; i < exts.size(); i ++) {
                 auto camera_pose = exts[i];
-                auto pose = (odom.pose()*camera_pose).to_ros_pose();
+                auto pose = (odom.pose()*camera_pose).toROS();
                 geometry_msgs::PoseStamped camera_pose_ros;
                 camera_pose_ros.header = odom_ros.header;
                 camera_pose_ros.header.frame_id = "world";

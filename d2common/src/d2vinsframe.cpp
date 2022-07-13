@@ -103,7 +103,7 @@ swarm_msgs::VIOFrame VINSFrame::toROS(const std::vector<Swarm::Pose> & exts) {
     msg.reference_frame_id = reference_frame_id;
     msg.odom = odom.toRos();
     for (int i = 0; i < exts.size(); i++) {
-        msg.extrinsics.emplace_back(exts[i].to_ros_pose());
+        msg.extrinsics.emplace_back(exts[i].toROS());
     }
     return msg;
 }

@@ -299,7 +299,7 @@ struct VisualImageDescArray {
         ret.drone_id = drone_id;
         ret.header.stamp = ros::Time(stamp);
         ret.landmark_num = landmarkNum();
-        ret.pose_drone = pose_drone.to_ros_pose();
+        ret.pose_drone = pose_drone.toROS();
         ret.reference_frame_id = reference_frame_id;
         for (auto & _img: images) {
             ret.images.emplace_back(_img.toROS());

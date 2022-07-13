@@ -18,6 +18,10 @@ inline bool IsSE3(ParamsType type) {
     return type == POSE || type == REL_COOR || type == EXTRINSIC;
 }
 
+inline bool IsPose4D(ParamsType type) {
+    return type == POSE_4D;
+}
+
 struct ParamInfo {
     state_type * pointer = nullptr;
     Matrix<state_type, -1, 1> data_copied;

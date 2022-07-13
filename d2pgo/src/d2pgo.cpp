@@ -29,7 +29,7 @@ bool D2PGO::solve() {
     if (config.mode == PGO_MODE_NON_DIST) {
         solver = new CeresSolver(&state, config.ceres_options);
     } else if (config.mode == PGO_MODE_DISTRIBUTED_AROCK) {
-        solver = new ARockPGO(&state, config.arock_config);
+        solver = new ARockPGO(&state, this, config.arock_config);
     }
 
     used_frames.clear();

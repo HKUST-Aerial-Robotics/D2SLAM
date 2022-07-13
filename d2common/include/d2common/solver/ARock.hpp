@@ -30,7 +30,12 @@ protected:
     void addParam(const ParamInfo & param_info);
     void updateDualStates();
     ceres::Solver::Summary solveLocalStep();
-    void setDualFactors();
+    void setDualStateFactors();
+    void scanAndCreateDualStates();
+    bool hasDualState(state_type* param, int drone_id);
+    void createDualState(const ParamInfo & param_info, int drone_id);
+    virtual bool isRemoteParam(const ParamInfo & param);
+    virtual int solverId(const ParamInfo & param);
 public:
     ARockSolver(D2State * _state, ARockSolverConfig _config):
             SolverWrapper(_state), config(_config), self_id(config.self_id) {

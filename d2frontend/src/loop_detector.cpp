@@ -490,7 +490,7 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
     }
 
     if (success) {
-        ret.relative_pose = DP_old_to_new.to_ros_pose();
+        ret.relative_pose = DP_old_to_new.toROS();
 
         ret.drone_id_a = frame_array_b.drone_id;
         ret.ts_a = ros::Time(frame_array_b.stamp);
@@ -699,7 +699,7 @@ int computeRelativePose(const Point3fVector lm_positions_a, const Point2fVector 
     bool success = solvePnPRansac(lm_positions_a, lm_2d_norm_b, K, D, rvec, t, false,   
         iteratives,  3, 0.99,  inliers);
     auto p_cam_old_in_new = PnPRestoCamPose(rvec, t);
-    auto p_drone_old_in_new = p_cam_old_in_new*(extrinsic_b.to_isometry().inverse());
+    auto p_drone_old_in_new = p_cam_old_in_new*(extrinsic_b.toIsometry().inverse());
     if (!success) {
         return 0;
     }

@@ -42,7 +42,7 @@ ceres::Solver::Summary ARockSolver::solve() {
                 residual_info->paramsPointerList(state));
         }
         receiveAll();
-        setDualFactors();
+        setDualStateFactors();
         setStateProperties();
         solveLocalStep();
         updateDualStates();
@@ -51,7 +51,57 @@ ceres::Solver::Summary ARockSolver::solve() {
     return summary;
 }
 
-void ARockSolver::setDualFactors() {
+bool ARockSolver::isRemoteParam(const ParamInfo & param_info) {
+    if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D) {
+        auto frame = state->getFramebyId(param_info.id);
+        if (frame.drone_id != self_id) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int ARockSolver::solverId(const ParamInfo & param_info) {
+    if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D) {
+        auto frame = state->getFramebyId(param_info.id);
+        return frame.drone_id;
+    }
+    return -1;
+}
+
+void ARockSolver::scanAndCreateDualStates() {
+    for (auto res: residuals) {
+        auto param_infos = res->paramsList(state);
+        for (auto param_info: param_infos) {
+            if (isRemoteParam(param_info)) {
+                auto drone_id = solverId(param_info);
+                if  (!hasDualState(param_info.pointer, drone_id)) {
+                    createDualState(param_info, drone_id);
+                }
+            }
+        }
+    }
+}
+
+bool ARockSolver::hasDualState(state_type* param, int drone_id) {
+    if (dual_states_remote.find(param) != dual_states_remote.end()) {
+        if (dual_states_remote[param].find(drone_id) != dual_states_remote[param].end()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void ARockSolver::createDualState(const ParamInfo & param_info, int drone_id) {
+    if (dual_states_remote.find(param_info.pointer) == dual_states_remote.end()) {
+        dual_states_remote[param_info.pointer] = std::map<int, VectorXd>();
+        dual_states_local[param_info.pointer] = std::map<int, VectorXd>();
+    }
+    dual_states_remote[param_info.pointer][drone_id] = Map<VectorXd>(param_info.pointer, param_info.size);
+    dual_states_local[param_info.pointer][drone_id] = Map<VectorXd>(param_info.pointer, param_info.size);
+}
+
+void ARockSolver::setDualStateFactors() {
     for (auto & param_pair : dual_states_remote) {
         auto state_pointer = param_pair.first;
         auto param_info = all_estimating_params.at(state_pointer);
@@ -64,6 +114,8 @@ void ARockSolver::setDualFactors() {
                 auto factor = new ConsenusPoseFactor(pose_dual.pos(), pose_dual.att(), 
                         Vector3d::Zero(), Vector3d::Zero(), rho_T, rho_theta);
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
+            } else if (IsPose4D(param_info.type)) {
+                //Not implemented.
             } else {
                 //Is euclidean.
                 MatrixXd A(param_info.size, param_info.size);
@@ -93,10 +145,7 @@ void ARockSolver::updateDualStates() {
                //Use pose average.
                 Swarm::Pose dual_pose_local(dual_states_local.at(state_pointer).at(remote_drone_id));
                 Swarm::Pose dual_pose_remote(dual_states_remote.at(state_pointer).at(remote_drone_id));
-                std::vector<Swarm::Pose> poses{
-                    dual_pose_remote,
-                    dual_pose_local
-                };
+                std::vector<Swarm::Pose> poses{dual_pose_remote, dual_pose_local};
                 Swarm::Pose avg_pose = Swarm::Pose::averagePoses(poses);
                 Swarm::Pose cur_est_pose = Swarm::Pose(state_pointer);
                 Vector6d pose_err = Swarm::Pose::DeltaPose(cur_est_pose, avg_pose).tangentSpace();

@@ -36,6 +36,7 @@ include_directories(
 add_library(${PROJECT_NAME}
   src/d2imu.cpp
   src/d2vinsframe.cpp
+  src/d2pgo_types.cpp
   src/solver/BaseParamResInfo.cpp
   src/solver/BaseSolverWrapper.cpp
   src/solver/ConsensusSolver.cpp
