@@ -190,12 +190,52 @@ Quaternion<Derived> averageQuaterions(std::vector<Quaternion<Derived>> quats) {
     return q;
 }
 
+template<typename T>
+inline void yawRotateVec(T yaw, 
+        const Eigen::Matrix<T, 3, 1> & vec, 
+        Eigen::Matrix<T, 3, 1> & ret) {
+    ret(0) = cos(yaw) * vec(0) - sin(yaw)*vec(1);
+    ret(1) = sin(yaw) * vec(0) + cos(yaw)*vec(1);
+    ret(2) = vec(2);
+}
+
+template<typename T>
+inline Matrix<T, 3, 3> yawRotMat(T yaw) {
+    Matrix<T, 3, 3> R;
+    T cyaw = ceres::cos(yaw);
+    T syaw = ceres::sin(yaw);
+    R << cyaw, - syaw, ((T) 0), 
+        syaw, cyaw, ((T) 0),
+        ((T) 0), ((T) 0), ((T) 1);
+    return R;
+}
+
 template <typename T>
 inline T NormalizeAngle(const T& angle_radians) {
   // Use ceres::floor because it is specialized for double and Jet types.
   T two_pi(2.0 * M_PI);
   return angle_radians -
          two_pi * ceres::floor((angle_radians + T(M_PI)) / two_pi);
+}
+
+template<typename T>
+inline void deltaPose4D(Eigen::Matrix<T, 4, 1> posea, 
+        Eigen::Matrix<T, 4, 1> poseb, Eigen::Matrix<T, 4, 1> & dpose) {
+    dpose(3) = Utility::NormalizeAngle(poseb(3) - posea(3));
+    Eigen::Matrix<T, 3, 1> tmp = poseb - posea;
+    yawRotateVec(-posea(3), tmp, dpose.segment<3>(0));
+}
+
+template<typename T>
+inline void poseError4D(const Ref<const Matrix<T, 3, 1>> & posa, T yaw_a,
+        const Ref<const Matrix<T, 3, 1>> & posb, T yaw_b,
+        const Ref<const Matrix<T, 4, 4>> &_sqrt_inf_mat, 
+        T *error) {
+    Map<Matrix<T, 3, 1>> err(error);
+    err = posb - posa;
+    error[3] = Utility::NormalizeAngle(yaw_b - yaw_a);
+    Map<Matrix<T, 4, 1>> err_4d(error);
+    err_4d.applyOnTheLeft(_sqrt_inf_mat);
 }
 
 class TicToc {

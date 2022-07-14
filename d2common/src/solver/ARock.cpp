@@ -1,5 +1,6 @@
 #include <d2common/solver/ARock.hpp>
 #include <d2common/solver/consenus_factor.h>
+#include <d2common/solver/consenus_factor_4d.h>
 #include <ceres/normal_prior.h>
 
 namespace D2Common {
@@ -115,7 +116,9 @@ void ARockSolver::setDualStateFactors() {
                         Vector3d::Zero(), Vector3d::Zero(), rho_T, rho_theta);
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
             } else if (IsPose4D(param_info.type)) {
-                //Not implemented.
+                Swarm::Pose pose_dual(dual_state);
+                auto factor = ConsenusPoseFactor4D::Create(pose_dual, rho_T, rho_theta);
+                problem->AddResidualBlock(factor, nullptr, state_pointer);
             } else {
                 //Is euclidean.
                 MatrixXd A(param_info.size, param_info.size);
