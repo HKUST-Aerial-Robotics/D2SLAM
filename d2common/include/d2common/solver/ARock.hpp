@@ -21,8 +21,8 @@ protected:
     double rho_theta = 0.1;
     int self_id = 0;
     int iteration_count = 0;
-    std::map<state_type*, std::map<int, VectorXd>> dual_states_local;
-    std::map<state_type*, std::map<int, VectorXd>> dual_states_remote;
+    std::map<int, std::map<state_type*, VectorXd>> dual_states_local;
+    std::map<int, std::map<state_type*, VectorXd>> dual_states_remote;
     std::map<state_type*, ParamInfo> all_estimating_params;
 
     virtual void receiveAll() = 0;

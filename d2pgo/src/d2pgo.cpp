@@ -154,4 +154,8 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
     return trajs;
 }
 
+void D2PGO::broadcastData(const DPGOData & data) {
+    bd_data_callback(data);
+}
+
 }

@@ -4,6 +4,7 @@
 #include <d2common/d2frontend_types.h>
 #include "pgostate.hpp"
 #include <swarm_msgs/relative_measurments.hpp>
+#include <d2common/d2pgo_types.h>
 
 namespace D2PGO {
 
@@ -45,6 +46,7 @@ protected:
     int solve_count = 0;
     bool updated = false;
 public:
+    std::function<void(const DPGOData & )> bd_data_callback;
     D2PGO(D2PGOConfig _config):
         config(_config), self_id(_config.self_id), main_id(_config.self_id),
         state(_config.self_id, _config.pgo_pose_dof == PGO_POSE_4D) {
@@ -53,6 +55,7 @@ public:
     void addLoop(const Swarm::LoopEdge & loop_info);
     void setStateProperties(ceres::Problem & problem);
     bool solve();
+    void broadcastData(const DPGOData & data);
     std::map<int, Swarm::DroneTrajectory> getOptimizedTrajs();
 };
 }

@@ -33,15 +33,8 @@
 #define CERES_EXAMPLES_POSE_GRAPH_2D_ANGLE_MANIFOLD_H_
 
 #include "ceres/autodiff_manifold.h"
-
+#include "../utils.hpp"
 namespace D2PGO {
-template <typename T>
-inline T NormalizeAngle(const T& angle_radians) {
-  // Use ceres::floor because it is specialized for double and Jet types.
-  T two_pi(2.0 * M_PI);
-  return angle_radians -
-         two_pi * ceres::floor((angle_radians + T(M_PI)) / two_pi);
-}
 // Defines a manifold for updating the angle to be constrained in [-pi to pi).
 class PosAngleManifold {
  public:
@@ -52,7 +45,7 @@ class PosAngleManifold {
     x_plus_delta_radians[0] = x_radians[0] + delta_radians[0];
     x_plus_delta_radians[1] = x_radians[1] + delta_radians[1];
     x_plus_delta_radians[2] = x_radians[2] + delta_radians[2];
-    x_plus_delta_radians[3] = NormalizeAngle(x_radians[3] + delta_radians[3]);
+    x_plus_delta_radians[3] = Utility::NormalizeAngle(x_radians[3] + delta_radians[3]);
     return true;
   }
 
@@ -64,7 +57,7 @@ class PosAngleManifold {
     y_minus_x_radians[1] = y_radians[1] - x_radians[1];
     y_minus_x_radians[2] = y_radians[2] - x_radians[2];
     y_minus_x_radians[3] =
-        NormalizeAngle(y_radians[3]) - NormalizeAngle(x_radians[3]);
+        Utility::NormalizeAngle(y_radians[3]) - Utility::NormalizeAngle(x_radians[3]);
 
     return true;
   }

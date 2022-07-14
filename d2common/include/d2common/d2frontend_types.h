@@ -285,7 +285,7 @@ struct VisualImageDescArray {
         for (auto & _img: img_desc.images) {
             images.emplace_back(_img);
         }
-        for (int i = 0; i < img_desc.imu_buf.size(); i ++) {
+        for (unsigned int i = 0; i < img_desc.imu_buf.size(); i ++) {
             auto data = img_desc.imu_buf[i];
             imu_buf.add(IMUData(data));
         }
@@ -333,7 +333,7 @@ struct VisualImageDescArray {
         ret.sld_win_status.drone_id = ret.drone_id;
         ret.sld_win_status.frame_ids = sld_win_status;
         ret.reference_frame_id = reference_frame_id;
-        for (int i = 0; i < imu_buf.size(); i ++) {
+        for (unsigned int i = 0; i < imu_buf.size(); i ++) {
             ret.imu_buf.emplace_back(imu_buf[i].toLCM());
         }
         return ret;

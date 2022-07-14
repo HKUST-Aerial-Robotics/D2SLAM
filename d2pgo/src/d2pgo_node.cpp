@@ -11,6 +11,7 @@ class D2PGONode {
     D2PGOConfig config;
     std::map<int, ros::Publisher> path_pubs;
     ros::Publisher path_pub;
+    ros::Publisher dpgo_data_pub;
     ros::Publisher drone_traj_pub;
     bool write_to_file = false;
     int write_to_file_step = 5;
@@ -69,6 +70,10 @@ protected:
         pgo = new D2PGO(config);
         path_pub = _nh->advertise<nav_msgs::Path>("pgo_path", 1000);
         drone_traj_pub = _nh->advertise<swarm_msgs::DroneTraj>("pgo_traj", 1000);
+        dpgo_data_pub = _nh->advertise<swarm_msgs::DPGOData>("pgo_data", 1000);
+        pgo->bd_data_callback = [&] (const DPGOData & data) {
+            dpgo_data_pub.publish(data.toROS());
+        };
         frame_sub = nh.subscribe("image_array_desc", 1, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
         remote_frame_sub = nh.subscribe("remote_frame_desc", 1, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
         loop_sub = nh.subscribe("loop", 1, &D2PGONode::processLoop, this, ros::TransportHints().tcpNoDelay());

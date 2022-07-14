@@ -135,7 +135,8 @@
 			"scoped_allocator": "cpp",
 			"*.txx": "cpp",
 			"dense": "cpp",
-			"__functional_base": "cpp"
+			"__functional_base": "cpp",
+			"__config": "cpp"
 		}
 	}
 }

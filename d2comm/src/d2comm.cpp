@@ -31,6 +31,7 @@ void D2Comm::PGODataRosCallback(const swarm_msgs::DPGOData & ros_data) {
     if (ros_data.drone_id == self_id) {
         return;
     }
+    printf("D2Comm: Broadcast PGO data of drone %d.\n", ros_data.drone_id);
     D2Common::DPGOData data(ros_data);
     auto lcm_data = data.toLCM();
     lcm->publish("PGO_Sync_Data", &lcm_data);

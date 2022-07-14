@@ -5,6 +5,7 @@
 #include <fstream>
 #include <mutex>
 #include <chrono>
+#include <ceres/ceres.h>
 
 using namespace Eigen;
 
@@ -187,6 +188,14 @@ Quaternion<Derived> averageQuaterions(std::vector<Quaternion<Derived>> quats) {
     Matrix<Derived, 4, 1> eigenvector = solver.eigenvectors().rightCols(1);
     Quaternion<Derived> q(eigenvector(3), eigenvector(0), eigenvector(1), eigenvector(2));
     return q;
+}
+
+template <typename T>
+inline T NormalizeAngle(const T& angle_radians) {
+  // Use ceres::floor because it is specialized for double and Jet types.
+  T two_pi(2.0 * M_PI);
+  return angle_radians -
+         two_pi * ceres::floor((angle_radians + T(M_PI)) / two_pi);
 }
 
 class TicToc {
