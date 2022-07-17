@@ -349,7 +349,7 @@ void D2Estimator::setStateProperties() {
     }
 
     if (!state.getPrior() || params->always_fixed_first_pose || !state.marginalizeSelf()) {
-        printf("[D2Estimator::setStateProperties] Will set every first frame as fixed\n");
+        // printf("[D2Estimator::setStateProperties] Will set first frame as fixed\n");
         // for (auto drone_id : state.availableDrones()) {
         //     problem.SetParameterBlockConstant(
         //             state.getPoseState(state.firstFrame(drone_id).frame_id));
