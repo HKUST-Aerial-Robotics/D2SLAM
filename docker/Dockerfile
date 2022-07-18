@@ -3,6 +3,7 @@ FROM nvcr.io/nvidia/tensorrt:22.04-py3
 ARG CERES_VERSION=2.1.0
 ARG CMAKE_VERSION=3.23.1
 ARG ONNX_VERSION=1.11.1
+ARG OPENCV_VERSION=4.6.0
 ENV SWARM_WS=/root/swarm_ws
 
 #Some basic dependencies
@@ -99,6 +100,29 @@ RUN   git clone https://github.com/facebookresearch/faiss.git && \
       make -C build install && \
       rm -rf ../faiss
 
+#Install OpenCV4 with CUDA
+RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip -O opencv.zip && \
+      unzip opencv.zip && \
+      rm opencv.zip && \
+      git clone https://github.com/opencv/opencv_contrib.git -b 4.6.0 && \
+      rm -rf opencv_contrib/modules/sfm && \
+      rm -rf opencv_contrib/modules/wechat_qrcode && \
+      cd opencv-${OPENCV_VERSION} && \
+      mkdir build && cd build && \
+      cmake .. \
+            -D CMAKE_BUILD_TYPE=RELEASE \
+            -D CMAKE_INSTALL_PREFIX=/usr/local \
+            -D WITH_CUDA=ON \
+            -D WITH_CUDNN=ON \
+            -D WITH_CUBLAS=ON \
+            -D WITH_TBB=ON \
+            -D OPENCV_DNN_CUDA=ON \
+            -D OPENCV_ENABLE_NONFREE=ON \
+            -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
+            -D BUILD_EXAMPLES=OFF && \
+      make -j $(USE_PROC) && \
+      make install 
+
 #Install Backward
 RUN wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp -O /usr/local/include/backward.hpp
 
@@ -106,7 +130,8 @@ RUN wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.
 RUN mkdir -p ${SWARM_WS}/src/ && \
       cd ${SWARM_WS}/src/ && \
       git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM && \
-      git clone https://github.com/HKUST-Swarm/sync_bag_player.git 
+      git clone https://github.com/HKUST-Swarm/sync_bag_player.git && \
+      git clone https://github.com/ros-perception/vision_opencv.git -b noetic
 COPY ./ ${SWARM_WS}/src/
 WORKDIR $SWARM_WS
 RUN   source "/opt/ros/noetic/setup.bash" && \
