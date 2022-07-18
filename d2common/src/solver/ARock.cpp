@@ -24,8 +24,9 @@ void ARockSolver::addParam(const ParamInfo & param_info) {
     all_estimating_params[param_info.pointer] = param_info;
 }
 
-ceres::Solver::Summary ARockSolver::solve() {
-    ceres::Solver::Summary summary;
+SolverReport ARockSolver::solve() {
+    SolverReport report;
+    Utility::TicToc tic;
     for (int i = 0; i < config.max_steps; i++) {
         //If sync mode.
         if (problem != nullptr) {
@@ -45,11 +46,15 @@ ceres::Solver::Summary ARockSolver::solve() {
         receiveAll();
         setDualStateFactors();
         setStateProperties();
-        solveLocalStep();
+        ceres::Solver::Summary summary;
+        summary = solveLocalStep();
+        report.total_iterations += summary.num_successful_steps + summary.num_unsuccessful_steps;
+        report.final_cost = summary.final_cost;
         updateDualStates();
         broadcastData();
     }
-    return summary;
+    report.total_time = tic.toc()/1000;
+    return report;
 }
 
 bool ARockSolver::isRemoteParam(const ParamInfo & param_info) {

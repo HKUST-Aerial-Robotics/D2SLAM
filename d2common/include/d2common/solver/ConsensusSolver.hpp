@@ -78,7 +78,7 @@ public:
     void reset() override;
 
     virtual void addResidual(ResidualInfo*residual_info) override;
-    ceres::Solver::Summary solve() override;
+    SolverReport solve() override;
     void setToken(int token) {
         solver_token = token;
     }

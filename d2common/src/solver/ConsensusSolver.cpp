@@ -31,8 +31,9 @@ void ConsensusSolver::addParam(const ParamInfo & param_info) {
     // std::cout << consenus_params[param_info.pointer].param_global.transpose() << std::endl;
 }
 
-ceres::Solver::Summary ConsensusSolver::solve() {
-    ceres::Solver::Summary summary;
+SolverReport ConsensusSolver::solve() {
+    SolverReport report;
+    Utility::TicToc tic;
     for (int i = 0; i < config.max_steps; i++) {
         //If sync mode.
         broadcastData();
@@ -59,11 +60,15 @@ ceres::Solver::Summary ConsensusSolver::solve() {
         updateGlobal();
         updateTilde();
         setStateProperties();
+        ceres::Solver::Summary summary;
         summary = solveLocalStep();
+        report.total_iterations += summary.num_successful_steps + summary.num_unsuccessful_steps;
+        report.final_cost = summary.final_cost;
         iteration_count++;
     }
+    report.total_time = tic.toc()/1000;
     broadcastData();
-    return summary;
+    return report;
 }
 
 void ConsensusSolver::updateTilde() {

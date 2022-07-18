@@ -39,10 +39,10 @@ bool D2PGO::solve() {
     if (config.mode == PGO_MODE_NON_DIST) {
         setStateProperties(solver->getProblem());
     }
-    auto summary = solver->solve();
+    auto report = solver->solve();
     state.syncFromState();
     printf("[D2PGO::solve@%d] solve_count %d total frames %ld loops %d opti_time %.1fms\n", 
-        self_id,  solve_count, used_frames.size(), used_loops_count, summary.total_time_in_seconds*1000);
+        self_id,  solve_count, used_frames.size(), used_loops_count, report.total_time*1000);
     solve_count ++;
     updated = false;
     return true;

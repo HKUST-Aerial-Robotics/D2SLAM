@@ -8,6 +8,15 @@
 namespace D2Common {
 class ResidualInfo;
 class D2EstimatorState;
+
+struct SolverReport {
+    int total_iterations = 0;
+    double total_time = 0;
+    double final_cost = 0;
+    bool succ = true;
+    std::string message = "";
+};
+
 class SolverWrapper {
 protected:
     ceres::Problem * problem = nullptr;
@@ -21,7 +30,7 @@ public:
     virtual void addResidual(ResidualInfo*residual_info) {
         residuals.push_back(residual_info);
     }
-    virtual ceres::Solver::Summary solve() = 0;
+    virtual SolverReport solve() = 0;
     ceres::Problem & getProblem() {
         return *problem;
     }
@@ -42,7 +51,7 @@ public:
     CeresSolver(D2State * _state, ceres::Solver::Options _options): 
             SolverWrapper(_state), options(_options)  {}
     virtual void addResidual(ResidualInfo*residual_info) override;
-    ceres::Solver::Summary solve() override;
+    SolverReport solve() override;
 };
 
 }

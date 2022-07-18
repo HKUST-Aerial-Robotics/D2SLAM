@@ -458,26 +458,25 @@ void D2Estimator::solveinDistributedMode() {
     setupLandmarkFactors();
     setupPriorFactor();
     
-    ceres::Solver::Summary summary = solver->solve();
+    auto report = solver->solve();
     state.syncFromState();
 
     //Now do some statistics
     static double sum_time = 0;
     static double sum_iteration = 0;
     static double sum_cost = 0;
-    sum_time += summary.total_time_in_seconds;
-    sum_iteration += summary.num_successful_steps + summary.num_unsuccessful_steps;
-    sum_cost += summary.final_cost;
+    sum_time += report.total_time;
+    sum_iteration += report.total_iterations;
+    sum_cost += report.final_cost;
 
     if (params->enable_perf_output) {
-        std::cout << summary.BriefReport() << std::endl;
         printf("[D2VINS::solveinDistributedMode@%d] average time %.1fms, average time of iter: %.1fms, average iteration %.3f, average cost %.3f\n", 
             self_id, sum_time*1000/solve_count, sum_time*1000/sum_iteration, sum_iteration/solve_count, sum_cost/solve_count);
     }
 
     auto last_odom = state.lastFrame().odom;
     printf("[D2VINS::solveinDistributedMode@%d] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
-        self_id, current_landmark_num, last_odom.toStr().c_str(), state.td*1000, summary.total_time_in_seconds*1000);
+        self_id, current_landmark_num, last_odom.toStr().c_str(), state.td*1000, report.total_time*1000);
 
     // Reprogation
     for (auto drone_id : state.availableDrones()) {
@@ -491,8 +490,8 @@ void D2Estimator::solveinDistributedMode() {
         state.printSldWin(keyframe_measurements);
     }
 
-    if (summary.termination_type == ceres::FAILURE)  {
-        std::cout << summary.message << std::endl;
+    if (!report.succ)  {
+        std::cout << report.message << std::endl;
         exit(1);
     }
     // exit(0);
@@ -507,19 +506,18 @@ void D2Estimator::solveNonDistrib() {
     setupLandmarkFactors();
     setupPriorFactor();
     setStateProperties();
-    ceres::Solver::Summary summary = solver->solve();
+    SolverReport report = solver->solve();
     state.syncFromState();
 
     //Now do some statistics
     static double sum_time = 0;
     static double sum_iteration = 0;
     static double sum_cost = 0;
-    sum_time += summary.total_time_in_seconds;
-    sum_iteration += summary.num_successful_steps + summary.num_unsuccessful_steps;
-    sum_cost += summary.final_cost;
+    sum_time += report.total_time;
+    sum_iteration += report.total_iterations;
+    sum_cost += report.final_cost;
 
     if (params->enable_perf_output) {
-        std::cout << summary.BriefReport() << std::endl;
         printf("[D2VINS] average time %.1fms, average time of iter: %.1fms, average iteration %.3f, average cost %.3f\n", 
             sum_time*1000/solve_count, sum_time*1000/sum_iteration, sum_iteration/solve_count, sum_cost/solve_count);
     }
@@ -527,10 +525,10 @@ void D2Estimator::solveNonDistrib() {
     if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
         auto last_odom = state.lastFrame().odom;
         printf("[D2VINS] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
-            current_landmark_num, last_odom.toStr().c_str(), state.td*1000, summary.total_time_in_seconds*1000);
+            current_landmark_num, last_odom.toStr().c_str(), state.td*1000, report.total_time*1000);
     } else {
         printf("[D2VINS] solve_count %d landmarks %d td %.1fms opti_time %.1fms\n", solve_count, 
-            current_landmark_num, state.td*1000, summary.total_time_in_seconds*1000);
+            current_landmark_num, state.td*1000, report.total_time*1000);
     }
 
     // Reprogation
@@ -545,8 +543,8 @@ void D2Estimator::solveNonDistrib() {
         state.printSldWin(keyframe_measurements);
     }
 
-    if (summary.termination_type == ceres::FAILURE)  {
-        std::cout << summary.message << std::endl;
+    if (!report.succ)  {
+        std::cout << report.message << std::endl;
         exit(1);
     }
 }

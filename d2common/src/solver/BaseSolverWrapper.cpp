@@ -11,10 +11,14 @@ void CeresSolver::addResidual(ResidualInfo*residual_info) {
     SolverWrapper::addResidual(residual_info);
 }
 
-ceres::Solver::Summary CeresSolver::solve() {
+SolverReport CeresSolver::solve() {
     ceres::Solver::Summary summary;
     ceres::Solve(options, problem, &summary);
-    return summary;
+    SolverReport report;
+    report.total_iterations = summary.num_successful_steps + summary.num_unsuccessful_steps;
+    report.total_time = summary.total_time_in_seconds;
+    report.final_cost = summary.final_cost;
+    return report;
 }
 
 }
