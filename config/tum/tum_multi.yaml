@@ -125,6 +125,10 @@ g_norm: 9.805         # gravity magnitude
 netvlad_IP_thres: 0.8
 enable_homography_test: 0
 
+#PGO
+pgo_solver_time: 0.5
+pgo_mode: 1
+
 #outputs
 output_path: "/root/output/"
 debug_print_sldwin: 0

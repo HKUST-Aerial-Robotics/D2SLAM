@@ -20,4 +20,15 @@ typedef double state_type;
 typedef SparseMatrix<state_type> SparseMat;
 typedef std::vector<cv::Point3f> Point3fVector;
 typedef std::vector<cv::Point2f> Point2fVector;
+
+enum PGO_MODE {
+    PGO_MODE_NON_DIST = 0,
+    PGO_MODE_DISTRIBUTED_AROCK
+};
+
+enum PGO_POSE_DOF {
+    PGO_POSE_4D,
+    PGO_POSE_6D
+};
+
 };

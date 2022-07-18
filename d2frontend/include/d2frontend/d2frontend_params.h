@@ -7,6 +7,7 @@
 #include <string>
 #include <ros/ros.h>
 #include <swarm_msgs/Pose.h>
+#include <d2common/d2basetypes.h>
 
 #define ACCEPT_LOOP_YAW (30) //ACCEPT MAX Yaw 
 #define MAX_LOOP_DIS 5.0 //ACCEPT MAX DISTANCE, 2.0 for indoor flying
@@ -28,11 +29,6 @@
 #define VISUALIZE_SCALE 2 //Scale for visuallize
 
 #define CROP_WIDTH_THRES 0.05 //If movement bigger than this, crop some matches down
-
-#define OUTLIER_XY_PRECENT_0 0.03 // This is given up match dx dy 
-#define OUTLIER_XY_PRECENT_20 0.03 // This is given up match dx dy 
-#define OUTLIER_XY_PRECENT_30 0.03 // This is given up match dx dy 
-#define OUTLIER_XY_PRECENT_40 0.03 // This is given up match dx dy 
 
 #define RPERR_THRES 10*DEG2RAD
 
@@ -72,6 +68,8 @@ struct D2FrontendParams {
     CameraConfig camera_configuration;
 
     D2FrontendParams(ros::NodeHandle &);
+
+    D2Common::PGO_MODE pgo_mode;
 
     //Debug params
     bool send_img;

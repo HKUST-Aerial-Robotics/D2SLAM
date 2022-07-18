@@ -8,18 +8,9 @@
 
 namespace D2PGO {
 
-enum PGO_MODE {
-    PGO_MODE_NON_DIST,
-    PGO_MODE_DISTRIBUTED_AROCK
-};
-
-enum PGO_POSE_DOF {
-    PGO_POSE_4D,
-    PGO_POSE_6D
-};
-
 struct D2PGOConfig {
     int self_id = -1;
+    int main_id = -1;
     PGO_MODE mode = PGO_MODE_NON_DIST;
     D2Common::ARockSolverConfig arock_config;
     ceres::Solver::Options ceres_options;
@@ -48,7 +39,7 @@ protected:
 public:
     std::function<void(const DPGOData & )> bd_data_callback;
     D2PGO(D2PGOConfig _config):
-        config(_config), self_id(_config.self_id), main_id(_config.self_id),
+        config(_config), self_id(_config.self_id), main_id(_config.main_id),
         state(_config.self_id, _config.pgo_pose_dof == PGO_POSE_4D) {
     }
     void addFrame(const VINSFrame & frame_desc);

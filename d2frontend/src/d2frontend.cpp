@@ -23,7 +23,8 @@ namespace D2FrontEnd {
 typedef std::lock_guard<std::mutex> lock_guard;
 
 void D2Frontend::onLoopConnection(LoopEdge & loop_con, bool is_local) {
-    if(is_local) {
+    if(is_local && params->pgo_mode == PGO_MODE::PGO_MODE_NON_DIST) {
+        //Only PGO is non-distributed we broadcast the loops.
         loop_net->broadcastLoopConnection(loop_con);
     }
 

@@ -93,11 +93,13 @@ protected:
             exit(-1);
         }
         fsSettings["output_path"] >> output_folder;
+        config.mode = static_cast<PGO_MODE>((int) fsSettings["pgo_mode"]);
         nh.param<int>("self_id", config.self_id, -1);
         config.ceres_options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
         config.ceres_options.num_threads = 1;
         config.ceres_options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;// ceres::DOGLEG;
         config.ceres_options.max_solver_time_in_seconds =  fsSettings["pgo_solver_time"];
+        config.main_id = 1;
     }
 public:
     D2PGONode(ros::NodeHandle & nh) {
