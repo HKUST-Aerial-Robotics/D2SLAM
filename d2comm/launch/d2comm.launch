@@ -2,5 +2,8 @@
     <arg name="self_id" default="1" />
     <node name="d2comm" pkg="d2comm" type="d2comm_node" output="screen" >
         <param name="self_id" value="$(arg self_id)" type="int" />
+        <rosparam>
+            lcm_uri: udpm://224.0.0.251:7667?ttl=1
+        </rosparam>
     </node>
 </launch>

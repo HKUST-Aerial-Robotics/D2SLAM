@@ -17,6 +17,10 @@ void ARockSolver::addResidual(ResidualInfo*residual_info) {
     SolverWrapper::addResidual(residual_info);
 }
 
+void ARockSolver::resetResiduals() {
+    residuals.clear();
+}
+
 void ARockSolver::addParam(const ParamInfo & param_info) {
     if (all_estimating_params.find(param_info.pointer) != all_estimating_params.end()) {
         return;
@@ -103,7 +107,7 @@ bool ARockSolver::hasDualState(state_type* param, int drone_id) {
 }
 
 void ARockSolver::createDualState(const ParamInfo & param_info, int drone_id) {
-    printf("[ARockSolver] Create dual state for param %ld, drone_id %d\n", param_info.id, drone_id);
+    // printf("[ARockSolver] Create dual state for param %ld, drone_id %d\n", param_info.id, drone_id);
     if (dual_states_remote.find(drone_id) == dual_states_remote.end()) {
         dual_states_remote[drone_id] = std::map<state_type*, VectorXd>();
         dual_states_local[drone_id] = std::map<state_type*, VectorXd>();
@@ -126,6 +130,8 @@ void ARockSolver::setDualStateFactors() {
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
             } else if (IsPose4D(param_info.type)) {
                 Swarm::Pose pose_dual(dual_state);
+                // printf("[ARockSolver] ConsenusPoseFactor4D param %ld, drone_id %d pose_dual %s pose_cur %s\n", 
+                //     param_info.id, param_pair.first, pose_dual.toStr().c_str(), Swarm::Pose(state_pointer, true).toStr().c_str());
                 auto factor = ConsenusPoseFactor4D::Create(pose_dual, rho_T, rho_theta);
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
             } else {

@@ -8,7 +8,8 @@ class ConsenusPoseFactor4D {
     Eigen::Vector3d t_ref;
     double yaw_ref;
 public:
-    ConsenusPoseFactor4D(Eigen::Vector3d _t_ref, double _yaw_ref, double rho_T, double rho_theta) {
+    ConsenusPoseFactor4D(Eigen::Vector3d _t_ref, double _yaw_ref, double rho_T, double rho_theta):
+        t_ref(_t_ref), yaw_ref(_yaw_ref) {
         _sqrt_inf.setZero();
         _sqrt_inf.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * rho_T;
         _sqrt_inf(3, 3) = rho_theta;

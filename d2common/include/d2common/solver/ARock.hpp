@@ -46,5 +46,6 @@ public:
     void reset() override;
     virtual void addResidual(ResidualInfo*residual_info) override;
     SolverReport solve() override;
+    void resetResiduals();
 };
 }

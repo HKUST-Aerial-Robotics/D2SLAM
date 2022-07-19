@@ -26,14 +26,14 @@ DistributedVinsData_t DistributedVinsData::toLCM() const {
     msg.drone_id = drone_id;
     for (int i = 0; i < frame_ids.size(); i++) {
         msg.frame_ids.emplace_back(frame_ids[i]);
-        msg.frame_poses.emplace_back(fromPose(frame_poses[i]));
+        msg.frame_poses.emplace_back(frame_poses[i].toLCM());
     }
     for (int i = 0; i < extrinsic.size(); i++) {
-        msg.extrinsic.emplace_back(fromPose(extrinsic[i]));
+        msg.extrinsic.emplace_back(extrinsic[i].toLCM());
         msg.cam_ids.emplace_back(cam_ids[i]);
     }
     for (int i = 0; i < relative_coordinates.size(); i++) {
-        msg.relative_coordinates.emplace_back(fromPose(relative_coordinates[i]));
+        msg.relative_coordinates.emplace_back(relative_coordinates[i].toLCM());
         msg.remote_drone_ids.emplace_back(remote_drone_ids[i]);
     }
     msg.camera_num = extrinsic.size();

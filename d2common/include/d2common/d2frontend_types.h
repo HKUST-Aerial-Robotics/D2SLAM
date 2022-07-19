@@ -150,8 +150,8 @@ struct VisualImageDesc {
         img_desc.landmark_descriptor = landmark_descriptor;
         img_desc.landmark_descriptor_size = landmark_descriptor.size();
 
-        img_desc.pose_drone = fromPose(pose_drone);
-        img_desc.camera_extrinsic = fromPose(extrinsic);
+        img_desc.pose_drone = pose_drone.toLCM();
+        img_desc.camera_extrinsic = extrinsic.toLCM();
         img_desc.landmark_num = landmarks.size();
         for (auto landmark: landmarks) {
             img_desc.landmarks.emplace_back(landmark.toLCM());
@@ -315,7 +315,7 @@ struct VisualImageDescArray {
         ret.drone_id = drone_id;
         ret.timestamp = toLCMTime(ros::Time(stamp));
         ret.landmark_num = landmarkNum();
-        ret.pose_drone = fromPose(pose_drone);
+        ret.pose_drone = pose_drone.toLCM();
         ret.is_keyframe = is_keyframe;
         for (auto & _img: images) {
             ret.images.emplace_back(_img.toLCM());

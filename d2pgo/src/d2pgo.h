@@ -36,6 +36,7 @@ protected:
     int used_loops_count;
     int solve_count = 0;
     bool updated = false;
+    SolverWrapper * solver = nullptr;
 public:
     std::function<void(const DPGOData & )> bd_data_callback;
     D2PGO(D2PGOConfig _config):
@@ -47,6 +48,7 @@ public:
     void setStateProperties(ceres::Problem & problem);
     bool solve();
     void broadcastData(const DPGOData & data);
+    void inputDPGOData(const DPGOData & data);
     std::map<int, Swarm::DroneTrajectory> getOptimizedTrajs();
 };
 }

@@ -86,6 +86,7 @@ protected:
                 loop_detector->updatebySldWin(estimator->getSelfSldWin());
             }
             if (ret && D2FrontEnd::params->enable_network) {
+                printf("[D2VINS] Send image to network frame_id %ld: %s\n", viokf.frame_id, viokf.pose_drone.toStr().c_str());
                 loop_net->broadcastVisualImageDescArray(viokf);
             }
             frame_pub.publish(viokf.toROS());

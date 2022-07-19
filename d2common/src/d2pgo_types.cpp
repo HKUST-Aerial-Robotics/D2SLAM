@@ -32,12 +32,11 @@ swarm_msgs::DPGOData DPGOData::toROS() const {
     msg.drone_id = drone_id;
     msg.target_id = target_id;
     msg.reference_frame_id = reference_frame_id;
-    msg.frame_poses.resize(frame_poses.size());
     for (auto it: frame_poses) {
         auto i = it.first;
         auto pose = it.second;
-        msg.frame_poses[i] = pose.toROS();
-        msg.frame_ids.push_back(i);
+        msg.frame_poses.emplace_back(pose.toROS());
+        msg.frame_ids.emplace_back(i);
     }
     msg.solver_token = solver_token;
     msg.iteration_count = iteration_count;
@@ -54,8 +53,8 @@ DistributedPGOData_t DPGOData::toLCM() const {
     for (auto it: frame_poses) {
         auto i = it.first;
         auto pose = it.second;
-        msg.frame_poses[i] = pose.toLCM();
-        msg.frame_ids.push_back(i);
+        msg.frame_poses.emplace_back(pose.toLCM());
+        msg.frame_ids.emplace_back(i);
     }
     msg.frame_num = frame_poses.size();
     msg.solver_token = solver_token;

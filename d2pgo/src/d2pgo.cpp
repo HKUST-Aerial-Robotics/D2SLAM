@@ -10,7 +10,8 @@ namespace D2PGO {
 void D2PGO::addFrame(const VINSFrame & frame_desc) {
     const Guard lock(state_lock);
     state.addFrame(frame_desc);
-    printf("[D2PGO@%d]add frame %d from drone %d\n", self_id, frame_desc.frame_id, frame_desc.drone_id);
+    printf("[D2PGO@%d]add frame %d pose %s from drone %d\n", self_id, frame_desc.frame_id,
+        frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
     updated = true;
 }
 
@@ -20,17 +21,26 @@ void D2PGO::addLoop(const Swarm::LoopEdge & loop_info) {
     updated = true;
 }
 
+void D2PGO::inputDPGOData(const DPGOData & data) {
+    if (solver!=nullptr && config.mode == PGO_MODE_DISTRIBUTED_AROCK) {
+        static_cast<ARockPGO*>(solver)->inputDPGOData(data);
+    }
+}
+
+
 bool D2PGO::solve() {
     const Guard lock(state_lock);
     if (state.size(self_id) < config.min_solve_size || !updated) {
         // printf("[D2PGO] Not enough frames to solve %d.\n", state.size(self_id));
         return false;
     }
-    SolverWrapper * solver;
     if (config.mode == PGO_MODE_NON_DIST) {
         solver = new CeresSolver(&state, config.ceres_options);
     } else if (config.mode == PGO_MODE_DISTRIBUTED_AROCK) {
-        solver = new ARockPGO(&state, this, config.arock_config);
+        if (solver==nullptr) {
+            solver = new ARockPGO(&state, this, config.arock_config);
+        }
+        static_cast<ARockPGO*>(solver)->resetResiduals();
     }
 
     used_frames.clear();

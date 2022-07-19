@@ -2,10 +2,17 @@
 #include "d2pgo.h"
 #include "swarm_msgs/ImageArrayDescriptor.h"
 
+#define BACKWARD_HAS_DW 1
+#include <backward.hpp>
+namespace backward
+{
+    backward::SignalHandling sh;
+}
+
 namespace D2PGO {
 class D2PGONode {
     D2PGO * pgo = nullptr;
-    ros::Subscriber frame_sub, remote_frame_sub, loop_sub;
+    ros::Subscriber frame_sub, remote_frame_sub, loop_sub, dpgo_data_sub;
     ros::Timer solver_timer;
     double solver_timer_freq = 10;
     D2PGOConfig config;
@@ -30,6 +37,13 @@ protected:
     void processLoop(const swarm_msgs::LoopEdge & loop_info) {
         ROS_INFO("[D2PGONode@%d] processLoop from %ld to %ld", config.self_id, loop_info.keyframe_id_a, loop_info.keyframe_id_b);
         pgo->addLoop(Swarm::LoopEdge(loop_info));
+    }
+    
+    void processDPGOData(const swarm_msgs::DPGOData & data) {
+        if (data.drone_id != config.self_id) {
+            ROS_INFO("[D2PGONode@%d] processDPGOData from drone %ld", config.self_id, data.drone_id);
+            pgo->inputDPGOData(DPGOData(data));
+        }
     }
 
     void pubTrajs(std::map<int, Swarm::DroneTrajectory> & trajs) {
@@ -72,9 +86,9 @@ protected:
         drone_traj_pub = _nh->advertise<swarm_msgs::DroneTraj>("pgo_traj", 1000);
         dpgo_data_pub = _nh->advertise<swarm_msgs::DPGOData>("pgo_data", 1000);
         pgo->bd_data_callback = [&] (const DPGOData & data) {
-            ROS_INFO("[D2PGONode@%d] publish DPGOData", config.self_id);
             dpgo_data_pub.publish(data.toROS());
         };
+        dpgo_data_sub = nh.subscribe("pgo_data", 1, &D2PGONode::processDPGOData, this, ros::TransportHints().tcpNoDelay());
         frame_sub = nh.subscribe("image_array_desc", 1, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
         remote_frame_sub = nh.subscribe("remote_frame_desc", 1, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
         loop_sub = nh.subscribe("loop", 1, &D2PGONode::processLoop, this, ros::TransportHints().tcpNoDelay());

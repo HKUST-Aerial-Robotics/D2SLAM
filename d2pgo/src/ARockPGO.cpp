@@ -4,6 +4,7 @@
 namespace D2PGO {
 
 void ARockPGO::inputDPGOData(const DPGOData & data) {
+    printf("[ARockPGO@%d]input DPGOData from %d\n", self_id, data.drone_id);
     const std::lock_guard<std::recursive_mutex> lock(pgo_data_mutex);
     pgo_data.emplace_back(data);
 }
@@ -44,16 +45,16 @@ void ARockPGO::receiveAll() {
 }
 
 void ARockPGO::broadcastData() {
-    printf("ARockPGO::broadcastData\n");
+    // printf("ARockPGO::broadcastData\n");
     const std::lock_guard<std::recursive_mutex> lock(pgo_data_mutex);
     DPGOData data;
-    //setup the data.
+    //broadcast the data.
     for (auto it : dual_states_local) {
         data.stamp = ros::Time::now().toSec();
         data.drone_id = self_id;
         data.target_id = it.first;
         data.reference_frame_id = state->getReferenceFrameId();
-        printf("ARockPGO::broadcastData of drone %d\n", data.target_id);
+        // printf("ARockPGO::broadcastData of drone %d\n", data.target_id);
         for (auto it2: it.second) {
             auto ptr = it2.first;
             auto & dual_state = it2.second;
