@@ -6,7 +6,7 @@
 namespace D2Common {
 enum ParamsType {
     POSE = 0,
-    POSE_4D = 0,
+    POSE_4D,
     REL_COOR, //Relative cooridinate frame pose (P_w_i_k)
     SPEED_BIAS,
     EXTRINSIC,

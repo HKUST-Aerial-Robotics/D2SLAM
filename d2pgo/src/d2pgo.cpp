@@ -10,6 +10,7 @@ namespace D2PGO {
 void D2PGO::addFrame(const VINSFrame & frame_desc) {
     const Guard lock(state_lock);
     state.addFrame(frame_desc);
+    printf("[D2PGO@%d]add frame %d from drone %d\n", self_id, frame_desc.frame_id, frame_desc.drone_id);
     updated = true;
 }
 
@@ -41,8 +42,8 @@ bool D2PGO::solve() {
     }
     auto report = solver->solve();
     state.syncFromState();
-    printf("[D2PGO::solve@%d] solve_count %d total frames %ld loops %d opti_time %.1fms\n", 
-        self_id,  solve_count, used_frames.size(), used_loops_count, report.total_time*1000);
+    printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms\n", 
+        self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000);
     solve_count ++;
     updated = false;
     return true;
@@ -60,7 +61,7 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver) {
         }
         if (state.hasFrame(loop.keyframe_id_a) && state.hasFrame(loop.keyframe_id_b)) {
             auto res_info = RelPoseResInfo::create(loop_factor, 
-                loss_function, loop.keyframe_id_a, loop.keyframe_id_b);
+                loss_function, loop.keyframe_id_a, loop.keyframe_id_b, config.pgo_pose_dof == PGO_POSE_4D);
             solver->addResidual(res_info);
             used_frames.insert(loop.keyframe_id_a);
             used_frames.insert(loop.keyframe_id_b);
@@ -91,11 +92,11 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
         if (config.pgo_pose_dof == PGO_POSE_4D) {
             auto relpose4d = Swarm::Pose::DeltaPose(frame_a->initial_ego_pose, frame_b->initial_ego_pose, true);
             auto factor = RelPoseFactor4D::Create(relpose4d, sqrt_info.block<3,3>(0, 0), sqrt_info(5, 5));
-            auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id);
+            auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id, true);
             solver->addResidual(res_info);
         } else if (config.pgo_pose_dof == PGO_POSE_6D) {
             auto factor = new RelPoseFactor(relpose6d, sqrt_info);
-            auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id);
+            auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id, false);
             solver->addResidual(res_info);
         }
 

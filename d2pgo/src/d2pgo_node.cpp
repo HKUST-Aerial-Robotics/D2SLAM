@@ -72,6 +72,7 @@ protected:
         drone_traj_pub = _nh->advertise<swarm_msgs::DroneTraj>("pgo_traj", 1000);
         dpgo_data_pub = _nh->advertise<swarm_msgs::DPGOData>("pgo_data", 1000);
         pgo->bd_data_callback = [&] (const DPGOData & data) {
+            ROS_INFO("[D2PGONode@%d] publish DPGOData", config.self_id);
             dpgo_data_pub.publish(data.toROS());
         };
         frame_sub = nh.subscribe("image_array_desc", 1, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
@@ -100,6 +101,8 @@ protected:
         config.ceres_options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;// ceres::DOGLEG;
         config.ceres_options.max_solver_time_in_seconds =  fsSettings["pgo_solver_time"];
         config.main_id = 1;
+        config.arock_config.self_id = config.self_id;
+        config.arock_config.ceres_options = config.ceres_options;
     }
 public:
     D2PGONode(ros::NodeHandle & nh) {

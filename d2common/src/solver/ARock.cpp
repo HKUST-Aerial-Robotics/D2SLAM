@@ -25,6 +25,7 @@ void ARockSolver::addParam(const ParamInfo & param_info) {
 }
 
 SolverReport ARockSolver::solve() {
+    ROS_INFO("ARockSolver::solve");
     SolverReport report;
     Utility::TicToc tic;
     for (int i = 0; i < config.max_steps; i++) {
@@ -44,6 +45,7 @@ SolverReport ARockSolver::solve() {
                 residual_info->paramsPointerList(state));
         }
         receiveAll();
+        scanAndCreateDualStates();
         setDualStateFactors();
         setStateProperties();
         ceres::Solver::Summary summary;
@@ -81,8 +83,10 @@ void ARockSolver::scanAndCreateDualStates() {
         for (auto param_info: param_infos) {
             if (isRemoteParam(param_info)) {
                 auto drone_id = solverId(param_info);
-                if  (!hasDualState(param_info.pointer, drone_id)) {
-                    createDualState(param_info, drone_id);
+                if (drone_id!=self_id) {
+                    if  (!hasDualState(param_info.pointer, drone_id)) {
+                        createDualState(param_info, drone_id);
+                    }
                 }
             }
         }
