@@ -26,7 +26,7 @@ void read_g2o_agent(
     std::string path,
     std::map<FrameIdType, D2BaseFrame> & keyframeid_agent_pose,
     std::vector<Swarm::LoopEdge> & edges,
-    bool is_4dof);
+    bool is_4dof, int drone_id=-1);
 
 void read_g2o_multi_agents(
     std::string path,

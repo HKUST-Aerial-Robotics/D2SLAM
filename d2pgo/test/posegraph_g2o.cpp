@@ -9,20 +9,33 @@ namespace D2PGO {
 std::regex reg_vertex_se3("VERTEX_SE3:QUAT\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)");
 std::regex reg_edge_se3("EDGE_SE3:QUAT\\s+([\\s,\\S]+)");
 
+#define IDX_WITH_AGENT_ID_MIN 6989586621679009792
+
 extern std::random_device rd;
 extern std::default_random_engine eng;
 extern std::normal_distribution<double> d;
 
-bool is_number(const std::string& s)
-{
+bool is_number(const std::string& s) {
     return !s.empty() && std::find_if(s.begin(), 
         s.end(), [](unsigned char c) { return !std::isdigit(c); }) == s.end();
 }
 
-std::vector<std::pair<int, std::string>>  get_all(fs::path const & root, std::string const & ext)
-{
-    std::vector<std::pair<int, std::string>>  paths;
+std::pair<int, int64_t> extrackKeyframeId(const int64_t & input) {
+    if (input < IDX_WITH_AGENT_ID_MIN) {
+        return std::make_pair(0, input);
+    }
+    const int keyBits = 8*8;
+    const int chrBits= 1*8;
+    const int indexBits = keyBits - chrBits;
+    const int64_t chrMask = (int64_t)255 << indexBits;
+    const int64_t indexMask = ~chrMask;
+    int agent_id = ((input & chrMask) >> indexBits)-97;
+    FrameIdType keyframe_id = input & indexMask;
+    return std::make_pair(agent_id, keyframe_id);
+}
 
+std::vector<std::pair<int, std::string>>  get_all(fs::path const & root, std::string const & ext) {
+    std::vector<std::pair<int, std::string>>  paths;
     if (fs::exists(root) && fs::is_directory(root))
     {
         for (auto const & entry : fs::directory_iterator(root))
@@ -36,12 +49,11 @@ std::vector<std::pair<int, std::string>>  get_all(fs::path const & root, std::st
             }
         }
     }
-
     return paths;
 }   
 
 
-bool match_vertex_se3(std::string line, uint64_t & kf_id, Swarm::Pose & pose) {
+bool match_vertex_se3(std::string line, int & agent_id, FrameIdType & kf_id, Swarm::Pose & pose) {
     Eigen::Vector3d pos;
     Eigen::Quaterniond quat;
     std::smatch sm;
@@ -51,9 +63,11 @@ bool match_vertex_se3(std::string line, uint64_t & kf_id, Swarm::Pose & pose) {
     //     std::cout << i << ": [" << sm[i] << ']' << std::endl;
     // }
     // std::cout << std::endl;
-
     if (sm.size() > 8) {
-        kf_id = std::stoll(sm[1].str());
+        auto ret = extrackKeyframeId(std::stoll(sm[1].str()));
+        kf_id = ret.second;
+        agent_id = ret.first;
+
         pos.x() = std::stod(sm[2].str());
         pos.y() = std::stod(sm[3].str());
         pos.z() = std::stod(sm[4].str());
@@ -69,7 +83,7 @@ bool match_vertex_se3(std::string line, uint64_t & kf_id, Swarm::Pose & pose) {
     return false;
 }
 
-bool match_edge_se3(std::string line, uint64_t & ida, uint64_t & idb, Swarm::Pose & pose, Eigen::Matrix6d & information) {
+bool match_edge_se3(std::string line, int & agent_ida, FrameIdType & ida, int & agent_idb, FrameIdType & idb, Swarm::Pose & pose, Eigen::Matrix6d & information) {
     Eigen::Vector3d pos;
     Eigen::Quaterniond quat;
     std::smatch sm;
@@ -81,9 +95,15 @@ bool match_edge_se3(std::string line, uint64_t & ida, uint64_t & idb, Swarm::Pos
     // std::cout << std::endl;
     if (sm.size() > 1) {
         std::stringstream stream(sm[1]);
-        stream >> ida >> idb;
+        int64_t tmp_a, tmp_b;
+        stream >> tmp_a >> tmp_b;
+        auto ret_a = extrackKeyframeId(tmp_a);
+        agent_ida = ret_a.first;
+        ida = ret_a.second;
+        auto ret_b = extrackKeyframeId(tmp_b);
+        agent_idb = ret_b.first;
+        idb = ret_b.second;
         stream >> pose;
-
         for (int i = 0; i < 6 && stream.good(); ++i) {
             for (int j = i; j < 6 && stream.good(); ++j) {
                 stream >> information(i, j);
@@ -94,53 +114,49 @@ bool match_edge_se3(std::string line, uint64_t & ida, uint64_t & idb, Swarm::Pos
         }
         return true;
     }
-
     return false;
 }
 
 
-void read_g2o_agent(
-    std::string path,
-    std::map<FrameIdType, D2BaseFrame> & keyframeid_agent_pose,
-    std::vector<Swarm::LoopEdge> & edges,
-    bool is_4dof) {
-
+void read_g2o_agent( std::string path, std::map<FrameIdType, D2BaseFrame> & keyframeid_agent_pose,
+        std::vector<Swarm::LoopEdge> & edges, bool is_4dof, int drone_id) {
     std::ifstream infile(path);
     std::string line;
-    std::vector<uint64_t> keyframeid_tmp;
-    while (std::getline(infile, line))
-    {
+    while (std::getline(infile, line)) {
         // std::cout << "line^" << line << "$" << std::endl;
         Swarm::Pose pose;
-        uint64_t id_a, id_b;
-        auto success = match_vertex_se3(line, id_a, pose);
+        FrameIdType id_a, id_b;
+        int agent_id;
+        auto success = match_vertex_se3(line, agent_id, id_a, pose);
         if (success) {
             //Add new vertex here
-            // std::cout << "Frame Id" << id_a << " Pos" << pos.transpose() << " quat" << quat.coeffs().transpose() << std::endl;
+            // std::cout << "Frame Id " << id_a << " agent " << agent_id << " pose: " << pose.toStr() << std::endl;
             D2BaseFrame frame;
+            frame.drone_id = agent_id;
             frame.odom.pose() = pose;
             frame.frame_id = id_a;
+            frame.reference_frame_id = 0;
             keyframeid_agent_pose[id_a] = frame;
         } else {
             Eigen::Matrix6d information;
-            success = match_edge_se3(line, id_a, id_b, pose, information);
+            int agent_id_b;
+            success = match_edge_se3(line, agent_id, id_a, agent_id_b, id_b, pose, information);
             if (success) {
-                // std::cout << "line" << line << std::endl;
-                // std::cout << "Edge " << id_a << "-> " << id_b << " Pos" << pose.pos().transpose() << " quat" << pose.att().coeffs().transpose() << std::endl;
-                // std::cout << "information:\n" << information << std::endl;
                 Swarm::LoopEdge edge(id_a, id_b, pose, information);
+                edge.id_a = agent_id;
+                edge.id_b = agent_id_b;
                 edges.emplace_back(edge);
+                // std::cout << "line" << line << std::endl;
+                // printf("Edge drone %d->%d frame %ld->%ld\n", agent_id, agent_id_b, id_a, id_b);
+                // std::cout << "information:\n" << information << std::endl;
             }
         }
     }
 }
 
-void read_g2o_multi_agents(
-    std::string path,
-    std::map<int, std::map<FrameIdType, D2BaseFrame>> & keyframeid_agent_pose,
-    std::map<int, std::vector<Swarm::LoopEdge>> & edges,
-    G2oParseParam param
-) {
+void read_g2o_multi_agents(std::string path,
+        std::map<int, std::map<FrameIdType, D2BaseFrame>> & keyframeid_agent_pose,
+        std::map<int, std::vector<Swarm::LoopEdge>> & edges, G2oParseParam param) {
     auto files = get_all(path, ".g2o");
     std::sort(files.begin(), files.end());
     int agent_num = files.size();

@@ -19,6 +19,7 @@ struct D2PGOConfig {
     double yaw_covariance_per_meter = 4e-5;
     int min_solve_size = 2;
     double min_cov_len = 0.1;
+    bool enable_ego_motion = true;
 };
 
 class D2PGO {
@@ -44,7 +45,7 @@ public:
         state(_config.self_id, _config.pgo_pose_dof == PGO_POSE_4D) {
     }
     void addFrame(const D2BaseFrame & frame_desc);
-    void addLoop(const Swarm::LoopEdge & loop_info);
+    void addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop=false);
     void setStateProperties(ceres::Problem & problem);
     bool solve();
     void broadcastData(const DPGOData & data);

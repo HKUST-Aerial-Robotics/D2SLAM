@@ -1,0 +1,19 @@
+<launch>
+    <arg name="self_id" default="1" />
+    <arg name="is_4dof" default="true" />
+    <arg name="solver_type" default="arock" />
+    <arg name="g2o_path" default="" />
+    <arg name="wait_for_start" default="false" />
+    <arg name="max_solver_time" default="0.5" />
+    <arg name="max_steps" default="10" />
+
+    <node name="d2pgo_test_$(arg self_id)" pkg="d2pgo" type="d2pgo_test" output="screen" >
+        <param name="self_id" value="$(arg self_id)" type="int" />
+        <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
+        <param name="solver_type" value="$(arg solver_type)" type="string" />
+        <param name="g2o_path" value="$(arg g2o_path)" type="string" />
+        <param name="wait_for_start" value="$(arg wait_for_start)" type="bool" />
+        <param name="max_solver_time" value="$(arg max_solver_time)" type="double" />
+        <param name="max_steps" value="$(arg max_steps)" type="int" />
+    </node>
+</launch>

@@ -10,14 +10,40 @@ namespace D2PGO {
 void D2PGO::addFrame(const D2BaseFrame & frame_desc) {
     const Guard lock(state_lock);
     state.addFrame(frame_desc);
-    printf("[D2PGO@%d]add frame %ld pose %s from drone %d\n", self_id, frame_desc.frame_id,
-        frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
+    // printf("[D2PGO@%d]add frame %ld pose %s from drone %d\n", self_id, frame_desc.frame_id,
+    //     frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
     updated = true;
 }
 
-void D2PGO::addLoop(const Swarm::LoopEdge & loop_info) {
+void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
     const Guard lock(state_lock);
     loops.emplace_back(loop_info);
+    // printf("Adding edge between keyframe %ld<->%ld drone %d<->%d hasKF %d %d\n ", loop_info.keyframe_id_a, loop_info.keyframe_id_b,
+            // loop_info.id_a, loop_info.id_b, state.hasFrame(loop_info.keyframe_id_a), state.hasFrame(loop_info.keyframe_id_b));
+    if (add_state_by_loop) {
+        //This is for debug...
+        if (state.hasFrame(loop_info.keyframe_id_a) && !state.hasFrame(loop_info.keyframe_id_b)) {
+            //Add frame idb to state
+            D2BaseFrame frame_desc;
+            frame_desc.drone_id = loop_info.id_b;
+            frame_desc.frame_id = loop_info.keyframe_id_b;
+            frame_desc.reference_frame_id = state.getFramebyId(loop_info.keyframe_id_a)->reference_frame_id;
+            //Initialize pose with known pose a and this loop edge
+            frame_desc.odom.pose() = state.getFramebyId(loop_info.keyframe_id_a)->odom.pose() * loop_info.relative_pose;
+            addFrame(frame_desc);
+            // printf("[D2PGO@%d]add frame %ld pose %s from drone %d\n", self_id, frame_desc.frame_id,
+            //     frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
+        } else if (!state.hasFrame(loop_info.keyframe_id_a) && state.hasFrame(loop_info.keyframe_id_b)) {
+            //Add frame idb to state
+            D2BaseFrame frame_desc;
+            frame_desc.drone_id = loop_info.id_a;
+            frame_desc.frame_id = loop_info.keyframe_id_a;
+            frame_desc.reference_frame_id = state.getFramebyId(loop_info.keyframe_id_b)->reference_frame_id;
+            //Initialize pose with known pose a and this loop edge
+            frame_desc.odom.pose() = state.getFramebyId(loop_info.keyframe_id_b)->odom.pose() * loop_info.relative_pose.inverse();
+            addFrame(frame_desc);
+        }
+    }
     updated = true;
 }
 
@@ -44,7 +70,9 @@ bool D2PGO::solve() {
 
     used_frames.clear();
     setupLoopFactors(solver);
-    setupEgoMotionFactors(solver);
+    if (config.enable_ego_motion) {
+        setupEgoMotionFactors(solver);
+    }
 
     if (config.mode == PGO_MODE_NON_DIST) {
         setStateProperties(solver->getProblem());

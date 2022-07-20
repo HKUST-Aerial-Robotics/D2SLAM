@@ -19,7 +19,6 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Eigen3 REQUIRED)
 find_package(Ceres REQUIRED)
-find_package(Boost REQUIRED COMPONENTS program_options)
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -33,7 +32,6 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${CERES_INCLUDE_DIRS}
-  ${BOOST_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -66,7 +64,6 @@ add_dependencies(${PROJECT_NAME}_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 target_link_libraries(${PROJECT_NAME}_test
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
-  ${Boost_LIBRARIES}
   dw
 )
 
