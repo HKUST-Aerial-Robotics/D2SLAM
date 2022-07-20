@@ -304,9 +304,6 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
 }
 
 void D2Estimator::setStateProperties() {
-    // ceres::EigenQuaternionManifold quat_manifold;
-    // ceres::EuclideanManifold<3> euc_manifold;
-    // auto pose_manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
     ceres::Problem & problem = solver->getProblem();
     auto pose_local_param = new PoseLocalParameterization;
     //set LocalParameterization
@@ -606,7 +603,7 @@ bool D2Estimator::hasCommonLandmarkMeasurments() {
             continue;
         }
             for (auto i = 0; i < lm.track.size(); i++) {
-                if (state.getFramebyId(lm.track[i].frame_id).drone_id != self_id) {
+                if (state.getFramebyId(lm.track[i].frame_id)->drone_id != self_id) {
                     return true;
             }
         }
@@ -636,7 +633,6 @@ void D2Estimator::setupLandmarkFactors() {
             }
         }
         LandmarkPerFrame firstObs = lm.track[0];
-        auto & firstFrame = state.getFramebyId(firstObs.frame_id);
         auto base_camera_id = firstObs.camera_id;
         auto mea0 = firstObs.measurement();
         keyframe_measurements[firstObs.frame_id] ++;
@@ -654,7 +650,6 @@ void D2Estimator::setupLandmarkFactors() {
         for (auto i = 1; i < lm.track.size(); i++) {
             auto lm_per_frame = lm.track[i];
             auto mea1 = lm_per_frame.measurement();
-            auto & frame1 = state.getFramebyId(lm_per_frame.frame_id);
             ResidualInfo * info = nullptr;
             if (lm_per_frame.camera_id == base_camera_id) {
                 ceres::CostFunction * f_td = nullptr;
@@ -711,12 +706,12 @@ void D2Estimator::setupLandmarkFactors() {
             printf("\033[0;31m[D2VINS::D2Estimator] frame_id %ld has only %d measurements\033[0m\n Related landmarks:\n", 
                 frame_id, it.second);
             std::vector<LandmarkPerId> related_landmarks = state.getRelatedLandmarks(frame_id);
-            // if (params->verbose) {
-            //     for (auto lm : related_landmarks) {
-            //         printf("Landmark %ld tracks %ld flag %d\n", lm.landmark_id, lm.track.size(), lm.flag);
-            //     }
-            //     printf("====================");
-            // }
+            if (params->verbose) {
+                for (auto lm : related_landmarks) {
+                    printf("Landmark %ld tracks %ld flag %d\n", lm.landmark_id, lm.track.size(), lm.flag);
+                }
+                printf("====================");
+            }
         }
     }
     if (params->verbose) {
@@ -764,6 +759,6 @@ D2EstimatorState & D2Estimator::getState() {
 }
 
 bool D2Estimator::isLocalFrame(FrameIdType frame_id) const {
-    return state.getFramebyId(frame_id).drone_id == self_id;
+    return state.getFramebyId(frame_id)->drone_id == self_id;
 }
 }

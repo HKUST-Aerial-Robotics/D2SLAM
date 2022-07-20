@@ -29,7 +29,6 @@ struct VINSFrame: public D2BaseFrame {
 
     void toVector(state_type * _pose, state_type * _spd_bias) const;
     void fromVector(state_type * _pose, state_type * _spd_bias);
-    void moveByPose(int new_ref_frame_id, const Swarm::Pose & delta_pose);
     D2BaseFrame toBaseFrame() {
         return D2BaseFrame(stamp, frame_id, drone_id, reference_frame_id, is_keyframe, odom, initial_ego_pose);
     }

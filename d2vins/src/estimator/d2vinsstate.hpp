@@ -66,7 +66,7 @@ public:
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
     virtual void moveAllPoses(int new_ref_frame_id, const Swarm::Pose & delta_pose) override;
     const std::vector<VINSFrame*> & getSldWin(int drone_id) const;
-
+    VINSFrame * addVINSFrame(const VINSFrame & _frame);
     //Frame access    
     VINSFrame & getFrame(int index);
     const VINSFrame & getFrame(int index) const;

@@ -39,11 +39,6 @@ VINSFrame::VINSFrame(const VisualImageDescArray & frame):
     }
 }
 
-void VINSFrame::moveByPose(int new_ref_frame_id, const Swarm::Pose & delta_pose) {
-    reference_frame_id = new_ref_frame_id;
-    odom.moveByPose(delta_pose);
-}
-
 std::string VINSFrame::toStr() {
     char buf[1024] = {0};
     char buf_imu[1024] = {0};

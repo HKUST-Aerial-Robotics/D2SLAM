@@ -43,7 +43,7 @@ public:
         config(_config), self_id(_config.self_id), main_id(_config.main_id),
         state(_config.self_id, _config.pgo_pose_dof == PGO_POSE_4D) {
     }
-    void addFrame(const VINSFrame & frame_desc);
+    void addFrame(const D2BaseFrame & frame_desc);
     void addLoop(const Swarm::LoopEdge & loop_info);
     void setStateProperties(ceres::Problem & problem);
     bool solve();

@@ -9,7 +9,7 @@ protected:
     int self_id;
     std::set<int> all_drones;
     int reference_frame_id = -1;
-    std::map<FrameIdType, VINSFrame*> frame_db;
+    std::map<FrameIdType, D2BaseFrame*> frame_db;
     std::map<FrameIdType, state_type*> _frame_pose_state;
     mutable std::recursive_mutex state_lock;
     bool is_4dof = false;
@@ -22,22 +22,6 @@ public:
         return all_drones;
     }
 
-    VINSFrame * addVINSFrame(const VINSFrame & _frame) {
-        all_drones.insert(_frame.drone_id);
-        const Guard lock(state_lock);
-        auto * frame = new VINSFrame;
-        *frame = _frame;
-        frame_db[frame->frame_id] = frame;
-        if (is_4dof) {
-            _frame_pose_state[frame->frame_id] = new state_type[POSE4D_SIZE];
-            _frame.odom.pose().to_vector_xyzyaw(_frame_pose_state[frame->frame_id]);
-        } else {
-            _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
-            _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
-        }
-        return frame;
-    }
-
     bool hasDrone(int drone_id) const{
         return all_drones.find(drone_id) != all_drones.end();
     }
@@ -46,20 +30,20 @@ public:
         return frame_db.find(frame_id) != frame_db.end();
     }
 
-    const VINSFrame & getFramebyId(int frame_id) const {
+    const D2BaseFrame * getFramebyId(int frame_id) const {
         if (frame_db.find(frame_id) == frame_db.end()) {
             printf("\033[0;31m[D2EstimatorState::getFramebyId] Frame %d not found in database\033[0m\n", frame_id);
             assert(true && "Frame not found in database");
         }
-        return *frame_db.at(frame_id);
+        return frame_db.at(frame_id);
     }
 
-    VINSFrame & getFramebyId(int frame_id) {
+    D2BaseFrame * getFramebyId(int frame_id) {
         if (frame_db.find(frame_id) == frame_db.end()) {
             printf("\033[0;31m[D2EstimatorState::getFramebyId] Frame %d not found in database\033[0m\n", frame_id);
             assert(true && "Frame not found in database");
         }
-        return *frame_db.at(frame_id);
+        return frame_db.at(frame_id);
     }
 
     int getReferenceFrameId() const {

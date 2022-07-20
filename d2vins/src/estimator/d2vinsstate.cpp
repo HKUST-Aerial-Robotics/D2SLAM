@@ -30,13 +30,29 @@ std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
     return removeFrameById(frame_id);
 }
 
+VINSFrame * D2EstimatorState::addVINSFrame(const VINSFrame & _frame) {
+    all_drones.insert(_frame.drone_id);
+    const Guard lock(state_lock);
+    auto * frame = new VINSFrame;
+    *frame = _frame;
+    frame_db[frame->frame_id] = frame;
+    if (is_4dof) {
+        _frame_pose_state[frame->frame_id] = new state_type[POSE4D_SIZE];
+        _frame.odom.pose().to_vector_xyzyaw(_frame_pose_state[frame->frame_id]);
+    } else {
+        _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
+        _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
+    }
+    return frame;
+}
+
 std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(FrameIdType frame_id, bool remove_base) {
     const Guard lock(state_lock);
     if (params->verbose) {
         printf("[D2VSIN::D2EstimatorState] remove frame %ld remove base %d\n", frame_id, remove_base);
     }
     auto ret = lmanager.popFrame(frame_id, remove_base);
-    auto _frame = frame_db.at(frame_id);
+    auto _frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
     if (_frame->pre_integrations) {
         delete _frame->pre_integrations;
     }
@@ -124,12 +140,12 @@ Swarm::Pose D2EstimatorState::getEstimatedPose(int drone_id, int index) const {
 
 Swarm::Pose D2EstimatorState::getEstimatedPose(FrameIdType frame_id) const {
     auto drone_id = getFrame(frame_id).drone_id;
-    return getFramebyId(frame_id).odom.pose();
+    return getFramebyId(frame_id)->odom.pose();
 }
 
 Swarm::Odometry D2EstimatorState::getEstimatedOdom(FrameIdType frame_id) const {
     auto drone_id = getFrame(frame_id).drone_id;
-    return getFramebyId(frame_id).odom;
+    return getFramebyId(frame_id)->odom;
 }
 
 VINSFrame & D2EstimatorState::firstFrame(int drone_id) {
@@ -426,7 +442,7 @@ void D2EstimatorState::syncFromState() {
         if (frame_db.find(frame_id) == frame_db.end()) {
             printf("[D2VINS::D2EstimatorState] Cannot find frame %ld\033[0m\n", frame_id);
         }
-        auto frame = frame_db.at(frame_id);
+        auto frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
             frame->odom.pose() = Swarm::Pose(it.second);
         }else {
@@ -467,7 +483,7 @@ void D2EstimatorState::moveAllPoses(int new_ref_frame_id, const Swarm::Pose & de
     reference_frame_id = new_ref_frame_id;
     for (auto it: frame_db) {
         auto frame_id = it.first;
-        auto & frame = it.second;
+        auto frame = static_cast<VINSFrame*>(it.second);
         frame->moveByPose(new_ref_frame_id, delta_pose);
         frame->toVector(_frame_pose_state.at(frame_id), _frame_spd_Bias_state.at(frame_id));
     }

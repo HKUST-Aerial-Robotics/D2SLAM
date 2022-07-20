@@ -30,7 +30,7 @@ protected:
         if (frame_desc.is_keyframe) {
             ROS_INFO("[D2PGONode@%d] processKeyImageArray %ld", config.self_id, frame_desc.frame_id);
             auto img_array = VisualImageDescArray(frame_desc);
-            pgo->addFrame(VINSFrame(img_array));
+            pgo->addFrame(VINSFrame(img_array).toBaseFrame());
         }
     }
     

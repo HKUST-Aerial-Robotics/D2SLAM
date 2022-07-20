@@ -66,7 +66,7 @@ SolverReport ARockSolver::solve() {
 bool ARockSolver::isRemoteParam(const ParamInfo & param_info) {
     if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D) {
         auto frame = state->getFramebyId(param_info.id);
-        if (frame.drone_id != self_id) {
+        if (frame->drone_id != self_id) {
             return true;
         }
     }
@@ -76,7 +76,7 @@ bool ARockSolver::isRemoteParam(const ParamInfo & param_info) {
 int ARockSolver::solverId(const ParamInfo & param_info) {
     if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D) {
         auto frame = state->getFramebyId(param_info.id);
-        return frame.drone_id;
+        return frame->drone_id;
     }
     return -1;
 }

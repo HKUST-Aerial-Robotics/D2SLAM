@@ -7,7 +7,7 @@
 
 namespace D2PGO {
 
-void D2PGO::addFrame(const VINSFrame & frame_desc) {
+void D2PGO::addFrame(const D2BaseFrame & frame_desc) {
     const Guard lock(state_lock);
     state.addFrame(frame_desc);
     printf("[D2PGO@%d]add frame %d pose %s from drone %d\n", self_id, frame_desc.frame_id,
@@ -26,7 +26,6 @@ void D2PGO::inputDPGOData(const DPGOData & data) {
         static_cast<ARockPGO*>(solver)->inputDPGOData(data);
     }
 }
-
 
 bool D2PGO::solve() {
     const Guard lock(state_lock);

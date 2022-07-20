@@ -36,5 +36,10 @@ struct D2BaseFrame {
         is_keyframe(_is_keyframe),
         odom(_stamp, pose),
         initial_ego_pose(pose) { }
+    
+    virtual void moveByPose(int new_ref_frame_id, const Swarm::Pose & delta_pose) {
+        reference_frame_id = new_ref_frame_id;
+        odom.moveByPose(delta_pose);
+    }
 };
 }

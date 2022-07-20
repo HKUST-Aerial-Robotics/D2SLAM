@@ -6,7 +6,7 @@ using namespace D2Common;
 namespace D2PGO {
 class PGOState : public D2State {
 protected:
-    std::map<int, std::vector<VINSFrame*>> drone_frames;
+    std::map<int, std::vector<D2BaseFrame*>> drone_frames;
     std::map<int, Swarm::DroneTrajectory> ego_drone_trajs;
 
 public:
@@ -17,14 +17,14 @@ public:
         } else {
             printf("[D2PGO] PGOState: is 6dof\n");
         }
-        drone_frames[self_id] = std::vector<VINSFrame*>();
+        drone_frames[self_id] = std::vector<D2BaseFrame*>();
     }
 
-    void addFrame(const VINSFrame & _frame) {
+    void addFrame(const D2BaseFrame & _frame) {
         printf("[D2PGO@%d] PGOState: add frame %ld for drone %d\n", self_id, _frame.frame_id, _frame.drone_id);
-        auto frame = addVINSFrame(_frame);
+        auto frame = addD2BaseFrame(_frame);
         if (drone_frames.find(_frame.drone_id) == drone_frames.end()) {
-            drone_frames[_frame.drone_id] = std::vector<VINSFrame*>();
+            drone_frames[_frame.drone_id] = std::vector<D2BaseFrame*>();
             ego_drone_trajs[_frame.drone_id] = Swarm::DroneTrajectory();
         }
         drone_frames.at(_frame.drone_id).push_back(frame);
@@ -38,7 +38,7 @@ public:
         return drone_frames.at(drone_id).size();
     }
 
-    std::vector<VINSFrame*> & getFrames(int drone_id) {
+    std::vector<D2BaseFrame*> & getFrames(int drone_id) {
         return drone_frames.at(drone_id);
     }
 
