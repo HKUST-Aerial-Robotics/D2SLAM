@@ -41,7 +41,7 @@ protected:
     
     void processDPGOData(const swarm_msgs::DPGOData & data) {
         if (data.drone_id != config.self_id) {
-            ROS_INFO("[D2PGONode@%d] processDPGOData from drone %ld", config.self_id, data.drone_id);
+            ROS_INFO("[D2PGONode@%d] processDPGOData from drone %d", config.self_id, data.drone_id);
             pgo->inputDPGOData(DPGOData(data));
         }
     }

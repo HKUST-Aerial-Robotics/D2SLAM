@@ -10,7 +10,7 @@ namespace D2PGO {
 void D2PGO::addFrame(const D2BaseFrame & frame_desc) {
     const Guard lock(state_lock);
     state.addFrame(frame_desc);
-    printf("[D2PGO@%d]add frame %d pose %s from drone %d\n", self_id, frame_desc.frame_id,
+    printf("[D2PGO@%d]add frame %ld pose %s from drone %d\n", self_id, frame_desc.frame_id,
         frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
     updated = true;
 }

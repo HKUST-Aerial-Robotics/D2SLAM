@@ -21,8 +21,20 @@ public:
     }
 
     void addFrame(const D2BaseFrame & _frame) {
+        const Guard lock(state_lock);
         printf("[D2PGO@%d] PGOState: add frame %ld for drone %d\n", self_id, _frame.frame_id, _frame.drone_id);
-        auto frame = addD2BaseFrame(_frame);
+
+        all_drones.insert(_frame.drone_id);
+        auto * frame = new D2BaseFrame;
+        *frame = _frame;
+        frame_db[frame->frame_id] = frame;
+        if (is_4dof) {
+            _frame_pose_state[frame->frame_id] = new state_type[POSE4D_SIZE];
+            _frame.odom.pose().to_vector_xyzyaw(_frame_pose_state[frame->frame_id]);
+        } else {
+            _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
+            _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
+        }
         if (drone_frames.find(_frame.drone_id) == drone_frames.end()) {
             drone_frames[_frame.drone_id] = std::vector<D2BaseFrame*>();
             ego_drone_trajs[_frame.drone_id] = Swarm::DroneTrajectory();
