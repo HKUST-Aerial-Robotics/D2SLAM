@@ -8,3 +8,6 @@ d2common/build/
 data_analysis/__pycache__/
 d2pgo/build/
 d2comm/build/
+d2pgo/scripts/__pycache__/
+d2pgo/scripts/notebooks/.ipynb_checkpoints/
+d2pgo/scripts/pose_graph_partitioning/__pycache__/
