@@ -988,6 +988,9 @@ class PoseGraph():
             self.agents[agent_id].write_to_g2o(f"{path}/{agent_id}.g2o", cvt_id)
         print(f"Wrote {c} edges total {len(self.edges)}")
 
+    def write_to_g2o(self, path, cvt_id=False, agent_id=0):
+        self.agents[agent_id].write_to_g2o(path, cvt_id)
+
     def read_g2o_single(self, path, update_only=False, cvt_id=False, verbose=False):
         if not update_only:
             self.agents[0] = Agent(0)
