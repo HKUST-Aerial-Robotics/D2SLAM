@@ -184,7 +184,7 @@ void ARockSolver::updateDualStates() {
     for (auto & param_pair : dual_states_local) {
         auto remote_drone_id = param_pair.first;
         auto & duals = param_pair.second;
-        for (auto it: duals) {
+        for (auto & it: duals) {
             auto * state_pointer = it.first;
             auto param_info = all_estimating_params.at(state_pointer);
             auto & dual_state_local = it.second;
@@ -200,7 +200,7 @@ void ARockSolver::updateDualStates() {
                 Vector6d delta_state = pose_err*config.eta_k;
                 //Retraction the delta state to pose
                 Swarm::Pose dual_pose_local_new = dual_pose_local * 
-                    Swarm::Pose::fromTangentSpace(delta_state);
+                    Swarm::Pose::fromTangentSpace(-delta_state);
                 dual_pose_local_new.to_vector(dual_state_local.data());
             } else if (IsPose4D(param_info.type)) {
                 VectorXd dual_state_remote = dual_states_remote.at(remote_drone_id).at(state_pointer);
@@ -208,7 +208,7 @@ void ARockSolver::updateDualStates() {
                 Map<VectorXd> cur_est_state(state_pointer, param_info.size);
                 VectorXd delta = (avg_state - cur_est_state)*config.eta_k;
                 delta(3) = Utility::NormalizeAngle(delta(3));
-                dual_state_local = dual_state_local + delta;
+                dual_state_local = dual_state_local - delta;
                 dual_state_local(3) = Utility::NormalizeAngle(dual_state_local(3));
             } else {
                 //Is a vector.
@@ -216,7 +216,7 @@ void ARockSolver::updateDualStates() {
                 VectorXd avg_state = (dual_state_local + dual_state_remote)/2;
                 Map<VectorXd> cur_est_state(state_pointer, param_info.size);
                 VectorXd delta = (avg_state - cur_est_state)*config.eta_k;
-                dual_state_local += delta;
+                dual_state_local -= delta;
             }
         }
     }
