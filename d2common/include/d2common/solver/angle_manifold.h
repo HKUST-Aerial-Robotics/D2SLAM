@@ -57,7 +57,7 @@ class PosAngleManifold {
     y_minus_x_radians[1] = y_radians[1] - x_radians[1];
     y_minus_x_radians[2] = y_radians[2] - x_radians[2];
     y_minus_x_radians[3] =
-        Utility::NormalizeAngle(y_radians[3]) - Utility::NormalizeAngle(x_radians[3]);
+        Utility::NormalizeAngle(y_radians[3] - x_radians[3]);
 
     return true;
   }

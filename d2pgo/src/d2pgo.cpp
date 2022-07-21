@@ -42,6 +42,8 @@ void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
             //Initialize pose with known pose a and this loop edge
             frame_desc.odom.pose() = state.getFramebyId(loop_info.keyframe_id_b)->odom.pose() * loop_info.relative_pose.inverse();
             addFrame(frame_desc);
+            // printf("[D2PGO@%d]add frame %ld pose %s from drone %d\n", self_id, frame_desc.frame_id,
+            //     frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
         }
     }
     updated = true;
@@ -87,13 +89,31 @@ bool D2PGO::solve() {
     return true;
 }
 
+void D2PGO::evalLoop(const Swarm::LoopEdge & loop) {
+    auto factor = new RelPoseFactor4D(loop.relative_pose, loop.get_sqrt_information_4d());
+    auto kf_a = state.getFramebyId(loop.keyframe_id_a);
+    auto kf_b = state.getFramebyId(loop.keyframe_id_b);
+    auto pose_ptr_a = state.getPoseState(loop.keyframe_id_a);
+    auto pose_ptr_b = state.getPoseState(loop.keyframe_id_b);
+    VectorXd residuals(4);
+    auto pose_a = kf_a->odom.pose();
+    auto pose_b = kf_b->odom.pose();
+    (*factor)(pose_ptr_a, pose_ptr_b, residuals.data());
+    printf("Loop %ld->%ld, RelPose %s\n", loop.keyframe_id_a, loop.keyframe_id_b, loop.relative_pose.toStr().c_str()); 
+    printf("RelPose            Est %s \n", Swarm::Pose::DeltaPose(pose_a, pose_b).toStr().c_str());
+    std::cout << "sqrt_info\n:" << loop.get_sqrt_information_4d() << std::endl;
+    printf("PoseA %s PoseB %s residual:", kf_a->odom.pose().toStr().c_str(), kf_b->odom.pose().toStr().c_str());
+    std::cout << residuals.transpose() << "\n" << std::endl;
+}
+
 void D2PGO::setupLoopFactors(SolverWrapper * solver) {
     used_loops_count = 0;
-    auto loss_function = new ceres::HuberLoss(1.0);    
+    auto loss_function = nullptr;//new ceres::HuberLoss(1.0);    
     for (auto loop : loops) {
         ceres::CostFunction * loop_factor = nullptr;
         if (config.pgo_pose_dof == PGO_POSE_4D) {
             loop_factor = RelPoseFactor4D::Create(&loop);
+            // this->evalLoop(loop);
         } else{
             loop_factor = new RelPoseFactor(loop.relative_pose, loop.sqrt_information_matrix());
         }

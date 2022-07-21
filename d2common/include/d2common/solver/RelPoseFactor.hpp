@@ -58,11 +58,13 @@ class RelPoseFactor4D {
     Eigen::Vector3d relative_pos;
     double relative_yaw;
     Eigen::Matrix4d sqrt_inf;
+public:
     RelPoseFactor4D(const Swarm::Pose & _relative_pose, const Eigen::Matrix4d & _sqrt_inf):
         relative_pose(_relative_pose), sqrt_inf(_sqrt_inf) {
         relative_pos = relative_pose.pos();
         relative_yaw = relative_pose.yaw();
     }
+
     RelPoseFactor4D(const Swarm::Pose & _relative_pose, const Eigen::Matrix3d & _sqrt_inf_pos, double sqrt_info_yaw):
         relative_pose(_relative_pose) {
         relative_pos = relative_pose.pos();
@@ -71,7 +73,7 @@ class RelPoseFactor4D {
         sqrt_inf.block<3, 3>(0, 0) = _sqrt_inf_pos;
         sqrt_inf(3, 3) = sqrt_info_yaw;
     }
-public:
+    
     template<typename T>
     bool operator()(const T* const p_a_ptr, const T* const p_b_ptr, T *_residual) const {
         Eigen::Map<const Eigen::Matrix<T, 3, 1>> pos_a(p_a_ptr);

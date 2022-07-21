@@ -43,6 +43,7 @@ public:
         config.enable_ego_motion = false;
         config.ceres_options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
         config.ceres_options.num_threads = 1;
+        config.ceres_options.max_num_iterations = 10000;
         config.ceres_options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;// ceres::DOGLEG;
         nh.param<double>("max_solver_time", config.ceres_options.max_solver_time_in_seconds, 0.1);
         config.main_id = 0;
@@ -87,7 +88,7 @@ public:
         th = std::thread([&]() {
             ROS_INFO("[D2PGO@%d] Start solve", self_id);
             pgo->solve();
-            ROS_INFO("[D2PGO@%d] End solve", self_id);
+            ROS_INFO("[D2PGO@%d] End solve, writing reslts", self_id);
             //Write data
             writeDataG2o();
             ros::shutdown();

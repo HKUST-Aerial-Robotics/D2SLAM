@@ -40,10 +40,16 @@ SolverReport ARockSolver::solve() {
         receiveAll();
         if (!updated) {
             if (config.verbose)
-                printf("[ARock@%d] No new data, skip this step: %d.\n", self_id, iter_cnt);
+                printf("[ARock@%d] No new data, skip this step: %d total_cnt %d.\n", self_id, iter_cnt, total_cnt);
             usleep(config.skip_iteration_usec);
             total_cnt ++;
-            continue;
+            if (total_cnt > config.max_wait_steps + config.max_steps) {
+                if (config.verbose)
+                    printf("Exit because exceed max_wait_steps: %d\n", total_cnt);
+                break;
+            } else {
+                continue;
+            }
         }
         if (problem != nullptr) {
             delete problem;
@@ -81,11 +87,6 @@ SolverReport ARockSolver::solve() {
                     summary.num_successful_steps + summary.num_unsuccessful_steps);
         iter_cnt ++;
         total_cnt ++;
-        if (total_cnt > config.max_wait_steps + config.max_steps) {
-            if (config.verbose)
-                printf("Exit because exceed max_wait_steps: %d\n", total_cnt);
-            break;
-        }
     }
     report.total_time = tic.toc()/1000;
     return report;

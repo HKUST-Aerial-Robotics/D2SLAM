@@ -130,7 +130,6 @@ void read_g2o_agent( std::string path, std::map<FrameIdType, D2BaseFrame> & keyf
         auto success = match_vertex_se3(line, agent_id, id_a, pose);
         if (success) {
             //Add new vertex here
-            // std::cout << "Frame Id " << id_a << " agent " << agent_id << " pose: " << pose.toStr() << std::endl;
             D2BaseFrame frame;
             frame.drone_id = agent_id;
             frame.odom.pose() = pose;
