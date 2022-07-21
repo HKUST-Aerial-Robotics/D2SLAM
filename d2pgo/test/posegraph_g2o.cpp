@@ -169,4 +169,17 @@ void read_g2o_multi_agents(std::string path,
     printf("g2o files %ld in path %s keyframe: %ld edges %ld\n", files.size(), path.c_str(), 
         keyframeid_agent_pose.size(), edges.size());
 }
+
+void write_result_to_g2o(const std::string & path, const std::vector<D2BaseFrame*> & frames) {
+    std::fstream file;
+    file.open(path.c_str(), std::fstream::out);
+    for (auto & frame : frames) {
+        Swarm::Pose pose = frame->odom.pose();
+        auto quat = pose.att();
+        auto pos = pose.pos();
+        file << "VERTEX_SE3:QUAT " << frame->frame_id << " " << pos.x() << " " << pos.y() << " " << pos.z() << " ";
+        file << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w() << std::endl;
+    }
+    file.close();
+}
 }

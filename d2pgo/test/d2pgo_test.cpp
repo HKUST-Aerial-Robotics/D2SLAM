@@ -14,6 +14,7 @@ class D2PGOTester {
     ros::Subscriber dpgo_data_sub;
     bool is_4dof;
     std::thread th;
+    std::string output_path;
 public:
     int self_id;
     void initSubandPub(ros::NodeHandle & nh) {
@@ -23,6 +24,7 @@ public:
 
     D2PGOTester(ros::NodeHandle & nh) {
         nh.param<std::string>("g2o_path", g2o_path, "");
+        nh.param<std::string>("output_path", output_path, "test.g2o");
         nh.param<int>("self_id", self_id, -1);
         nh.param<bool>("is_4dof", is_4dof, true);
         nh.param<std::string>("solver_type", solver_type, "arock");
@@ -45,6 +47,7 @@ public:
         nh.param<double>("max_solver_time", config.ceres_options.max_solver_time_in_seconds, 0.1);
         config.main_id = 0;
         config.arock_config.self_id = config.self_id;
+        config.arock_config.verbose = true;
         config.arock_config.ceres_options = config.ceres_options;
         nh.param<int>("max_steps", config.arock_config.max_steps, 10);
         if (solver_type == "ceres") {
@@ -85,9 +88,19 @@ public:
             ROS_INFO("[D2PGO@%d] Start solve", self_id);
             pgo->solve();
             ROS_INFO("[D2PGO@%d] End solve", self_id);
-            // ros::shutdown();
+            //Write data
+            writeDataG2o();
+            ros::shutdown();
         });
     }
+
+    void writeDataG2o() {
+        auto local_frames = pgo->getAllLocalFrames();
+        write_result_to_g2o(output_path, local_frames);
+        printf("[D2PGO@%d] Write result to %s\n", self_id, output_path.c_str());
+    }
+
+
 };
 
 int main(int argc, char ** argv) {

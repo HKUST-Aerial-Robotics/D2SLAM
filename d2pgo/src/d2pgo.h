@@ -51,5 +51,6 @@ public:
     void broadcastData(const DPGOData & data);
     void inputDPGOData(const DPGOData & data);
     std::map<int, Swarm::DroneTrajectory> getOptimizedTrajs();
+    std::vector<D2BaseFrame*> getAllLocalFrames();
 };
 }

@@ -33,43 +33,59 @@ SolverReport ARockSolver::solve() {
     ROS_INFO("ARockSolver::solve");
     SolverReport report;
     Utility::TicToc tic;
-    for (int i = 0; i < config.max_steps; i++) {
+    int iter_cnt = 0;
+    int total_cnt = 0;
+    while (iter_cnt < config.max_steps) {
         //If sync mode.
+        receiveAll();
+        if (!updated) {
+            if (config.verbose)
+                printf("[ARock@%d] No new data, skip this step: %d.\n", self_id, iter_cnt);
+            usleep(config.skip_iteration_usec);
+            total_cnt ++;
+            continue;
+        }
         if (problem != nullptr) {
             delete problem;
         }
         ceres::Problem::Options problem_options;
-        if (i != config.max_steps - 1) {
+        if (iter_cnt != config.max_steps - 1) {
             problem_options.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
             problem_options.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
             problem_options.local_parameterization_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+            problem_options.manifold_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+        } else {
+            if (config.verbose)
+                printf("[ARockSolver::solve:%d] last iteration\n", self_id);
         }
         problem = new ceres::Problem(problem_options);
         for (auto residual_info : residuals) {
             problem->AddResidualBlock(residual_info->cost_function, residual_info->loss_function,
                 residual_info->paramsPointerList(state));
         }
-        receiveAll();
-        if (!updated) {
-            printf("[ARock@%d] No new data, skip this step: %d.\n", self_id, i);
-            usleep(config.skip_iteration_usec);
-            continue;
-        }
         scanAndCreateDualStates();
         setDualStateFactors();
         setStateProperties();
-        ceres::Solver::Summary summary;
-        summary = solveLocalStep();
-        report.total_iterations += summary.num_successful_steps + summary.num_unsuccessful_steps;
-        report.final_cost = summary.final_cost;
-        printf("[ARock@%d] substep %d, total_iterations %d, initial_cost %.2e final_cost %.2e iteration takes %.2fms steps %d\n", 
-                self_id, i, report.total_iterations, summary.initial_cost, summary.final_cost, summary.total_time_in_seconds * 1000, 
-                summary.num_successful_steps + summary.num_unsuccessful_steps);
-        if (i == 0) {
-            report.initial_cost = summary.initial_cost;
-        }
+        auto summary = solveLocalStep();
         updateDualStates();
         broadcastData();
+        report.total_iterations += summary.num_successful_steps + summary.num_unsuccessful_steps;
+        report.final_cost = summary.final_cost;
+        float changes = (summary.initial_cost-summary.final_cost)/summary.initial_cost;
+        if (iter_cnt == 0) {
+            report.initial_cost = summary.initial_cost;
+        }
+        if (config.verbose)
+            printf("[ARock@%d] substeps: %d total_iterations: %d initial_cost: %.2e final_cost: %.2e changes: %02.2f%% time: %.2fms steps: %d\n", 
+                    self_id, iter_cnt, report.total_iterations, summary.initial_cost, summary.final_cost, changes*100, summary.total_time_in_seconds * 1000, 
+                    summary.num_successful_steps + summary.num_unsuccessful_steps);
+        iter_cnt ++;
+        total_cnt ++;
+        if (total_cnt > config.max_wait_steps + config.max_steps) {
+            if (config.verbose)
+                printf("Exit because exceed max_wait_steps: %d\n", total_cnt);
+            break;
+        }
     }
     report.total_time = tic.toc()/1000;
     return report;

@@ -10,7 +10,9 @@ struct ARockSolverConfig {
     double rho_landmark = 0.1;
     double eta_k = 0.9;
     int max_steps = 10;
+    int max_wait_steps = 10;
     int skip_iteration_usec = 10000;
+    bool verbose = false;
     ceres::Solver::Options ceres_options;
 };
 

@@ -79,7 +79,7 @@ bool D2PGO::solve() {
     }
     auto report = solver->solve();
     state.syncFromState();
-    printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms initial cost %.2e final cost %.e\n", 
+    printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms initial cost %.2e final cost %.2e\n", 
             self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
             report.initial_cost, report.final_cost);
     solve_count ++;
@@ -195,6 +195,10 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
 
 void D2PGO::broadcastData(const DPGOData & data) {
     bd_data_callback(data);
+}
+
+std::vector<D2BaseFrame*> D2PGO::getAllLocalFrames() {
+    return state.getFrames(self_id);
 }
 
 }

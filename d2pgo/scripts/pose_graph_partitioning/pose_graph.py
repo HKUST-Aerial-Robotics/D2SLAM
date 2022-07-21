@@ -11,6 +11,7 @@ from pose_graph_partitioning.graph_partitioning import *
 from datetime import datetime
 from pose_graph_partitioning.utils import *
 import copy
+from typing import List, Set, Dict, Tuple, Optional
 
 random.seed(datetime.now())
 
@@ -201,6 +202,8 @@ class Agent():
 
 
 class PoseGraph():
+    edges: List[Edge]
+    keyframes: Dict[int, KeyFrame]
     def __init__(self, is_4d=True):
         self.is_4d = is_4d
         self.keyframes = {}
@@ -801,7 +804,7 @@ class PoseGraph():
             if show_raw_edges:
                 ax.quiver(edges_a[:,0],edges_a[:,1],edge_real[:,0],edge_real[:,1], linewidths=-.5, color="black")
             ax.grid(True)   
-        # ax.legend()
+        ax.legend()
         plt.tight_layout()
         plt.axis('off')
         plt.savefig(f"{title}.png")
@@ -1019,7 +1022,26 @@ comm_vol {self.communication_volume()} from path {path}")
         self.agents[0] = Agent(0)
         self.read_txt(path, 0)
         print(f"Total agents {len(self.agents)} keyframes {len(self.keyframes)} edges {len(self.edges)} comm_vol {self.communication_volume()}")
+    
+    def convert_to_4dof(self):
+        #Convert all edges and keyframes to 4DoF
+        for edge in self.edges:
+            rel_pos_6d = edge.pos
+            rel_quat_6d = edge.quat
+            kf_a = self.keyframes[edge.keyframe_ida]
+            pos_a = kf_a.pos
+            quat_a = kf_a.quat
+            pos_b = pos_a + quaternion_rotate(quat_a, rel_pos_6d)
+            dyaw, _, _ = quat2eulers(rel_quat_6d)
+            yawa, _, _ = quat2eulers(quat_a)
+            dpos = quaternion_rotate(quaternion_from_euler(0, 0, -yawa) , pos_b - pos_a)
+            edge.pos = dpos
+            edge.quat = quaternion_from_euler(0, 0, dyaw)
 
+        for kf_id in self.keyframes:
+            kf = self.keyframes[kf_id]
+            yaw, _, _ = quat2eulers(kf.quat)
+            kf.quat = quaternion_from_euler(0, 0, yaw)
 
 if __name__ == '__main__':
     pg = PoseGraph()

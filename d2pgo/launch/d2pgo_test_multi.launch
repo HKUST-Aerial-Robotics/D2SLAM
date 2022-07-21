@@ -2,6 +2,7 @@
     <arg name="is_4dof" default="true" />
     <arg name="solver_type" default="arock" />
     <arg name="g2o_path" default="" />
+    <arg name="output_path" default="" />
     <arg name="wait_for_start" default="true" />
     <arg name="max_solver_time" default="0.5" />
     <arg name="max_steps" default="10" />
@@ -13,6 +14,7 @@
         <arg name="is_4dof" value="$(arg is_4dof)" />
         <arg name="solver_type" value="$(arg solver_type)" />
         <arg name="g2o_path" value="$(arg g2o_path)/0.g2o" />
+        <arg name="output_path" value="$(arg output_path)/0.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
         <arg name="max_solver_time" value="$(arg max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
@@ -23,6 +25,7 @@
         <arg name="is_4dof" value="$(arg is_4dof)" />
         <arg name="solver_type" value="$(arg solver_type)" />
         <arg name="g2o_path" value="$(arg g2o_path)/1.g2o" />
+        <arg name="output_path" value="$(arg output_path)/1.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
         <arg name="max_solver_time" value="$(arg max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
@@ -33,6 +36,7 @@
         <arg name="is_4dof" value="$(arg is_4dof)" />
         <arg name="solver_type" value="$(arg solver_type)" />
         <arg name="g2o_path" value="$(arg g2o_path)/2.g2o" />
+        <arg name="output_path" value="$(arg output_path)/2.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
         <arg name="max_solver_time" value="$(arg max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
@@ -43,6 +47,7 @@
         <arg name="is_4dof" value="$(arg is_4dof)" />
         <arg name="solver_type" value="$(arg solver_type)" />
         <arg name="g2o_path" value="$(arg g2o_path)/3.g2o" />
+        <arg name="output_path" value="$(arg output_path)/3.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
         <arg name="max_solver_time" value="$(arg max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
@@ -53,6 +58,7 @@
         <arg name="is_4dof" value="$(arg is_4dof)" />
         <arg name="solver_type" value="$(arg solver_type)" />
         <arg name="g2o_path" value="$(arg g2o_path)/4.g2o" />
+        <arg name="output_path" value="$(arg output_path)/4.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
         <arg name="max_solver_time" value="$(arg max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
@@ -63,6 +69,7 @@
         <arg name="is_4dof" value="$(arg is_4dof)" />
         <arg name="solver_type" value="$(arg solver_type)" />
         <arg name="g2o_path" value="$(arg g2o_path)/5.g2o" />
+        <arg name="output_path" value="$(arg output_path)/5.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
         <arg name="max_solver_time" value="$(arg max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />

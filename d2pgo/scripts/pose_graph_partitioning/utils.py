@@ -3,6 +3,7 @@ import graphviz
 from transformations import *
 from matplotlib.lines import Line2D
 import numpy as np
+from math import *
 
 plt.rc("figure", figsize=(10,8))
 marker_list = [*Line2D.markers.keys()][0:-4]
@@ -39,3 +40,14 @@ def quaternion_rotate(q, v):
     v = mat @ v
     v = v.transpose()[0]
     return v
+
+def quat2eulers(quat):
+    w = quat[0]
+    x = quat[1]
+    y = quat[2]
+    z = quat[3]
+    r = atan2(2 * (w * x + y * z),
+                    1 - 2 * (x * x + y * y))
+    p = asin(2 * (w * y - z * x))
+    y = atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
+    return y, p, r

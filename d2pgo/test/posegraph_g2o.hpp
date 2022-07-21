@@ -35,9 +35,6 @@ void read_g2o_multi_agents(
     G2oParseParam param
 );
 
-void write_result_to_g2o(
-    std::string path,
-    std::vector<D2BaseFrame> states,
-    bool is_4dof
-);
+void write_result_to_g2o(const std::string & path, 
+    const std::vector<D2BaseFrame*> & frames);
 }
