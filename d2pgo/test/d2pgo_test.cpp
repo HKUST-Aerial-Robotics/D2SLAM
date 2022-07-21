@@ -70,9 +70,8 @@ public:
     }
 
     void processDPGOData(const swarm_msgs::DPGOData & data) {
-        // printf("[D2PGO@%d] receive sync from %ld\n", self_id, data.drone_id);
         if (data.drone_id != self_id) {
-            ROS_INFO("[D2PGONode@%d] processDPGOData from drone %d", self_id, data.drone_id);
+            // ROS_INFO("[D2PGONode@%d] processDPGOData from drone %d", self_id, data.drone_id);
             pgo->inputDPGOData(DPGOData(data));
         }
     }
@@ -86,7 +85,7 @@ public:
             ROS_INFO("[D2PGO@%d] Start solve", self_id);
             pgo->solve();
             ROS_INFO("[D2PGO@%d] End solve", self_id);
-            ros::shutdown();
+            // ros::shutdown();
         });
     }
 };
@@ -102,7 +101,7 @@ int main(int argc, char ** argv) {
     ros::Subscriber start_sub;
     if (wait_for_start) {
         bool is_start = false;
-        start_sub = n.subscribe("/d2pgo/start_solve_trigger", 1, &D2PGOTester::startSignalCallback, &tester, ros::TransportHints().tcpNoDelay(true));
+        start_sub = n.subscribe("/dpgo/start_solve_trigger", 1, &D2PGOTester::startSignalCallback, &tester, ros::TransportHints().tcpNoDelay(true));
     } else {
         tester.startSolve();
     }

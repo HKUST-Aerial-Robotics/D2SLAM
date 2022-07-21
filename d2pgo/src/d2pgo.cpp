@@ -79,8 +79,9 @@ bool D2PGO::solve() {
     }
     auto report = solver->solve();
     state.syncFromState();
-    printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms\n", 
-        self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000);
+    printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms initial cost %.2e final cost %.e\n", 
+            self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
+            report.initial_cost, report.final_cost);
     solve_count ++;
     updated = false;
     return true;

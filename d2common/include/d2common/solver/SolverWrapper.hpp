@@ -12,6 +12,7 @@ class D2EstimatorState;
 struct SolverReport {
     int total_iterations = 0;
     double total_time = 0;
+    double initial_cost = 0;
     double final_cost = 0;
     bool succ = true;
     std::string message = "";

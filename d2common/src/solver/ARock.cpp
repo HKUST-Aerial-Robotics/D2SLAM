@@ -15,6 +15,7 @@ void ARockSolver::addResidual(ResidualInfo*residual_info) {
         addParam(param);
     }
     SolverWrapper::addResidual(residual_info);
+    updated = true;
 }
 
 void ARockSolver::resetResiduals() {
@@ -49,6 +50,11 @@ SolverReport ARockSolver::solve() {
                 residual_info->paramsPointerList(state));
         }
         receiveAll();
+        if (!updated) {
+            printf("[ARock@%d] No new data, skip this step: %d.\n", self_id, i);
+            usleep(config.skip_iteration_usec);
+            continue;
+        }
         scanAndCreateDualStates();
         setDualStateFactors();
         setStateProperties();
@@ -56,6 +62,12 @@ SolverReport ARockSolver::solve() {
         summary = solveLocalStep();
         report.total_iterations += summary.num_successful_steps + summary.num_unsuccessful_steps;
         report.final_cost = summary.final_cost;
+        printf("[ARock@%d] substep %d, total_iterations %d, initial_cost %.2e final_cost %.2e iteration takes %.2fms steps %d\n", 
+                self_id, i, report.total_iterations, summary.initial_cost, summary.final_cost, summary.total_time_in_seconds * 1000, 
+                summary.num_successful_steps + summary.num_unsuccessful_steps);
+        if (i == 0) {
+            report.initial_cost = summary.initial_cost;
+        }
         updateDualStates();
         broadcastData();
     }
@@ -114,6 +126,7 @@ void ARockSolver::createDualState(const ParamInfo & param_info, int drone_id) {
     }
     dual_states_remote[drone_id][param_info.pointer] = Map<VectorXd>(param_info.pointer, param_info.size);
     dual_states_local[drone_id][param_info.pointer] = Map<VectorXd>(param_info.pointer, param_info.size);
+    updated = true;
 }
 
 void ARockSolver::setDualStateFactors() {
@@ -195,6 +208,7 @@ void ARockSolver::updateDualStates() {
 ceres::Solver::Summary ARockSolver::solveLocalStep() {
     ceres::Solver::Summary summary;
     ceres::Solve(config.ceres_options, problem, &summary);
+    updated = false;
     return summary;
 }
 

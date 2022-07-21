@@ -10,6 +10,7 @@ struct ARockSolverConfig {
     double rho_landmark = 0.1;
     double eta_k = 0.9;
     int max_steps = 10;
+    int skip_iteration_usec = 10000;
     ceres::Solver::Options ceres_options;
 };
 
@@ -36,6 +37,7 @@ protected:
     void createDualState(const ParamInfo & param_info, int drone_id);
     virtual bool isRemoteParam(const ParamInfo & param);
     virtual int solverId(const ParamInfo & param);
+    bool updated = false;
 public:
     ARockSolver(D2State * _state, ARockSolverConfig _config):
             SolverWrapper(_state), config(_config), self_id(config.self_id) {

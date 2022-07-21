@@ -2,10 +2,11 @@
     <arg name="is_4dof" default="true" />
     <arg name="solver_type" default="arock" />
     <arg name="g2o_path" default="" />
-    <arg name="wait_for_start" default="false" />
+    <arg name="wait_for_start" default="true" />
     <arg name="max_solver_time" default="0.5" />
     <arg name="max_steps" default="10" />
     <arg name="agent_num" default="2" />
+    <arg name="delay_launch" default="0.5" />
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 0)" >
         <arg name="self_id" value="0" />
@@ -66,4 +67,5 @@
         <arg name="max_solver_time" value="$(arg max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
     </include>
+    <node name="d2pgo" pkg="d2pgo" type="delay_launch_dpgo.sh" args="$(arg delay_launch)" if="$(arg wait_for_start)" />
 </launch>
