@@ -175,12 +175,14 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver) {
 
 void D2PGO::setStateProperties(ceres::Problem & problem) {
     ceres::Manifold* manifold;
+    ceres::LocalParameterization * local_parameterization;
     if (config.pgo_pose_dof == PGO_POSE_4D) {
         manifold = PosAngleManifold::Create();
     } else {
-        ceres::EigenQuaternionManifold quat_manifold;
-        ceres::EuclideanManifold<3> euc_manifold;
-        manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
+        // ceres::EigenQuaternionManifold quat_manifold;
+        // ceres::EuclideanManifold<3> euc_manifold;
+        // manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
+        local_parameterization = new PoseLocalParameterization;
     }
 
     for (auto frame_id : used_frames) {
@@ -188,7 +190,11 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
         if (!problem.HasParameterBlock(pointer)) {
             continue;
         }
-        problem.SetManifold(pointer, manifold);
+        if (config.pgo_pose_dof == PGO_POSE_4D) {
+            problem.SetManifold(pointer, manifold);
+        } else {
+            problem.SetParameterization(pointer, local_parameterization);
+        }
     }
     if (config.mode == PGO_MODE_NON_DIST || 
             config.mode >= PGO_MODE_DISTRIBUTED_AROCK && self_id == main_id) {
