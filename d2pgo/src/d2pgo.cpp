@@ -115,7 +115,7 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver) {
             loop_factor = RelPoseFactor4D::Create(&loop);
             // this->evalLoop(loop);
         } else{
-            loop_factor = new RelPoseFactor(loop.relative_pose, loop.sqrt_information_matrix());
+            loop_factor = RelPoseFactor::Create(loop.relative_pose, loop.sqrt_information_matrix());
         }
         if (state.hasFrame(loop.keyframe_id_a) && state.hasFrame(loop.keyframe_id_b)) {
             auto res_info = RelPoseResInfo::create(loop_factor, 
@@ -153,7 +153,7 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
             auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id, true);
             solver->addResidual(res_info);
         } else if (config.pgo_pose_dof == PGO_POSE_6D) {
-            auto factor = new RelPoseFactor(relpose6d, sqrt_info);
+            auto factor = RelPoseFactor::Create(relpose6d, sqrt_info);
             auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id, false);
             solver->addResidual(res_info);
         }
@@ -174,18 +174,21 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver) {
 }
 
 void D2PGO::setStateProperties(ceres::Problem & problem) {
-    auto pose_local_param = new PoseLocalParameterization;
-    auto pos_angle_manifold = PosAngleManifold::Create();
+    ceres::Manifold* manifold;
+    if (config.pgo_pose_dof == PGO_POSE_4D) {
+        manifold = PosAngleManifold::Create();
+    } else {
+        ceres::EigenQuaternionManifold quat_manifold;
+        ceres::EuclideanManifold<3> euc_manifold;
+        manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
+    }
+
     for (auto frame_id : used_frames) {
         auto pointer = state.getPoseState(frame_id);
         if (!problem.HasParameterBlock(pointer)) {
             continue;
         }
-        if (config.pgo_pose_dof == PGO_POSE_4D) {
-            problem.SetManifold(pointer, pos_angle_manifold);
-        } else {
-            problem.SetParameterization(pointer, pose_local_param);
-        }
+        problem.SetManifold(pointer, manifold);
     }
     if (config.mode == PGO_MODE_NON_DIST || 
             config.mode >= PGO_MODE_DISTRIBUTED_AROCK && self_id == main_id) {

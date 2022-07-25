@@ -40,6 +40,10 @@ public:
 
         D2PGOConfig config;
         config.self_id = self_id;
+        if (is_4dof)
+            config.pgo_pose_dof = PGO_POSE_4D;
+        else
+            config.pgo_pose_dof = PGO_POSE_6D;
         config.enable_ego_motion = false;
         config.ceres_options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
         config.ceres_options.num_threads = 1;
