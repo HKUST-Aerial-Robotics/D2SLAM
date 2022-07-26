@@ -2,8 +2,8 @@
     <arg name="config" default="$(find d2vins)/../config/tum/tum_single.yaml" />
     <arg name="self_id" default="1" />
     <node name="d2pgo" pkg="d2pgo" type="d2pgo_node" output="screen" >
-        <remap from="~image_array_desc" to="/d2vins/image_array_desc" />
-        <remap from="~remote_frame_desc" to="/d2vins/remote_frame_desc" />
+        <remap from="~frame_local" to="/d2vins/frame_local" />
+        <remap from="~frame_remote" to="/d2vins/frame_remote" />
         <remap from="~loop" to="/d2vins/loop" />
         <param name="vins_config_path" value="$(arg config)" type="string" />
         <param name="self_id" value="$(arg self_id)" type="int" />

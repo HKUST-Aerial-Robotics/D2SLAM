@@ -43,8 +43,9 @@ Panels:
         - /GT1
         - /Remote1
         - /PGOPath1
+        - /PGOPath21
       Splitter Ratio: 0.5
-    Tree Height: 511
+    Tree Height: 305
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -483,6 +484,54 @@ Visualization Manager:
       Topic: /d2pgo/pgo_path
       Unreliable: false
       Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 85; 0; 255
+      Enabled: false
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Billboards
+      Line Width: 0.05000000074505806
+      Name: PGOPath1
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Queue Size: 10
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
+      Topic: /d2pgo/pgo_path_1
+      Unreliable: false
+      Value: false
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 255; 0; 255
+      Enabled: false
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Billboards
+      Line Width: 0.05000000074505806
+      Name: PGOPath2
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Queue Size: 10
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
+      Topic: /d2pgo/pgo_path_2
+      Unreliable: false
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 211; 215; 207
@@ -509,7 +558,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 9.527398109436035
+      Distance: 22.03141212463379
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -517,17 +566,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -3.51737117767334
-        Y: -1.2825522422790527
+        X: -2.4198451042175293
+        Y: 0.8563224077224731
         Z: 0
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0897939205169678
+      Pitch: 1.044793963432312
       Target Frame: world
-      Yaw: 1.2650201320648193
+      Yaw: 1.3250216245651245
     Saved:
       - Class: rviz/XYOrbit
         Distance: 9.527398109436035
@@ -565,5 +614,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1316
-  X: 1889
-  Y: 55
+  X: 1224
+  Y: 254

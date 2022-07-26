@@ -98,6 +98,7 @@ struct D2VINSConfig {
     std::string output_folder;
     bool enable_perf_output = false;
     bool debug_write_margin_matrix = false;
+    bool pub_visual_frame = false;
 
     bool verbose = true;
 

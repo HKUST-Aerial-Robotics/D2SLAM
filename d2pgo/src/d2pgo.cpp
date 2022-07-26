@@ -19,27 +19,30 @@ void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
     const Guard lock(state_lock);
     loops.emplace_back(loop_info);
     // printf("Adding edge between keyframe %ld<->%ld drone %d<->%d hasKF %d %d\n ", loop_info.keyframe_id_a, loop_info.keyframe_id_b,
-            // loop_info.id_a, loop_info.id_b, state.hasFrame(loop_info.keyframe_id_a), state.hasFrame(loop_info.keyframe_id_b));
+    //         loop_info.id_a, loop_info.id_b, state.hasFrame(loop_info.keyframe_id_a), state.hasFrame(loop_info.keyframe_id_b));
+    if (loop_info.relative_pose.pos().norm() > 1.0) {
+        ROS_WARN("[D2PGO@%d]loop edge is too far: %s\n", self_id, loop_info.relative_pose.toStr().c_str());
+    }
     if (add_state_by_loop) {
-        //This is for debug...
+        // This is for debug...
         if (state.hasFrame(loop_info.keyframe_id_a) && !state.hasFrame(loop_info.keyframe_id_b)) {
-            //Add frame idb to state
+            // Add frame idb to state
             D2BaseFrame frame_desc;
             frame_desc.drone_id = loop_info.id_b;
             frame_desc.frame_id = loop_info.keyframe_id_b;
             frame_desc.reference_frame_id = state.getFramebyId(loop_info.keyframe_id_a)->reference_frame_id;
-            //Initialize pose with known pose a and this loop edge
+            // Initialize pose with known pose a and this loop edge
             frame_desc.odom.pose() = state.getFramebyId(loop_info.keyframe_id_a)->odom.pose() * loop_info.relative_pose;
             addFrame(frame_desc);
             // printf("[D2PGO@%d]add frame %ld pose %s from drone %d\n", self_id, frame_desc.frame_id,
             //     frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
         } else if (!state.hasFrame(loop_info.keyframe_id_a) && state.hasFrame(loop_info.keyframe_id_b)) {
-            //Add frame idb to state
+            // Add frame idb to state
             D2BaseFrame frame_desc;
             frame_desc.drone_id = loop_info.id_a;
             frame_desc.frame_id = loop_info.keyframe_id_a;
             frame_desc.reference_frame_id = state.getFramebyId(loop_info.keyframe_id_b)->reference_frame_id;
-            //Initialize pose with known pose a and this loop edge
+            // Initialize pose with known pose a and this loop edge
             frame_desc.odom.pose() = state.getFramebyId(loop_info.keyframe_id_b)->odom.pose() * loop_info.relative_pose.inverse();
             addFrame(frame_desc);
             // printf("[D2PGO@%d]add frame %ld pose %s from drone %d\n", self_id, frame_desc.frame_id,
@@ -66,8 +69,10 @@ bool D2PGO::solve() {
     } else if (config.mode == PGO_MODE_DISTRIBUTED_AROCK) {
         if (solver==nullptr) {
             solver = new ARockPGO(&state, this, config.arock_config);
+        } else {
+            // static_cast<ARockPGO*>(solver)->resetResiduals();
+            solver = new ARockPGO(&state, this, config.arock_config);
         }
-        static_cast<ARockPGO*>(solver)->resetResiduals();
     }
 
     used_frames.clear();
@@ -100,7 +105,7 @@ void D2PGO::evalLoop(const Swarm::LoopEdge & loop) {
     auto pose_b = kf_b->odom.pose();
     (*factor)(pose_ptr_a, pose_ptr_b, residuals.data());
     printf("Loop %ld->%ld, RelPose %s\n", loop.keyframe_id_a, loop.keyframe_id_b, loop.relative_pose.toStr().c_str()); 
-    printf("RelPose            Est %s \n", Swarm::Pose::DeltaPose(pose_a, pose_b).toStr().c_str());
+    printf("RelPose            Est %s\n", Swarm::Pose::DeltaPose(pose_a, pose_b).toStr().c_str());
     std::cout << "sqrt_info\n:" << loop.get_sqrt_information_4d() << std::endl;
     printf("PoseA %s PoseB %s residual:", kf_a->odom.pose().toStr().c_str(), kf_b->odom.pose().toStr().c_str());
     std::cout << residuals.transpose() << "\n" << std::endl;
@@ -108,13 +113,13 @@ void D2PGO::evalLoop(const Swarm::LoopEdge & loop) {
 
 void D2PGO::setupLoopFactors(SolverWrapper * solver) {
     used_loops_count = 0;
-    auto loss_function = nullptr;//new ceres::HuberLoss(1.0);    
+    auto loss_function = new ceres::HuberLoss(1.0);    
     for (auto loop : loops) {
         ceres::CostFunction * loop_factor = nullptr;
         if (config.pgo_pose_dof == PGO_POSE_4D) {
             loop_factor = RelPoseFactor4D::Create(&loop);
             // this->evalLoop(loop);
-        } else{
+        } else {
             loop_factor = RelPoseFactor::Create(loop.relative_pose, loop.sqrt_information_matrix());
         }
         if (state.hasFrame(loop.keyframe_id_a) && state.hasFrame(loop.keyframe_id_b)) {
@@ -157,7 +162,6 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
             auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id, false);
             solver->addResidual(res_info);
         }
-
         used_frames.insert(frame_a->frame_id);
         used_frames.insert(frame_b->frame_id);
     }
@@ -205,6 +209,7 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
 }
 
 std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
+    const Guard lock(state_lock);
     std::map<int, Swarm::DroneTrajectory> trajs;
     for (auto drone_id : state.availableDrones()) {
         trajs[drone_id] = Swarm::DroneTrajectory(drone_id, false);
@@ -227,6 +232,7 @@ void D2PGO::broadcastData(const DPGOData & data) {
 }
 
 std::vector<D2BaseFrame*> D2PGO::getAllLocalFrames() {
+    const Guard lock(state_lock);
     return state.getFrames(self_id);
 }
 

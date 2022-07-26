@@ -1,6 +1,7 @@
 #pragma once
 #include "utils.hpp"
 #include <swarm_msgs/Odometry.h>
+#include <swarm_msgs/VIOFrame.h>
 
 namespace D2Common {
 struct D2BaseFrame {
@@ -36,6 +37,15 @@ struct D2BaseFrame {
         is_keyframe(_is_keyframe),
         odom(_stamp, pose),
         initial_ego_pose(pose) { }
+
+    D2BaseFrame(const swarm_msgs::VIOFrame & vio_frame):
+        stamp(vio_frame.header.stamp.toSec()),
+        frame_id(vio_frame.frame_id),
+        drone_id(vio_frame.drone_id),
+        reference_frame_id(vio_frame.reference_frame_id),
+        is_keyframe(vio_frame.is_keyframe),
+        odom(vio_frame.odom),
+        initial_ego_pose(vio_frame.odom.pose.pose) {}
     
     virtual void moveByPose(int new_ref_frame_id, const Swarm::Pose & delta_pose) {
         reference_frame_id = new_ref_frame_id;

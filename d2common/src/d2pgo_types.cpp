@@ -49,7 +49,6 @@ DistributedPGOData_t DPGOData::toLCM() const {
     msg.drone_id = drone_id;
     msg.target_id = target_id;
     msg.reference_frame_id = reference_frame_id;
-    msg.frame_poses.resize(frame_poses.size());
     for (auto it: frame_poses) {
         auto i = it.first;
         auto pose = it.second;

@@ -214,6 +214,10 @@ void ARockSolver::updateDualStates() {
                 delta(3) = Utility::NormalizeAngle(delta(3));
                 dual_state_local = dual_state_local - delta;
                 dual_state_local(3) = Utility::NormalizeAngle(dual_state_local(3));
+                // printf("[ARockSolver%d] Pose %d delta_state: ", self_id, param_info.id);
+                // std::cout << delta.transpose() << std::endl;
+                // std::cout << "dual_state_local" << dual_state_local.transpose() << std::endl;
+                // std::cout << "avg_state" << avg_state.transpose() << std::endl  << std::endl;
             } else {
                 //Is a vector.
                 VectorXd dual_state_remote = dual_states_remote.at(remote_drone_id).at(state_pointer);

@@ -27,7 +27,7 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     D2Estimator * estimator = nullptr;
     D2VINSNet * d2vins_net = nullptr;
     ros::Subscriber imu_sub;
-    ros::Publisher frame_pub;
+    ros::Publisher visual_array_pub;
     int frame_count = 0;
     std::queue<D2Common::VisualImageDescArray> viokf_queue;
     std::mutex queue_lock;
@@ -54,7 +54,9 @@ protected:
         if (D2FrontEnd::params->enable_loop) {
             loop_detector->processImageArray(frame_desc);
         }
-        frame_pub.publish(frame_desc.toROS());
+        if (params->pub_visual_frame) {
+            visual_array_pub.publish(frame_desc.toROS());
+        }
     }
     
     void distriburedTimerCallback(const ros::TimerEvent & event) {
@@ -89,7 +91,9 @@ protected:
                 printf("[D2VINS] Send image to network frame_id %ld: %s\n", viokf.frame_id, viokf.pose_drone.toStr().c_str());
                 loop_net->broadcastVisualImageDescArray(viokf);
             }
-            frame_pub.publish(viokf.toROS());
+            if (params->pub_visual_frame) {
+                visual_array_pub.publish(viokf.toROS());
+            }
         }
     }
 
@@ -126,7 +130,7 @@ protected:
         estimator = new D2Estimator(params->self_id);
         d2vins_net = new D2VINSNet(estimator, params->lcm_uri);
         estimator->init(nh, d2vins_net);
-        frame_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("image_array_desc", 1);
+        visual_array_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("image_array_desc", 1);
         imu_sub = nh.subscribe(params->imu_topic, 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
         estimator_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::timerCallback, this);
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {

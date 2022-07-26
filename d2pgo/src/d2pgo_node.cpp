@@ -26,22 +26,22 @@ class D2PGONode {
     std::string output_folder;
     ros::NodeHandle * _nh;
 protected:
-    void processImageArray(const swarm_msgs::ImageArrayDescriptor & frame_desc) {
-        if (frame_desc.is_keyframe) {
-            ROS_INFO("[D2PGONode@%d] processKeyImageArray %ld", config.self_id, frame_desc.frame_id);
-            auto img_array = VisualImageDescArray(frame_desc);
-            pgo->addFrame(VINSFrame(img_array).toBaseFrame());
+    void processImageArray(const swarm_msgs::VIOFrame & vioframe) {
+        if (vioframe.is_keyframe) {
+            ROS_INFO("[D2PGONode@%d] processVIOFrame %ld", config.self_id, vioframe.frame_id);
+            D2BaseFrame frame(vioframe);
+            pgo->addFrame(frame);
         }
     }
     
     void processLoop(const swarm_msgs::LoopEdge & loop_info) {
-        ROS_INFO("[D2PGONode@%d] processLoop from %ld to %ld", config.self_id, loop_info.keyframe_id_a, loop_info.keyframe_id_b);
+        // ROS_INFO("[D2PGONode@%d] processLoop from %ld to %ld", config.self_id, loop_info.keyframe_id_a, loop_info.keyframe_id_b);
         pgo->addLoop(Swarm::LoopEdge(loop_info));
     }
     
     void processDPGOData(const swarm_msgs::DPGOData & data) {
         if (data.drone_id != config.self_id) {
-            ROS_INFO("[D2PGONode@%d] processDPGOData from drone %d", config.self_id, data.drone_id);
+            // ROS_INFO("[D2PGONode@%d] processDPGOData from drone %d", config.self_id, data.drone_id);
             pgo->inputDPGOData(DPGOData(data));
         }
     }
@@ -89,8 +89,8 @@ protected:
             dpgo_data_pub.publish(data.toROS());
         };
         dpgo_data_sub = nh.subscribe("pgo_data", 1, &D2PGONode::processDPGOData, this, ros::TransportHints().tcpNoDelay());
-        frame_sub = nh.subscribe("image_array_desc", 1, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
-        remote_frame_sub = nh.subscribe("remote_frame_desc", 1, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
+        frame_sub = nh.subscribe("frame_local", 1, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
+        remote_frame_sub = nh.subscribe("frame_remote", 1, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
         loop_sub = nh.subscribe("loop", 1, &D2PGONode::processLoop, this, ros::TransportHints().tcpNoDelay());
         solver_timer = nh.createTimer(ros::Duration(1.0/solver_timer_freq), &D2PGONode::solverTimerCallback, this);
         printf("[D2PGONode@%d] Initialized\n", config.self_id);

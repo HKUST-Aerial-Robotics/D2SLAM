@@ -5,6 +5,7 @@
 #include "pgostate.hpp"
 #include <swarm_msgs/relative_measurments.hpp>
 #include <d2common/d2pgo_types.h>
+#include "../test/posegraph_g2o.hpp"
 
 namespace D2PGO {
 
