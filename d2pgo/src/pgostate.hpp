@@ -22,7 +22,8 @@ public:
 
     void addFrame(const D2BaseFrame & _frame) {
         const Guard lock(state_lock);
-        // printf("[D2PGO@%d] PGOState: add frame %ld for drone %d\n", self_id, _frame.frame_id, _frame.drone_id);
+        // printf("[D2PGO@%d] PGOState: add frame %ld for drone %d: %s\n", self_id, 
+        //         _frame.frame_id, _frame.drone_id, _frame.odom.pose().toStr().c_str());
         all_drones.insert(_frame.drone_id);
         auto * frame = new D2BaseFrame;
         *frame = _frame;

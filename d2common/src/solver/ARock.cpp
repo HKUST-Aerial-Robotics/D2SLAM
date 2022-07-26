@@ -157,6 +157,8 @@ void ARockSolver::setDualStateFactors() {
                 Swarm::Pose pose_dual(dual_state);
                 auto factor = new ConsenusPoseFactor(pose_dual.pos(), pose_dual.att(), 
                         Vector3d::Zero(), Vector3d::Zero(), rho_T, rho_theta);
+                // printf("[ARockSolver] ConsenusPoseFactor param %ld, drone_id %d pose_dual %s pose_cur %s\n", 
+                //     param_info.id, param_pair.first, pose_dual.toStr().c_str(), Swarm::Pose(state_pointer).toStr().c_str());
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
             } else if (IsPose4D(param_info.type)) {
                 Swarm::Pose pose_dual(dual_state);
@@ -199,6 +201,8 @@ void ARockSolver::updateDualStates() {
                 Vector6d pose_err = Swarm::Pose::DeltaPose(cur_est_pose, avg_pose).tangentSpace();
                 Vector6d delta_state = pose_err*config.eta_k;
                 //Retraction the delta state to pose
+                // printf("[ARockSolver%d] Pose %d delta_state: ", self_id, param_info.id);
+                // std::cout << delta_state.transpose() << std::endl;
                 Swarm::Pose dual_pose_local_new = dual_pose_local * 
                     Swarm::Pose::fromTangentSpace(-delta_state);
                 dual_pose_local_new.to_vector(dual_state_local.data());

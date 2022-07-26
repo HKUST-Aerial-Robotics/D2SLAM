@@ -36,6 +36,12 @@ void ARockPGO::processPGOData(const DPGOData & data) {
                         pose.to_vector(dual_states_remote[drone_id][ptr].data());
                         if (create)
                             pose.to_vector(dual_states_local[drone_id][ptr].data());
+                        // printf("[ARockPGO@%d]dual remote for frame_id %ld drone_id %d: %s\n", 
+                        //         self_id, frame_id, drone_id, pose.toStr().c_str());
+                        // printf("[ARockPGO@%d]dual local: %s\n", 
+                        //         self_id, Swarm::Pose(dual_states_local[drone_id][ptr]).toStr().c_str());
+                        // printf("[ARockPGO@%d]state     : %s\n", 
+                        //         self_id, Swarm::Pose(ptr, true).toStr().c_str());
                     } else if (param_info.type == ParamsType::POSE_4D) {
                         pose.to_vector_xyzyaw(dual_states_remote[drone_id][ptr].data());
                         if (create)
