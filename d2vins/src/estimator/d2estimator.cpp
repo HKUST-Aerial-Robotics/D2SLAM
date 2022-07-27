@@ -472,8 +472,8 @@ void D2Estimator::solveinDistributedMode() {
     }
 
     auto last_odom = state.lastFrame().odom;
-    printf("[D2VINS::solveinDistributedMode@%d] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
-        self_id, current_landmark_num, last_odom.toStr().c_str(), state.td*1000, report.total_time*1000);
+    printf("[D2VINS::solveinDistributedMode@%d] solve_count %d landmarks %d odom %s opti_time %.1fms steps %d td %.1fms \n", solve_count, 
+        self_id, current_landmark_num, last_odom.toStr().c_str(), report.total_time*1000, report.total_iterations, state.td*1000);
 
     // Reprogation
     for (auto drone_id : state.availableDrones()) {

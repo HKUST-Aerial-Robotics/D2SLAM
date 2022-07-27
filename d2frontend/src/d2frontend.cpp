@@ -11,7 +11,7 @@
 #include <nav_msgs/Odometry.h>
 #include <mutex>
 #include <swarm_msgs/node_frame.h>
-
+#include <d2common/utils.hpp>
 // #define BACKWARD_HAS_DW 1
 // #include <backward.hpp>
 // namespace backward
@@ -148,7 +148,8 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
 
 void D2Frontend::addToLoopQueue(const VisualImageDescArray & viokf) {
     if (params->enable_loop) {
-        lock_guard guard(loop_lock);
+        // lock_guard guard(loop_lock);
+        Utility::TicToc tic;
         loop_queue.push(viokf);
     }
 }
@@ -166,15 +167,18 @@ void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc) {
 }
 
 
-void D2Frontend::loopTimerCallback(const ros::TimerEvent & e) {
-    if (loop_queue.size() > 0) {
-        VisualImageDescArray vframearry;
-        {
-            lock_guard guard(loop_lock);
-            vframearry = loop_queue.front();
-            loop_queue.pop();
+void D2Frontend::loopDetectionThread() {
+    while (ros::ok()) {
+        if (loop_queue.size() > 0) {
+            VisualImageDescArray vframearry;
+            {
+                lock_guard guard(loop_lock);
+                vframearry = loop_queue.front();
+                loop_queue.pop();
+            }
+            loop_detector->processImageArray(vframearry);
         }
-        loop_detector->processImageArray(vframearry);
+        usleep(10000);
     }
 }
 
@@ -275,8 +279,8 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
         loop_net->scanRecvPackets();
     });
 
-    loop_timer = nh.createTimer(ros::Duration(0.01), &D2Frontend::loopTimerCallback, this);
-
+    // loop_timer = nh.createTimer(ros::Duration(0.01), &D2Frontend::loopTimerCallback, this);
+    th_loop_det = std::thread(&D2Frontend::loopDetectionThread, this);
     th = std::thread([&] {
         while(0 == loop_net->lcmHandle()) {
         }

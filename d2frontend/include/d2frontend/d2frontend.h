@@ -70,7 +70,7 @@ protected:
     virtual void processRemoteImage(VisualImageDescArray & frame_desc);
 
     void processStereoframe(const StereoFrame & stereoframe);
-    void loopTimerCallback(const ros::TimerEvent & event);
+    void loopDetectionThread();
 
     void addToLoopQueue(const VisualImageDescArray & viokf);
 
@@ -93,7 +93,7 @@ protected:
     message_filters::TimeSynchronizer<sensor_msgs::CompressedImage, sensor_msgs::Image> * comp_depth_sync;
 
 
-    std::thread th;
+    std::thread th, th_loop_det;
     bool received_image = false;
     ros::Timer timer, loop_timer;
 public:

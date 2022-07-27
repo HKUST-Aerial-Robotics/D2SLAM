@@ -79,13 +79,18 @@ protected:
             }
             bool ret;
             {
+                Utility::TicToc input;
                 Guard guard(esti_lock);
                 ret = estimator->inputImage(viokf);
+                double input_time = input.toc();
+                Utility::TicToc loop;
                 if (viokf.is_keyframe) {
                     addToLoopQueue(viokf);
                 }
                 loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
                 loop_detector->updatebySldWin(estimator->getSelfSldWin());
+                if (params->verbose || params->enable_perf_output)
+                    printf("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
             }
             if (ret && D2FrontEnd::params->enable_network) {
                 printf("[D2VINS] Send image to network frame_id %ld: %s\n", viokf.frame_id, viokf.pose_drone.toStr().c_str());
@@ -107,19 +112,12 @@ protected:
         double freq = params->IMAGE_FREQ/params->frame_step;
         int duration_us = floor(1000000.0/freq);
         int allow_err = params->consensus_trigger_time_err_us;
-        while (!ros::isShuttingDown()) {
+        int64_t last_invoke = 0;
+        while (ros::ok()) {
             int64_t usec = duration_cast<microseconds>(high_resolution_clock::now().time_since_epoch()).count();
-            int err = std::min(duration_us - usec%duration_us, usec%duration_us);
-            if (err < allow_err) {
-                // printf("call err %ld us\n", err);
-                Guard guard(esti_lock);
-                ros::TimerEvent e;
-                distriburedTimerCallback(e);
-            } else {
-                if (duration_us - usec%duration_us > 2*allow_err) {
-                    usleep(duration_us - usec%duration_us - 2*allow_err);
-                }
-                usleep(10);
+            if (usec - last_invoke > duration_us) {
+                last_invoke = usec;
+                distriburedTimerCallback(ros::TimerEvent());
             }
         }
     }
@@ -134,7 +132,10 @@ protected:
         imu_sub = nh.subscribe(params->imu_topic, 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
         estimator_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::timerCallback, this);
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-            solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
+            // solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
+            th_timer = std::thread([&] {
+                myHighResolutionTimerThread();
+            });
         }
         th = std::thread([&] {
             ROS_INFO("Starting d2vins_net lcm.");
@@ -143,6 +144,7 @@ protected:
         });
         ROS_INFO("D2VINS node %d initialized. Ready to start.", params->self_id);
     }
+
 public:
     D2VINSNode(ros::NodeHandle & nh) {
         Init(nh);
@@ -157,8 +159,9 @@ int main(int argc, char **argv)
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
     D2VINSNode d2vins(n);
-    ros::MultiThreadedSpinner spinner(4);
-    spinner.spin();
+    ros::AsyncSpinner spinner(4);
+    spinner.start();
+    ros::waitForShutdown();
     return 0;
 }
 
