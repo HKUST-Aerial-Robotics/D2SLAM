@@ -230,8 +230,8 @@ VINSFrame * D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
             //Use IMU
             if (params->verbose) {
                 printf("\033[0;31m[D2VINS::D2Estimator] Initialization failed for remote %d@%d. will not add\033[0m\n", _frame.frame_id, _frame.drone_id);
-                return nullptr;
             }
+            return nullptr;
         } else {
             if (params->verbose) {
                 printf("\033[0;32m[D2VINS::D2Estimator] Initial first remoteframe@drone%d with PnP: %s\033[0m\n", r_drone_id, pnp_init.second.toStr().c_str());

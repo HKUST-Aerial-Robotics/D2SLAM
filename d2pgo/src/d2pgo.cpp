@@ -70,8 +70,8 @@ bool D2PGO::solve() {
         if (solver==nullptr) {
             solver = new ARockPGO(&state, this, config.arock_config);
         } else {
-            // static_cast<ARockPGO*>(solver)->resetResiduals();
-            solver = new ARockPGO(&state, this, config.arock_config);
+            static_cast<ARockPGO*>(solver)->resetResiduals();
+            // solver = new ARockPGO(&state, this, config.arock_config);
         }
     }
 
@@ -211,7 +211,7 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
             auto frames = state.getFrames(self_id);
             for (auto frame : frames) {
                 if (frame->reference_frame_id == main_id) {
-                    // printf("[D2PGO%d] Set frame %ld constant reference_frame %d \n", self_id, frame->frame_id, frame->reference_frame_id);
+                    printf("[D2PGO%d] Set frame %ld constant reference_frame %d \n", self_id, frame->frame_id, frame->reference_frame_id);
                     auto pointer = state.getPoseState(frame->frame_id);
                     problem.SetParameterBlockConstant(pointer);
                     break;
