@@ -101,12 +101,12 @@ RUN   git clone https://github.com/facebookresearch/faiss.git && \
       rm -rf ../faiss
 
 #Install OpenCV4 with CUDA
-RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip -O opencv.zip && \
+RUN   apt update && \
+      apt install libgtk2.0-dev -y && \
+      wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip -O opencv.zip && \
       unzip opencv.zip && \
       rm opencv.zip && \
       git clone https://github.com/opencv/opencv_contrib.git -b 4.6.0 && \
-      rm -rf opencv_contrib/modules/sfm && \
-      rm -rf opencv_contrib/modules/wechat_qrcode && \
       cd opencv-${OPENCV_VERSION} && \
       mkdir build && cd build && \
       cmake .. \
@@ -119,7 +119,16 @@ RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip -O openc
             -D OPENCV_DNN_CUDA=ON \
             -D OPENCV_ENABLE_NONFREE=ON \
             -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
-            -D BUILD_EXAMPLES=OFF && \
+            -D BUILD_EXAMPLES=OFF \
+            -D BUILD_opencv_java=OFF \
+            -D BUILD_opencv_python=OFF \
+            -D BUILD_TESTS=OFF \
+            -D BUILD_PERF_TESTS=OFF \
+            -D BUILD_opencv_apps=OFF \
+            -D BUILD_LIST=calib3d,features2d,highgui,dnn,imgproc,imgcodecs,\
+cudev,cudaoptflow,cudaimgproc,cudalegacy,cudaarithm,cudacodec,cudastereo,\
+cudafeatures2d,xfeatures2d,tracking,stereo,\
+aruco,videoio && \
       make -j $(USE_PROC) && \
       make install 
 
