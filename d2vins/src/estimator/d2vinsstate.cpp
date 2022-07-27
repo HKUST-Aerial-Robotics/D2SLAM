@@ -43,6 +43,7 @@ VINSFrame * D2EstimatorState::addVINSFrame(const VINSFrame & _frame) {
         _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
         _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
     }
+    frame->reference_frame_id = reference_frame_id;
     return frame;
 }
 
@@ -426,8 +427,9 @@ VINSFrame * D2EstimatorState::addFrame(const VisualImageDescArray & images, cons
 
     lmanager.addKeyframe(images, td);
     if (params->verbose) {
-        printf("[D2VINS::D2EstimatorState] add frame %ld@%d iskeyframe %d with %d images, current %ld frame\n", 
-            images.frame_id, _frame.drone_id, frame->is_keyframe, images.images.size(), sld_wins[self_id].size());
+        printf("[D2VINS::D2EstimatorState%d] add frame %ld@%d ref %d iskeyframe %d with %d images, current %ld frame\n", 
+                self_id, images.frame_id, _frame.drone_id, frame->reference_frame_id, frame->is_keyframe, 
+                images.images.size(), sld_wins[self_id].size());
     }
     return frame;
 }

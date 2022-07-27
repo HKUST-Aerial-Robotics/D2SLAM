@@ -28,7 +28,6 @@ class D2PGONode {
 protected:
     void processImageArray(const swarm_msgs::VIOFrame & vioframe) {
         if (vioframe.is_keyframe) {
-            ROS_INFO("[D2PGONode@%d] processVIOFrame %ld", config.self_id, vioframe.frame_id);
             D2BaseFrame frame(vioframe);
             pgo->addFrame(frame);
         }

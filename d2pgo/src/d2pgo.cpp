@@ -10,8 +10,8 @@ namespace D2PGO {
 void D2PGO::addFrame(const D2BaseFrame & frame_desc) {
     const Guard lock(state_lock);
     state.addFrame(frame_desc);
-    // printf("[D2PGO@%d]add frame %ld pose %s from drone %d\n", self_id, frame_desc.frame_id,
-    //     Swarm::Pose(state.getPoseState(frame_desc.frame_id)).toStr().c_str(), frame_desc.drone_id);
+    printf("[D2PGO@%d]add frame %ld ref %ld pose %s from drone %d\n", self_id, frame_desc.frame_id, frame_desc.reference_frame_id,
+        Swarm::Pose(state.getPoseState(frame_desc.frame_id)).toStr().c_str(), frame_desc.drone_id);
     updated = true;
 }
 
@@ -205,6 +205,19 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
         auto frame_id = state.headId(self_id);
         auto pointer = state.getPoseState(frame_id);
         problem.SetParameterBlockConstant(pointer);
+    } else {
+        if (config.mode >= PGO_MODE_DISTRIBUTED_AROCK && self_id != main_id) {
+            //In this case we found the first frame of the self drone which reference_frame_id is main_id
+            auto frames = state.getFrames(self_id);
+            for (auto frame : frames) {
+                if (frame->reference_frame_id == main_id) {
+                    // printf("[D2PGO%d] Set frame %ld constant reference_frame %d \n", self_id, frame->frame_id, frame->reference_frame_id);
+                    auto pointer = state.getPoseState(frame->frame_id);
+                    problem.SetParameterBlockConstant(pointer);
+                    break;
+                }
+            }
+        }
     }
 }
 
