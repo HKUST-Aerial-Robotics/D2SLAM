@@ -606,12 +606,14 @@ void LoopDetector::drawMatched(const VisualImageDescArray & frame_array_a,
 
         sprintf(title, "%s", DP_b_to_a.toStr().c_str());
         cv::putText(show, title, cv::Point2f(20, 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
-        sprintf(title, "%d<->%d", 
-            frame_array_b.frame_id,
-            frame_array_a.frame_id);
+        sprintf(title, "%d<->%d", frame_array_b.frame_id, frame_array_a.frame_id);
         cv::putText(show, title, cv::Point2f(20, 70), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
-        
-        } else {
+        sprintf(title, "Ego A: %s", frame_array_a.pose_drone.toStr().c_str());
+        cv::putText(show, title, cv::Point2f(20, 90), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+        sprintf(title, "Ego B: %s", frame_array_b.pose_drone.toStr().c_str());
+        cv::putText(show, title, cv::Point2f(20, 110), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+
+    } else {
         sprintf(title, "FAILED LOOP %d->%d dt %3.3fs inliers %d", frame_array_b.drone_id, frame_array_a.drone_id, dt, inliers.size());
         cv::putText(show, title, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
     }

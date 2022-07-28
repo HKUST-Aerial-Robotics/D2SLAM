@@ -21,6 +21,7 @@ struct D2PGOConfig {
     int min_solve_size = 2;
     double min_cov_len = 0.1;
     bool enable_ego_motion = true;
+    double loop_distance_threshold = 1.2;
 };
 
 class D2PGO {

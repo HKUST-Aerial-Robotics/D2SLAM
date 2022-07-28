@@ -17,6 +17,10 @@ void D2PGO::addFrame(const D2BaseFrame & frame_desc) {
 
 void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
     const Guard lock(state_lock);
+    if (loop_info.relative_pose.pos().norm() > config.loop_distance_threshold) {
+        printf("[D2PGO@%d]loop distance %.1fm too large, ignore\n", self_id, loop_info.relative_pose.pos().norm());
+        return;
+    }
     loops.emplace_back(loop_info);
     // printf("Adding edge between keyframe %ld<->%ld drone %d<->%d hasKF %d %d\n ", loop_info.keyframe_id_a, loop_info.keyframe_id_b,
     //         loop_info.id_a, loop_info.id_b, state.hasFrame(loop_info.keyframe_id_a), state.hasFrame(loop_info.keyframe_id_b));
@@ -75,7 +79,7 @@ bool D2PGO::solve() {
         }
     }
 
-    used_frames.clear();
+    // used_frames.clear();
     setupLoopFactors(solver);
     if (config.enable_ego_motion) {
         setupEgoMotionFactors(solver);
@@ -129,6 +133,9 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver) {
             used_frames.insert(loop.keyframe_id_a);
             used_frames.insert(loop.keyframe_id_b);
             used_loops_count ++;
+            // if (loop.id_a != loop.id_b) 
+            //     printf("[D2PGO::setupLoopFactors@%d] add loop %ld->%ld pose: %s\n", 
+            //         self_id, loop.keyframe_id_a, loop.keyframe_id_b, loop.relative_pose.toStr().c_str());
         }
     }
 }
@@ -227,6 +234,9 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
     for (auto drone_id : state.availableDrones()) {
         trajs[drone_id] = Swarm::DroneTrajectory(drone_id, false);
         for (auto frame : state.getFrames(drone_id)) {
+            if (used_frames.find(frame->frame_id) == used_frames.end()) {
+                continue;
+            }
             auto pose = frame->odom.pose();
             if (config.pgo_pose_dof == PGO_POSE_4D) {
                 //Then we need to combine the roll pitch from ego motion

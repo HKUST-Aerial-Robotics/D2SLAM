@@ -212,12 +212,17 @@ void ARockSolver::updateDualStates() {
                 Map<VectorXd> cur_est_state(state_pointer, param_info.size);
                 VectorXd delta = (avg_state - cur_est_state)*config.eta_k;
                 delta(3) = Utility::NormalizeAngle(delta(3));
+                // printf("\n[ARockSolver%d] Pose %d:\n", self_id, param_info.id);
+                // std::cout << "dual_state_local" << dual_state_local.transpose() << std::endl;
+                // std::cout << "dual_state_remote" << dual_state_remote.transpose() << std::endl;
+                // std::cout << "avg_dual_state" << avg_state.transpose() << std::endl  << std::endl;
+                // std::cout << "cur_state" << cur_est_state.transpose() << std::endl  << std::endl;
+                // std::cout << "delta " << delta.transpose() << std::endl;
                 dual_state_local = dual_state_local - delta;
                 dual_state_local(3) = Utility::NormalizeAngle(dual_state_local(3));
-                // printf("[ARockSolver%d] Pose %d delta_state: ", self_id, param_info.id);
-                // std::cout << delta.transpose() << std::endl;
-                // std::cout << "dual_state_local" << dual_state_local.transpose() << std::endl;
-                // std::cout << "avg_state" << avg_state.transpose() << std::endl  << std::endl;
+                // avg_state = (dual_state_local + dual_state_remote)/2;
+                // std::cout << "dual_state_local new " << dual_state_local.transpose() << std::endl;
+                // std::cout << "avg_dual_state   new " << avg_state.transpose() << std::endl;
             } else {
                 //Is a vector.
                 VectorXd dual_state_remote = dual_states_remote.at(remote_drone_id).at(state_pointer);
