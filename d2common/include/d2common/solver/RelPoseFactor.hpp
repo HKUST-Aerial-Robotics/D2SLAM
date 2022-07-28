@@ -52,6 +52,11 @@ public:
     static ceres::CostFunction * Create(const Swarm::Pose & _relative_pose, const Eigen::Matrix6d & _sqrt_inf) {
         return new RelPoseFactor(_relative_pose, _sqrt_inf);
     }
+    
+    static ceres::CostFunction* Create(const Swarm::GeneralMeasurement2Drones* _loc) {
+        auto loop = static_cast<const Swarm::LoopEdge*>(_loc);
+        return new RelPoseFactor(loop->relative_pose, loop->sqrt_information_matrix());
+    }
 };
 
 class RelPoseFactor4D {

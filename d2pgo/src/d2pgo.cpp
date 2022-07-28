@@ -3,6 +3,7 @@
 #include <d2common/solver/RelPoseFactor.hpp>
 #include <d2common/solver/pose_local_parameterization.h>
 #include <d2common/solver/angle_manifold.h>
+#include "../test/posegraph_g2o.hpp"
 
 
 namespace D2PGO {
@@ -80,6 +81,7 @@ bool D2PGO::solve() {
     }
 
     // used_frames.clear();
+    used_loops.clear();
     setupLoopFactors(solver);
     if (config.enable_ego_motion) {
         setupEgoMotionFactors(solver);
@@ -87,6 +89,9 @@ bool D2PGO::solve() {
 
     if (config.mode == PGO_MODE_NON_DIST) {
         setStateProperties(solver->getProblem());
+    }
+    if (config.write_g2o) {
+        saveG2O();
     }
     auto report = solver->solve();
     state.syncFromState();
@@ -96,6 +101,15 @@ bool D2PGO::solve() {
     solve_count ++;
     updated = false;
     return true;
+}
+
+void D2PGO::saveG2O() {
+    std::vector<D2BaseFrame*> frames;
+    for (auto frame_id: used_frames) {
+        frames.emplace_back(state.getFramebyId(frame_id));
+    }
+    printf("[D2PGO::saveG2O@%d] save %ld frames\n", self_id, frames.size());
+    write_result_to_g2o(config.g2o_output_path, frames, used_loops, config.g2o_use_raw_data);
 }
 
 void D2PGO::evalLoop(const Swarm::LoopEdge & loop) {
@@ -124,7 +138,7 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver) {
             loop_factor = RelPoseFactor4D::Create(&loop);
             // this->evalLoop(loop);
         } else {
-            loop_factor = RelPoseFactor::Create(loop.relative_pose, loop.sqrt_information_matrix());
+            loop_factor = RelPoseFactor::Create(&loop);
         }
         if (state.hasFrame(loop.keyframe_id_a) && state.hasFrame(loop.keyframe_id_b)) {
             auto res_info = RelPoseResInfo::create(loop_factor, 
@@ -133,6 +147,9 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver) {
             used_frames.insert(loop.keyframe_id_a);
             used_frames.insert(loop.keyframe_id_b);
             used_loops_count ++;
+            if (config.write_g2o) {
+                used_loops.emplace_back(loop);
+            }
             // if (loop.id_a != loop.id_b) 
             //     printf("[D2PGO::setupLoopFactors@%d] add loop %ld->%ld pose: %s\n", 
             //         self_id, loop.keyframe_id_a, loop.keyframe_id_b, loop.relative_pose.toStr().c_str());
@@ -146,11 +163,13 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
     for (int i = 0; i < frames.size() - 1; i ++ ) {
         auto frame_a = frames[i];
         auto frame_b = frames[i + 1];
-        // Swarm::TsType tsa = frame_a->stamp * 1e9;
-        // Swarm::TsType tsb = frame_b->stamp * 1e9;
-        // auto cov = traj.covariance_between_appro_ts(tsa, tsb);
-        auto relpose6d = Swarm::Pose::DeltaPose(frame_a->initial_ego_pose, frame_b->initial_ego_pose, true);
-        double len = relpose6d.pos().norm();
+        Swarm::Pose rel_pose;
+        if (config.pgo_pose_dof == PGO_POSE_4D) {
+            rel_pose = Swarm::Pose::DeltaPose(frame_a->initial_ego_pose, frame_b->initial_ego_pose, true);
+        } else {
+            rel_pose = Swarm::Pose::DeltaPose(frame_a->initial_ego_pose, frame_b->initial_ego_pose);
+        }
+        double len = rel_pose.pos().norm();
         if (len < config.min_cov_len) {
             len = config.min_cov_len;
         }
@@ -159,18 +178,21 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
             + 0.5*Matrix3d::Identity()*config.yaw_covariance_per_meter*len*len;
         cov.block<3, 3>(3, 3) = Matrix3d::Identity()*config.yaw_covariance_per_meter*len;
         Matrix6d sqrt_info = cov.inverse().cwiseAbs().cwiseSqrt();
+        Swarm::LoopEdge loop(frame_a->frame_id, frame_b->frame_id, rel_pose, sqrt_info);
         if (config.pgo_pose_dof == PGO_POSE_4D) {
-            auto relpose4d = Swarm::Pose::DeltaPose(frame_a->initial_ego_pose, frame_b->initial_ego_pose, true);
-            auto factor = RelPoseFactor4D::Create(relpose4d, sqrt_info.block<3,3>(0, 0), sqrt_info(5, 5));
+            auto factor = RelPoseFactor4D::Create(&loop);
             auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id, true);
             solver->addResidual(res_info);
         } else if (config.pgo_pose_dof == PGO_POSE_6D) {
-            auto factor = RelPoseFactor::Create(relpose6d, sqrt_info);
+            auto factor = RelPoseFactor::Create(&loop);
             auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id, false);
             solver->addResidual(res_info);
         }
         used_frames.insert(frame_a->frame_id);
         used_frames.insert(frame_b->frame_id);
+        if (config.write_g2o) {
+            used_loops.emplace_back(loop);
+        }
     }
 }
 

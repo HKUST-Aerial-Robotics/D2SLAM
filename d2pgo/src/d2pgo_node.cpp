@@ -107,6 +107,9 @@ protected:
             exit(-1);
         }
         fsSettings["output_path"] >> output_folder;
+        config.write_g2o = (int) fsSettings["write_g2o"];
+        fsSettings["g2o_output_path"] >> config.g2o_output_path;
+        config.g2o_output_path = output_folder + "/" + config.g2o_output_path;
         config.mode = static_cast<PGO_MODE>((int) fsSettings["pgo_mode"]);
         nh.param<int>("self_id", config.self_id, -1);
         config.ceres_options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;

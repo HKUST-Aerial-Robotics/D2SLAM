@@ -169,15 +169,38 @@ void read_g2o_multi_agents(std::string path,
         keyframeid_agent_pose.size(), edges.size());
 }
 
-void write_result_to_g2o(const std::string & path, const std::vector<D2BaseFrame*> & frames) {
+void write_result_to_g2o(const std::string & path, 
+    const std::vector<D2BaseFrame*> & frames, 
+    const std::vector<Swarm::LoopEdge> & edges,
+    bool write_ego_pose) {
     std::fstream file;
     file.open(path.c_str(), std::fstream::out);
     for (auto & frame : frames) {
-        Swarm::Pose pose = frame->odom.pose();
+        Swarm::Pose pose;
+        if (write_ego_pose) {
+            pose = frame->initial_ego_pose;
+        } else {
+            pose = frame->odom.pose();
+        }
         auto quat = pose.att();
         auto pos = pose.pos();
         file << "VERTEX_SE3:QUAT " << frame->frame_id << " " << pos.x() << " " << pos.y() << " " << pos.z() << " ";
         file << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w() << std::endl;
+    }
+
+    for (auto & edge : edges) {
+        Swarm::Pose pose = edge.relative_pose;
+        auto info = edge.information_matrix();
+        auto quat = pose.att();
+        auto pos = pose.pos();
+        file << "EDGE_SE3:QUAT " << edge.keyframe_id_a << " " << edge.keyframe_id_b << " " << pos.x() << " " << pos.y() << " " << pos.z() << " ";
+        file << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w() << " ";
+        for (int i = 0; i < 6; ++i) {
+            for (int j = 0; j < 6; ++j) {
+                file << info(i, j) << " ";
+            }
+        }
+        file << std::endl;
     }
     file.close();
 }

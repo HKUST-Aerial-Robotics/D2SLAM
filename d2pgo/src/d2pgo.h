@@ -22,6 +22,9 @@ struct D2PGOConfig {
     double min_cov_len = 0.1;
     bool enable_ego_motion = true;
     double loop_distance_threshold = 1.2;
+    bool write_g2o = false;
+    std::string g2o_output_path = "";
+    bool g2o_use_raw_data = true;
 };
 
 class D2PGO {
@@ -40,6 +43,8 @@ protected:
     int solve_count = 0;
     bool updated = false;
     SolverWrapper * solver = nullptr;
+    std::vector<Swarm::LoopEdge> used_loops;
+    void saveG2O();
 public:
     std::function<void(const DPGOData & )> bd_data_callback;
     D2PGO(D2PGOConfig _config):

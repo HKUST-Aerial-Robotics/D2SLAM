@@ -45,7 +45,7 @@ Panels:
         - /PGOPath1
         - /PGOPath21
       Splitter Ratio: 0.5
-    Tree Height: 305
+    Tree Height: 511
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -488,7 +488,7 @@ Visualization Manager:
       Buffer Length: 1
       Class: rviz/Path
       Color: 85; 0; 255
-      Enabled: false
+      Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
@@ -507,12 +507,12 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic: /d2pgo/pgo_path_1
       Unreliable: false
-      Value: false
+      Value: true
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
       Color: 255; 0; 255
-      Enabled: false
+      Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
@@ -531,7 +531,7 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic: /d2pgo/pgo_path_2
       Unreliable: false
-      Value: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 211; 215; 207
@@ -558,7 +558,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 22.03141212463379
+      Distance: 16.63945198059082
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -566,17 +566,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -2.4198451042175293
-        Y: 0.8563224077224731
-        Z: 0
+        X: -11.843106269836426
+        Y: -1.5488742589950562
+        Z: 1.33514404296875e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.044793963432312
+      Pitch: 1.3997936248779297
       Target Frame: world
-      Yaw: 1.3250216245651245
+      Yaw: 1.505021572113037
     Saved:
       - Class: rviz/XYOrbit
         Distance: 9.527398109436035
@@ -614,5 +614,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1316
-  X: 1224
-  Y: 254
+  X: 1970
+  Y: 182

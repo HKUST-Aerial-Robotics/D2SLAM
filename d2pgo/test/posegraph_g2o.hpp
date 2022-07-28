@@ -36,5 +36,7 @@ void read_g2o_multi_agents(
 );
 
 void write_result_to_g2o(const std::string & path, 
-    const std::vector<D2BaseFrame*> & frames);
+    const std::vector<D2BaseFrame*> & frames, 
+    const std::vector<Swarm::LoopEdge> & edges,
+    bool write_ego_pose=false);
 }

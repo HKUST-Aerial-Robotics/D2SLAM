@@ -38,6 +38,7 @@ include_directories(
 add_library(${PROJECT_NAME}
   src/d2pgo.cpp
   src/ARockPGO.cpp
+  test/posegraph_g2o.cpp
 )
 
 add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -58,7 +59,7 @@ target_link_libraries(${PROJECT_NAME}_node
 
 add_executable(${PROJECT_NAME}_test 
   test/d2pgo_test.cpp 
-  test/posegraph_g2o.cpp)
+)
 
 add_dependencies(${PROJECT_NAME}_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_test

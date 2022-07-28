@@ -15,6 +15,9 @@ class D2PGOTester {
     bool is_4dof;
     std::thread th;
     std::string output_path;
+
+    std::vector<Swarm::LoopEdge> edges;
+    std::map<FrameIdType, D2BaseFrame> keyframeid_agent_pose;
 public:
     int self_id;
     void initSubandPub(ros::NodeHandle & nh) {
@@ -33,8 +36,6 @@ public:
             ROS_INFO("[D2PGO] agent %d parse g2o file: %s\n", self_id, g2o_path.c_str());
         else
             ROS_INFO("[D2PGO@%d] Need to indicate g2o path\n", self_id);
-        std::map<FrameIdType, D2BaseFrame> keyframeid_agent_pose;
-        std::vector<Swarm::LoopEdge> edges;
         read_g2o_agent(g2o_path, keyframeid_agent_pose, edges, is_4dof, self_id);
         ROS_INFO("[D2PGO@%d] Read %ld keyframes and %ld edges\n", self_id, keyframeid_agent_pose.size(), edges.size());
 
@@ -103,7 +104,7 @@ public:
 
     void writeDataG2o() {
         auto local_frames = pgo->getAllLocalFrames();
-        write_result_to_g2o(output_path, local_frames);
+        write_result_to_g2o(output_path, local_frames, edges);
         printf("[D2PGO@%d] Write result to %s\n", self_id, output_path.c_str());
     }
 
