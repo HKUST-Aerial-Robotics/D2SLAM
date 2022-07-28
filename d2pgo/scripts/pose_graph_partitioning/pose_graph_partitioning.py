@@ -60,7 +60,7 @@ def repartitioning_with_parmetis(pg, agent_num, parts, obj, itr):
     # print(f"ParMetis adptive_repart_kway takes {(end - start)*1000}ms")
     return objval, parts
 
-def partitioning(pg, obj="vol", agent_num=None, show=False, method="METIS", iteration=10, pathes=None, parts=None, itr=1000):
+def partitioning(pg:PoseGraph, obj="vol", agent_num=None, show=False, method="METIS", iteration=10, pathes=None, parts=None, itr=1000):
     if agent_num is None:
         agent_num = pg.agent_num
 

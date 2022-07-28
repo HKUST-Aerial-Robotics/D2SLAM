@@ -16,6 +16,7 @@
     <arg name="enable_pgo" default="false" />
     <arg name="rviz" default="false" />
     <arg name="verbose" default="false" />
+    <arg name="is_4dof" default="true" />
     
     <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" >
         <rosparam>
@@ -46,7 +47,6 @@
             pos_covariance_per_meter: 0.01
             yaw_covariance_per_meter: 0.003
             enable_network: true
-            is_4dof: true
             ransacReprojThreshold: 10.0
         </rosparam>
         <param name="pca_comp_path" value="$(find d2frontend)/models/components_.csv" type="string" />
@@ -65,11 +65,13 @@
         <param name="vins_config_path" value="$(arg config)" type="string" />
         <param name="enable_loop" value="$(arg enable_loop)" type="bool" />
         <param name="verbose" value="$(arg verbose)" type="bool" />
+        <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
         <remap from="~imu" to="/dji_sdk_1/dji_sdk/imu" />
     </node>
     <include file="$(find d2pgo)/launch/d2pgo.launch" if="$(arg enable_pgo)" >
         <arg name="config" value="$(arg config)" />
         <arg name="self_id" value="$(arg self_id)" />
+        <arg name="is_4dof" value="$(arg is_4dof)" />
     </include>
     <include file="$(find d2comm)/launch/d2comm.launch" if="$(arg enable_pgo)" >
         <arg name="self_id" value="$(arg self_id)" />

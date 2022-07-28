@@ -196,7 +196,7 @@ void write_result_to_g2o(const std::string & path,
         file << "EDGE_SE3:QUAT " << edge.keyframe_id_a << " " << edge.keyframe_id_b << " " << pos.x() << " " << pos.y() << " " << pos.z() << " ";
         file << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w() << " ";
         for (int i = 0; i < 6; ++i) {
-            for (int j = 0; j < 6; ++j) {
+            for (int j = i; j < 6; ++j) {
                 file << info(i, j) << " ";
             }
         }

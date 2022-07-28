@@ -36,13 +36,8 @@ VINSFrame * D2EstimatorState::addVINSFrame(const VINSFrame & _frame) {
     auto * frame = new VINSFrame;
     *frame = _frame;
     frame_db[frame->frame_id] = frame;
-    if (is_4dof) {
-        _frame_pose_state[frame->frame_id] = new state_type[POSE4D_SIZE];
-        _frame.odom.pose().to_vector_xyzyaw(_frame_pose_state[frame->frame_id]);
-    } else {
-        _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
-        _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
-    }
+    _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
+    _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
     frame->reference_frame_id = reference_frame_id;
     return frame;
 }

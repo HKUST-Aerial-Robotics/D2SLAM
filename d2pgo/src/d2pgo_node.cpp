@@ -112,6 +112,13 @@ protected:
         config.g2o_output_path = output_folder + "/" + config.g2o_output_path;
         config.mode = static_cast<PGO_MODE>((int) fsSettings["pgo_mode"]);
         nh.param<int>("self_id", config.self_id, -1);
+        bool is_4dof;
+        nh.param<bool>("is_4dof", is_4dof, true);
+        if (is_4dof) {
+            config.pgo_pose_dof = PGO_POSE_4D;
+        } else {
+            config.pgo_pose_dof = PGO_POSE_6D;
+        }
         config.ceres_options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
         config.ceres_options.num_threads = 1;
         config.ceres_options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;// ceres::DOGLEG;

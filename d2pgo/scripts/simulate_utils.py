@@ -95,17 +95,32 @@ def call_dslam_opti(g2o_folder,  output_folder, rate=1e-3, tor=1e-4, is_async="t
     min_it, max_it, initial, final, totalv = pocess_DSLAM_result(output)
     return min_it, max_it, initial, final, totalv, 0.0
 
-def loadSESyncResult(path, pg):
+def loadSESyncResult(path, pg: PoseGraph):
     data = np.loadtxt(path)
     poses_num = data.shape[1]//4
     assert poses_num == len(pg.keyframes), f"poses num error {poses_num}/{len(pg.keyframes)}"
     for i in range(0, poses_num):
         T = data[:, i]
         R = data[:, poses_num+i*3:poses_num+i*3+3]
-        pg.keyframes[i].pos = T
+        _id = pg.index2id[i]
+        pg.keyframes[_id].pos = T
         R_ = np.identity(4)
         R_[0:3, 0:3] = R
-        pg.keyframes[i].quat = quaternion_from_matrix(R_)
+        pg.keyframes[_id].quat = quaternion_from_matrix(R_)
+    return pg
+
+def loadDPGOResult(path, pg: PoseGraph):
+    data = np.loadtxt(path, delimiter=",")
+    poses_num = data.shape[1]//4
+    assert poses_num == len(pg.keyframes), f"poses num error {poses_num}/{len(pg.keyframes)}"
+    for i in range(0, poses_num):
+        T = data[:, i]
+        R = data[:, poses_num+i*3:poses_num+i*3+3]
+        _id = pg.index2id[i]
+        pg.keyframes[_id].pos = T
+        R_ = np.identity(4)
+        R_[0:3, 0:3] = R
+        pg.keyframes[_id].quat = quaternion_from_matrix(R_)
     return pg
 
 def angular_error_quat(quat1, quat2):
@@ -226,15 +241,16 @@ def count_total_v(pgms):
 
 MB=1024*1024
 
-def generate_groundtruth_sesync(pg0, data_folder):
-    pg = copy.deepcopy(pg0)
+def generate_groundtruth_sesync(pg0: PoseGraph, data_folder):
+    pg: PoseGraph = copy.deepcopy(pg0)
     if pg.agent_num() != 1:
-        print("union...")
         partitioning(pg, agent_num=1,method="union")
-    pg.write_to_g2o_folder(f"{data_folder}/SE-Sync", cvt_id=False)
+    pg.rename_keyframes_by_index()
+    pg.write_to_g2o_folder(f"{data_folder}/SE-Sync", cvt_id=False, update_edges=False)
     optimized_path = f"{data_folder}/SE-Sync/optimized_poses.txt"
     call_SESync(f"{data_folder}/SE-Sync/0.g2o", optimized_path)
     pg = loadSESyncResult(optimized_path, pg)
+    pg.rename_keyframes_from_index()
     return pg
 
 def generate_groundtruth_DGS(pg, data_folder, agent_num=10):

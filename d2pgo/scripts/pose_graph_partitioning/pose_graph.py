@@ -349,7 +349,7 @@ class PoseGraph():
                 if agent_id_b != agent_id_a and duplicate_inter_edge:
                     self.agents[agent_id_b].add_edge(edge)
             except:
-                raise Exception(f"Unknow agent! {edge}")
+                raise Exception(f"Unknown agent! {edge}")
 
         # print(f"Update {count} edge")        
         return len(self.edges), cut
@@ -376,7 +376,7 @@ class PoseGraph():
                 else:
                     edge.is_inter = False
             except:
-                raise Exception(f"Unknow agent! {edge}")
+                raise Exception(f"Unknown agent! {edge}")
         return cut
 
     def statistical(self):
@@ -705,12 +705,11 @@ class PoseGraph():
                 _axes_x.append(x_vec)
                 _axes_y.append(y_vec)
                 _axes_z.append(z_vec)
-
-            poses.append(np.array(_poses))
-            axes_x.append(np.array(_axes_x))
-            axes_y.append(np.array(_axes_y))
-            axes_z.append(np.array(_axes_z))
-
+            if len(_poses) > 0:
+                poses.append(_poses)
+                axes_x.append(_axes_x)
+                axes_y.append(_axes_y)
+                axes_z.append(_axes_z)
         for edge in self.edges:
             pos = self.keyframes[edge.keyframe_ida].pos
             edges_a.append(pos)
@@ -731,7 +730,13 @@ class PoseGraph():
             axis_len = -1, plot3d=True, show_edges=True, show_title=True, elev=45, azim=45, show_axis_labels=True,
             color_override=None):
         poses, axes_x, axes_y, axes_z, kf_mc, edges_a, edges_b, edge_real, edge_color= self.serialize(index)
-        _poses = np.concatenate(poses, axis=0)
+        if len(poses) > 1:
+            _poses = np.concatenate(poses, axis=0)
+            print("Concat")
+        else:
+            _poses = np.array(poses[0])
+            print("No Concat")
+        print(type(_poses))
         range_x = np.max(_poses[:,0]) - np.min(_poses[:,0])
         range_y = np.max(_poses[:,1]) - np.min(_poses[:,1])
         range_z = np.max(_poses[:,2]) - np.min(_poses[:,2])
@@ -774,7 +779,9 @@ class PoseGraph():
                 ax.set_box_aspect(range_y/range_x)
 
         for i in range(len(poses)):
-            _poses = poses[i]
+            _poses = np.array(poses[i])
+            if _poses.shape[0] == 0:
+                continue
             _axes_x = axes_x[i]
             _axes_y = axes_y[i]
             _axes_z = axes_z[i]
@@ -857,6 +864,8 @@ class PoseGraph():
                     self.keyframes[_id].pos = pos
                     self.keyframes[_id].quat = quat
             else:
+                if _id in self.keyframes:
+                    continue
                 kf = KeyFrame(_id,  agent_id, pos, quat)
                 self.add_keyframe(kf, agent_id)
         vertices_2d_matched = re.findall("VERTEX_SE2 (\\S+) (\\S+) (\\S+) (\\S+)", content, flags=0)
@@ -869,9 +878,10 @@ class PoseGraph():
                 self.keyframes[_id].pos = pos
                 self.keyframes[_id].quat = quat
             else:
+                if _id in self.keyframes:
+                    continue
                 kf = KeyFrame(_id,  agent_id, pos, quat)
                 self.add_keyframe(kf, agent_id)
-            
         if update_only:
             return
         # edges_matched = re.findall("EDGE_SE3:QUAT\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)", content, flags=0)
@@ -975,7 +985,21 @@ class PoseGraph():
         if prt:
             print(f"Total agents {len(self.agents)} keyframes {len(self.keyframes)} edges {len(self.edges)} inter edge {inter_edge} comm_vol {self.communication_volume()} keyframes {min_keyframes}<->{max_keyframes}")
 
-    def write_to_g2o_folder(self, path, cvt_id=False, duplicate_inter_edge=True):
+    def rename_keyframes_by_index(self):
+        for kf_id in self.keyframes:
+            self.keyframes[kf_id].keyframe_id = self.id2index[kf_id]
+        for edge in self.edges:
+            edge.keyframe_ida = self.id2index[edge.keyframe_ida]
+            edge.keyframe_idb = self.id2index[edge.keyframe_idb]
+
+    def rename_keyframes_from_index(self):
+        for kf_id in self.keyframes:
+            self.keyframes[kf_id].keyframe_id = kf_id
+        for edge in self.edges:
+            edge.keyframe_ida = self.index2id[edge.keyframe_ida]
+            edge.keyframe_idb = self.index2id[edge.keyframe_idb]
+
+    def write_to_g2o_folder(self, path, cvt_id=False, duplicate_inter_edge=True, update_edges=True):
         #duplicate_inter_edge True for DGS. False for DSLAM
         import shutil
         from pathlib import Path
@@ -984,7 +1008,8 @@ class PoseGraph():
         except:
             pass
         Path(path).mkdir(parents=True, exist_ok=True)
-        self.update_edges(duplicate_inter_edge=duplicate_inter_edge)
+        if update_edges:
+            self.update_edges(duplicate_inter_edge=duplicate_inter_edge)
         c = 0
         for agent_id in self.agents:
             c += len(self.agents[agent_id].edges)
