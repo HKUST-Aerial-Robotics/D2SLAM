@@ -9,11 +9,12 @@
 using D2Common::Utility::TicToc;
 using D2Common::FrameIdType;
 
+
 #define PCM_DEBUG_OUTPUT
 
+namespace D2PGO {
 std::fstream pcm_errors;
 FILE * f_logs;
-
 SwarmLocalOutlierRejection::SwarmLocalOutlierRejection(int _self_id, const SwarmLocalOutlierRejectionParams &_param, std::map<int, Swarm::DroneTrajectory> &_ego_motion_trajs):
         self_id(_self_id), param(_param), ego_motion_trajs(_ego_motion_trajs) {
     if (param.debug_write_pcm_errors) {
@@ -156,10 +157,6 @@ std::vector<Swarm::LoopEdge> SwarmLocalOutlierRejection::OutlierRejectionLoopEdg
     return good_loops;
 }
 
-bool SwarmLocalOutlierRejection::check_outlier_by_odometry_consistency(const Swarm::LoopEdge & loop) {
-    return false;
-}
-
 void SwarmLocalOutlierRejection::OutlierRejectionLoopEdgesPCM(const std::vector<Swarm::LoopEdge > & new_loops, int id_a, int id_b) {
     std::map<FrameIdType, int> bad_pair_count;
 
@@ -280,4 +277,5 @@ void SwarmLocalOutlierRejection::OutlierRejectionLoopEdgesPCM(const std::vector<
         good_loops_set[id_a][id_b].insert(_all_loops[i].id);
         good_loops_set[id_b][id_a].insert(_all_loops[i].id);
     }
+}
 }

@@ -11,9 +11,14 @@ namespace D2PGO {
 void D2PGO::addFrame(const D2BaseFrame & frame_desc) {
     const Guard lock(state_lock);
     state.addFrame(frame_desc);
-    printf("[D2PGO@%d]add frame %ld ref %ld pose %s from drone %d\n", self_id, frame_desc.frame_id, frame_desc.reference_frame_id,
+    printf("[D2PGO@%d]add frame %ld ref %d pose %s from drone %d\n", self_id, frame_desc.frame_id, frame_desc.reference_frame_id,
         frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
     updated = true;
+    if (ego_motion_trajs.find(frame_desc.drone_id) == ego_motion_trajs.end()) {
+        Swarm::DroneTrajectory traj(frame_desc.drone_id, true);
+        ego_motion_trajs[frame_desc.drone_id] = traj;
+    }
+    ego_motion_trajs[frame_desc.drone_id].push(frame_desc.stamp, frame_desc.initial_ego_pose, frame_desc.frame_id);
 }
 
 void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
@@ -22,7 +27,7 @@ void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
         printf("[D2PGO@%d]loop distance %.1fm too large, ignore\n", self_id, loop_info.relative_pose.pos().norm());
         return;
     }
-    loops.emplace_back(loop_info);
+    all_loops.emplace_back(loop_info);
     // printf("Adding edge between keyframe %ld<->%ld drone %d<->%d hasKF %d %d\n ", loop_info.keyframe_id_a, loop_info.keyframe_id_b,
     //         loop_info.id_a, loop_info.id_b, state.hasFrame(loop_info.keyframe_id_a), state.hasFrame(loop_info.keyframe_id_b));
     if (loop_info.relative_pose.pos().norm() > 1.0) {
@@ -82,7 +87,8 @@ bool D2PGO::solve() {
 
     // used_frames.clear();
     used_loops.clear();
-    setupLoopFactors(solver);
+    auto good_loops = rejection.OutlierRejectionLoopEdges(ros::Time::now(), all_loops);
+    setupLoopFactors(solver, good_loops);
     if (config.enable_ego_motion) {
         setupEgoMotionFactors(solver);
     }
@@ -129,10 +135,10 @@ void D2PGO::evalLoop(const Swarm::LoopEdge & loop) {
     std::cout << residuals.transpose() << "\n" << std::endl;
 }
 
-void D2PGO::setupLoopFactors(SolverWrapper * solver) {
+void D2PGO::setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::LoopEdge> & good_loops) {
     used_loops_count = 0;
     auto loss_function = new ceres::HuberLoss(1.0);    
-    for (auto loop : loops) {
+    for (auto loop : good_loops) {
         ceres::CostFunction * loop_factor = nullptr;
         if (config.pgo_pose_dof == PGO_POSE_4D) {
             loop_factor = RelPoseFactor4D::Create(&loop);

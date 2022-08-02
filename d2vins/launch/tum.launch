@@ -18,7 +18,7 @@
     <arg name="verbose" default="false" />
     <arg name="is_4dof" default="true" />
     
-    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" >
+    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="$(arg output)" >
         <rosparam>
             lcm_uri: udpm://224.0.0.251:7667?ttl=1
             jpg_quality: 75
