@@ -29,6 +29,7 @@ catkin_package(
 
 include_directories(
   # include
+  third_party/
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${CERES_INCLUDE_DIRS}
@@ -38,6 +39,11 @@ include_directories(
 add_library(${PROJECT_NAME}
   src/d2pgo.cpp
   src/ARockPGO.cpp
+  src/swarm_outlier_rejection/swarm_outlier_rejection.cpp
+  third_party/fast_max-clique_finder/src/findCliqueHeu.cpp
+  third_party/fast_max-clique_finder/src/findClique.cpp
+  third_party/fast_max-clique_finder/src/graphIO.cpp
+  third_party/fast_max-clique_finder/src/utils.cpp
   test/posegraph_g2o.cpp
 )
 
