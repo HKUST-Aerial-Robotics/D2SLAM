@@ -84,10 +84,16 @@ bool D2PGO::solve() {
             // solver = new ARockPGO(&state, this, config.arock_config);
         }
     }
-
     // used_frames.clear();
     used_loops.clear();
-    auto good_loops = rejection.OutlierRejectionLoopEdges(ros::Time::now(), all_loops);
+    //Use available loops for outlier rejection.
+    std::vector<Swarm::LoopEdge> available_loops;
+    for (const Swarm::LoopEdge & loop_info : all_loops) {
+        if (state.hasFrame(loop_info.keyframe_id_a) && state.hasFrame(loop_info.keyframe_id_b)) {
+            available_loops.emplace_back(loop_info);
+        }
+    }
+    auto good_loops = rejection.OutlierRejectionLoopEdges(ros::Time::now(), available_loops);
     setupLoopFactors(solver, good_loops);
     if (config.enable_ego_motion) {
         setupEgoMotionFactors(solver);
