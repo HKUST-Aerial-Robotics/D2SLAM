@@ -11,8 +11,8 @@ namespace D2PGO {
 void D2PGO::addFrame(const D2BaseFrame & frame_desc) {
     const Guard lock(state_lock);
     state.addFrame(frame_desc);
-    printf("[D2PGO@%d]add frame %ld ref %d pose %s from drone %d\n", self_id, frame_desc.frame_id, frame_desc.reference_frame_id,
-        frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
+    // printf("[D2PGO@%d]add frame %ld ref %d pose %s from drone %d\n", self_id, frame_desc.frame_id, frame_desc.reference_frame_id,
+    //     frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
     updated = true;
     if (ego_motion_trajs.find(frame_desc.drone_id) == ego_motion_trajs.end()) {
         Swarm::DroneTrajectory traj(frame_desc.drone_id, true);
@@ -91,8 +91,12 @@ bool D2PGO::solve() {
             available_loops.emplace_back(loop_info);
         }
     }
-    auto good_loops = rejection.OutlierRejectionLoopEdges(ros::Time::now(), available_loops);
-    setupLoopFactors(solver, good_loops);
+    if (config.enable_pcm) {
+        auto good_loops = rejection.OutlierRejectionLoopEdges(ros::Time::now(), available_loops);
+        setupLoopFactors(solver, good_loops);
+    } else {
+        setupLoopFactors(solver, available_loops);
+    }
     if (config.enable_ego_motion) {
         setupEgoMotionFactors(solver);
     }

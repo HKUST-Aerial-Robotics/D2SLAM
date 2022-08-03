@@ -58,6 +58,7 @@ public:
         nh.param<int>("max_steps", config.arock_config.max_steps, 10);
         nh.param<double>("rho_frame_T", config.arock_config.rho_frame_T, 0.1);
         nh.param<double>("rho_frame_theta", config.arock_config.rho_frame_theta, 0.1);
+        nh.param<double>("eta_k", config.arock_config.eta_k, 0.9);
         if (solver_type == "ceres") {
             config.mode = PGO_MODE_NON_DIST;
         } else {

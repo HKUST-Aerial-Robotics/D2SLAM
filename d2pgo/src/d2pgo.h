@@ -26,6 +26,7 @@ struct D2PGOConfig {
     bool write_g2o = false;
     std::string g2o_output_path = "";
     bool g2o_use_raw_data = true;
+    bool enable_pcm = false;
     SwarmLocalOutlierRejectionParams pcm_rej;
 };
 

@@ -10,6 +10,7 @@
     <arg name="delay_launch" default="0.5" />
     <arg name="rho_frame_T" default="0.006" />
     <arg name="rho_frame_theta" default="0.02" />
+    <arg name="eta_k" default="0.9" />
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 0)" >
         <arg name="self_id" value="0" />
@@ -22,6 +23,7 @@
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="eta_k" value="$(arg eta_k)" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 1)" >
@@ -35,6 +37,7 @@
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="eta_k" value="$(arg eta_k)" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 2)" >
@@ -48,6 +51,7 @@
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="eta_k" value="$(arg eta_k)" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 3)" >
@@ -61,6 +65,7 @@
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="eta_k" value="$(arg eta_k)" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 4)" >
@@ -74,6 +79,7 @@
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="eta_k" value="$(arg eta_k)" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 5)" >
@@ -87,6 +93,7 @@
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="eta_k" value="$(arg eta_k)" />
     </include>
     <node name="d2pgo" pkg="d2pgo" type="delay_launch_dpgo.sh" args="$(arg delay_launch)" if="$(arg wait_for_start)" />
 </launch>

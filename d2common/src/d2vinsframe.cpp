@@ -15,6 +15,7 @@ VINSFrame::VINSFrame(const VisualImageDescArray & frame, const IMUBuffer & buf, 
 
 VINSFrame::VINSFrame(const VisualImageDescArray & frame, const std::pair<IMUBuffer, int> & buf, const VINSFrame & prev_frame):
     D2BaseFrame(frame.stamp, frame.frame_id, frame.drone_id, frame.reference_frame_id, frame.is_keyframe, frame.pose_drone),
+    Ba(prev_frame.Ba), Bg(prev_frame.Bg),
     prev_frame_id(prev_frame.frame_id),
     imu_buf_index(buf.second) {
     pre_integrations = new IntegrationBase(buf.first, Ba, Bg);
