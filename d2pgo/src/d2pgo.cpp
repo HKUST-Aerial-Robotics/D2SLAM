@@ -145,8 +145,8 @@ void D2PGO::evalLoop(const Swarm::LoopEdge & loop) {
 
 void D2PGO::setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::LoopEdge> & good_loops) {
     used_loops_count = 0;
-    // auto loss_function = new ceres::HuberLoss(1.0);    
-    auto loss_function = nullptr; //new ceres::HuberLoss(1.0);    
+    auto loss_function = new ceres::HuberLoss(1.0);    
+    // auto loss_function = nullptr; //new ceres::HuberLoss(1.0);    
     for (auto loop : good_loops) {
         ceres::CostFunction * loop_factor = nullptr;
         if (config.pgo_pose_dof == PGO_POSE_4D) {
