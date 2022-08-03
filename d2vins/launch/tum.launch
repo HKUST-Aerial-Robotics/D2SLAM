@@ -1,6 +1,6 @@
 <launch>
     <arg name="show" default="false" />
-    <arg name="output" default="screen" />
+    <arg name="output" default="log" />
     <arg name="send_img"     default="false"/>
     <arg name="send_whole_img_desc"     default="false"/>
     <arg name="self_id"     default="1"/>

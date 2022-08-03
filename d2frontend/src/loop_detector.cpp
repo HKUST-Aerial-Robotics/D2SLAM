@@ -170,9 +170,24 @@ int LoopDetector::queryFrameIndexFromDatabase(const VisualImageDesc & img_desc, 
     int ret = -1;
     if (img_desc.drone_id == self_id) {
         //Then this is self drone
-        ret = queryIndexFromDatabase(img_desc, remote_index, true, thres, _config.MATCH_INDEX_DIST, similarity);
-        if (ret < 0)
-            ret = queryIndexFromDatabase(img_desc, local_index, false, thres, _config.MATCH_INDEX_DIST, similarity);
+        double similarity_local, similarity_remote;
+        int ret_remote = queryIndexFromDatabase(img_desc, remote_index, true, thres, _config.MATCH_INDEX_DIST, similarity_remote);
+        int ret_local = queryIndexFromDatabase(img_desc, local_index, false, thres, _config.MATCH_INDEX_DIST, similarity_local);
+        if (ret_remote >=0 && ret_local >= 0) {
+            if (similarity_local > similarity_remote) {
+                similarity = similarity_local;
+                return ret_local;
+            } else {
+                similarity = similarity_remote;
+                return similarity_remote;
+            }
+        } else if (ret_remote >=0) {
+            similarity = similarity_remote;
+            return similarity_remote;
+        } else if (ret_local >= 0) {
+            similarity = similarity_local;
+            return ret_local;
+        }
     } else {
         ret = queryIndexFromDatabase(img_desc, local_index, false, thres, _config.MATCH_INDEX_DIST, similarity);
     }

@@ -190,8 +190,8 @@ void SwarmLocalOutlierRejection::OutlierRejectionLoopEdgesPCM(const std::vector<
                 if (same_robot_pair == 1) {
                     p_edge2 = edge2.relative_pose;
                     //ODOM is tsa->tsb
-                    odom_a = ego_motion_trajs.at(edge1.id_a).get_relative_pose_by_frame_id(edge1.keyframe_id_a, edge2.keyframe_id_a, true);
-                    odom_b = ego_motion_trajs.at(edge1.id_b).get_relative_pose_by_frame_id(edge1.keyframe_id_b, edge2.keyframe_id_b, true);
+                    odom_a = ego_motion_trajs.at(edge1.id_a).get_relative_pose_by_frame_id(edge1.keyframe_id_a, edge2.keyframe_id_a, param.is_4dof);
+                    odom_b = ego_motion_trajs.at(edge1.id_b).get_relative_pose_by_frame_id(edge1.keyframe_id_b, edge2.keyframe_id_b, param.is_4dof);
                     if (param.debug_write_debug) {
                         traj_a = ego_motion_trajs.at(edge1.id_a).trajectory_length_by_ts(edge1.ts_a, edge2.ts_a);
                         traj_b = ego_motion_trajs.at(edge1.id_b).trajectory_length_by_ts(edge1.ts_b, edge2.ts_b);
@@ -201,8 +201,8 @@ void SwarmLocalOutlierRejection::OutlierRejectionLoopEdgesPCM(const std::vector<
 
                 }  else if (same_robot_pair == 2) {
                     p_edge2 = edge2.relative_pose.inverse();
-                    odom_a = ego_motion_trajs.at(edge1.id_a).get_relative_pose_by_frame_id(edge1.keyframe_id_a, edge2.keyframe_id_b, true);
-                    odom_b = ego_motion_trajs.at(edge1.id_b).get_relative_pose_by_frame_id(edge1.keyframe_id_b, edge2.keyframe_id_a, true);
+                    odom_a = ego_motion_trajs.at(edge1.id_a).get_relative_pose_by_frame_id(edge1.keyframe_id_a, edge2.keyframe_id_b, param.is_4dof);
+                    odom_b = ego_motion_trajs.at(edge1.id_b).get_relative_pose_by_frame_id(edge1.keyframe_id_b, edge2.keyframe_id_a, param.is_4dof);
                     
                     if (param.debug_write_debug) {
                         traj_a = ego_motion_trajs.at(edge1.id_a).trajectory_length_by_ts(edge1.ts_a, edge2.ts_b);

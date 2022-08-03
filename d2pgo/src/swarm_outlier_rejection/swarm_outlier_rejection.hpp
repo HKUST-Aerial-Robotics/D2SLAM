@@ -10,9 +10,10 @@ struct SwarmLocalOutlierRejectionParams {
     bool debug_write_pcm_errors = false;
     bool debug_write_debug = false;
     bool debug_write_pcm_good = false;
-    float pcm_thres = 0.6;
+    float pcm_thres = 1.635;
     bool enable_pcm = true;
     bool redundant = true;
+    bool is_4dof = true;
 };
 
 typedef std::vector<std::vector<int>> DisjointGraph;

@@ -28,11 +28,9 @@ void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
         return;
     }
     all_loops.emplace_back(loop_info);
-    // printf("Adding edge between keyframe %ld<->%ld drone %d<->%d hasKF %d %d\n ", loop_info.keyframe_id_a, loop_info.keyframe_id_b,
-    //         loop_info.id_a, loop_info.id_b, state.hasFrame(loop_info.keyframe_id_a), state.hasFrame(loop_info.keyframe_id_b));
-    if (loop_info.relative_pose.pos().norm() > 1.0) {
-        ROS_WARN("[D2PGO@%d]loop edge is too far: %s\n", self_id, loop_info.relative_pose.toStr().c_str());
-    }
+    all_loops.back().id = all_loops.size() - 1;
+    printf("[D2PGO::addLoop@%d] Add edge %ld<->%ld drone %d<->%d hasKF %d %d\n ", self_id, loop_info.keyframe_id_a,
+        loop_info.keyframe_id_b, loop_info.id_a, loop_info.id_b, state.hasFrame(loop_info.keyframe_id_a), state.hasFrame(loop_info.keyframe_id_b));
     if (add_state_by_loop) {
         // This is for debug...
         if (state.hasFrame(loop_info.keyframe_id_a) && !state.hasFrame(loop_info.keyframe_id_b)) {
@@ -143,7 +141,8 @@ void D2PGO::evalLoop(const Swarm::LoopEdge & loop) {
 
 void D2PGO::setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::LoopEdge> & good_loops) {
     used_loops_count = 0;
-    auto loss_function = new ceres::HuberLoss(1.0);    
+    // auto loss_function = new ceres::HuberLoss(1.0);    
+    auto loss_function = nullptr; //new ceres::HuberLoss(1.0);    
     for (auto loop : good_loops) {
         ceres::CostFunction * loop_factor = nullptr;
         if (config.pgo_pose_dof == PGO_POSE_4D) {
@@ -252,7 +251,7 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
             auto frames = state.getFrames(self_id);
             for (auto frame : frames) {
                 if (frame->reference_frame_id == main_id) {
-                    printf("[D2PGO%d] Set frame %ld constant reference_frame %d \n", self_id, frame->frame_id, frame->reference_frame_id);
+                    // printf("[D2PGO%d] Set frame %ld constant reference_frame %d \n", self_id, frame->frame_id, frame->reference_frame_id);
                     auto pointer = state.getPoseState(frame->frame_id);
                     problem.SetParameterBlockConstant(pointer);
                     break;

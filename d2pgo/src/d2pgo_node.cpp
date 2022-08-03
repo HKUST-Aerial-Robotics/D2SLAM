@@ -128,6 +128,8 @@ protected:
         config.arock_config.ceres_options = config.ceres_options;
         config.arock_config.rho_frame_T = fsSettings["pgo_rho_frame_T"];
         config.arock_config.rho_frame_theta = fsSettings["pgo_rho_frame_theta"];
+        config.pcm_rej.is_4dof = is_4dof;
+        
     }
 public:
     D2PGONode(ros::NodeHandle & nh) {
