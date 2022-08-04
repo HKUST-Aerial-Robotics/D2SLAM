@@ -197,48 +197,41 @@ int LoopDetector::queryFrameIndexFromDatabase(const VisualImageDesc & img_desc, 
 
 int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss::IndexFlatIP & index, bool remote_db, 
         double thres, int max_index, double & similarity) {
-    float distances[1000] = {0};
-    faiss::Index::idx_t labels[1000];
+    float similiarity[1024] = {0};
+    faiss::Index::idx_t labels[1024];
 
     int index_offset = 0;
     if (remote_db) {
         index_offset = REMOTE_MAGIN_NUMBER;
     }
-    
     for (int i = 0; i < 1000; i++) {
         labels[i] = -1;
     }
-
     int search_num = SEARCH_NEAREST_NUM + max_index;
-    index.search(1, img_desc.image_desc.data(), search_num, distances, labels);
+    index.search(1, img_desc.image_desc.data(), search_num, similiarity, labels);
     int return_frame_id = -1, return_drone_id = -1;
     int k = -1;
     for (int i = 0; i < search_num; i++) {
         if (labels[i] < 0) {
             continue;
         }
-
         if (index_to_frame_id.find(labels[i] + index_offset) == index_to_frame_id.end()) {
             ROS_WARN("[SWARM_LOOP] Can't find image %d; skipping", labels[i] + index_offset);
             continue;
         }
-
         // int return_frame_id = index_to_frame_id.at(labels[i] + index_offset);
         return_frame_id = labels[i] + index_offset;
         return_drone_id = keyframe_database[index_to_frame_id[return_frame_id]].drone_id;
-
-        //ROS_INFO("Return Label %d/%d/%d from %d, distance %f/%f", labels[i] + index_offset, index.ntotal, index.ntotal - max_index , return_drone_id, distances[i], thres);
-        
-        if (labels[i] <= index.ntotal - max_index && distances[i] > thres) {
+        // ROS_INFO("Return Label %d/%d/%d from %d, distance %f/%f", labels[i] + index_offset, index.ntotal, index.ntotal - max_index , return_drone_id, similiarity[i], thres);
+        if (labels[i] <= index.ntotal - max_index && similiarity[i] > thres) {
             //Is same id, max index make sense
             k = i;
-            thres = similarity = distances[i];
+            thres = similarity = similiarity[i];
             return return_frame_id;
         }
     }
-
-    // ROS_INFO("Database return %ld on drone %d, radius %f frame_id %d", labels[k] + index_offset, return_drone_id, distances[k], return_frame_id);
-    return return_frame_id;
+    // ROS_INFO("Database return %ld on drone %d, radius %f frame_id %d", labels[k] + index_offset, return_drone_id, similiarity[k], return_frame_id);
+    return -1;
 }
 
 
