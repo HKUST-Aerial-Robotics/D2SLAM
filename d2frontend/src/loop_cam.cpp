@@ -487,7 +487,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         //otherwise, d2vins only uses LK optical flow feature.
         if (_config.cnn_use_onnx) {
 #ifdef USE_ONNX
-            superpoint_onnx->inference(img, landmarks_2d, vframe.landmark_descriptor);
+            superpoint_onnx->inference(img, landmarks_2d, vframe.landmark_descriptor, vframe.landmark_scores);
 #endif
         } else {
 #ifdef USE_TENSORRT

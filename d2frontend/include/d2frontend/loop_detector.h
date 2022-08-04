@@ -32,7 +32,11 @@ struct LoopDetectorConfig {
     double pos_covariance_per_meter;
     double yaw_covariance_per_meter;
     bool enable_homography_test = false;
+    bool enable_superglue = true;
+    std::string superglue_model_path;
 };
+
+class SuperGlueOnnx;
 
 class LoopDetector {
     LoopDetectorConfig _config;
@@ -51,6 +55,7 @@ protected:
     
     double t0 = -1;
     int loop_count = 0;
+    SuperGlueOnnx * superglue = nullptr;
     
     //Use 3D points from frame a.
     bool computeLoop(const VisualImageDescArray & frame_array_a, const VisualImageDescArray & frame_array_b,
@@ -79,7 +84,6 @@ protected:
     void drawMatched(const VisualImageDescArray & fisheye_desc_a, const VisualImageDescArray & fisheye_desc_b,
             int main_dir_a, int main_dir_b, bool success, std::vector<int> inliers, Swarm::Pose DP_b_to_a,
             std::vector<std::pair<int, int>> index2dirindex_a, std::vector<std::pair<int, int>> index2dirindex_b);
-
 public:
     std::function<void(LoopEdge &)> on_loop_cb;
     int self_id = -1;

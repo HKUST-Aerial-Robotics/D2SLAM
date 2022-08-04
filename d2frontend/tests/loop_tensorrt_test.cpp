@@ -24,6 +24,7 @@ int main(int argc, char* argv[]) {
         ("superglue,g", po::value<std::string>()->default_value(""), "model path of SuperGlue")
         ("limage,l", po::value<std::string>()->default_value(""), "model path of image0")
         ("rimage,r", po::value<std::string>()->default_value(""), "model path of image1")
+        ("focal,f", po::value<double>()->default_value(384), "image focal length")
         ("width,w", po::value<int>()->default_value(640), "image width")
         ("height,h", po::value<int>()->default_value(480), "image height")
         ("num-test,t", po::value<int>()->default_value(100), "num of tests");
@@ -34,6 +35,7 @@ int main(int argc, char* argv[]) {
     int width = vm["width"].as<int>();
     int height = vm["height"].as<int>();
     int num_test = vm["num-test"].as<int>();
+    double focal = vm["focal"].as<double>();
 
     cv::Mat img0 = cv::imread(vm["limage"].as<std::string>());
     cv::Mat img1;
@@ -65,10 +67,10 @@ int main(int argc, char* argv[]) {
     auto global_desc0 = netvlad_onnx.inference(img_gray0);
     auto global_desc1 = netvlad_onnx.inference(img_gray1);
     for (size_t i = 0; i < kps0.size(); i ++) {
-        kps0_norm.emplace_back(cv::Point2f(kps0[i].x / width, kps0[i].y / height));
+        kps0_norm.emplace_back(cv::Point2f((kps0[i].x-width/2)/focal, (kps0[i].y-height/2)/focal));
     }
     for (size_t i = 0; i < kps1.size(); i ++) {
-        kps1_norm.emplace_back(cv::Point2f(kps0[i].x / width, kps0[i].y / height));
+        kps1_norm.emplace_back(cv::Point2f((kps1[i].x-width/2)/focal, (kps1[i].y-height/2)/focal));
     }
     std::cout << "Finish inference mobilenetvlad" << std::endl;
     auto matches = sg_onnx.inference(kps0_norm, kps1_norm, local_desc0, local_desc1, scores0, scores1);
@@ -113,10 +115,10 @@ int main(int argc, char* argv[]) {
         printf("SuperGlue: %.1fms\n", dt_superglue/num_test);
     }
     cv::drawMatches(img0, _kps0, img1, _kps1, matches, show);
-    for (auto match : matches) {
-        //Draw match distance on image
-        cv::putText(show, std::to_string(match.distance), kps0[match.queryIdx], cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
-    }
+    // for (auto match : matches) {
+    //     //Draw match scores on image
+    //     cv::putText(show, std::to_string(1-match.distance), kps0[match.queryIdx], cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
+    // }
     cv::imshow("Matches", show);
     cv::waitKey(-1);
 #else

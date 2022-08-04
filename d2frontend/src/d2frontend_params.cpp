@@ -95,6 +95,7 @@ namespace D2FrontEnd {
         nh.param<double>("loop_cov_ang", loopdetectorconfig->loop_cov_ang, 2.5e-04);
         nh.param<int>("min_direction_loop", loopdetectorconfig->MIN_DIRECTION_LOOP, 3);
         pgo_mode = static_cast<PGO_MODE>((int) fsSettings["pgo_mode"]);
+        nh.param<std::string>("superglue_model_path", loopdetectorconfig->superglue_model_path, "");
 
         //Network config
         nh.param<std::string>("lcm_uri", _lcm_uri, "udpm://224.0.0.251:7667?ttl=1");

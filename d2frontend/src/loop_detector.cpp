@@ -3,6 +3,7 @@
 #include <d2frontend/utils.h>
 #include <d2common/d2vinsframe.h>
 #include <swarm_msgs/relative_measurments.hpp>
+#include <d2frontend/CNN/superglue_onnx.h>
 
 using namespace std::chrono; 
 
@@ -398,24 +399,29 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
 
 bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, 
         Point3fVector &lm_pos_a, std::vector<int> &idx_a, Point2fVector &lm_norm_2d_b, std::vector<int> &idx_b) {
-    // ROS_INFO("[SWARM_LOOP](LoopDetector::computeCorrespondFeatures) %d %d ", img_desc_a.spLandmarkNum(), img_desc_a.landmark_descriptor.size());
-    assert(img_desc_a.spLandmarkNum() * FEATURE_DESC_SIZE == img_desc_a.landmark_descriptor.size() && "Desciptor size of new img desc must equal to to landmarks*256!!!");
-    assert(img_desc_b.spLandmarkNum() * FEATURE_DESC_SIZE == img_desc_b.landmark_descriptor.size() && "Desciptor size of old img desc must equal to to landmarks*256!!!");
-
-    auto & _b_lms = img_desc_b.landmarks;
-    auto & _a_lms = img_desc_a.landmarks;
-
-    cv::Mat descriptors_a( img_desc_a.spLandmarkNum(), FEATURE_DESC_SIZE, CV_32F);
-    memcpy(descriptors_a.data, img_desc_a.landmark_descriptor.data(), img_desc_a.landmark_descriptor.size()*sizeof(float));
-
-    cv::Mat descriptors_b( img_desc_b.spLandmarkNum(), FEATURE_DESC_SIZE, CV_32F);
-    memcpy(descriptors_b.data, img_desc_b.landmark_descriptor.data(), img_desc_b.landmark_descriptor.size()*sizeof(float));
-    
-    cv::BFMatcher bfmatcher(cv::NORM_L2, true);
     std::vector<cv::DMatch> _matches;
-    std::vector<unsigned char> mask;
-    bfmatcher.match(descriptors_a, descriptors_b, _matches);
-
+    auto & _a_lms = img_desc_a.landmarks;
+    auto & _b_lms = img_desc_b.landmarks;
+    
+    if (_config.enable_superglue) {
+        auto kpts_a = img_desc_a.landmarks2D(true, true);
+        auto kpts_b = img_desc_b.landmarks2D(true, true);
+        auto & desc0 = img_desc_a.landmark_descriptor;
+        auto & desc1 = img_desc_b.landmark_descriptor;
+        auto & scores0 = img_desc_a.landmark_scores;
+        auto & scores1 = img_desc_b.landmark_scores;
+        _matches = superglue->inference(kpts_a, kpts_b, desc0, desc1, scores0, scores1);
+    } else{ 
+        // ROS_INFO("[SWARM_LOOP](LoopDetector::computeCorrespondFeatures) %d %d ", img_desc_a.spLandmarkNum(), img_desc_a.landmark_descriptor.size());
+        assert(img_desc_a.spLandmarkNum() * FEATURE_DESC_SIZE == img_desc_a.landmark_descriptor.size() && "Desciptor size of new img desc must equal to to landmarks*256!!!");
+        assert(img_desc_b.spLandmarkNum() * FEATURE_DESC_SIZE == img_desc_b.landmark_descriptor.size() && "Desciptor size of old img desc must equal to to landmarks*256!!!");
+        cv::Mat descriptors_a( img_desc_a.spLandmarkNum(), FEATURE_DESC_SIZE, CV_32F);
+        memcpy(descriptors_a.data, img_desc_a.landmark_descriptor.data(), img_desc_a.landmark_descriptor.size()*sizeof(float));
+        cv::Mat descriptors_b( img_desc_b.spLandmarkNum(), FEATURE_DESC_SIZE, CV_32F);
+        memcpy(descriptors_b.data, img_desc_b.landmark_descriptor.data(), img_desc_b.landmark_descriptor.size()*sizeof(float));
+        cv::BFMatcher bfmatcher(cv::NORM_L2, true);
+        bfmatcher.match(descriptors_a, descriptors_b, _matches);
+    }
     Point2fVector lm_b_2d, lm_a_2d;
     for (auto match : _matches) {
         int index_a = match.queryIdx;
@@ -439,14 +445,15 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
             lm_pos_a.push_back(toCV(landmark_db.at(landmark_id).position));
             lm_norm_2d_b.push_back(toCV(pt2d_norm_b));
         } else {
-            ROS_WARN("[SWARM_LOOP] landmark_id %d is near image plane, give up in current framework", landmark_id);
+            // ROS_WARN("[SWARM_LOOP] landmark_id %d is near image plane, give up in current framework", landmark_id);
         }
     }
 
     if (lm_b_2d.size() < 4) {
         return false;
     }
-    if (_config.enable_homography_test) {
+    if (_config.enable_homography_test && !_config.enable_superglue) {
+        std::vector<unsigned char> mask;
         cv::findHomography(lm_b_2d, lm_a_2d, cv::RANSAC, 3, mask);
         reduceVector(idx_a, mask);
         reduceVector(idx_b, mask);
@@ -677,6 +684,9 @@ LoopDetector::LoopDetector(int _self_id, const LoopDetectorConfig & config):
         local_index(NETVLAD_DESC_SIZE), 
         remote_index(NETVLAD_DESC_SIZE), 
     ego_motion_traj(_self_id, true, _config.pos_covariance_per_meter, _config.yaw_covariance_per_meter) {
+    if (_config.enable_superglue) {
+        superglue = new SuperGlueOnnx(_config.superglue_model_path);
+    }
 }
 
 bool pnp_result_verify(bool pnp_success, int inliers, double rperr, const Swarm::Pose & DP_old_to_new) {

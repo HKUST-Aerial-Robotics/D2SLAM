@@ -33,7 +33,7 @@
 #define RPERR_THRES 10*DEG2RAD
 
 
-#define FEATURE_DESC_SIZE 64
+#define FEATURE_DESC_SIZE 256
 #define ACCEPT_SP_MATCH_DISTANCE 0.7
 
 namespace D2FrontEnd {
@@ -68,6 +68,7 @@ struct D2FrontendParams {
     CameraConfig camera_configuration;
 
     D2FrontendParams(ros::NodeHandle &);
+    D2FrontendParams() {}
 
     D2Common::PGO_MODE pgo_mode;
 

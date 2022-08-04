@@ -77,6 +77,7 @@ struct VisualImageDesc {
 
     std::vector<float> image_desc;
     std::vector<float> landmark_descriptor;
+    std::vector<float> landmark_scores;
     bool prevent_adding_db = false;
 
     std::vector<uint8_t> image; //Buffer to store compressed image.
@@ -113,10 +114,18 @@ struct VisualImageDesc {
         }
     }
 
-    std::vector<cv::Point2f> landmarks2D() const {
+    std::vector<cv::Point2f> landmarks2D(bool sp_mode=false, bool normed=false) const {
         std::vector<cv::Point2f> ret;
         for (auto & lm : landmarks) {
-            ret.emplace_back(lm.pt2d);
+            if (sp_mode && lm.type != LandmarkType::SuperPointLandmark) {
+                break;
+            }
+            if (normed) {
+                cv::Point2f normed(lm.pt3d_norm.x() / lm.pt3d_norm.z(), lm.pt3d_norm.y() / lm.pt3d_norm.z());
+                ret.push_back(normed);
+            } else {
+                ret.push_back(lm.pt2d);
+            }
         }
         return ret;
     }

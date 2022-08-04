@@ -34,6 +34,7 @@ set(TENSORRT_ROOT $ENV{HOME}/source/TensorRT-7.1.3.4)
 
 set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch")
 find_package(Torch REQUIRED)
+find_package(Boost REQUIRED COMPONENTS program_options)
 include_directories(${TORCH_INCLUDE_DIRS})
 
 if (USE_TENSORRT)
@@ -138,7 +139,7 @@ target_link_libraries(loop_tensorrt_test
   ${TORCH_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${catkin_LIBRARIES}
-  )
+  ${Boost_LIBRARIES})
   set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 14)
 
 add_dependencies(${PROJECT_NAME}_nodelet

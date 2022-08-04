@@ -110,7 +110,7 @@ max_superpoint_cnt: 150 # max feature extraction by superpoint
 max_solve_cnt: 150
 show_track_id: 0
 check_homography: 1
-enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
+enable_lk_optical_flow: 0 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
 remote_min_match_num: 20
 
 #CNN
