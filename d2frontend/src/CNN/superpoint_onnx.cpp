@@ -18,7 +18,7 @@ SuperPointONNX::SuperPointONNX(std::string engine_path,
         input_shape_{1, 1, _height, _width},
         max_num(_max_num) {
     at::set_num_threads(1);
-    std::cout << "Init SuperPointTensorONNX: " << engine_path << " size " << _width << " " << _height << std::endl;
+    std::cout << "Init SuperPointONNX: " << engine_path << " size " << _width << " " << _height << std::endl;
 
     input_image = new float[_width*_height];
     auto memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
@@ -33,8 +33,10 @@ SuperPointONNX::SuperPointONNX(std::string engine_path,
     output_tensors_.emplace_back(Ort::Value::CreateTensor<float>(memory_info,
         results_desc_, SP_DESC_RAW_LEN*height/8*width/8, output_shape_desc_.data(), output_shape_desc_.size()));
 
+#ifdef USE_PCA
     pca_comp_T = load_csv_mat_eigen(_pca_comp).transpose();
     pca_mean = load_csv_vec_eigen(_pca_mean).transpose();
+#endif
 }
 
 void SuperPointONNX::doInference(const unsigned char* input, const uint32_t batchSize) {
@@ -44,7 +46,7 @@ void SuperPointONNX::doInference(const unsigned char* input, const uint32_t batc
     session_->Run(Ort::RunOptions{nullptr}, input_names, &input_tensor_, 1, output_names_, output_tensors_.data(), 2);
 }
 
-void SuperPointONNX::inference(const cv::Mat & input, std::vector<cv::Point2f> & keypoints, std::vector<float> & local_descriptors) {
+void SuperPointONNX::inference(const cv::Mat & input, std::vector<cv::Point2f> & keypoints, std::vector<float> & local_descriptors, std::vector<float> & scores) {
     TicToc tic;
     cv::Mat _input;
     keypoints.clear();
@@ -75,7 +77,7 @@ void SuperPointONNX::inference(const cv::Mat & input, std::vector<cv::Point2f> &
     }
 
     TicToc tic2;
-    getKeyPoints(Prob, thres, keypoints, width, height, max_num);
+    getKeyPoints(Prob, thres, keypoints, scores, width, height, max_num);
     if (params->enable_perf_output) {
         std::cout << " getKeyPoints " << tic2.toc();
     }

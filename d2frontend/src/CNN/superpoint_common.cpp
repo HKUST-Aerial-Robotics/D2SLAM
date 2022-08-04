@@ -3,9 +3,9 @@
 #include <d2frontend/d2frontend_params.h>
 
 namespace D2FrontEnd {
-void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts,
+void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts, std::vector<float>& scores,
         int border, int dist_thresh, int img_width, int img_height, int max_num);
-void getKeyPoints(const cv::Mat & prob, float threshold, std::vector<cv::Point2f> &keypoints, int width, int height, int max_num)
+void getKeyPoints(const cv::Mat & prob, float threshold, std::vector<cv::Point2f> &keypoints, std::vector<float>& scores, int width, int height, int max_num)
 {
     TicToc getkps;
     auto mask = (prob > threshold);
@@ -26,7 +26,7 @@ void getKeyPoints(const cv::Mat & prob, float threshold, std::vector<cv::Point2f
     int border = 0;
     int dist_thresh = 4;
     TicToc ticnms;
-    NMS2(keypoints_no_nms, conf, keypoints, border, dist_thresh, width, height, max_num);
+    NMS2(keypoints_no_nms, conf, keypoints, scores, border, dist_thresh, width, height, max_num);
     if (params->enable_perf_output) {
         printf(" NMS %f keypoints_no_nms %ld keypoints %ld/%ld\n", ticnms.toc(), keypoints_no_nms.size(), keypoints.size(), max_num);
     }
@@ -34,7 +34,8 @@ void getKeyPoints(const cv::Mat & prob, float threshold, std::vector<cv::Point2f
 
 
 void computeDescriptors(const torch::Tensor & mProb, const torch::Tensor & mDesc, 
-        const std::vector<cv::Point2f> &keypoints, std::vector<float> & local_descriptors, int width, int height, 
+        const std::vector<cv::Point2f> &keypoints, 
+        std::vector<float> & local_descriptors, int width, int height, 
         const Eigen::MatrixXf & pca_comp_T, const Eigen::RowVectorXf & pca_mean) {
     TicToc tic;
     cv::Mat kpt_mat(keypoints.size(), 2, CV_32F);  // [n_keypoints, 2]  (y, x)
@@ -81,8 +82,8 @@ bool pt_conf_comp(std::pair<cv::Point2f, double> i1, std::pair<cv::Point2f, doub
 }
 
 //NMS code is modified from https://github.com/KinglittleQ/SuperPoint_SLAM
-void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts,
-            int border, int dist_thresh, int img_width, int img_height, int max_num)
+void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts, 
+            std::vector<float>& scores, int border, int dist_thresh, int img_width, int img_height, int max_num)
 {
 
     std::vector<cv::Point2f> pts_raw = det;
@@ -151,7 +152,7 @@ void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& 
     std::sort(pts_conf_vec.begin(), pts_conf_vec.end(), pt_conf_comp);
     for (unsigned int i = 0; i < max_num && i < pts_conf_vec.size(); i ++) {
         pts.push_back(pts_conf_vec[i].first);
-        // printf("conf:%f\n", pts_conf_vec[i].second);
+        scores.push_back(pts_conf_vec[i].second);
     }
 }
 }

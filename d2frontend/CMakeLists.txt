@@ -106,6 +106,7 @@ if (USE_TENSORRT)
     src/CNN/mobilenetvlad_tensorrt.cpp
     src/CNN/superpoint_common.cpp
     src/CNN/superpoint_onnx.cpp
+    src/CNN/superglue_onnx.cpp
     src/loop_utils.cpp
     src/d2frontend_params.cpp
   )
@@ -113,6 +114,7 @@ else()
   add_library(loop_cnn
     src/CNN/superpoint_common.cpp
     src/CNN/superpoint_onnx.cpp
+    src/CNN/superglue_onnx.cpp
     src/loop_utils.cpp
     src/d2frontend_params.cpp
   )

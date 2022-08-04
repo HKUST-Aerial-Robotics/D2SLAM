@@ -20,7 +20,7 @@ public:
         int _width, int _height, float _thres = 0.015, int _max_num = 200, bool _enable_perf = false);
 
     
-    void inference(const cv::Mat & input, std::vector<cv::Point2f> & keypoints, std::vector<float> & local_descriptors);
+    void inference(const cv::Mat & input, std::vector<cv::Point2f> & keypoints, std::vector<float> & local_descriptors, std::vector<float> & scores);
     void doInference(const unsigned char* input, const uint32_t batchSize) override;
 };
 }
