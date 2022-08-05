@@ -63,7 +63,7 @@ void LoopDetector::processImageArray(VisualImageDescArray & flatten_desc) {
         return;
     }
 
-    if (flatten_desc.spLandmarkNum() >= _config.MIN_LOOP_NUM) {
+    if (flatten_desc.spLandmarkNum() >= _config.loop_inlier_feature_num) {
         //Initialize images for visualization
         if (params->show) {
             std::vector<cv::Mat> imgs;
@@ -460,7 +460,7 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
 bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const VisualImageDescArray & frame_array_b,
     int main_dir_a, int main_dir_b, LoopEdge & ret) {
 
-    if (frame_array_a.spLandmarkNum() < _config.MIN_LOOP_NUM) {
+    if (frame_array_a.spLandmarkNum() < _config.loop_inlier_feature_num) {
         return false;
     }
     //Recover imformation
@@ -487,7 +487,7 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
         main_dir_a, main_dir_b, lm_pos_a, lm_norm_2d_b, index2dirindex_a, index2dirindex_b);
     
     if(success) {
-        if (lm_pos_a.size() > _config.MIN_LOOP_NUM) {
+        if (lm_pos_a.size() > _config.loop_inlier_feature_num) {
             success = computeRelativePose( lm_pos_a, lm_norm_2d_b, frame_array_b.images[main_dir_b].extrinsic,
                     frame_array_a.pose_drone, frame_array_b.pose_drone, DP_old_to_new, inliers, _config.is_4dof);
         } else {
@@ -691,7 +691,7 @@ bool pnp_result_verify(bool pnp_success, int inliers, double rperr, const Swarm:
         return false;
     }   
     auto &_config = (*params->loopdetectorconfig);
-    success = (inliers >= _config.MIN_LOOP_NUM) && fabs(DP_old_to_new.yaw()) < _config.accept_loop_max_yaw*DEG2RAD && DP_old_to_new.pos().norm() < _config.accept_loop_max_pos;
+    success = (inliers >= _config.loop_inlier_feature_num) && fabs(DP_old_to_new.yaw()) < _config.accept_loop_max_yaw*DEG2RAD && DP_old_to_new.pos().norm() < _config.accept_loop_max_pos;
     return success;
 }
 

@@ -108,6 +108,7 @@ show_track_id: 0
 check_homography: 1
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
 remote_min_match_num: 20
+loop_inlier_feature_num: 50
 
 #CNN
 cnn_use_onnx: 1

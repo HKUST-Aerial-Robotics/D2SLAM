@@ -8,17 +8,25 @@
 
 namespace D2PGO {
 
-void D2PGO::addFrame(const D2BaseFrame & frame_desc) {
+void D2PGO::addFrame(D2BaseFrame frame) {
     const Guard lock(state_lock);
-    state.addFrame(frame_desc);
+    if (config.is_realtime && state.hasDrone(frame.drone_id)) {
+        //Use ego motion and current estimation to predict the frame pose
+        auto ego_motion = frame.initial_ego_pose;
+        auto cur_est_last_frame = state.getFrames(frame.drone_id).back()->odom.pose();
+        auto ego_motion_last_frame = state.getFrames(frame.drone_id).back()->initial_ego_pose;
+        auto pose = cur_est_last_frame*ego_motion_last_frame.inverse()*ego_motion;
+        frame.odom.pose() = pose;
+    }
+    state.addFrame(frame);
     // printf("[D2PGO@%d]add frame %ld ref %d pose %s from drone %d\n", self_id, frame_desc.frame_id, frame_desc.reference_frame_id,
     //     frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
     updated = true;
-    if (ego_motion_trajs.find(frame_desc.drone_id) == ego_motion_trajs.end()) {
-        Swarm::DroneTrajectory traj(frame_desc.drone_id, true);
-        ego_motion_trajs[frame_desc.drone_id] = traj;
+    if (ego_motion_trajs.find(frame.drone_id) == ego_motion_trajs.end()) {
+        Swarm::DroneTrajectory traj(frame.drone_id, true);
+        ego_motion_trajs[frame.drone_id] = traj;
     }
-    ego_motion_trajs[frame_desc.drone_id].push(frame_desc.stamp, frame_desc.initial_ego_pose, frame_desc.frame_id);
+    ego_motion_trajs[frame.drone_id].push(frame.stamp, frame.initial_ego_pose, frame.frame_id);
 }
 
 void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {

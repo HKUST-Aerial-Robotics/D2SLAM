@@ -27,6 +27,7 @@ struct D2PGOConfig {
     std::string g2o_output_path = "";
     bool g2o_use_raw_data = true;
     bool enable_pcm = false;
+    bool is_realtime = false;
     SwarmLocalOutlierRejectionParams pcm_rej;
 };
 
@@ -59,7 +60,7 @@ public:
         rejection(_config.self_id, _config.pcm_rej, ego_motion_trajs) {
     }
     void evalLoop(const Swarm::LoopEdge & loop);
-    void addFrame(const D2BaseFrame & frame_desc);
+    void addFrame(D2BaseFrame frame_desc);
     void addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop=false);
     void setStateProperties(ceres::Problem & problem);
     bool solve();

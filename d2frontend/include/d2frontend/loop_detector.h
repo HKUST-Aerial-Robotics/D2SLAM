@@ -27,7 +27,7 @@ struct LoopDetectorConfig {
     int inter_drone_init_frames;
     bool DEBUG_NO_REJECT;
     double odometry_consistency_threshold;
-    int MIN_LOOP_NUM;
+    int loop_inlier_feature_num;
     bool is_4dof;
     double pos_covariance_per_meter;
     double yaw_covariance_per_meter;
