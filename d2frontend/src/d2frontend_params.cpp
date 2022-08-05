@@ -81,6 +81,8 @@ namespace D2FrontEnd {
         //Loop detector
         loopdetectorconfig->netvlad_IP_thres = fsSettings["netvlad_IP_thres"];
         loopdetectorconfig->enable_homography_test = (int) fsSettings["enable_homography_test"];
+        loopdetectorconfig->accept_loop_max_yaw = (double) fsSettings["accept_loop_max_yaw"];
+        loopdetectorconfig->accept_loop_max_pos = (double) fsSettings["accept_loop_max_pos"];
         nh.param<bool>("enable_loop", enable_loop, true);
         nh.param<bool>("is_4dof", loopdetectorconfig->is_4dof, true);
         nh.param<int>("match_index_dist", loopdetectorconfig->MATCH_INDEX_DIST, 10);

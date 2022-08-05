@@ -10,13 +10,10 @@
 #include <d2common/d2basetypes.h>
 
 #define ACCEPT_LOOP_YAW (30) //ACCEPT MAX Yaw 
-#define MAX_LOOP_DIS 5.0 //ACCEPT MAX DISTANCE, 2.0 for indoor flying
 
 #define MAX_LOOP_DIS_LEVEL2 3.0 //ACCEPT MAX DISTANCE, 2.0 for indoor flying
 
 #define DEG2RAD (0.01745277777777778)
-
-#define ACCEPT_LOOP_YAW_RAD ACCEPT_LOOP_YAW*DEG2RAD
 
 #define USE_DEEPNET
 

@@ -121,7 +121,7 @@ struct VisualImageDesc {
                 break;
             }
             if (normed) {
-                cv::Point2f normed(lm.pt3d_norm.x() / lm.pt3d_norm.z(), lm.pt3d_norm.y() / lm.pt3d_norm.z());
+                cv::Point2f normed(lm.pt3d_norm.x(), lm.pt3d_norm.y());
                 ret.push_back(normed);
             } else {
                 ret.push_back(lm.pt2d);
@@ -136,6 +136,7 @@ struct VisualImageDesc {
         img_desc.drone_id = drone_id;
         img_desc.frame_id = frame_id;
         img_desc.landmark_descriptor = landmark_descriptor;
+        img_desc.landmark_scores = landmark_scores;
         img_desc.pose_drone = toROSPose(pose_drone);
         img_desc.camera_extrinsic = toROSPose(extrinsic);
         for (auto landmark: landmarks) {
@@ -162,6 +163,9 @@ struct VisualImageDesc {
         img_desc.pose_drone = pose_drone.toLCM();
         img_desc.camera_extrinsic = extrinsic.toLCM();
         img_desc.landmark_num = landmarks.size();
+        img_desc.landmark_scores_size = landmark_scores.size();
+        img_desc.landmark_scores = landmark_scores;
+
         for (auto landmark: landmarks) {
             img_desc.landmarks.emplace_back(landmark.toLCM());
         }
@@ -189,6 +193,7 @@ struct VisualImageDesc {
         stamp = desc.header.stamp.toSec();
         drone_id = desc.drone_id;
         landmark_descriptor = desc.landmark_descriptor;
+        landmark_scores = desc.landmark_scores;
         image_desc = desc.image_desc;
         image = desc.image;
         camera_index = desc.camera_index;
@@ -208,6 +213,7 @@ struct VisualImageDesc {
         stamp = toROSTime(desc.timestamp).toSec();
         drone_id = desc.drone_id;
         landmark_descriptor = desc.landmark_descriptor;
+        landmark_scores = desc.landmark_scores;
         image_desc = desc.image_desc;
         image = desc.image;
         camera_index = desc.camera_index;

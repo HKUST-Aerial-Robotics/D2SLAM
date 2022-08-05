@@ -399,10 +399,10 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
     if (_config.enable_superglue) {
         auto kpts_a = img_desc_a.landmarks2D(true, true);
         auto kpts_b = img_desc_b.landmarks2D(true, true);
-        auto & desc0 = img_desc_a.landmark_descriptor;
-        auto & desc1 = img_desc_b.landmark_descriptor;
-        auto & scores0 = img_desc_a.landmark_scores;
-        auto & scores1 = img_desc_b.landmark_scores;
+        auto desc0 = img_desc_a.landmark_descriptor;
+        auto desc1 = img_desc_b.landmark_descriptor;
+        auto scores0 = img_desc_a.landmark_scores;
+        auto scores1 = img_desc_b.landmark_scores;
         _matches = superglue->inference(kpts_a, kpts_b, desc0, desc1, scores0, scores1);
     } else{ 
         // ROS_INFO("[SWARM_LOOP](LoopDetector::computeCorrespondFeatures) %d %d ", img_desc_a.spLandmarkNum(), img_desc_a.landmark_descriptor.size());
@@ -500,10 +500,6 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
         success = false;
     }
 
-    if (params->show) {
-        drawMatched(frame_array_a, frame_array_b, main_dir_a, main_dir_b, success, inliers, DP_old_to_new, index2dirindex_a, index2dirindex_b);
-    }
-
     if (success) {
         ret.relative_pose = DP_old_to_new.toROS();
 
@@ -540,14 +536,17 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
             int old_d_id = frame_array_b.drone_id;
             inter_drone_loop_count[new_d_id][old_d_id] = inter_drone_loop_count[new_d_id][old_d_id] +1;
             inter_drone_loop_count[old_d_id][new_d_id] = inter_drone_loop_count[old_d_id][new_d_id] +1;
-            
-            return true;
-
         } else {
+            success = false;
             ROS_INFO("[SWARM_LOOP] Loop not consistency with odometry, give up.");
         }
     }
-    return false;
+
+    if (params->show) {
+        drawMatched(frame_array_a, frame_array_b, main_dir_a, main_dir_b, success, inliers, DP_old_to_new, index2dirindex_a, index2dirindex_b);
+    }
+
+    return success;
 }
 
 void LoopDetector::drawMatched(const VisualImageDescArray & frame_array_a, 
@@ -692,7 +691,7 @@ bool pnp_result_verify(bool pnp_success, int inliers, double rperr, const Swarm:
         return false;
     }   
     auto &_config = (*params->loopdetectorconfig);
-    success = (inliers >= _config.MIN_LOOP_NUM) && fabs(DP_old_to_new.yaw()) < ACCEPT_LOOP_YAW_RAD && DP_old_to_new.pos().norm() < MAX_LOOP_DIS;
+    success = (inliers >= _config.MIN_LOOP_NUM) && fabs(DP_old_to_new.yaw()) < _config.accept_loop_max_yaw*DEG2RAD && DP_old_to_new.pos().norm() < _config.accept_loop_max_pos;
     return success;
 }
 

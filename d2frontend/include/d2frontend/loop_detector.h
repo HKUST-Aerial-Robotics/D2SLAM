@@ -33,6 +33,8 @@ struct LoopDetectorConfig {
     double yaw_covariance_per_meter;
     bool enable_homography_test = false;
     bool enable_superglue = true;
+    double accept_loop_max_yaw = 15;
+    double accept_loop_max_pos = 1.5;
     std::string superglue_model_path;
 };
 

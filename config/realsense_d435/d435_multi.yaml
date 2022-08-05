@@ -129,6 +129,8 @@ g_norm: 9.805         # gravity magnitude
 #Loop Closure Detection
 netvlad_IP_thres: 0.8
 enable_homography_test: 0
+accept_loop_max_yaw: 10
+accept_loop_max_pos: 1.0
 
 #PGO
 pgo_solver_time: 0.5

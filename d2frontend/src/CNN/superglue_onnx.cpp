@@ -56,7 +56,14 @@ std::vector<cv::DMatch> SuperGlueOnnx::inference(const std::vector<cv::Point2f> 
     std::vector<Ort::Value> inputs;
     std::vector<float> _kpts0 = flatten(kpts0);
     std::vector<float> _kpts1 = flatten(kpts1);
-    
+    // printf("num_kpts0 %ld num_kpts1 %ld\n", num_kpts0, num_kpts1);
+    // printf("desc0 data size %ld\n", desc0.size());
+    // printf("desc1 data size %ld\n", desc1.size());
+    // printf("scores0 data size %ld\n", scores0.size());
+    // printf("scores1 data size %ld\n", scores1.size());
+    // printf("kpts0 data size %ld\n", _kpts0.size());
+    // printf("kpts1 data size %ld\n", _kpts1.size());
+    // std::cout << std::endl;
     inputs.emplace_back(Ort::Value::CreateTensor<float>(memory_info, const_cast<float*>(desc0.data()),
         dim_desc*num_kpts0, input_desc_dim0.data(), input_desc_dim0.size()));
     inputs.emplace_back(Ort::Value::CreateTensor<float>(memory_info, _kpts0.data(),
