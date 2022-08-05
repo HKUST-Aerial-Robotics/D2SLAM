@@ -1,10 +1,17 @@
 #include <d2frontend/d2featuretracker.h>
 #include <camodocal/camera_models/Camera.h>
+#include <d2frontend/CNN/superglue_onnx.h>
 
-namespace D2FrontEnd {
 #define MIN_HOMOGRAPHY 6
 #define PYR_LEVEL 3
 #define WIN_SIZE cv::Size(21, 21)
+
+namespace D2FrontEnd {
+D2FeatureTracker::D2FeatureTracker(D2FTConfig config):
+    _config(config) {
+    lmanager = new LandmarkManager;
+    superglue = new SuperGlueOnnx(config.superglue_model_path);
+}
 
 bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     const Guard lock(track_lock);
@@ -99,7 +106,7 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, bool skip_who
             printf("[D2FeatureTracker::trackRemote] Remote image does not match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
             return report;
         } else {
-            if (params->verbose)
+            // if (params->verbose)
                 printf("[D2FeatureTracker::trackRemote] Remote image match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
         }
     }
@@ -107,17 +114,15 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, bool skip_who
     if (current_keyframe.images.size() > 0 && current_keyframe.frame_id != frame.frame_id) {
         //Then current keyframe has been assigned, feature tracker by LK.
         auto & previous = current_keyframe.images[frame.camera_index];
-        auto prev_pts = previous.landmarks2D();
-        auto cur_pts = frame.landmarks2D();
-        std::vector<int> ids_down_to_up;
-        bool success = matchLocalFeatures(prev_pts, cur_pts, previous.landmark_descriptor, frame.landmark_descriptor, ids_down_to_up);
+        std::vector<int> ids_b_to_a;
+        bool success = matchLocalFeatures(previous, frame, ids_b_to_a, _config.enable_superglue_remote);
         if (!success) {
             return report;
         }
-        for (size_t i = 0; i < ids_down_to_up.size(); i++) { 
-            if (ids_down_to_up[i] >= 0) {
-                assert(ids_down_to_up[i] < previous.landmarkNum() && "too large");
-                auto local_index = ids_down_to_up[i];
+        for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
+            if (ids_b_to_a[i] >= 0) {
+                assert(ids_b_to_a[i] < previous.landmarkNum() && "too large");
+                auto local_index = ids_b_to_a[i];
                 auto &remote_lm = frame.landmarks[i];
                 auto &local_lm = previous.landmarks[local_index];
                 if (remote_lm.landmark_id >= 0 && local_lm.landmark_id>=0) {
@@ -170,14 +175,12 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
         auto & current_keyframe = current_keyframes.back();
         //Then current keyframe has been assigned, feature tracker by LK.
         auto & previous = current_keyframe.images[frame.camera_index];
-        auto prev_pts = previous.landmarks2D();
-        auto cur_pts = frame.landmarks2D();
-        std::vector<int> ids_down_to_up;
-        matchLocalFeatures(prev_pts, cur_pts, previous.landmark_descriptor, frame.landmark_descriptor, ids_down_to_up);
-        for (size_t i = 0; i < ids_down_to_up.size(); i++) { 
-            if (ids_down_to_up[i] >= 0) {
-                assert(ids_down_to_up[i] < previous.landmarkNum() && "too large");
-                auto prev_index = ids_down_to_up[i];
+        std::vector<int> ids_b_to_a;
+        matchLocalFeatures(previous, frame, ids_b_to_a, _config.enable_superglue_local);
+        for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
+            if (ids_b_to_a[i] >= 0) {
+                assert(ids_b_to_a[i] < previous.landmarkNum() && "too large");
+                auto prev_index = ids_b_to_a[i];
                 auto landmark_id = previous.landmarks[prev_index].landmark_id;
                 auto &cur_lm = frame.landmarks[i];
                 auto &prev_lm = previous.landmarks[prev_index];
@@ -276,13 +279,13 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
 TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame) {
     auto prev_pts = left_frame.landmarks2D();
     auto cur_pts = right_frame.landmarks2D();
-    std::vector<int> ids_down_to_up;
+    std::vector<int> ids_b_to_a;
     TrackReport report;
-    matchLocalFeatures(prev_pts, cur_pts, left_frame.landmark_descriptor, right_frame.landmark_descriptor, ids_down_to_up);
-    for (size_t i = 0; i < ids_down_to_up.size(); i++) { 
-        if (ids_down_to_up[i] >= 0) {
-            assert(ids_down_to_up[i] < left_frame.landmarkNum() && "too large");
-            auto prev_index = ids_down_to_up[i];
+    matchLocalFeatures(left_frame, right_frame, ids_b_to_a, _config.enable_superglue_local);
+    for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
+        if (ids_b_to_a[i] >= 0) {
+            assert(ids_b_to_a[i] < left_frame.landmarkNum() && "too large");
+            auto prev_index = ids_b_to_a[i];
             auto landmark_id = left_frame.landmarks[prev_index].landmark_id;
             auto &cur_lm = right_frame.landmarks[i];
             auto &prev_lm = left_frame.landmarks[prev_index];
@@ -522,46 +525,53 @@ void D2FeatureTracker::draw(VisualImageDesc & lframe, VisualImageDesc & rframe, 
     }
 }
 
-bool matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
-        const std::vector<float> & _desc_up, const std::vector<float> & _desc_down, 
-        std::vector<int> & ids_down_to_up) {
-    const cv::Mat desc_up(_desc_up.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(_desc_up.data()));
-    const cv::Mat desc_down(_desc_down.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(_desc_down.data()));
-
-    cv::BFMatcher bfmatcher(cv::NORM_L2, true);
+bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, 
+        std::vector<int> & ids_b_to_a, bool enable_superglue) {
+    TicToc tic;
+    auto & _desc_a = img_desc_a.landmark_descriptor;
+    auto & _desc_b = img_desc_b.landmark_descriptor;
+    auto pts_a = img_desc_a.landmarks2D(true);
+    auto pts_b = img_desc_b.landmarks2D(true);
+    std::vector<int> ids_a, ids_b;
     std::vector<cv::DMatch> _matches;
-    bfmatcher.match(desc_up, desc_down, _matches); //Query train result
-    ids_down_to_up.resize(pts_down.size());
-    std::fill(ids_down_to_up.begin(), ids_down_to_up.end(), -1);
-    std::vector<cv::Point2f> up_2d, down_2d;
-    std::vector<int> ids_up, ids_down;
-    if (params->enable_perf_output) {
-        printf("[D2Frontend] matchLocalFeatures %ld %ld: matches %ld ", pts_up.size(), pts_down.size(), _matches.size());
+    ids_b_to_a.resize(pts_b.size());
+    std::fill(ids_b_to_a.begin(), ids_b_to_a.end(), -1);
+    if (enable_superglue) {
+        auto kpts_a = img_desc_a.landmarks2D(true, true);
+        auto kpts_b = img_desc_b.landmarks2D(true, true);
+        auto & desc0 = img_desc_a.landmark_descriptor;
+        auto & desc1 = img_desc_b.landmark_descriptor;
+        auto & scores0 = img_desc_a.landmark_scores;
+        auto & scores1 = img_desc_b.landmark_scores;
+        _matches = superglue->inference(kpts_a, kpts_b, desc0, desc1, scores0, scores1);
+    } else {
+        const cv::Mat desc_a(_desc_a.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(_desc_a.data()));
+        const cv::Mat desc_b(_desc_b.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(_desc_b.data()));
+        cv::BFMatcher bfmatcher(cv::NORM_L2, true);
+        bfmatcher.match(desc_a, desc_b, _matches); //Query train result
     }
+    std::vector<cv::Point2f> up_2d, down_2d;
     for (auto match : _matches) {
-        if (match.distance < ACCEPT_SP_MATCH_DISTANCE) {
-            ids_up.push_back(match.queryIdx);
-            ids_down.push_back(match.trainIdx);
-            up_2d.push_back(pts_up[match.queryIdx]);
-            down_2d.push_back(pts_down[match.trainIdx]);
-        } else {
-            // std::cout << "Giveup match dis" << match.distance << std::endl;
-        }
+        ids_a.push_back(match.queryIdx);
+        ids_b.push_back(match.trainIdx);
+        up_2d.push_back(pts_a[match.queryIdx]);
+        down_2d.push_back(pts_b[match.trainIdx]);
+    }
+    if (params->ftconfig->check_homography && !enable_superglue) {
+        std::vector<unsigned char> mask;
+            if (up_2d.size() < MIN_HOMOGRAPHY) {
+                return false;
+            }
+            cv::findHomography(up_2d, down_2d, cv::RANSAC, params->ftconfig->ransacReprojThreshold, mask);
+            reduceVector(ids_a, mask);
+            reduceVector(ids_b, mask);
+    }
+    for (auto i = 0; i < ids_a.size(); i++) {
+        ids_b_to_a[ids_b[i]] = ids_a[i];
     }
 
-    std::vector<unsigned char> mask;
-    if (params->ftconfig->check_homography) {
-        if (up_2d.size() < MIN_HOMOGRAPHY) {
-            return false;
-        }
-        cv::findHomography(up_2d, down_2d, cv::RANSAC, params->ftconfig->ransacReprojThreshold, mask);
-        reduceVector(ids_up, mask);
-        reduceVector(ids_down, mask);
-    }
-    for (auto i = 0; i < ids_up.size(); i++) {
-        ids_down_to_up[ids_down[i]] = ids_up[i];
-    }
-    if (ids_down.size() > params->ftconfig->remote_min_match_num) {
+    printf("[D2FeatureTracker::track] match local features %d:%d %.3f ms\n", pts_a.size(), pts_b.size(), tic.toc());
+    if (ids_b.size() >= params->ftconfig->remote_min_match_num) {
         return true;
     }
     return false;

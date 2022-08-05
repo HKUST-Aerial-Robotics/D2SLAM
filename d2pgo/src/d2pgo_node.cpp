@@ -129,6 +129,7 @@ protected:
         config.arock_config.rho_frame_T = fsSettings["pgo_rho_frame_T"];
         config.arock_config.rho_frame_theta = fsSettings["pgo_rho_frame_theta"];
         config.pcm_rej.is_4dof = is_4dof;
+        config.is_realtime = true;
         
     }
 public:

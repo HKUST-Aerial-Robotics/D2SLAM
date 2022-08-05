@@ -24,7 +24,10 @@ struct D2FTConfig {
     double max_pts_velocity_time=0.3;
     int remote_min_match_num = 30;
     bool double_counting_common_feature = false;
+    bool enable_superglue_local = false;
+    bool enable_superglue_remote = false;
     std::string output_folder = "/root/output/";
+    std::string superglue_model_path;
 };
 
 struct TrackReport {
@@ -57,6 +60,8 @@ struct LKImageInfo {
     cv::Mat image;
 };
 
+class SuperGlueOnnx;
+
 class D2FeatureTracker {
     D2FTConfig _config;
     std::vector<VisualImageDescArray> current_keyframes;
@@ -82,23 +87,18 @@ class D2FeatureTracker {
     std::unordered_map<LandmarkIdType, LandmarkIdType> remote_to_local; // Remote landmark id to local;
     std::unordered_map<LandmarkIdType, std::unordered_map<int, LandmarkIdType>> local_to_remote; // local landmark id to remote drone and id;
     typedef std::lock_guard<std::recursive_mutex> Guard;
-    mutable std::recursive_mutex track_lock;
+    std::recursive_mutex track_lock;
+    SuperGlueOnnx * superglue = nullptr;
+    bool matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, std::vector<int> & ids_down_to_up, bool enable_superglue=true);
 public:
-    D2FeatureTracker(D2FTConfig config):
-        _config(config)
-    {
-        lmanager = new LandmarkManager;
-    }
-
+    D2FeatureTracker(D2FTConfig config);
     bool trackLocalFrames(VisualImageDescArray & frames);
     bool trackRemoteFrames(VisualImageDescArray & frames);
     
     std::vector<camodocal::CameraPtr> cams;
 };
 
-bool matchLocalFeatures(const std::vector<cv::Point2f> & pts_up, const std::vector<cv::Point2f> & pts_down, 
-        const std::vector<float> & _desc_up, const std::vector<float> & _desc_down, 
-        std::vector<int> & ids_down_to_up);
+
 void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts);
 std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
                         std::vector<LandmarkIdType> & ids);

@@ -70,6 +70,8 @@ namespace D2FrontEnd {
         ftconfig->enable_lk_optical_flow = (int) fsSettings["enable_lk_optical_flow"];
         ftconfig->remote_min_match_num = fsSettings["remote_min_match_num"];
         ftconfig->double_counting_common_feature = (int) fsSettings["double_counting_common_feature"];
+        ftconfig->enable_superglue_local = (int) fsSettings["enable_superglue_local"];
+        ftconfig->enable_superglue_remote = (int) fsSettings["enable_superglue_remote"];
         vlad_threshold = fsSettings["vlad_threshold"];
         nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
@@ -77,6 +79,7 @@ namespace D2FrontEnd {
         nh.param<double>("parallex_thres", ftconfig->parallex_thres, 10.0/460.0);
         nh.param<int>("min_keyframe_num", ftconfig->min_keyframe_num, 2);
         nh.param<double>("ransacReprojThreshold", ftconfig->ransacReprojThreshold, 10.0);
+        nh.param<std::string>("superglue_model_path", ftconfig->superglue_model_path, "");
 
         //Loop detector
         loopdetectorconfig->netvlad_IP_thres = fsSettings["netvlad_IP_thres"];

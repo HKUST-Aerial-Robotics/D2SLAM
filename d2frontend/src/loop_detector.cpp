@@ -399,10 +399,10 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
     if (_config.enable_superglue) {
         auto kpts_a = img_desc_a.landmarks2D(true, true);
         auto kpts_b = img_desc_b.landmarks2D(true, true);
-        auto desc0 = img_desc_a.landmark_descriptor;
-        auto desc1 = img_desc_b.landmark_descriptor;
-        auto scores0 = img_desc_a.landmark_scores;
-        auto scores1 = img_desc_b.landmark_scores;
+        auto & desc0 = img_desc_a.landmark_descriptor;
+        auto & desc1 = img_desc_b.landmark_descriptor;
+        auto & scores0 = img_desc_a.landmark_scores;
+        auto & scores1 = img_desc_b.landmark_scores;
         _matches = superglue->inference(kpts_a, kpts_b, desc0, desc1, scores0, scores1);
     } else{ 
         // ROS_INFO("[SWARM_LOOP](LoopDetector::computeCorrespondFeatures) %d %d ", img_desc_a.spLandmarkNum(), img_desc_a.landmark_descriptor.size());

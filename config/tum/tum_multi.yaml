@@ -70,7 +70,7 @@ max_depth_to_fuse: 5.0
 min_depth_to_fuse: 0.3
 
 #Multi-drone
-vlad_threshold: 0.5
+vlad_threshold: 0.8
 
 #Initialization
 init_method: 0 #0 IMU, 1 PnP
@@ -106,7 +106,7 @@ max_solve_cnt: 150
 show_track_id: 0
 check_homography: 1
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
-remote_min_match_num: 20
+remote_min_match_num: 40
 loop_inlier_feature_num: 80
 
 #CNN
