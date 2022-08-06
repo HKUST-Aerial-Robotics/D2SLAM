@@ -149,6 +149,7 @@ int LoopDetector::addToDatabase(VisualImageDescArray & new_fisheye_desc) {
         if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             break;
         }
+        const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
         keyframe_database[new_fisheye_desc.frame_id] = new_fisheye_desc;
     }
     return new_fisheye_desc.frame_id;
@@ -221,6 +222,7 @@ int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss
         }
         // int return_frame_id = index_to_frame_id.at(labels[i] + index_offset);
         return_frame_id = labels[i] + index_offset;
+        const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
         return_drone_id = keyframe_database[index_to_frame_id[return_frame_id]].drone_id;
         // ROS_INFO("Return Label %d/%d/%d from %d, distance %f/%f", labels[i] + index_offset, index.ntotal, index.ntotal - max_index , return_drone_id, similiarity[i], thres);
         if (labels[i] <= index.ntotal - max_index && similiarity[i] > thres) {
@@ -262,6 +264,7 @@ bool LoopDetector::queryDescArrayFromDatabase(const VisualImageDescArray & img_d
         }
 
         if (best_image_index != -1) {
+            const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
             int frame_id = index_to_frame_id[best_image_index];
             camera_index_old = imgid2dir[best_image_index];
             ROS_INFO("[SWARM_LOOP] Query image for %ld: ret frame_id %d index %d drone %d with camera %d similarity %f", 
@@ -662,6 +665,7 @@ void LoopDetector::updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPer
 }
 
 void LoopDetector::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
+    const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
     for (auto frame : sld_win) {
         auto frame_id = frame->frame_id;
         if (keyframe_database.find(frame_id) != keyframe_database.end()) {

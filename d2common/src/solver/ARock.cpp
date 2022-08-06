@@ -164,7 +164,14 @@ void ARockSolver::setDualStateFactors() {
                 Swarm::Pose pose_dual(dual_state);
                 // printf("[ARockSolver] ConsenusPoseFactor4D param %ld, drone_id %d pose_dual %s pose_cur %s\n", 
                 //     param_info.id, param_pair.first, pose_dual.toStr().c_str(), Swarm::Pose(state_pointer, true).toStr().c_str());
-                auto factor = ConsenusPoseFactor4D::Create(pose_dual, rho_T, rho_theta);
+
+                // auto factor = ConsenusPoseFactor4D::Create(pose_dual, rho_T, rho_theta);
+                // problem->AddResidualBlock(factor, nullptr, state_pointer);
+                MatrixXd A(param_info.size, param_info.size);
+                A.setIdentity();
+                A.block<3, 3>(0, 0) *= rho_T;
+                A(3, 3) = rho_theta;
+                auto factor = new ceres::NormalPrior(A, dual_state);
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
             } else {
                 //Is euclidean.

@@ -569,8 +569,8 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     for (auto i = 0; i < ids_a.size(); i++) {
         ids_b_to_a[ids_b[i]] = ids_a[i];
     }
-
-    printf("[D2FeatureTracker::track] match local features %d:%d %.3f ms\n", pts_a.size(), pts_b.size(), tic.toc());
+    if (params->verbose || params->enable_perf_output)
+        printf("[D2FeatureTracker::track] match local features %d:%d %.3f ms\n", pts_a.size(), pts_b.size(), tic.toc());
     if (ids_b.size() >= params->ftconfig->remote_min_match_num) {
         return true;
     }

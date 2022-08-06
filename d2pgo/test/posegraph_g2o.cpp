@@ -133,6 +133,7 @@ void read_g2o_agent( std::string path, std::map<FrameIdType, D2BaseFrame> & keyf
             D2BaseFrame frame;
             frame.drone_id = agent_id;
             frame.odom.pose() = pose;
+            frame.initial_ego_pose = pose;
             frame.frame_id = id_a;
             frame.reference_frame_id = 0;
             keyframeid_agent_pose[id_a] = frame;

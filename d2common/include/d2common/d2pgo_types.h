@@ -12,17 +12,14 @@ public:
     int target_id = -1;
     int reference_frame_id = -1;
     std::map<FrameIdType, Swarm::Pose> frame_poses;
+    std::map<FrameIdType, VectorXd> frame_duals;
     int64_t solver_token = -1;
     int iteration_count = -1;
 
     DPGOData() {}
-    
     DPGOData(const swarm_msgs::DPGOData & msg);
-
     DPGOData(const DistributedPGOData_t & msg);
-
     swarm_msgs::DPGOData toROS() const;
-
     DistributedPGOData_t toLCM() const;
 
 };

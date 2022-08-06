@@ -15,12 +15,12 @@ void D2PGO::addFrame(D2BaseFrame frame) {
         auto ego_motion = frame.initial_ego_pose;
         auto cur_est_last_frame = state.getFrames(frame.drone_id).back()->odom.pose();
         auto ego_motion_last_frame = state.getFrames(frame.drone_id).back()->initial_ego_pose;
-        auto pose = cur_est_last_frame*ego_motion_last_frame.inverse()*ego_motion;
+        auto pose = cur_est_last_frame*Swarm::Pose::DeltaPose(ego_motion_last_frame, ego_motion);
         frame.odom.pose() = pose;
     }
     state.addFrame(frame);
-    // printf("[D2PGO@%d]add frame %ld ref %d pose %s from drone %d\n", self_id, frame_desc.frame_id, frame_desc.reference_frame_id,
-    //     frame_desc.odom.pose().toStr().c_str(), frame_desc.drone_id);
+    printf("[D2PGO@%d]add frame %ld ref %d ego_pose %s pose %s from drone %d\n", self_id, frame.frame_id, frame.reference_frame_id,
+        frame.initial_ego_pose.toStr().c_str(), frame.odom.pose().toStr().c_str(), frame.drone_id);
     updated = true;
     if (ego_motion_trajs.find(frame.drone_id) == ego_motion_trajs.end()) {
         Swarm::DroneTrajectory traj(frame.drone_id, true);
@@ -153,8 +153,8 @@ void D2PGO::evalLoop(const Swarm::LoopEdge & loop) {
 
 void D2PGO::setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::LoopEdge> & good_loops) {
     used_loops_count = 0;
-    auto loss_function = new ceres::HuberLoss(1.0);    
-    // auto loss_function = nullptr; //new ceres::HuberLoss(1.0);    
+    // auto loss_function = new ceres::HuberLoss(1.0);    
+    auto loss_function = nullptr;
     for (auto loop : good_loops) {
         ceres::CostFunction * loop_factor = nullptr;
         if (config.pgo_pose_dof == PGO_POSE_4D) {

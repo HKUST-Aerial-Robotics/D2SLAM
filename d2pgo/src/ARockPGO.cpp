@@ -12,9 +12,9 @@ void ARockPGO::inputDPGOData(const DPGOData & data) {
 void ARockPGO::processPGOData(const DPGOData & data) {
     // printf("[ARockPGO@%d]process DPGOData from %d\n", self_id, data.drone_id);
     auto drone_id = data.drone_id;
-    for (auto it: data.frame_poses) {
+    for (auto it: data.frame_duals) {
         auto frame_id = it.first;
-        auto & pose = it.second;
+        auto & dual = it.second;
         if (state->hasFrame(frame_id)) {
             auto * ptr = state->getPoseState(frame_id);
             if (all_estimating_params.find(ptr) != all_estimating_params.end()) {
@@ -33,9 +33,9 @@ void ARockPGO::processPGOData(const DPGOData & data) {
                     }
                     //Then we update the dual state.
                     if (param_info.type == ParamsType::POSE) {
-                        pose.to_vector(dual_states_remote[drone_id][ptr].data());
-                        if (create)
-                            pose.to_vector(dual_states_local[drone_id][ptr].data());
+                        // pose.to_vector(dual_states_remote[drone_id][ptr].data());
+                        // if (create)
+                        //     pose.to_vector(dual_states_local[drone_id][ptr].data());
                         // printf("[ARockPGO@%d]dual remote for frame_id %ld drone_id %d: %s\n", 
                         //         self_id, frame_id, drone_id, pose.toStr().c_str());
                         // printf("[ARockPGO@%d]dual local: %s\n", 
@@ -43,9 +43,9 @@ void ARockPGO::processPGOData(const DPGOData & data) {
                         // printf("[ARockPGO@%d]state     : %s\n", 
                         //         self_id, Swarm::Pose(ptr, true).toStr().c_str());
                     } else if (param_info.type == ParamsType::POSE_4D) {
-                        pose.to_vector_xyzyaw(dual_states_remote[drone_id][ptr].data());
+                        dual_states_remote[drone_id][ptr] = dual;
                         if (create)
-                            pose.to_vector_xyzyaw(dual_states_local[drone_id][ptr].data());
+                            dual_states_local[drone_id][ptr] = dual;
                         // printf("[ARockPGO@%d]dual remote for frame_id %ld drone_id %d: %s\n", 
                         //         self_id, frame_id, drone_id, pose.toStr().c_str());
                         // printf("[ARockPGO@%d]dual local: %s\n", 
@@ -90,6 +90,7 @@ void ARockPGO::broadcastData() {
             } else if (param.type == ParamsType::POSE_4D) {
                 pose = Swarm::Pose(dual_state.data(), true);
             }
+            data.frame_duals[param.id] = dual_state;
             data.frame_poses[param.id] = pose;
         }
         pgo->broadcastData(data);

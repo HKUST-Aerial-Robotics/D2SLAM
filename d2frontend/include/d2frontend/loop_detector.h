@@ -52,6 +52,7 @@ protected:
     std::map<int, std::map<int, int>> inter_drone_loop_count;
 
     std::map<int64_t, VisualImageDescArray> keyframe_database;
+    std::mutex keyframe_database_mutex;
 
     std::map<int64_t, std::vector<cv::Mat>> msgid2cvimgs;
     
