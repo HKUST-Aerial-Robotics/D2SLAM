@@ -135,6 +135,21 @@ def angular_error_quat(quat1, quat2):
         angle = 0
     return angle
 
+def align_posegraph(pg0):
+    _key0 = list(pg0.keyframes.keys())[0]
+    pos0_0 = pg0.keyframes[_key0].pos
+    quat0_0 = pg0.keyframes[_key0].quat
+    invq0_0 = quaternion_inverse(quat0_0)
+
+    for i in pg0.keyframes:
+        pos0 = pg0.keyframes[i].pos
+        quat0 = pg0.keyframes[i].quat
+        dpos0 = pos0 - pos0_0
+        dpos0 = quaternion_matrix(invq0_0)[0:3, 0:3]@dpos0
+        dquat0 = quaternion_multiply(invq0_0, quat0)
+        pg0.keyframes[i].pos = dpos0
+        pg0.keyframes[i].quat = dquat0
+
 def align_posegraphs(pg0, gt):
     assert len(pg0.keyframes) <= len(gt.keyframes), f"poses num error {len(pg0.keyframes)}/{len(pg1.keyframes)}"
     _key0 = list(gt.keyframes.keys())[0]

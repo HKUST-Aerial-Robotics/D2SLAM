@@ -128,6 +128,7 @@ protected:
         config.arock_config.ceres_options = config.ceres_options;
         config.arock_config.rho_frame_T = fsSettings["pgo_rho_frame_T"];
         config.arock_config.rho_frame_theta = fsSettings["pgo_rho_frame_theta"];
+        config.arock_config.eta_k = fsSettings["pgo_eta_k"];
         config.pcm_rej.is_4dof = is_4dof;
         config.is_realtime = true;
         
