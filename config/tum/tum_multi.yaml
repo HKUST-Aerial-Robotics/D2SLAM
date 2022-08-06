@@ -134,6 +134,7 @@ pgo_solver_time: 0.5
 pgo_mode: 1
 pgo_rho_frame_T: 0.092
 pgo_rho_frame_theta: 0.17
+pgo_eta_k: 0.09
 write_g2o: 1
 g2o_output_path: "output.g2o"
 
