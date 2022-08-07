@@ -3,6 +3,8 @@
 #include "../src/d2pgo.h"
 #include <thread>
 #include <std_msgs/Int32.h>
+#include <nav_msgs/Path.h>
+// #include <visualization_msgs/Markers.h>
 
 using namespace D2PGO;
 
@@ -15,7 +17,11 @@ class D2PGOTester {
     bool is_4dof;
     std::thread th;
     std::string output_path;
+    ros::NodeHandle & _nh;
 
+    int max_steps = 100;
+
+    std::map<int, ros::Publisher> path_pubs;
     std::vector<Swarm::LoopEdge> edges;
     std::map<FrameIdType, D2BaseFrame> keyframeid_agent_pose;
 public:
@@ -25,7 +31,8 @@ public:
         dpgo_data_sub = nh.subscribe("/dpgo/pgo_data", 100, &D2PGOTester::processDPGOData, this, ros::TransportHints().tcpNoDelay());
     }
 
-    D2PGOTester(ros::NodeHandle & nh) {
+    D2PGOTester(ros::NodeHandle & nh):
+        _nh(nh) {
         nh.param<std::string>("g2o_path", g2o_path, "");
         nh.param<std::string>("output_path", output_path, "test.g2o");
         nh.param<int>("self_id", self_id, -1);
@@ -55,7 +62,8 @@ public:
         config.arock_config.self_id = config.self_id;
         config.arock_config.verbose = true;
         config.arock_config.ceres_options = config.ceres_options;
-        nh.param<int>("max_steps", config.arock_config.max_steps, 10);
+        config.arock_config.max_steps = 1;
+        nh.param<int>("max_steps", max_steps, 10);
         nh.param<double>("rho_frame_T", config.arock_config.rho_frame_T, 0.1);
         nh.param<double>("rho_frame_theta", config.arock_config.rho_frame_theta, 0.1);
         nh.param<double>("eta_k", config.arock_config.eta_k, 0.9);
@@ -78,6 +86,13 @@ public:
             dpgo_data_pub.publish(data.toROS());
         };
 
+        pgo->postsolve_callback = [&] (void) {
+            printf("Publish path\n");
+            auto trajs = pgo->getOptimizedTrajs();
+            pubTrajs(trajs);
+            //Sleep for visualization.
+            // usleep(100*1000);
+        };
         initSubandPub(nh);
     }
 
@@ -92,10 +107,44 @@ public:
         startSolve();
     }
 
+    void pubLoops(const std::vector<Swarm::LoopEdge> loops) {
+        // for (auto loop : loops) {
+        //     visualization_msgs::Marker marker;
+        //     marker.ns = "marker";
+        //     marker.id = loop.id;
+        //     marker.type = visualization_msgs::Marker::LINE_STRIP;
+        //     marker.action = visualization_msgs::Marker::ADD;
+        //     marker.lifetime = ros::Duration();
+        //     marker.scale.x = 0.02;
+        //     marker.color.r = 1.0f;
+        //     marker.color.a = 1.0;
+
+        //     geometry_msgs::Point point0, point1;
+        //     Eigen2Point(p0, point0);
+        //     Eigen2Point(p1, point1);
+        //     marker.points.push_back(point0);
+        //     marker.points.push_back(point1);
+        //     m_markers.push_back(marker);
+        // }
+    }
+
+    void pubTrajs(const std::map<int, Swarm::DroneTrajectory> & trajs) {
+        for (auto it : trajs) {
+            auto drone_id = it.first;
+            auto traj = it.second;
+            if (path_pubs.find(drone_id) == path_pubs.end()) {
+                path_pubs[drone_id] = _nh.advertise<nav_msgs::Path>("pgo_path_" + std::to_string(drone_id), 1000);
+            }
+            path_pubs[drone_id].publish(traj.get_ros_path());
+        }
+    }
+
     void startSolve() {
         th = std::thread([&]() {
             ROS_INFO("[D2PGO@%d] Start solve", self_id);
-            pgo->solve();
+            for (int i = 0; i < max_steps; i ++) {
+                pgo->solve(true);
+            }
             ROS_INFO("[D2PGO@%d] End solve, writing reslts", self_id);
             //Write data
             writeDataG2o();

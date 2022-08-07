@@ -164,7 +164,7 @@ void ARockSolver::setDualStateFactors() {
                 Swarm::Pose pose_dual(dual_state);
                 // printf("[ARockSolver] ConsenusPoseFactor4D param %ld, drone_id %d pose_dual %s pose_cur %s\n", 
                 //     param_info.id, param_pair.first, pose_dual.toStr().c_str(), Swarm::Pose(state_pointer, true).toStr().c_str());
-                auto factor = ConsenusPoseFactor4D::Create(pose_dual, rho_T, rho_theta);
+                auto factor = ConsenusPoseFactor4D::Create(pose_dual, rho_T, rho_theta, true);
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
             } else {
                 //Is euclidean.
@@ -211,10 +211,12 @@ void ARockSolver::updateDualStates() {
                 VectorXd avg_state = (dual_state_local + dual_state_remote)/2;
                 Map<VectorXd> cur_est_state(state_pointer, param_info.size);
                 VectorXd delta = (avg_state - cur_est_state)*config.eta_k;
-                delta(3) = Utility::NormalizeAngle(delta(3));
                 dual_state_local = dual_state_local - delta;
-                dual_state_local(3) = Utility::NormalizeAngle(dual_state_local(3));
-
+                if (dual_state_local(3) > M_PI || dual_state_local(3) < -M_PI) {
+                    ROS_WARN("Note: [ARockSolver] Dual state %ld has angle %f\n", param_info.id, dual_state_local(3));
+                    dual_state_local(3) = Utility::NormalizeAngle(dual_state_local(3));
+                    ROS_WARN("Normed angle: %f", dual_state_local(3));
+                }
                 // printf("\n[ARockSolver%d] Pose %d:\n", self_id, param_info.id);
                 // std::cout << "dual_state_local" << dual_state_local.transpose() << std::endl;
                 // std::cout << "dual_state_remote" << dual_state_remote.transpose() << std::endl;

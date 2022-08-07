@@ -230,10 +230,14 @@ template<typename T>
 inline void poseError4D(const Ref<const Matrix<T, 3, 1>> & posa, T yaw_a,
         const Ref<const Matrix<T, 3, 1>> & posb, T yaw_b,
         const Ref<const Matrix<T, 4, 4>> &_sqrt_inf_mat, 
-        T *error) {
+        T *error, bool norm_yaw=true) {
     Map<Matrix<T, 3, 1>> err(error);
     err = posb - posa;
-    error[3] = Utility::NormalizeAngle(yaw_b - yaw_a);
+    if (norm_yaw) {
+        error[3] = Utility::NormalizeAngle(yaw_b - yaw_a);
+    } else {
+        error[3] = yaw_b - yaw_a;
+    }
     Map<Matrix<T, 4, 1>> err_4d(error);
     err_4d.applyOnTheLeft(_sqrt_inf_mat);
 }

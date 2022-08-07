@@ -53,6 +53,7 @@ protected:
     void setupEgoMotionFactors(SolverWrapper * solver);
     void setupEgoMotionFactors(SolverWrapper * solver, int drone_id);
 public:
+    std::function<void(void)> postsolve_callback;
     std::function<void(const DPGOData & )> bd_data_callback;
     D2PGO(D2PGOConfig _config):
         config(_config), self_id(_config.self_id), main_id(_config.main_id),
@@ -63,7 +64,7 @@ public:
     void addFrame(D2BaseFrame frame_desc);
     void addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop=false);
     void setStateProperties(ceres::Problem & problem);
-    bool solve();
+    bool solve(bool force_solve=false);
     void broadcastData(const DPGOData & data);
     void inputDPGOData(const DPGOData & data);
     std::map<int, Swarm::DroneTrajectory> getOptimizedTrajs();

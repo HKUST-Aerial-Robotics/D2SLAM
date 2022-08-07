@@ -107,7 +107,6 @@ show_track_id: 0
 check_homography: 1
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
 remote_min_match_num: 40
-loop_inlier_feature_num: 80
 
 #CNN
 cnn_use_onnx: 1
@@ -124,17 +123,18 @@ gyr_w: 0.0004       # gyroscope bias random work noise standard deviation.     #
 g_norm: 9.805         # gravity magnitude
 
 #Loop Closure Detection
-netvlad_IP_thres: 0.8
+netvlad_IP_thres: 0.85
 enable_homography_test: 0
+loop_inlier_feature_num: 80
 accept_loop_max_yaw: 10
 accept_loop_max_pos: 1.0
 
 #PGO
 pgo_solver_time: 0.5
 pgo_mode: 1
-pgo_rho_frame_T: 0.092
-pgo_rho_frame_theta: 0.17
-pgo_eta_k: 0.09
+pgo_rho_frame_T: 0.14
+pgo_rho_frame_theta: 0.125
+pgo_eta_k: 0.9
 write_g2o: 1
 g2o_output_path: "output.g2o"
 

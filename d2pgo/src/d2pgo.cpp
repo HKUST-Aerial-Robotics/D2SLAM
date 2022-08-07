@@ -74,9 +74,9 @@ void D2PGO::inputDPGOData(const DPGOData & data) {
     }
 }
 
-bool D2PGO::solve() {
+bool D2PGO::solve(bool force_solve) {
     const Guard lock(state_lock);
-    if (state.size(self_id) < config.min_solve_size || !updated) {
+    if ((state.size(self_id) < config.min_solve_size || !updated) && !force_solve) {
         // printf("[D2PGO] Not enough frames to solve %d.\n", state.size(self_id));
         return false;
     }
@@ -117,6 +117,9 @@ bool D2PGO::solve() {
     }
     auto report = solver->solve();
     state.syncFromState();
+    if (postsolve_callback != nullptr) {
+        postsolve_callback();
+    }
     printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms initial cost %.2e final cost %.2e\n", 
             self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
             report.initial_cost, report.final_cost);

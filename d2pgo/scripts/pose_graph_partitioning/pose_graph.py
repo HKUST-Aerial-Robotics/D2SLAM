@@ -810,10 +810,9 @@ class PoseGraph():
             ax.quiver(edges_a[:,0],edges_a[:,1],edges_b[:,0],edges_b[:,1], headlength=0, headaxislength=0, scale_units="xy", linewidths=-.5, color=edge_color)
             if show_raw_edges:
                 ax.quiver(edges_a[:,0],edges_a[:,1],edge_real[:,0],edge_real[:,1], linewidths=-.5, color="black")
-            ax.grid(True)   
+        ax.grid(True)   
         ax.legend()
         plt.tight_layout()
-        plt.axis('off')
         plt.savefig(f"{title}.png")
         return ax
     
