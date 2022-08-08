@@ -132,9 +132,9 @@ accept_loop_max_pos: 1.0
 #PGO
 pgo_solver_time: 0.5
 pgo_mode: 1
-pgo_rho_frame_T: 0.14
-pgo_rho_frame_theta: 0.125
-pgo_eta_k: 0.9
+pgo_rho_frame_T: 0.84
+pgo_rho_frame_theta: 0.25
+pgo_eta_k: 0.1
 write_g2o: 1
 g2o_output_path: "output.g2o"
 
