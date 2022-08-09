@@ -68,6 +68,7 @@ public:
     bool solve(bool force_solve=false);
     void broadcastData(const DPGOData & data);
     void inputDPGOData(const DPGOData & data);
+    void rotInitial(const std::vector<Swarm::LoopEdge> & good_loops);
     std::map<int, Swarm::DroneTrajectory> getOptimizedTrajs();
     std::vector<D2BaseFrame*> getAllLocalFrames();
 };

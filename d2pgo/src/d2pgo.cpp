@@ -19,8 +19,8 @@ void D2PGO::addFrame(D2BaseFrame frame) {
         frame.odom.pose() = pose;
     }
     state.addFrame(frame);
-    printf("[D2PGO@%d]add frame %ld ref %d ego_pose %s pose %s from drone %d\n", self_id, frame.frame_id, frame.reference_frame_id,
-        frame.initial_ego_pose.toStr().c_str(), frame.odom.pose().toStr().c_str(), frame.drone_id);
+    // printf("[D2PGO@%d]add frame %ld ref %d ego_pose %s pose %s from drone %d\n", self_id, frame.frame_id, frame.reference_frame_id,
+    //     frame.initial_ego_pose.toStr().c_str(), frame.odom.pose().toStr().c_str(), frame.drone_id);
     updated = true;
     if (ego_motion_trajs.find(frame.drone_id) == ego_motion_trajs.end()) {
         Swarm::DroneTrajectory traj(frame.drone_id, true);
@@ -110,10 +110,7 @@ bool D2PGO::solve(bool force_solve) {
     }
 
     if (config.enable_rotation_initialization) {
-        RotationInitializationd rot_init(state);
-        rot_init.addLoops(used_loops);
-        rot_init.setFixedFrameId(state.headId(self_id));
-        rot_init.solve();
+        rotInitial(used_loops);
     }
 
     if (config.mode == PGO_MODE_NON_DIST) {
@@ -133,6 +130,13 @@ bool D2PGO::solve(bool force_solve) {
     solve_count ++;
     updated = false;
     return true;
+}
+
+void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge> & good_loops) {
+    RotationInitializationd rot_init(state);
+    rot_init.addLoops(good_loops);
+    rot_init.setFixedFrameId(state.headId(self_id));
+    rot_init.solve();
 }
 
 void D2PGO::saveG2O() {

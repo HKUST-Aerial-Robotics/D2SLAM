@@ -66,9 +66,18 @@ target_link_libraries(${PROJECT_NAME}_node
 add_executable(${PROJECT_NAME}_test 
   test/d2pgo_test.cpp 
 )
-
 add_dependencies(${PROJECT_NAME}_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_test
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+  dw
+)
+
+add_executable(test_pgo
+  test/test_pgo.cpp 
+)
+add_dependencies(test_pgo ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(test_pgo
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
   dw
