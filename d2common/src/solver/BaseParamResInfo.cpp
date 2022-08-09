@@ -14,6 +14,19 @@ ParamInfo createFramePose(D2State * state, FrameIdType id) {
     return info;
 }
 
+ParamInfo createFrameRotMat(D2State * state, FrameIdType id) {
+    ParamInfo info;
+    info.pointer = state->getRotState(id);
+    info.index = -1;
+    info.size = ROTMAT_SIZE;
+    info.eff_size = ROTMAT_SIZE;
+    info.type = ROTMAT;
+    info.id = id;
+    info.data_copied.resize(info.size);
+    memcpy(info.data_copied.data(), info.pointer, sizeof(state_type) * info.size);
+    return info;
+}
+
 ParamInfo createFramePose4D(D2State * state, FrameIdType id) {
     ParamInfo info;
     info.pointer = state->getPoseState(id);

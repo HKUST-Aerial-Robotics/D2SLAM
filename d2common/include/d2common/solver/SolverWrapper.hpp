@@ -16,6 +16,7 @@ struct SolverReport {
     double final_cost = 0;
     bool succ = true;
     std::string message = "";
+    ceres::Solver::Summary summary;
 };
 
 class SolverWrapper {

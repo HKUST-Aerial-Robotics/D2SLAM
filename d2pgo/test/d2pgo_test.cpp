@@ -52,6 +52,7 @@ public:
             config.pgo_pose_dof = PGO_POSE_4D;
         else
             config.pgo_pose_dof = PGO_POSE_6D;
+        nh.param<double>("loop_distance_threshold", config.loop_distance_threshold, 1000);
         config.enable_ego_motion = false;
         config.ceres_options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
         config.ceres_options.num_threads = 1;

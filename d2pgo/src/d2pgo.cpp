@@ -37,8 +37,8 @@ void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
     }
     all_loops.emplace_back(loop_info);
     all_loops.back().id = all_loops.size() - 1;
-    printf("[D2PGO::addLoop@%d] Add edge %ld<->%ld drone %d<->%d hasKF %d %d\n ", self_id, loop_info.keyframe_id_a,
-        loop_info.keyframe_id_b, loop_info.id_a, loop_info.id_b, state.hasFrame(loop_info.keyframe_id_a), state.hasFrame(loop_info.keyframe_id_b));
+    // printf("[D2PGO::addLoop@%d] Add edge %ld<->%ld drone %d<->%d hasKF %d %d\n ", self_id, loop_info.keyframe_id_a,
+    //     loop_info.keyframe_id_b, loop_info.id_a, loop_info.id_b, state.hasFrame(loop_info.keyframe_id_a), state.hasFrame(loop_info.keyframe_id_b));
     if (add_state_by_loop) {
         // This is for debug...
         if (state.hasFrame(loop_info.keyframe_id_a) && !state.hasFrame(loop_info.keyframe_id_b)) {
@@ -109,6 +109,13 @@ bool D2PGO::solve(bool force_solve) {
         setupEgoMotionFactors(solver);
     }
 
+    if (config.enable_rotation_initialization) {
+        RotationInitializationd rot_init(state);
+        rot_init.addLoops(used_loops);
+        rot_init.setFixedFrameId(state.headId(self_id));
+        rot_init.solve();
+    }
+
     if (config.mode == PGO_MODE_NON_DIST) {
         setStateProperties(solver->getProblem());
     }
@@ -173,9 +180,7 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::Lo
             used_frames.insert(loop.keyframe_id_a);
             used_frames.insert(loop.keyframe_id_b);
             used_loops_count ++;
-            if (config.write_g2o) {
-                used_loops.emplace_back(loop);
-            }
+            used_loops.emplace_back(loop);
             // if (loop.id_a != loop.id_b) 
             //     printf("[D2PGO::setupLoopFactors@%d] add loop %ld->%ld pose: %s\n", 
             //         self_id, loop.keyframe_id_a, loop.keyframe_id_b, loop.relative_pose.toStr().c_str());
@@ -216,9 +221,7 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
         }
         used_frames.insert(frame_a->frame_id);
         used_frames.insert(frame_b->frame_id);
-        if (config.write_g2o) {
-            used_loops.emplace_back(loop);
-        }
+        used_loops.emplace_back(loop);
     }
 }
 

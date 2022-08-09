@@ -131,7 +131,6 @@ protected:
         config.arock_config.eta_k = fsSettings["pgo_eta_k"];
         config.pcm_rej.is_4dof = is_4dof;
         config.is_realtime = true;
-        
     }
 public:
     D2PGONode(ros::NodeHandle & nh) {

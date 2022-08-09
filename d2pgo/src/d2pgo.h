@@ -28,6 +28,7 @@ struct D2PGOConfig {
     bool g2o_use_raw_data = true;
     bool enable_pcm = false;
     bool is_realtime = false;
+    bool enable_rotation_initialization = true;
     SwarmLocalOutlierRejectionParams pcm_rej;
 };
 

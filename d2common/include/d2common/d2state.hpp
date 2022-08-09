@@ -11,6 +11,7 @@ protected:
     int reference_frame_id = -1;
     std::map<FrameIdType, D2BaseFrame*> frame_db;
     std::map<FrameIdType, state_type*> _frame_pose_state;
+    std::map<FrameIdType, state_type*> _frame_rot_state;
     mutable std::recursive_mutex state_lock;
     bool is_4dof = false;
 public:
@@ -68,10 +69,19 @@ public:
     double * getPoseState(FrameIdType frame_id) const {
         const Guard lock(state_lock);
         if (_frame_pose_state.find(frame_id) == _frame_pose_state.end()) {
-            printf("\033[0;31m[D2VINS::D2EstimatorState] frame %ld not found\033[0m\n", frame_id);
+            printf("\033[0;31m[D2State::getPoseState] frame %ld not found\033[0m\n", frame_id);
             assert(false && "Frame not found");
         }
         return _frame_pose_state.at(frame_id);
+    }
+
+    double * getRotState(FrameIdType frame_id) const {
+        const Guard lock(state_lock);
+        if (_frame_rot_state.find(frame_id) == _frame_rot_state.end()) {
+            printf("\033[0;31m[D2State::getRotState] frame %ld not found\033[0m\n", frame_id);
+            assert(false && "Frame not found");
+        }
+        return _frame_rot_state.at(frame_id);
     }
 };
 }

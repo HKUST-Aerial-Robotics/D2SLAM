@@ -1,6 +1,6 @@
 <launch>
     <arg name="self_id" default="1" />
-    <arg name="is_4dof" default="true" />
+    <arg name="is_4dof" default="false" />
     <arg name="solver_type" default="arock" />
     <arg name="g2o_path" default="" />
     <arg name="output_path" default="" />

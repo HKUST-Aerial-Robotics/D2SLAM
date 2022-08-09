@@ -105,6 +105,68 @@ public:
     }
 };
 
+class RelRotFactor9D {
+    Matrix3d R_sqrt_info;
+    Matrix3d R_rel;
+public:
+    RelRotFactor9D(Swarm::Pose relative_pose, Matrix6d sqrt_info): 
+        R_sqrt_info(sqrt_info.block<3,3>(3,3)) {
+        R_rel = relative_pose.att().toRotationMatrix();
+    }
+
+    template<typename T>
+    bool operator() (const T* const R_a_ptr, const T* const R_b_ptr, T *residuals) const {
+        Map<const Matrix<T, 3, 3, RowMajor>> Ri(R_a_ptr);
+        Map<const Matrix<T, 3, 3, RowMajor>> Rj(R_b_ptr);
+        Map<Matrix<T, 3, 3, RowMajor>> R_res(residuals);
+        R_res = R_sqrt_info*(R_rel.transpose()*Ri.transpose() - Rj.transpose());
+        return true;
+    }
+
+    static ceres::CostFunction * Create(const Swarm::Pose & _relative_pose, const Eigen::Matrix6d & _sqrt_inf) {
+        return new ceres::AutoDiffCostFunction<RelRotFactor9D, 9, 9, 9>(
+                new RelRotFactor9D(_relative_pose, _sqrt_inf));
+    }
+    
+    static ceres::CostFunction* Create(const Swarm::GeneralMeasurement2Drones* _loc) {
+        auto loop = static_cast<const Swarm::LoopEdge*>(_loc);
+        return Create(*loop);
+    }
+
+    static ceres::CostFunction* Create(const Swarm::LoopEdge & loop) {
+        return new ceres::AutoDiffCostFunction<RelRotFactor9D, 9, 9, 9>(
+            new RelRotFactor9D(loop.relative_pose, loop.sqrt_information_matrix()));
+    }
+};
+
+class RelRot9DResInfo : public ResidualInfo {
+public:
+    FrameIdType frame_ida;
+    FrameIdType frame_idb;
+
+    RelRot9DResInfo():ResidualInfo(ResidualType::RelRotResidual) {}
+    
+    bool relavant(const std::set<FrameIdType> & frame_id) const override {
+        return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
+    }
+    
+    virtual std::vector<ParamInfo> paramsList(D2State * state) const override {
+        std::vector<ParamInfo> params_list{createFrameRotMat(state, frame_ida), 
+                createFrameRotMat(state, frame_idb)};
+        return params_list;
+    }
+    
+    static RelRot9DResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function, 
+            FrameIdType frame_ida, FrameIdType frame_idb) {
+        auto * info = new RelRot9DResInfo();
+        info->frame_ida = frame_ida;
+        info->frame_idb = frame_idb;
+        info->cost_function = cost_function;
+        info->loss_function = loss_function;
+        return info;
+    }
+};
+
 class RelPoseResInfo : public ResidualInfo {
 public:
     FrameIdType frame_ida;
@@ -125,7 +187,6 @@ public:
         }
         return params_list;
     }
-
     static RelPoseResInfo * create(
             ceres::CostFunction * cost_function, ceres::LossFunction * loss_function, 
             FrameIdType frame_ida, FrameIdType frame_idb, bool is_4dof=false) {
