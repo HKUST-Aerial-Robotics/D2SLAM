@@ -55,7 +55,7 @@ public:
     
     static ceres::CostFunction* Create(const Swarm::GeneralMeasurement2Drones* _loc) {
         auto loop = static_cast<const Swarm::LoopEdge*>(_loc);
-        return new RelPoseFactor(loop->relative_pose, loop->sqrt_information_matrix());
+        return new RelPoseFactor(loop->relative_pose, loop->getSqrtInfo());
     }
 };
 
@@ -135,7 +135,7 @@ public:
 
     static ceres::CostFunction* Create(const Swarm::LoopEdge & loop) {
         return new ceres::AutoDiffCostFunction<RelRotFactor9D, 9, 9, 9>(
-            new RelRotFactor9D(loop.relative_pose, loop.sqrt_information_matrix()));
+            new RelRotFactor9D(loop.relative_pose, loop.getSqrtInfo()));
     }
 };
 

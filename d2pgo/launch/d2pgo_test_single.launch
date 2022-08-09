@@ -10,6 +10,7 @@
     <arg name="rho_frame_T" default="0.006" />
     <arg name="rho_frame_theta" default="0.02" />
     <arg name="eta_k" default="0.9" />
+    <arg name="enable_rot_int" default="true" />
 
     <node name="d2pgo_test_$(arg self_id)" pkg="d2pgo" type="d2pgo_test" output="screen" >
         <param name="self_id" value="$(arg self_id)" type="int" />
@@ -23,5 +24,6 @@
         <param name="rho_frame_theta" value="$(arg rho_frame_theta)" type="double" />
         <param name="rho_frame_T" value="$(arg rho_frame_T)" type="double" />
         <param name="eta_k" value="$(arg eta_k)" type="double" />
+        <param name="enable_rot_int" value="$(arg enable_rot_int)" type="bool" />
     </node>
 </launch>

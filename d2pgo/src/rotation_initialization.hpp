@@ -72,6 +72,7 @@ public:
             auto frame_id_b = loop.keyframe_id_b;
             auto idx_a = frame_id_to_idx.at(frame_id_a);
             auto idx_b = frame_id_to_idx.at(frame_id_b);
+            Mat3 sqrt_info = loop.getSqrtInfo().block<3, 3>(3, 3).template cast<T>();
             if (idx_a == idx_b) {
                 printf("[RotationInitialization::solveLinear] Loop between frame %ld<->%ld idx %d<->%d is self loop\n", frame_id_a, frame_id_b, idx_a, idx_b);
                 continue;
@@ -81,20 +82,20 @@ public:
             if (idx_a == -1) {
                 Mat3 Rj_t = (R_fix * R).transpose();
                 for (int k = 0; k < 3; k ++) {  //Row of Rotation of keyframe b
-                    fillInTripet(row_id + k*3, 9*idx_b + 3*k, Mat3::Identity(), triplet_list);
-                    b.segment<3>(row_id + k*3) = Rj_t.col(k);     
+                    fillInTripet(row_id + k*3, 9*idx_b + 3*k, sqrt_info*Mat3::Identity(), triplet_list);
+                    b.segment<3>(row_id + k*3) = sqrt_info*Rj_t.col(k);     
                 }
             } else if (idx_b == -1) {
                 Mat3 Ri_t = (R_fix * Rt).transpose();
                 for (int k = 0; k < 3; k ++) {  //Row of Rotation of keyframe b
-                    fillInTripet(row_id + k*3, 9*idx_a + 3*k, Mat3::Identity(), triplet_list);
-                    b.segment<3>(row_id + k*3) = Ri_t.col(k);           
+                    fillInTripet(row_id + k*3, 9*idx_a + 3*k, sqrt_info*Mat3::Identity(), triplet_list);
+                    b.segment<3>(row_id + k*3) = sqrt_info*Ri_t.col(k);           
                 }
             } else {
                 for (int k = 0; k < 3; k ++) { //Row of Rotation of keyframe a
                     int j0 = 9*idx_a + 3*k;
-                    fillInTripet(row_id + k*3, 9*idx_a + 3*k, Rt, triplet_list);
-                    fillInTripet(row_id + k*3, 9*idx_b + 3*k, -Mat3::Identity(), triplet_list);
+                    fillInTripet(row_id + k*3, 9*idx_a + 3*k, sqrt_info*Rt, triplet_list);
+                    fillInTripet(row_id + k*3, 9*idx_b + 3*k, -sqrt_info*Mat3::Identity(), triplet_list);
                 }
             }
             row_id += 9;
@@ -163,6 +164,7 @@ public:
             // std::cout << "M\n" << M << std::endl;
             // std::cout << "R\n" << R << std::endl;
             pose.att() = Quaternion<T>(R).template cast<double>();
+            pose.to_vector(state.getPoseState(frame_id));
         }
     }
 
