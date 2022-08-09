@@ -173,11 +173,11 @@ void SwarmLocalOutlierRejection::OutlierRejectionLoopEdgesPCM(const std::vector<
         }
 
         auto p_edge1 = edge1.relative_pose;
-        Matrix6d _cov_mat_1 = edge1.get_covariance();
+        Matrix6d _cov_mat_1 = edge1.getCovariance();
 
         for (size_t j = 0; j < _all_loops.size(); j++) {
             auto & edge2 = _all_loops[j];
-            auto _cov_mat_2 = edge2.get_covariance();;
+            auto _cov_mat_2 = edge2.getCovariance();;
             Matrix6d _covariance = _cov_mat_1 + _cov_mat_2;
 
             int same_robot_pair = edge2.same_robot_pair(edge1);

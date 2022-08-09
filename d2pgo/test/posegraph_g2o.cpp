@@ -191,7 +191,7 @@ void write_result_to_g2o(const std::string & path,
 
     for (auto & edge : edges) {
         Swarm::Pose pose = edge.relative_pose;
-        auto info = edge.information_matrix();
+        auto info = edge.getInfoMat();
         auto quat = pose.att();
         auto pos = pose.pos();
         file << "EDGE_SE3:QUAT " << edge.keyframe_id_a << " " << edge.keyframe_id_b << " " << pos.x() << " " << pos.y() << " " << pos.z() << " ";

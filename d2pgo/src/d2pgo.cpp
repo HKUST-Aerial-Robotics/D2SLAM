@@ -149,7 +149,7 @@ void D2PGO::saveG2O() {
 }
 
 void D2PGO::evalLoop(const Swarm::LoopEdge & loop) {
-    auto factor = new RelPoseFactor4D(loop.relative_pose, loop.get_sqrt_information_4d());
+    auto factor = new RelPoseFactor4D(loop.relative_pose, loop.getSqrtInfoMat4D());
     auto kf_a = state.getFramebyId(loop.keyframe_id_a);
     auto kf_b = state.getFramebyId(loop.keyframe_id_b);
     auto pose_ptr_a = state.getPoseState(loop.keyframe_id_a);
@@ -160,7 +160,7 @@ void D2PGO::evalLoop(const Swarm::LoopEdge & loop) {
     (*factor)(pose_ptr_a, pose_ptr_b, residuals.data());
     printf("Loop %ld->%ld, RelPose %s\n", loop.keyframe_id_a, loop.keyframe_id_b, loop.relative_pose.toStr().c_str()); 
     printf("RelPose            Est %s\n", Swarm::Pose::DeltaPose(pose_a, pose_b).toStr().c_str());
-    std::cout << "sqrt_info\n:" << loop.get_sqrt_information_4d() << std::endl;
+    std::cout << "sqrt_info\n:" << loop.getSqrtInfoMat4D() << std::endl;
     printf("PoseA %s PoseB %s residual:", kf_a->odom.pose().toStr().c_str(), kf_b->odom.pose().toStr().c_str());
     std::cout << residuals.transpose() << "\n" << std::endl;
 }

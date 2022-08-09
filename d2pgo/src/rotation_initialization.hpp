@@ -72,7 +72,7 @@ public:
             auto frame_id_b = loop.keyframe_id_b;
             auto idx_a = frame_id_to_idx.at(frame_id_a);
             auto idx_b = frame_id_to_idx.at(frame_id_b);
-            Mat3 sqrt_info = loop.getSqrtInfo().block<3, 3>(3, 3).template cast<T>();
+            Mat3 sqrt_info = loop.getSqrtInfoMat().block<3, 3>(3, 3).template cast<T>();
             if (idx_a == idx_b) {
                 printf("[RotationInitialization::solveLinear] Loop between frame %ld<->%ld idx %d<->%d is self loop\n", frame_id_a, frame_id_b, idx_a, idx_b);
                 continue;

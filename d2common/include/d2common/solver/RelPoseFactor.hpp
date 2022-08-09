@@ -55,7 +55,7 @@ public:
     
     static ceres::CostFunction* Create(const Swarm::GeneralMeasurement2Drones* _loc) {
         auto loop = static_cast<const Swarm::LoopEdge*>(_loc);
-        return new RelPoseFactor(loop->relative_pose, loop->getSqrtInfo());
+        return new RelPoseFactor(loop->relative_pose, loop->getSqrtInfoMat());
     }
 };
 
@@ -94,9 +94,9 @@ public:
 
     static ceres::CostFunction* Create(const Swarm::GeneralMeasurement2Drones* _loc) {
         auto loop = static_cast<const Swarm::LoopEdge*>(_loc);
-        // std::cout << "Loop" << "sqrt_inf\n" << loop->get_sqrt_information_4d() << std::endl;
+        // std::cout << "Loop" << "sqrt_inf\n" << loop->getSqrtInfoMat4D() << std::endl;
         return new ceres::AutoDiffCostFunction<RelPoseFactor4D, 4, 4, 4>(
-            new RelPoseFactor4D(loop->relative_pose, loop->get_sqrt_information_4d()));
+            new RelPoseFactor4D(loop->relative_pose, loop->getSqrtInfoMat4D()));
     }
 
     static ceres::CostFunction * Create(const Swarm::Pose & _relative_pose, const Eigen::Matrix3d & _sqrt_inf_pos, double sqrt_info_yaw) {
@@ -135,7 +135,7 @@ public:
 
     static ceres::CostFunction* Create(const Swarm::LoopEdge & loop) {
         return new ceres::AutoDiffCostFunction<RelRotFactor9D, 9, 9, 9>(
-            new RelRotFactor9D(loop.relative_pose, loop.getSqrtInfo()));
+            new RelRotFactor9D(loop.relative_pose, loop.getSqrtInfoMat()));
     }
 };
 
