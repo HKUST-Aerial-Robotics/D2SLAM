@@ -1,3 +1,4 @@
+#pragma once
 #include <d2common/d2state.hpp>
 #include <swarm_msgs/drone_trajectory.hpp>
 

@@ -4,7 +4,7 @@
 #include <d2common/solver/pose_local_parameterization.h>
 #include <d2common/solver/angle_manifold.h>
 #include "../test/posegraph_g2o.hpp"
-
+#include "rotation_initialization.hpp"
 
 namespace D2PGO {
 
