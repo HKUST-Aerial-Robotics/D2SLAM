@@ -192,39 +192,6 @@ public:
             pose.to_vector(state.getPoseState(frame_id));
         }
     }
-
-    void recoverRotationCeres() {
-        //Next recover the rotation matrices.
-        for (auto it : frame_id_to_idx) {
-            auto frame_id = it.first;
-            if (it.second == -1) {
-                continue;
-            }
-            Map<Matrix<T, 3, 3, RowMajor>> R(state.getRotState(frame_id));
-            R = recoverRotationSVD(Matrix3d(R));
-            state.getFramebyId(frame_id)->odom.pose().att() = Quaterniond(R);
-        }
-    }
-
-    void solveCeres() {
-        ceres::Solver::Options options;
-        options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
-        auto solver = new CeresSolver(&state, options);
-        for (auto loop : loops) {
-            auto loop_factor = RelRotFactor9D::Create(loop);
-            auto res_info = RelRot9DResInfo::create(loop_factor, 
-                nullptr, loop.keyframe_id_a, loop.keyframe_id_b);
-            solver->addResidual(res_info);
-        }
-        solver->getProblem().SetParameterBlockConstant(state.getRotState(fixed_frame_id));
-        auto report = solver->solve();
-        recoverRotationCeres();
-        std::cout << "Solver report: " << report.summary.FullReport() << std::endl;
-        printf("[D2PGO::RotInit] total frames %ld loops %ld opti_time %.1fms initial cost %.2e final cost %.2e float32 %d gravity prior\n", 
-                frame_id_to_idx.size(), loops.size(), report.total_time*1000, report.initial_cost, report.final_cost, 
-                type(T()) == typeid(float), config.enable_gravity_prior);
-    }
-
 protected:
     static Eigen::Matrix<T, 3, 3> recoverRotationSVD(Eigen::Matrix<T, 3, 3> M) {
         auto svd = M.jacobiSvd(ComputeFullV|ComputeFullU);
