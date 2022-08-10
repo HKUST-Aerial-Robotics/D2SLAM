@@ -56,9 +56,9 @@ public:
         config.enable_ego_motion = false;
         config.ceres_options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
         config.ceres_options.num_threads = 1;
-        config.ceres_options.max_num_iterations = 10000;
         config.ceres_options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;// ceres::DOGLEG;
-        nh.param<double>("max_solver_time", config.ceres_options.max_solver_time_in_seconds, 0.1);
+        nh.param<double>("ceres_max_solver_time", config.ceres_options.max_solver_time_in_seconds, 0.1);
+        nh.param<int>("ceres_max_num_iterations", config.ceres_options.max_num_iterations, 50);
         config.main_id = 0;
         config.arock_config.self_id = config.self_id;
         config.arock_config.verbose = true;
@@ -92,7 +92,6 @@ public:
         };
 
         pgo->postsolve_callback = [&] (void) {
-            printf("Publish path\n");
             auto trajs = pgo->getOptimizedTrajs();
             pubTrajs(trajs);
             //Sleep for visualization.

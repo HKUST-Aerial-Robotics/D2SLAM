@@ -5,7 +5,8 @@
     <arg name="g2o_path" default="" />
     <arg name="output_path" default="" />
     <arg name="wait_for_start" default="false" />
-    <arg name="max_solver_time" default="0.5" />
+    <arg name="ceres_max_solver_time" default="0.5" />
+    <arg name="ceres_max_num_iterations" default="50" />
     <arg name="max_steps" default="10" />
     <arg name="rho_frame_T" default="0.006" />
     <arg name="rho_frame_theta" default="0.02" />
@@ -20,7 +21,8 @@
         <param name="g2o_path" value="$(arg g2o_path)" type="string" />
         <param name="output_path" value="$(arg output_path)" type="string" />
         <param name="wait_for_start" value="$(arg wait_for_start)" type="bool" />
-        <param name="max_solver_time" value="$(arg max_solver_time)" type="double" />
+        <param name="ceres_max_solver_time" value="$(arg ceres_max_solver_time)" type="double" />
+        <param name="ceres_max_num_iterations" value="$(arg ceres_max_num_iterations)" type="int" />
         <param name="max_steps" value="$(arg max_steps)" type="int" />
         <param name="rho_frame_theta" value="$(arg rho_frame_theta)" type="double" />
         <param name="rho_frame_T" value="$(arg rho_frame_T)" type="double" />

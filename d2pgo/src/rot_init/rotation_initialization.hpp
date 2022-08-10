@@ -1,18 +1,19 @@
 #pragma once
 #include <d2common/utils.hpp>
-#include "pgostate.hpp"
+#include "../pgostate.hpp"
 #include <swarm_msgs/relative_measurments.hpp>
-#include "d2pgo_config.h"
+#include "../d2pgo_config.h"
 
 namespace D2PGO {
+
 template<typename T>
 class RotationInitialization {
-typedef Eigen::Matrix<T, 3, 3> Mat3;
-typedef Eigen::Matrix<T, 3, 1> Vec3;
-typedef Eigen::Triplet<T> Tpl;
-typedef Eigen::Matrix<T, Eigen::Dynamic, 1> VecX;
-
 protected:
+    typedef Eigen::Matrix<T, 3, 3> Mat3;
+    typedef Eigen::Matrix<T, 3, 1> Vec3;
+    typedef Eigen::Triplet<T> Tpl;
+    typedef Eigen::Matrix<T, Eigen::Dynamic, 1> VecX;
+
     PGOState & state;
     std::vector<Swarm::LoopEdge> loops;
     FrameIdType fixed_frame_id;
@@ -126,7 +127,7 @@ public:
 
         SparseMatrix<T> A(row_id, 9*(frame_id_to_idx.size() - 1));
         A.setFromTriplets(triplet_list.begin(), triplet_list.end());
-        printf("Rots %ld A rows%ld cols %ld b rows %d/%ld\n", frame_id_to_idx.size(), A.rows(), A.cols(), row_id, b.rows());
+        // printf("Rots %ld A rows%ld cols %ld b rows %d/%ld\n", frame_id_to_idx.size(), A.rows(), A.cols(), row_id, b.rows());
         auto At = A.transpose();
         SparseMatrix<T> H = At*A;
         if (b.rows() < row_id) {
@@ -170,7 +171,6 @@ public:
             addFrameId(frame_id_b);
         }
         solveLinear();
-        // solveCeres();
     }
 
     void recoverRotationLLT(const VecX & X) {

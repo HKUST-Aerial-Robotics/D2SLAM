@@ -4,7 +4,7 @@
 #include <d2common/solver/pose_local_parameterization.h>
 #include <d2common/solver/angle_manifold.h>
 #include "../test/posegraph_g2o.hpp"
-#include "rotation_initialization.hpp"
+#include "rot_init/rotation_initialization.hpp"
 
 namespace D2PGO {
 
@@ -124,9 +124,9 @@ bool D2PGO::solve(bool force_solve) {
     if (postsolve_callback != nullptr) {
         postsolve_callback();
     }
-    printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms initial cost %.2e final cost %.2e\n", 
+    printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
             self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
-            report.initial_cost, report.final_cost);
+            report.total_iterations, report.initial_cost, report.final_cost);
     solve_count ++;
     updated = false;
     return true;
