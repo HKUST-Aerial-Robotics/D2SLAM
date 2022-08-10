@@ -133,10 +133,17 @@ bool D2PGO::solve(bool force_solve) {
 }
 
 void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge> & good_loops) {
-    RotationInitializationd rot_init(state);
-    rot_init.addLoops(good_loops);
-    rot_init.setFixedFrameId(state.headId(self_id));
-    rot_init.solve();
+    if (config.rot_init_config.enable_float32) {
+        RotationInitializationf rot_init(state, config.rot_init_config);
+        rot_init.addLoops(good_loops);
+        rot_init.setFixedFrameId(state.headId(self_id));
+        rot_init.solve();
+    } else {
+        RotationInitializationd rot_init(state, config.rot_init_config);
+        rot_init.addLoops(good_loops);
+        rot_init.setFixedFrameId(state.headId(self_id));
+        rot_init.solve();
+    }
 }
 
 void D2PGO::saveG2O() {

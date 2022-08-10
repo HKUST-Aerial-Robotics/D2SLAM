@@ -69,6 +69,9 @@ public:
         nh.param<double>("rho_frame_theta", config.arock_config.rho_frame_theta, 0.1);
         nh.param<double>("eta_k", config.arock_config.eta_k, 0.9);
         nh.param<bool>("enable_rot_int", config.enable_rotation_initialization, true);
+        nh.param<bool>("rot_init_enable_gravity_prior", config.rot_init_config.enable_gravity_prior, true);
+        nh.param<double>("rot_init_gravity_sqrt_info", config.rot_init_config.gravity_sqrt_info, 10);
+        nh.param<bool>("rot_init_enable_float32", config.rot_init_config.enable_float32, false);
         if (solver_type == "ceres") {
             config.mode = PGO_MODE_NON_DIST;
         } else {

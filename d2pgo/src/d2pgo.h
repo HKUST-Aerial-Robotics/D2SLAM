@@ -7,31 +7,9 @@
 #include <d2common/d2pgo_types.h>
 #include "../test/posegraph_g2o.hpp"
 #include "swarm_outlier_rejection/swarm_outlier_rejection.hpp"
+#include "d2pgo_config.h"
 
 namespace D2PGO {
-
-struct D2PGOConfig {
-    int self_id = -1;
-    int main_id = -1;
-    PGO_MODE mode = PGO_MODE_NON_DIST;
-    D2Common::ARockSolverConfig arock_config;
-    ceres::Solver::Options ceres_options;
-    PGO_POSE_DOF pgo_pose_dof = PGO_POSE_4D;
-    double pos_covariance_per_meter = 4e-3;
-    double yaw_covariance_per_meter = 4e-5;
-    int min_solve_size = 2;
-    double min_cov_len = 0.1;
-    bool enable_ego_motion = true;
-    double loop_distance_threshold = 1.2;
-    bool write_g2o = false;
-    std::string g2o_output_path = "";
-    bool g2o_use_raw_data = true;
-    bool enable_pcm = false;
-    bool is_realtime = false;
-    bool enable_rotation_initialization = true;
-    SwarmLocalOutlierRejectionParams pcm_rej;
-};
-
 class D2PGO {
 protected:
     D2PGOConfig config;

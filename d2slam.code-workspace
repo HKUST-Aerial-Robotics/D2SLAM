@@ -137,7 +137,8 @@
 			"dense": "cpp",
 			"__functional_base": "cpp",
 			"__config": "cpp",
-			"__mutex_base": "cpp"
+			"__mutex_base": "cpp",
+			"orderingmethods": "cpp"
 		}
 	}
 }
