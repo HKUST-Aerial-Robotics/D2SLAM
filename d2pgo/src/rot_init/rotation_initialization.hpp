@@ -16,6 +16,7 @@ protected:
 
     PGOState & state;
     std::vector<Swarm::LoopEdge> loops;
+    std::vector<Swarm::PosePrior> pose_priors; 
     FrameIdType fixed_frame_id;
     std::map<FrameIdType, int> frame_id_to_idx;
     RotInitConfig config;
@@ -60,11 +61,30 @@ public:
         }
     }
 
+
+    void setPriorFactorsbyFixedParam() {
+        auto pose_fixed = state.getFramebyId(fixed_frame_id)->odom.pose();
+        for (auto loop : loops) {
+            //Set up the problem
+            auto frame_id_a = loop.keyframe_id_a;
+            auto frame_id_b = loop.keyframe_id_b;
+            auto idx_a = frame_id_to_idx.at(frame_id_a);
+            auto idx_b = frame_id_to_idx.at(frame_id_b);
+            if (idx_a == -1) {
+                Swarm::Pose pose_b = pose_fixed*loop.relative_pose;
+                pose_priors.emplace_back(Swarm::PosePrior(frame_id_b, pose_b, loop.getInfoMat()));
+            } else if (idx_b == -1) {
+                Swarm::Pose pose_a = pose_fixed*loop.relative_pose.inverse();
+                pose_priors.emplace_back(Swarm::PosePrior(frame_id_a, pose_a, loop.getInfoMat()));
+            }
+        }
+    }
+
     void solveLinear() {
         D2Common::Utility::TicToc tic;
-        VecX b(loops.size()*9);
+        VecX b(loops.size()*9 + pose_priors.size()*9);
         if (config.enable_gravity_prior) {
-            b.resize(loops.size()*9 + (frame_id_to_idx.size() - 1)*3);
+            b.resize(loops.size()*9 + pose_priors.size()*9 + (frame_id_to_idx.size() - 1)*3);
         }
         b.setZero();
         auto pose_fixed = state.getFramebyId(fixed_frame_id)->odom.pose();
@@ -82,26 +102,32 @@ public:
                 printf("[RotationInitialization::solveLinear] Loop between frame %ld<->%ld idx %d<->%d is self loop\n", frame_id_a, frame_id_b, idx_a, idx_b);
                 continue;
             }
+            if (idx_a == -1 || idx_b == -1) {
+                continue;
+            }
             Mat3 R = loop.relative_pose.att().toRotationMatrix().template cast<T>();
             Mat3 Rt = R.transpose();
-            if (idx_a == -1) {
-                Mat3 Rj_t = (R_fix * R).transpose();
-                for (int k = 0; k < 3; k ++) {  //Row of Rotation of keyframe b
-                    fillInTripet(row_id + k*3, 9*idx_b + 3*k, sqrt_info*Mat3::Identity(), triplet_list);
-                    b.segment(row_id + k*3, 3) = sqrt_info*Rj_t.col(k);     
-                }
-            } else if (idx_b == -1) {
-                Mat3 Ri_t = (R_fix * Rt).transpose();
-                for (int k = 0; k < 3; k ++) {  //Row of Rotation of keyframe b
-                    fillInTripet(row_id + k*3, 9*idx_a + 3*k, sqrt_info*Mat3::Identity(), triplet_list);
-                    b.segment(row_id + k*3, 3) = sqrt_info*Ri_t.col(k);           
-                }
-            } else {
-                for (int k = 0; k < 3; k ++) { //Row of Rotation of keyframe a
-                    int j0 = 9*idx_a + 3*k;
-                    fillInTripet(row_id + k*3, 9*idx_a + 3*k, sqrt_info*Rt, triplet_list);
-                    fillInTripet(row_id + k*3, 9*idx_b + 3*k, -sqrt_info*Mat3::Identity(), triplet_list);
-                }
+            for (int k = 0; k < 3; k ++) { //Row of Rotation of keyframe a
+                fillInTripet(row_id + k*3, 9*idx_a + 3*k, sqrt_info*Rt, triplet_list);
+                fillInTripet(row_id + k*3, 9*idx_b + 3*k, -sqrt_info, triplet_list);
+            }
+            row_id += 9;
+        }
+
+        for (auto prior: pose_priors) {
+            auto frame_id = prior.frame_id;
+            auto idx = frame_id_to_idx.at(frame_id);
+            if (idx == -1) {
+                continue;
+            }
+            Mat3 R = prior.pose.att().toRotationMatrix().template cast<T>();
+            Mat3 Rt = R.transpose();
+            auto sqrt_info = prior.getSqrtInfoMat();
+            Mat3 sqrt_R = sqrt_info.block<3, 3>(3, 3).template cast<T>();
+            // std::cout << "sqrtinfo:\n" << sqrt_R << std::endl;
+            for (int k = 0; k < 3; k ++) { //Row of Rotation of keyframe a
+                fillInTripet(row_id + k*3, 9*idx + 3*k, sqrt_R, triplet_list);
+                b.segment(row_id + k*3, 3) = sqrt_R*Rt.col(k);     
             }
             row_id += 9;
         }
@@ -127,17 +153,17 @@ public:
 
         SparseMatrix<T> A(row_id, 9*(frame_id_to_idx.size() - 1));
         A.setFromTriplets(triplet_list.begin(), triplet_list.end());
-        // printf("Rots %ld A rows%ld cols %ld b rows %d/%ld\n", frame_id_to_idx.size(), A.rows(), A.cols(), row_id, b.rows());
+        printf("Rots %ld A rows%ld cols %ld b rows %d/%ld\n", frame_id_to_idx.size(), A.rows(), A.cols(), row_id, b.rows());
         auto At = A.transpose();
         SparseMatrix<T> H = At*A;
-        if (b.rows() < row_id) {
+        if (b.rows() > row_id) {
             b.conservativeResize(row_id);
         }
-        b = At*b;
         // Solve by LLT
         // std::cout << "A" << std::endl << A << std::endl;
         // std::cout << "b" << std::endl << b.transpose() << std::endl;
         // std::cout << "H" << std::endl << H << std::endl;
+        b = At*b;
         Eigen::SimplicialLLT<Eigen::SparseMatrix<T>> solver;
         solver.compute(H);
         if (solver.info() != Eigen::Success) {
@@ -157,8 +183,8 @@ public:
         // std::cout << "X" << std::endl << X.transpose() << std::endl;
         //Update the rotation
         recoverRotationLLT(X);
-        printf("[RotationInitialization] RotInit %.2fms Solve A LLT %.2fms Recover rotation in %.2fms F32: %d g_prior: %d\n", tic.toc(), dt, tic2.toc(),
-            typeid(T) == typeid(float), config.enable_gravity_prior);
+        printf("[RotationInitialization] RotInit %.2fms LLT %.2fms Recover %.2fms Loops %ld Priors %ld F32: %d g_prior: %d\n", tic.toc(), dt, tic2.toc(),
+            loops.size(), pose_priors.size(), typeid(T) == typeid(float), config.enable_gravity_prior);
     }
 
 
@@ -170,6 +196,7 @@ public:
             addFrameId(frame_id_a);
             addFrameId(frame_id_b);
         }
+        setPriorFactorsbyFixedParam();
         solveLinear();
     }
 
