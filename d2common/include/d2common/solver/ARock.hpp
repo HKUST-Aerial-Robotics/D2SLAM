@@ -8,6 +8,7 @@ struct ARockSolverConfig {
     double rho_frame_T = 0.1;
     double rho_frame_theta = 0.1;
     double rho_landmark = 0.1;
+    double rho_rot_mat = 0.1;
     double eta_k = 0.9;
     int max_steps = 10;
     int max_wait_steps = 10;
@@ -28,17 +29,18 @@ protected:
     std::map<state_type*, ParamInfo> all_estimating_params;
     void addParam(const ParamInfo & param_info);
     void updateDualStates();
-    virtual void receiveAll() = 0;
-    virtual void broadcastData() = 0;
-    virtual void setDualStateFactors() = 0;
-    virtual void scanAndCreateDualStates() = 0;
     bool hasDualState(state_type* param, int drone_id);
     void createDualState(const ParamInfo & param_info, int drone_id);
     virtual bool isRemoteParam(const ParamInfo & param);
     virtual int solverId(const ParamInfo & param);
+    
     virtual SolverReport solveLocalStep() = 0;
-    virtual void prepare_solver(bool final_iter) = 0;
+    virtual void prepareSolverInIter(bool final_iter) = 0;
     virtual SolverReport solve_arock();
+    virtual void receiveAll() = 0;
+    virtual void broadcastData() = 0;
+    virtual void setDualStateFactors() = 0;
+    virtual void scanAndCreateDualStates() = 0;
 public:
     void reset();
     ARockBase(D2State * _state, ARockSolverConfig _config):
@@ -53,7 +55,7 @@ protected:
     double rho_theta = 0.1;
     virtual SolverReport solveLocalStep() override;
     void setDualStateFactors() override;
-    virtual void prepare_solver(bool final_iter) override;
+    virtual void prepareSolverInIter(bool final_iter) override;
 public:
     ARockSolver(D2State * _state, ARockSolverConfig _config):
             SolverWrapper(_state), ARockBase(_state, _config) {

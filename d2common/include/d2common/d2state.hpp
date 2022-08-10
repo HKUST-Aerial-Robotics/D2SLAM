@@ -11,7 +11,11 @@ protected:
     int reference_frame_id = -1;
     std::map<FrameIdType, D2BaseFrame*> frame_db;
     std::map<FrameIdType, state_type*> _frame_pose_state;
-    std::map<FrameIdType, state_type*> _frame_rot_state;
+
+    // Note that this rot state is not esstentially a rotation matrix. 
+    // To get real rotation matrix from it, need recoverRotationSVD
+    std::map<FrameIdType, state_type*> _frame_rot_state; 
+
     mutable std::recursive_mutex state_lock;
     bool is_4dof = false;
 public:

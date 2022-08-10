@@ -10,6 +10,8 @@
 #include "d2pgo_config.h"
 
 namespace D2PGO {
+class RotInit;
+
 class D2PGO {
 protected:
     D2PGOConfig config;
@@ -26,6 +28,8 @@ protected:
     std::vector<Swarm::LoopEdge> used_loops;
     std::map<int, Swarm::DroneTrajectory> ego_motion_trajs;
     SwarmLocalOutlierRejection rejection;
+
+    RotInit * rot_init = nullptr;
 
     void saveG2O();
     void setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::LoopEdge> & good_loops);

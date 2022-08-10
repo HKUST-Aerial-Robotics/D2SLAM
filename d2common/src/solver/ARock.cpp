@@ -133,7 +133,7 @@ SolverReport ARockBase::solve_arock() {
                 continue;
             }
         }
-        prepare_solver(total_cnt == config.max_steps - 1);
+        prepareSolverInIter(total_cnt == config.max_steps - 1);
         scanAndCreateDualStates();
         setDualStateFactors();
         auto _report = solveLocalStep();
@@ -188,7 +188,7 @@ void ARockSolver::resetResiduals() {
     residuals.clear();
 }
 
-void ARockSolver::prepare_solver(bool final_iter) {
+void ARockSolver::prepareSolverInIter(bool final_iter) {
     if (problem != nullptr) {
         delete problem;
     }
