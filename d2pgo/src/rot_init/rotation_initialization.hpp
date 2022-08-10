@@ -120,10 +120,9 @@ public:
             if (idx == -1) {
                 continue;
             }
-            Mat3 R = prior.pose.att().toRotationMatrix().template cast<T>();
+            Mat3 R = prior.getRotMat().template cast<T>();
             Mat3 Rt = R.transpose();
-            auto sqrt_info = prior.getSqrtInfoMat();
-            Mat3 sqrt_R = sqrt_info.block<3, 3>(3, 3).template cast<T>();
+            Mat3 sqrt_R = prior.getSqrtInfoMatRot().template cast<T>();;
             // std::cout << "sqrtinfo:\n" << sqrt_R << std::endl;
             for (int k = 0; k < 3; k ++) { //Row of Rotation of keyframe a
                 fillInTripet(row_id + k*3, 9*idx + 3*k, sqrt_R, triplet_list);
