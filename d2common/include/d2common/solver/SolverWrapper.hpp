@@ -17,6 +17,14 @@ struct SolverReport {
     bool succ = true;
     std::string message = "";
     ceres::Solver::Summary summary;
+    void compose(const SolverReport & other) {
+        total_iterations += other.total_iterations;
+        total_time += other.total_time;
+        final_cost = other.final_cost;
+        succ = succ && other.succ;
+        message += other.message;
+        summary = other.summary;
+    }
 };
 
 class SolverWrapper {

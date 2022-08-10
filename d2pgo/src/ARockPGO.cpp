@@ -15,8 +15,8 @@ void ARockPGO::processPGOData(const DPGOData & data) {
     for (auto it: data.frame_duals) {
         auto frame_id = it.first;
         auto & dual = it.second;
-        if (state->hasFrame(frame_id)) {
-            auto * ptr = state->getPoseState(frame_id);
+        if (SolverWrapper::state->hasFrame(frame_id)) {
+            auto * ptr = SolverWrapper::state->getPoseState(frame_id);
             if (all_estimating_params.find(ptr) != all_estimating_params.end()) {
                 if (data.target_id == self_id || !hasDualState(ptr, drone_id)) {
                     // if (data.target_id != self_id) {
@@ -79,7 +79,7 @@ void ARockPGO::broadcastData() {
         data.stamp = ros::Time::now().toSec();
         data.drone_id = self_id;
         data.target_id = it.first;
-        data.reference_frame_id = state->getReferenceFrameId();
+        data.reference_frame_id = SolverWrapper::state->getReferenceFrameId();
         // printf("ARockPGO::broadcastData of drone %d\n", data.target_id);
         for (auto it2: it.second) {
             auto ptr = it2.first;

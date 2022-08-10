@@ -138,7 +138,8 @@
 			"__functional_base": "cpp",
 			"__config": "cpp",
 			"__mutex_base": "cpp",
-			"orderingmethods": "cpp"
+			"orderingmethods": "cpp",
+			"regex": "cpp"
 		}
 	}
 }
