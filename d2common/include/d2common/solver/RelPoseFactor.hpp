@@ -59,6 +59,76 @@ public:
     }
 };
 
+class RelPoseFactorManifold {
+public:
+    RelPoseFactorManifold(const Swarm::Pose &t_ab_measured,
+                         const Eigen::Matrix6d &sqrt_information)
+        : t_ab_measured_(t_ab_measured), sqrt_information_(sqrt_information) {
+            // std::cout << "sqrt_information_diag_" << sqrt_information_diag_.transpose() << std::endl;
+        }
+
+    template <typename T>
+    bool operator()(const T *const pose_a_ptr,
+                    const T *const pose_b_ptr,
+                    T *residuals_ptr) const {
+        Eigen::Map<const Eigen::Matrix<T, 3, 1>> p_a(pose_a_ptr);
+        Eigen::Map<const Eigen::Quaternion<T>> q_a(pose_a_ptr + 3);
+
+        Eigen::Map<const Eigen::Matrix<T, 3, 1>> p_b(pose_b_ptr);
+        Eigen::Map<const Eigen::Quaternion<T>> q_b(pose_b_ptr + 3);
+
+        // Compute the relative transformation between the two frames.
+        Eigen::Quaternion<T> q_a_inverse = q_a.conjugate();
+        Eigen::Quaternion<T> q_ab_estimated = q_a_inverse * q_b;
+
+        // Represent the displacement between the two frames in the A frame.
+        Eigen::Matrix<T, 3, 1> p_ab_estimated = q_a_inverse * (p_b - p_a);
+
+        // Compute the error between the two orientation estimates.
+        Eigen::Quaternion<T> delta_q =
+            t_ab_measured_.att().template cast<T>() * q_ab_estimated.conjugate();
+
+        // Compute the residuals.
+        // [ position         ]   [ delta_p          ]
+        // [ orientation (3x1)] = [ 2 * delta_q(0:2) ]
+        Eigen::Map<Eigen::Matrix<T, 6, 1>> residuals(residuals_ptr);
+        residuals.template block<3, 1>(0, 0) =
+            p_ab_estimated - t_ab_measured_.pos().template cast<T>();
+        residuals.template block<3, 1>(3, 0) = T(2.0) * delta_q.vec();
+
+        // Scale the residuals by the measurement uncertainty.
+    #ifdef USE_INFORMATION_DIAG
+        for (unsigned int i = 0; i < 6; i ++ ) {
+            residuals(i) = residuals(i)*sqrt_information_diag_(i);
+        }
+    #else
+        residuals.applyOnTheLeft(sqrt_information_.template cast<T>());
+    #endif
+        return true;
+    }
+
+    static ceres::CostFunction *Create(
+        const Swarm::Pose &t_ab_measured,
+        const Eigen::Matrix6d &sqrt_information)
+    {
+        return new ceres::AutoDiffCostFunction<RelPoseFactorManifold, 6, 7, 7>(
+            new RelPoseFactorManifold(t_ab_measured, sqrt_information));
+    }
+
+    static ceres::CostFunction* Create(const Swarm::GeneralMeasurement2Drones* _loc) {
+        auto loop = static_cast<const Swarm::LoopEdge*>(_loc);
+        return new ceres::AutoDiffCostFunction<RelPoseFactorManifold, 6, 7, 7>(
+            new RelPoseFactorManifold(loop->relative_pose, loop->getSqrtInfoMat()));
+    }
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+private:
+    // The measurement for the position of B relative to A in the A frame.
+    const Swarm::Pose t_ab_measured_;
+    // The square root of the measurement information matrix.
+    const Eigen::Matrix6d sqrt_information_;
+};
+
 class RelPoseFactor4D {
     Swarm::Pose relative_pose;
     Eigen::Vector3d relative_pos;

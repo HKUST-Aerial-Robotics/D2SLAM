@@ -125,16 +125,21 @@ bool D2PGO::solve(bool force_solve) {
     if (config.write_g2o) {
         saveG2O();
     }
-    // auto report = solver->solve();
-    // state.syncFromState();
-    // if (postsolve_callback != nullptr) {
-    //     postsolve_callback();
-    // }
-    // printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
-    //         self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
-    //         report.total_iterations, report.initial_cost, report.final_cost);
-    // solve_count ++;
-    // updated = false;
+    if (config.debug_rot_init_only) {
+        solve_count ++;
+        updated = false;
+        return true;
+    }
+    auto report = solver->solve();
+    state.syncFromState();
+    if (postsolve_callback != nullptr) {
+        postsolve_callback();
+    }
+    printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
+            self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
+            report.total_iterations, report.initial_cost, report.final_cost);
+    solve_count ++;
+    updated = false;
     return true;
 }
 
@@ -188,7 +193,11 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::Lo
             loop_factor = RelPoseFactor4D::Create(&loop);
             // this->evalLoop(loop);
         } else {
-            loop_factor = RelPoseFactor::Create(&loop);
+            if (config.pgo_use_autodiff) {
+                loop_factor = RelPoseFactorManifold::Create(&loop);
+            } else {
+                loop_factor = RelPoseFactor::Create(&loop);
+            }
         }
         if (state.hasFrame(loop.keyframe_id_a) && state.hasFrame(loop.keyframe_id_b)) {
             auto res_info = RelPoseResInfo::create(loop_factor, 
@@ -232,7 +241,12 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
             auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id, true);
             solver->addResidual(res_info);
         } else if (config.pgo_pose_dof == PGO_POSE_6D) {
-            auto factor = RelPoseFactor::Create(&loop);
+            ceres::CostFunction * factor;
+            if (config.pgo_use_autodiff) {
+                factor = RelPoseFactorManifold::Create(&loop);
+            } else {
+                factor = RelPoseFactor::Create(&loop);
+            }
             auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id, false);
             solver->addResidual(res_info);
         }
@@ -258,10 +272,13 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
     if (config.pgo_pose_dof == PGO_POSE_4D) {
         manifold = PosAngleManifold::Create();
     } else {
-        // ceres::EigenQuaternionManifold quat_manifold;
-        // ceres::EuclideanManifold<3> euc_manifold;
-        // manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
+        if (config.pgo_use_autodiff) {
+            ceres::EigenQuaternionManifold quat_manifold;
+            ceres::EuclideanManifold<3> euc_manifold;
+            manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
+        } else {
         local_parameterization = new PoseLocalParameterization;
+        }
     }
 
     for (auto frame_id : used_frames) {
@@ -269,7 +286,7 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
         if (!problem.HasParameterBlock(pointer)) {
             continue;
         }
-        if (config.pgo_pose_dof == PGO_POSE_4D) {
+        if (config.pgo_pose_dof == PGO_POSE_4D || config.pgo_use_autodiff) {
             problem.SetManifold(pointer, manifold);
         } else {
             problem.SetParameterization(pointer, local_parameterization);

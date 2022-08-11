@@ -1,5 +1,5 @@
 <launch>
-    <arg name="self_id" default="1" />
+    <arg name="self_id" default="0" />
     <arg name="is_4dof" default="false" />
     <arg name="solver_type" default="arock" />
     <arg name="g2o_path" default="" />
@@ -13,6 +13,8 @@
     <arg name="eta_k" default="0.9" />
     <arg name="enable_rot_int" default="true" />
     <arg name="rot_init_enable_float32" default="true" />
+    <arg name="rot_init_enable_gravity_prior" default="false" />
+    <arg name="debug_rot_init_only" default="false" />
 
     <node name="d2pgo_test_$(arg self_id)" pkg="d2pgo" type="d2pgo_test" output="screen" >
         <param name="self_id" value="$(arg self_id)" type="int" />
@@ -28,6 +30,8 @@
         <param name="rho_frame_T" value="$(arg rho_frame_T)" type="double" />
         <param name="eta_k" value="$(arg eta_k)" type="double" />
         <param name="enable_rot_int" value="$(arg enable_rot_int)" type="bool" />
+        <param name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" type="bool" />
         <param name="rot_init_enable_float32" value="$(arg rot_init_enable_float32)" type="bool" />
+        <param name="debug_rot_init_only" value="$(arg debug_rot_init_only)" type="bool" />
     </node>
 </launch>

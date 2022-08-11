@@ -43,6 +43,8 @@ struct D2PGOConfig {
     bool enable_pcm = false;
     bool is_realtime = false;
     bool enable_rotation_initialization = true;
+    bool debug_rot_init_only = false;
+    bool pgo_use_autodiff = true;
     SwarmLocalOutlierRejectionParams pcm_rej;
     RotInitConfig rot_init_config;
 };
