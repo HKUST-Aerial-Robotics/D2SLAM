@@ -145,7 +145,7 @@ SolverReport ARockBase::solve_arock() {
         }
         if (config.verbose)
             printf("[ARock@%d] substeps: %d total_iterations: %d initial_cost: %.2e final_cost: %.2e changes: %02.2f%% time: %.2fms steps: %d\n", 
-                    self_id, iter_cnt, report.total_iterations, report.initial_cost, report.final_cost, changes*100, report.total_time * 1000, 
+                    self_id, iter_cnt, report.total_iterations, report.initial_cost, report.final_cost, changes*100, _report.total_time * 1000, 
                     report.total_iterations);
         iter_cnt ++;
         total_cnt ++;

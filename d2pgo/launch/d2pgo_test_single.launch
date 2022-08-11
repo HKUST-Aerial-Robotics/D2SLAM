@@ -10,6 +10,7 @@
     <arg name="max_steps" default="10" />
     <arg name="rho_frame_T" default="0.006" />
     <arg name="rho_frame_theta" default="0.02" />
+    <arg name="rho_rot_mat" default="0.1" />
     <arg name="eta_k" default="0.9" />
     <arg name="enable_rot_int" default="true" />
     <arg name="rot_init_enable_float32" default="true" />
@@ -28,6 +29,7 @@
         <param name="max_steps" value="$(arg max_steps)" type="int" />
         <param name="rho_frame_theta" value="$(arg rho_frame_theta)" type="double" />
         <param name="rho_frame_T" value="$(arg rho_frame_T)" type="double" />
+        <param name="rho_rot_mat" value="$(arg rho_rot_mat)" type="double" />
         <param name="eta_k" value="$(arg eta_k)" type="double" />
         <param name="enable_rot_int" value="$(arg enable_rot_int)" type="bool" />
         <param name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" type="bool" />

@@ -12,6 +12,7 @@ struct RotInitConfig {
     const Vector3d gravity_direction = Vector3d(0, 0, 1); //In FLU frame actually it's sky direction.
     double gravity_sqrt_info = 10;
     bool enable_float32 = true;
+    int self_id;
 };
 
 struct SwarmLocalOutlierRejectionParams {

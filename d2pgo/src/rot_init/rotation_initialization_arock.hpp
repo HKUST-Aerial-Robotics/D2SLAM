@@ -15,7 +15,7 @@ protected:
         SolverReport report;
         D2Common::Utility::TicToc tic;
         RotationInitialization<T>::solveLinear();
-        report.total_time = tic.toc();
+        report.total_time = tic.toc()/1000;
         report.total_iterations = 1;
         report.succ = true;
         report.message = "";
@@ -27,7 +27,7 @@ protected:
             for (auto it : param_pair.second) {
                 auto state_pointer = it.first;
                 auto param_info = all_estimating_params.at(state_pointer);
-                if (param_info.id == RotationInitialization<T>::fixed_frame_id) {
+                if (RotationInitialization<T>::isFixedFrame(param_info.id)) {
                     continue;
                 }
                 auto & dual_state = it.second;
@@ -151,6 +151,7 @@ public:
             addFrameId(frame_id_a);
             addFrameId(frame_id_b);
         }
+        RotationInitialization<T>::updateFrameIdx();
         solve_arock();
     }
 

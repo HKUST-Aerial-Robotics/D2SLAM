@@ -732,11 +732,8 @@ class PoseGraph():
         poses, axes_x, axes_y, axes_z, kf_mc, edges_a, edges_b, edge_real, edge_color= self.serialize(index)
         if len(poses) > 1:
             _poses = np.concatenate(poses, axis=0)
-            print("Concat")
         else:
             _poses = np.array(poses[0])
-            print("No Concat")
-        print(type(_poses))
         range_x = np.max(_poses[:,0]) - np.min(_poses[:,0])
         range_y = np.max(_poses[:,1]) - np.min(_poses[:,1])
         range_z = np.max(_poses[:,2]) - np.min(_poses[:,2])

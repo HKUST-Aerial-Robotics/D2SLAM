@@ -128,6 +128,7 @@ bool D2PGO::solve(bool force_solve) {
     if (config.debug_rot_init_only) {
         solve_count ++;
         updated = false;
+        usleep(50000); //In this case we sleep 50ms to let the other drones to initialize rotation 
         return true;
     }
     auto report = solver->solve();
@@ -143,6 +144,10 @@ bool D2PGO::solve(bool force_solve) {
     return true;
 }
 
+bool D2PGO::isMain() const {
+    return main_id == self_id;
+}
+
 void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge> & good_loops) {
     if (rot_init == nullptr) {
         rot_init = new RotInit(&state, config.rot_init_config, config.arock_config, 
@@ -153,7 +158,10 @@ void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge> & good_loops) {
         rot_init->reset();
     }
     rot_init->addLoops(good_loops);
-    rot_init->setFixedFrameId(state.headId(self_id));
+    if (isMain()) {
+        printf("[D2PGO@%d]rotInitial: set first frame fixed\n", self_id);
+        rot_init->setFixedFrameId(state.headId(self_id));
+    }
     rot_init->solve();
 }
 

@@ -16,7 +16,7 @@ class D2PGO {
 protected:
     D2PGOConfig config;
     int self_id;
-    int main_id;
+    int main_id = 0;
     PGOState state;
     mutable std::recursive_mutex state_lock;
     std::vector<Swarm::LoopEdge> all_loops;
@@ -35,6 +35,7 @@ protected:
     void setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::LoopEdge> & good_loops);
     void setupEgoMotionFactors(SolverWrapper * solver);
     void setupEgoMotionFactors(SolverWrapper * solver, int drone_id);
+    bool isMain() const;
 public:
     std::function<void(void)> postsolve_callback;
     std::function<void(const DPGOData & )> bd_data_callback;

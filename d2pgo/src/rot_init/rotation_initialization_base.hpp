@@ -17,20 +17,39 @@ protected:
     PGOState * state = nullptr;
     std::vector<Swarm::LoopEdge> loops;
     std::vector<Swarm::PosePrior> pose_priors; 
-    FrameIdType fixed_frame_id;
     std::map<FrameIdType, int> frame_id_to_idx;
+    std::set<FrameIdType> fixed_frame_ids;
+    std::set<FrameIdType> all_frames;
     RotInitConfig config;
     bool is_fixed_frame_set = false;
+    int self_id;
+    int eff_frame_num = 0;
 
     virtual void addFrameId(FrameIdType _frame_id) {
-        if (!is_fixed_frame_set) {
-            setFixedFrameId(_frame_id);
-            is_fixed_frame_set = true;
-        } else {
-            if (frame_id_to_idx.find(_frame_id) == frame_id_to_idx.end()) {
-                frame_id_to_idx[_frame_id] = frame_id_to_idx.size() - 1;
+        all_frames.insert(_frame_id);
+    }
+
+    int getFrameIdx(FrameIdType _frame_id) {
+        auto idx =  frame_id_to_idx.at(_frame_id);
+        return idx;
+    }
+
+    bool isFixedFrame(FrameIdType _frame_id) {
+        return fixed_frame_ids.find(_frame_id) != fixed_frame_ids.end();
+    }
+
+    void updateFrameIdx() {
+        frame_id_to_idx.clear();
+        int idx = 0;
+        for (auto frame_id : all_frames) {
+            if (!isFixedFrame(frame_id)) {
+                frame_id_to_idx[frame_id] = idx;
+                idx++;
+            } else {
+                frame_id_to_idx[frame_id] = -1;
             }
         }
+        eff_frame_num = idx;
     }
 
     void fillInTripet(int i0, int j0, Matrix<T, 3, 3> M, std::vector<Tpl> & triplets) {
@@ -41,42 +60,38 @@ protected:
         }
     }
 
-
     void setPriorFactorsbyFixedParam() {
-        auto pose_fixed = state->getFramebyId(fixed_frame_id)->odom.pose();
         for (auto loop : loops) {
             //Set up the problem
             auto frame_id_a = loop.keyframe_id_a;
             auto frame_id_b = loop.keyframe_id_b;
-            auto idx_a = frame_id_to_idx.at(frame_id_a);
-            auto idx_b = frame_id_to_idx.at(frame_id_b);
-            if (idx_a == -1) {
+            if (isFixedFrame(frame_id_a) && ! isFixedFrame(frame_id_b)) {
+                auto pose_fixed = state->getFramebyId(frame_id_a)->odom.pose();
                 Swarm::Pose pose_b = pose_fixed*loop.relative_pose;
                 pose_priors.emplace_back(Swarm::PosePrior(frame_id_b, pose_b, loop.getInfoMat()));
-            } else if (idx_b == -1) {
+            } else if (!isFixedFrame(frame_id_a) && isFixedFrame(frame_id_b)) {
+                auto pose_fixed = state->getFramebyId(frame_id_b)->odom.pose();
                 Swarm::Pose pose_a = pose_fixed*loop.relative_pose.inverse();
-                pose_priors.emplace_back(Swarm::PosePrior(frame_id_a, pose_a, loop.getInfoMat()));
+                pose_priors.emplace_back(Swarm::PosePrior(frame_id_b, pose_a, loop.getInfoMat()));
             }
         }
     }
 
     void solveLinear() {
         D2Common::Utility::TicToc tic;
-        VecX b(loops.size()*9 + pose_priors.size()*9);
+        VecX b(loops.size()*ROTMAT_SIZE + pose_priors.size()*ROTMAT_SIZE);
         if (config.enable_gravity_prior) {
-            b.resize(loops.size()*9 + pose_priors.size()*9 + (frame_id_to_idx.size() - 1)*3);
+            b.resize(loops.size()*ROTMAT_SIZE + pose_priors.size()*ROTMAT_SIZE + eff_frame_num*POS_SIZE);
         }
         b.setZero();
-        auto pose_fixed = state->getFramebyId(fixed_frame_id)->odom.pose();
-        Mat3 R_fix = pose_fixed.att().toRotationMatrix().template cast<T>();
         int row_id = 0;
         std::vector<Tpl> triplet_list;
         for (auto loop : loops) {
             //Set up the problem
             auto frame_id_a = loop.keyframe_id_a;
             auto frame_id_b = loop.keyframe_id_b;
-            auto idx_a = frame_id_to_idx.at(frame_id_a);
-            auto idx_b = frame_id_to_idx.at(frame_id_b);
+            auto idx_a = getFrameIdx(frame_id_a);
+            auto idx_b = getFrameIdx(frame_id_b);
             Mat3 sqrt_info = loop.getSqrtInfoMat().block<3, 3>(3, 3).template cast<T>();
             if (idx_a == idx_b) {
                 printf("[RotationInitialization::solveLinear] Loop between frame %ld<->%ld idx %d<->%d is self loop\n", frame_id_a, frame_id_b, idx_a, idx_b);
@@ -96,7 +111,7 @@ protected:
 
         for (auto prior: pose_priors) {
             auto frame_id = prior.frame_id;
-            auto idx = frame_id_to_idx.at(frame_id);
+            auto idx = getFrameIdx(frame_id);
             if (idx == -1) {
                 continue;
             }
@@ -116,7 +131,7 @@ protected:
             //For each frame, add the gravity prior
             for (auto it : frame_id_to_idx) {
                 auto frame_id = it.first;
-                auto idx = it.second;
+                auto idx = getFrameIdx(frame_id);
                 if (idx == -1) {
                     continue;
                 }
@@ -130,9 +145,12 @@ protected:
             }
         }
 
-        SparseMatrix<T> A(row_id, 9*(frame_id_to_idx.size() - 1));
+        SparseMatrix<T> A(row_id, 9*eff_frame_num);
         A.setFromTriplets(triplet_list.begin(), triplet_list.end());
         printf("Rots %ld A rows%ld cols %ld b rows %d/%ld\n", frame_id_to_idx.size(), A.rows(), A.cols(), row_id, b.rows());
+        printf("[RotInit%d] Poses %d EffPoses %d Loops %ld Priors %ld F32: %d g_prior: %d\n", self_id,
+            frame_id_to_idx.size(), eff_frame_num, loops.size(), pose_priors.size(),
+            typeid(T) == typeid(float), config.enable_gravity_prior);
         auto At = A.transpose();
         SparseMatrix<T> H = At*A;
         if (b.rows() > row_id) {
@@ -162,14 +180,15 @@ protected:
         // std::cout << "X" << std::endl << X.transpose() << std::endl;
         //Update the rotation
         recoverRotationLLT(X);
-        printf("[RotationInitialization] RotInit %.2fms LLT %.2fms Recover %.2fms Loops %ld Priors %ld F32: %d g_prior: %d\n", tic.toc(), dt, tic2.toc(),
-            loops.size(), pose_priors.size(), typeid(T) == typeid(float), config.enable_gravity_prior);
+        printf("[RotInit%d] RotInit %.2fms LLT %.2fms Recover %.2fms Poses %d EffPoses %d Loops %ld Priors %ld F32: %d g_prior: %d\n", self_id,
+            tic.toc(), dt, tic2.toc(), frame_id_to_idx.size(), eff_frame_num, loops.size(), pose_priors.size(),
+            typeid(T) == typeid(float), config.enable_gravity_prior);
     }
 
     void recoverRotationLLT(const VecX & X) {
         for (auto it : frame_id_to_idx) {
             auto frame_id = it.first;
-            auto idx = it.second;
+            auto idx = getFrameIdx(frame_id);
             if (idx == -1) {
                 continue;
             }
@@ -199,7 +218,7 @@ protected:
 
 public:
     RotationInitialization(PGOState * _state, RotInitConfig _config):
-        state(_state), config(_config) {
+        state(_state), config(_config), self_id(_config.self_id) {
     }
 
     virtual void addLoop(const Swarm::LoopEdge & loop) {
@@ -212,10 +231,8 @@ public:
     }
 
     void setFixedFrameId(FrameIdType _fixed_frame_id) {
-        fixed_frame_id = _fixed_frame_id;
-        frame_id_to_idx[fixed_frame_id] = -1;
-        is_fixed_frame_set = true;
-        printf("[RotationInitialization::setFixedFrameId] Fixed frame id: %ld\n", fixed_frame_id);
+        fixed_frame_ids.insert(_fixed_frame_id);
+        printf("[RotationInitialization::setFixedFrameId] Fixed frame id: %ld now %ld fixed\n", _fixed_frame_id, fixed_frame_ids.size());
     }
 
     void solve() {
@@ -226,6 +243,7 @@ public:
             addFrameId(frame_id_a);
             addFrameId(frame_id_b);
         }
+        updateFrameIdx();
         setPriorFactorsbyFixedParam();
         solveLinear();
     }
