@@ -74,7 +74,7 @@ void ARockBase::updateDualStates() {
 }
 
 bool ARockBase::isRemoteParam(const ParamInfo & param_info) {
-    if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D) {
+    if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D || param_info.type == ParamsType::ROTMAT) {
         auto frame = state->getFramebyId(param_info.id);
         if (frame->drone_id != self_id) {
             return true;
@@ -84,7 +84,7 @@ bool ARockBase::isRemoteParam(const ParamInfo & param_info) {
 }
 
 int ARockBase::solverId(const ParamInfo & param_info) {
-    if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D) {
+    if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D || param_info.type == ParamsType::ROTMAT) {
         auto frame = state->getFramebyId(param_info.id);
         return frame->drone_id;
     }
@@ -101,7 +101,6 @@ bool ARockBase::hasDualState(state_type* param, int drone_id) {
 }
 
 void ARockBase::createDualState(const ParamInfo & param_info, int drone_id) {
-    // printf("[ARockSolver] Create dual state for param %ld, drone_id %d\n", param_info.id, drone_id);
     if (dual_states_remote.find(drone_id) == dual_states_remote.end()) {
         dual_states_remote[drone_id] = std::map<state_type*, VectorXd>();
         dual_states_local[drone_id] = std::map<state_type*, VectorXd>();

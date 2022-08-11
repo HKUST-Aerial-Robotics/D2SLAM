@@ -202,11 +202,11 @@ public:
         state(_state), config(_config) {
     }
 
-    void addLoop(const Swarm::LoopEdge & loop) {
+    virtual void addLoop(const Swarm::LoopEdge & loop) {
         loops.emplace_back(loop);
     }
     
-    void addLoops(const std::vector<Swarm::LoopEdge> & _loops) {
+    virtual void addLoops(const std::vector<Swarm::LoopEdge> & _loops) {
         printf("[RotationInitialization::addLoops] Adding %ld loops\n", _loops.size());
         loops = _loops;
     }

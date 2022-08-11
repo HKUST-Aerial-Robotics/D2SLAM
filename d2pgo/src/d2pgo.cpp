@@ -69,8 +69,14 @@ void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
 }
 
 void D2PGO::inputDPGOData(const DPGOData & data) {
-    if (solver!=nullptr && config.mode == PGO_MODE_DISTRIBUTED_AROCK) {
-        static_cast<ARockPGO*>(solver)->inputDPGOData(data);
+    if (config.mode == PGO_MODE_DISTRIBUTED_AROCK) {
+        if (data.type == DPGODataType::DPGO_POSE_DUAL && solver!=nullptr) {
+            static_cast<ARockPGO*>(solver)->inputDPGOData(data);
+        } else {
+            if (rot_init!=nullptr) {
+                rot_init->inputDPGOData(data);
+            }
+        }
     }
 }
 
@@ -119,23 +125,25 @@ bool D2PGO::solve(bool force_solve) {
     if (config.write_g2o) {
         saveG2O();
     }
-    auto report = solver->solve();
-    state.syncFromState();
-    if (postsolve_callback != nullptr) {
-        postsolve_callback();
-    }
-    printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
-            self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
-            report.total_iterations, report.initial_cost, report.final_cost);
-    solve_count ++;
-    updated = false;
+    // auto report = solver->solve();
+    // state.syncFromState();
+    // if (postsolve_callback != nullptr) {
+    //     postsolve_callback();
+    // }
+    // printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
+    //         self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
+    //         report.total_iterations, report.initial_cost, report.final_cost);
+    // solve_count ++;
+    // updated = false;
     return true;
 }
 
 void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge> & good_loops) {
     if (rot_init == nullptr) {
         rot_init = new RotInit(&state, config.rot_init_config, config.arock_config, 
-            config.mode==PGO_MODE_DISTRIBUTED_AROCK);
+            config.mode==PGO_MODE_DISTRIBUTED_AROCK, [&](const DPGOData & data) {
+            this->broadcastData(data);
+        });
     } else {
         rot_init->reset();
     }
