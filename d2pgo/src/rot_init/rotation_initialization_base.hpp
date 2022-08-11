@@ -148,7 +148,7 @@ protected:
         SparseMatrix<T> A(row_id, 9*eff_frame_num);
         A.setFromTriplets(triplet_list.begin(), triplet_list.end());
         printf("Rots %ld A rows%ld cols %ld b rows %d/%ld\n", frame_id_to_idx.size(), A.rows(), A.cols(), row_id, b.rows());
-        printf("[RotInit%d] Poses %d EffPoses %d Loops %ld Priors %ld F32: %d g_prior: %d\n", self_id,
+        printf("[RotInit%d] Poses %ld EffPoses %d Loops %ld Priors %ld F32: %d g_prior: %d\n", self_id,
             frame_id_to_idx.size(), eff_frame_num, loops.size(), pose_priors.size(),
             typeid(T) == typeid(float), config.enable_gravity_prior);
         auto At = A.transpose();
@@ -180,7 +180,7 @@ protected:
         // std::cout << "X" << std::endl << X.transpose() << std::endl;
         //Update the rotation
         recoverRotationLLT(X);
-        printf("[RotInit%d] RotInit %.2fms LLT %.2fms Recover %.2fms Poses %d EffPoses %d Loops %ld Priors %ld F32: %d g_prior: %d\n", self_id,
+        printf("[RotInit%d] RotInit %.2fms LLT %.2fms Recover %.2fms Poses %ld EffPoses %d Loops %ld Priors %ld F32: %d g_prior: %d\n", self_id,
             tic.toc(), dt, tic2.toc(), frame_id_to_idx.size(), eff_frame_num, loops.size(), pose_priors.size(),
             typeid(T) == typeid(float), config.enable_gravity_prior);
     }

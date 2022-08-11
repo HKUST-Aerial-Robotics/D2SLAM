@@ -30,7 +30,7 @@ protected:
     void addParam(const ParamInfo & param_info);
     void updateDualStates();
     bool hasDualState(state_type* param, int drone_id);
-    void createDualState(const ParamInfo & param_info, int drone_id);
+    void createDualState(const ParamInfo & param_info, int drone_id, bool init_to_zero = false);
     virtual bool isRemoteParam(const ParamInfo & param);
     virtual int solverId(const ParamInfo & param);
     

@@ -58,7 +58,7 @@ protected:
                     auto drone_id = solverId(param_info);
                     if (drone_id!=self_id) {
                         if  (!hasDualState(param_info.pointer, drone_id)) {
-                            createDualState(param_info, drone_id);
+                            createDualState(param_info, drone_id, true);
                         }
                     }
                 }
@@ -114,7 +114,7 @@ protected:
                         //Then we check it this param has dual.
                         if (!hasDualState(ptr, drone_id)) {
                             //Then we create a new dual state.
-                            createDualState(param_info, drone_id);
+                            createDualState(param_info, drone_id, true);
                             create = true;
                         }
                         //Then we update the dual state.
@@ -124,11 +124,14 @@ protected:
                         // printf("[ARockRotInit@%d]dual remote for frame_id %ld drone_id %d:\n", 
                         //         self_id, frame_id, drone_id);
                         // std::cout << dual.transpose() << std::endl;
-                        // printf("[ARockRotInit@%d]dual local: \n ");
+                        // printf("[ARockRotInit@%d]dual local: \n ", self_id);
                         // std::cout << dual_states_local[drone_id][ptr].transpose() << std::endl;
+                        // VectorXd avg = (dual_states_local[drone_id][ptr] + dual)/2;
+                        // printf("[ARockRotInit@%d]avg dual: \n ", self_id);
+                        // std::cout << avg.transpose() << std::endl;
                         // printf("[ARockRotInit@%d]state     : \n", 
                         //         self_id);
-                        // std::cout << Map<VectorXd>(ptr, 9).transpose() << std::endl;
+                        // std::cout << Map<VectorXd>(ptr, 9).transpose() << "\n" << std::endl;
                     }
                 }
             }

@@ -180,7 +180,7 @@ def align_posegraphs(pg0, gt):
      
 def ATE(pg0, gt, debug=False, debug_title=""):
     assert len(pg0.keyframes) <= len(gt.keyframes), f"poses num error {len(pg0.keyframes)}/{len(gt.keyframes)}"
-    _key0 = list(gt.keyframes.keys())[0]
+    _key0 = list(pg0.keyframes.keys())[0]
     pos0_0 = pg0.keyframes[_key0].pos
     quat0_0 = pg0.keyframes[_key0].quat
     invq0_0 = quaternion_inverse(quat0_0)

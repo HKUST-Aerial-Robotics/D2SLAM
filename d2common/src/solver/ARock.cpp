@@ -100,13 +100,18 @@ bool ARockBase::hasDualState(state_type* param, int drone_id) {
     return false;
 }
 
-void ARockBase::createDualState(const ParamInfo & param_info, int drone_id) {
+void ARockBase::createDualState(const ParamInfo & param_info, int drone_id, bool init_to_zero) {
     if (dual_states_remote.find(drone_id) == dual_states_remote.end()) {
         dual_states_remote[drone_id] = std::map<state_type*, VectorXd>();
         dual_states_local[drone_id] = std::map<state_type*, VectorXd>();
     }
-    dual_states_remote[drone_id][param_info.pointer] = Map<VectorXd>(param_info.pointer, param_info.size);
-    dual_states_local[drone_id][param_info.pointer] = Map<VectorXd>(param_info.pointer, param_info.size);
+    if (init_to_zero) {
+        dual_states_remote[drone_id][param_info.pointer] = VectorXd::Zero(param_info.size);
+        dual_states_local[drone_id][param_info.pointer] = VectorXd::Zero(param_info.size);
+    } else {
+        dual_states_remote[drone_id][param_info.pointer] = Map<VectorXd>(param_info.pointer, param_info.size);
+        dual_states_local[drone_id][param_info.pointer] = Map<VectorXd>(param_info.pointer, param_info.size);
+    }
     updated = true;
 }
 
