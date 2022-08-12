@@ -28,15 +28,15 @@ void ARockPGO::processPGOData(const DPGOData & data) {
                     //Then we check it this param has dual.
                     if (!hasDualState(ptr, drone_id)) {
                         //Then we create a new dual state.
-                        createDualState(param_info, drone_id);
+                        createDualState(param_info, drone_id, true);
                         create = true;
                     }
                     //Then we update the dual state.
                     if (param_info.type == ParamsType::POSE) {
-                        Swarm::Pose pose(dual);
-                        pose.to_vector(dual_states_remote[drone_id][ptr].data());
-                        if (create)
-                            pose.to_vector(dual_states_local[drone_id][ptr].data());
+                        // Swarm::Pose pose(dual);
+                        // pose.to_vector(dual_states_remote[drone_id][ptr].data());
+                        // if (create)
+                        //     pose.to_vector(dual_states_local[drone_id][ptr].data());
                         // printf("[ARockPGO@%d]dual remote for frame_id %ld drone_id %d: %s\n", 
                         //         self_id, frame_id, drone_id, pose.toStr().c_str());
                         // printf("[ARockPGO@%d]dual local: %s\n", 

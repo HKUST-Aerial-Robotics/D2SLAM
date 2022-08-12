@@ -239,7 +239,7 @@ protected:
         Cm <<   Ra(0, 2)*t.y() , -Ra(0, 2)*t.x() + (Ra(0, 0) - Ra(0, 1)) * t.z(), Ra(0, 1)*t.x() - Ra(0, 0)*t.y(),
                 Ra(1, 2)*t.y(), -Ra(1, 2)*t.x() + (Ra(1, 0) - Ra(1, 1)) * t.z(), Ra(1, 1)*t.x() - Ra(1, 0)*t.y(),
                 Ra(2, 2)*t.y(), -Ra(2, 2)*t.x() + (Ra(2, 0) - Ra(2, 1)) * t.z(), Ra(2, 1)*t.x() - Ra(2, 0)*t.y();
-        fillInTripet(row_id, POSE_EFF_SIZE*idx_a + POS_SIZE, T_sqrt_info*Cm, triplet_list); //  take Cm*T_sqrt_info*v_a
+        fillInTripet(row_id, POSE_EFF_SIZE*idx_a + POS_SIZE, -T_sqrt_info*Cm, triplet_list); //  take Cm*T_sqrt_info*v_a
         b.segment(row_id, 3) = T_sqrt_info*Ra*t;  // T_sqrt_info*R*T_a->b    
         row_id = row_id + 3;
         //Rotation error.
@@ -253,9 +253,9 @@ protected:
                 0,          -Rb(2, 2),  Rb(2, 1),
                 Rb(2, 2),   0,          -Rb(2, 0),
                 0,          Rb(2, 0) - Rb(2, 1), 0;
-        fillInTripet(row_id, POSE_EFF_SIZE*idx_b + POS_SIZE, Cm_rb*R_sqrt_info, triplet_list); //  take Cm_rb*R_a
-        Matrix<T, 9, 3> Cm_rab;
-        Cm_rab << -Ra(0,2)*Rab(0,1) + Ra(0, 1)*Rab(0, 2),       -Ra(0, 2)*Rab(1, 1) + Ra(0, 1)*Rab(1, 2), -Ra(0,2)*Rab(2, 1) + Ra(0, 1)*Rab(2, 2),
+        fillInTripet(row_id, POSE_EFF_SIZE*idx_b + POS_SIZE, Cm_rb*R_sqrt_info, triplet_list); //  take Cm_rb*v_b
+        Matrix<T, 9, 3> Cm_ra;
+        Cm_ra << -Ra(0,2)*Rab(0,1) + Ra(0, 1)*Rab(0, 2),       -Ra(0, 2)*Rab(1, 1) + Ra(0, 1)*Rab(1, 2), -Ra(0,2)*Rab(2, 1) + Ra(0, 1)*Rab(2, 2),
                     Ra(0, 2)*Rab(0, 0) - Ra(0, 0)*Rab(0, 2),    Ra(0, 2)*Rab(1, 0) - Ra(0, 0)*Rab(1, 2), Ra(0, 2)*Rab(2, 0) - Ra(0, 0)*Rab(2, 2),
                     (Ra(0, 0) - Ra(0, 1))*Rab(0, 1),            (Ra(0, 0) - Ra(0, 1))*Rab(1, 1),            (Ra(0, 0) - Ra(0, 1))*Rab(2, 1),
                     -Ra(1, 2)*Rab(0, 1) + Ra(1, 1)*Rab(0, 2),   -Ra(1, 2)*Rab(1, 1) + Ra(1, 1)*Rab(1, 2), -Ra(1, 2)*Rab(2, 1) + Ra(1, 1)*Rab(2, 2),
@@ -264,7 +264,7 @@ protected:
                     -Ra(2, 2)*Rab(0, 1) + Ra(2, 1)*Rab(0, 2),   -Ra(2, 2)*Rab(1, 1) + Ra(2, 1)*Rab(1, 2), -Ra(2, 2)*Rab(2, 1) + Ra(2, 1)*Rab(2, 2),
                     Ra(2, 2)*Rab(0, 0) - Ra(2, 0)*Rab(0, 2),    Ra(2, 2)*Rab(1, 0) - Ra(2, 0)*Rab(1, 2), Ra(2, 2)*Rab(2, 0) - Ra(2, 0)*Rab(2, 2),
                     (Ra(2, 0) - Ra(2, 1))*Rab(0, 1),            (Ra(2, 0) - Ra(2, 1))*Rab(1, 1),            (Ra(2, 0) - Ra(2, 1))*Rab(2, 1);
-        fillInTripet(row_id, POSE_EFF_SIZE*idx_a + POS_SIZE, Cm_rab*R_sqrt_info, triplet_list); //  take Cm_rab*R_b
+        fillInTripet(row_id, POSE_EFF_SIZE*idx_a + POS_SIZE, -Cm_ra*R_sqrt_info, triplet_list); //  take -Cm_ra*v_a
         Matrix<T, 3, 3, RowMajor> right = R_sqrt_info*(-Rb+Ra*Rab); // R_sqrt_info*R_b - R_sqrt_info*R_a*Rab
         Map<Matrix<T, 9, 1>> right_vec(right.data()); // Flat matrix
         b.segment(row_id, 9) = right_vec;
@@ -403,9 +403,13 @@ public:
         solveLinearRot();
 
         //solve6DPose
-        pose_priors.clear(); 
-        setPriorFactorsbyFixedParam();
-        solveLinearPose6d();
+        if (config.enable_pose6d_solver) {
+            pose_priors.clear(); 
+            setPriorFactorsbyFixedParam();
+            for (unsigned int i = 0; i < 100; i ++) {
+                solveLinearPose6d();
+            }
+        }
     }
 
     void reset() {

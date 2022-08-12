@@ -115,26 +115,31 @@ bool D2PGO::solve(bool force_solve) {
         setupEgoMotionFactors(solver);
     }
 
-    if (config.enable_rotation_initialization) {
+    if (config.enable_rotation_initialization && !isRotInitConvergence()) {
         rotInitial(used_loops);
+        if (config.write_g2o) {
+            saveG2O();
+        }
     }
 
-    if (config.mode == PGO_MODE_NON_DIST) {
-        setStateProperties(solver->getProblem());
-    }
-    if (config.write_g2o) {
-        saveG2O();
-    }
-    if (config.debug_rot_init_only) {
+    if (config.debug_rot_init_only || config.enable_rotation_initialization && !isRotInitConvergence()) {
         solve_count ++;
         updated = false;
         usleep(50000); //In this case we sleep 50ms to let the other drones to initialize rotation 
         return true;
     }
+    
+    if (config.mode == PGO_MODE_NON_DIST) {
+        setStateProperties(solver->getProblem());
+    }
+    
     auto report = solver->solve();
     state.syncFromState();
     if (postsolve_callback != nullptr) {
         postsolve_callback();
+    }
+    if (config.write_g2o) {
+        saveG2O();
     }
     printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
             self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
@@ -142,6 +147,10 @@ bool D2PGO::solve(bool force_solve) {
     solve_count ++;
     updated = false;
     return true;
+}
+
+bool D2PGO::isRotInitConvergence() const {
+    return solve_count > 10;
 }
 
 bool D2PGO::isMain() const {
