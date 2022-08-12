@@ -115,14 +115,18 @@ bool D2PGO::solve(bool force_solve) {
         setupEgoMotionFactors(solver);
     }
 
-    if (config.enable_rotation_initialization && !isRotInitConvergence()) {
+    if (config.enable_rotation_initialization && !isRotInitConvergence() || 
+            config.rot_init_config.enable_pose6d_solver) {
         rotInitial(used_loops);
         if (config.write_g2o) {
             saveG2O();
         }
     }
 
-    if (config.debug_rot_init_only || config.enable_rotation_initialization && !isRotInitConvergence()) {
+    if (config.debug_rot_init_only || 
+            config.rot_init_config.enable_pose6d_solver ||
+            config.enable_rotation_initialization  && !isRotInitConvergence()) {
+        //When use pose6d in rot init, we do not solve ceres.
         solve_count ++;
         updated = false;
         usleep(50000); //In this case we sleep 50ms to let the other drones to initialize rotation 

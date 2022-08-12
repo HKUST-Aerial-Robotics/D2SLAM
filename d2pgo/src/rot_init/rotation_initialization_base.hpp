@@ -5,7 +5,7 @@
 #include "../d2pgo_config.h"
 
 namespace D2PGO {
-
+using D2Common::Utility::skewSymVec3;
 template <typename Derived, typename T>
 inline void fillInTripet(int i0, int j0, const MatrixBase<Derived> & M, std::vector<Eigen::Triplet<T>> & triplets) {
     for (int i = 0; i < M.rows(); i ++) { //Row, col of relative rotation R
@@ -213,8 +213,12 @@ protected:
             typeid(T) == typeid(float), config.enable_gravity_prior);
     }
 
-    int setupPose6dProblembyLoop(int row_id, const Swarm::LoopEdge & loop, std::vector<Tpl> & triplet_list, VecX & b) {
+    int setupPose6dProblembyLoop(int row_id, const Swarm::LoopEdge & loop, std::vector<Tpl> & triplet_list, VecX & b, bool finetune_rot = true) {
         //Set up the problem
+        int pose_size = POSE_EFF_SIZE;
+        if (!finetune_rot) {
+            pose_size = POS_SIZE;
+        }
         auto frame_id_a = loop.keyframe_id_a;
         auto frame_id_b = loop.keyframe_id_b;
         auto idx_a = getFrameIdx(frame_id_a);
@@ -228,53 +232,58 @@ protected:
         Vec3 t = loop.relative_pose.pos().template cast<T>();
         Mat3 Ra = state->getFramebyId(frame_id_a)->R().template cast<T>();
         Mat3 Rb = state->getFramebyId(frame_id_b)->R().template cast<T>();
-        R_sqrt_info = Mat3::Identity() * R_sqrt_info.norm();
-        T_sqrt_info = Mat3::Identity() * T_sqrt_info.norm();
+        R_sqrt_info = Mat3::Identity() * R_sqrt_info.norm()/3;
+        T_sqrt_info = Mat3::Identity() * T_sqrt_info.norm()/3;
         //Translation error.
         //For now a pose has 6 param. XYZ and theta_x, theta_y, theta_z
         //Row of Rotation of keyframe a
-        fillInTripet(row_id, POSE_EFF_SIZE*idx_a, -T_sqrt_info, triplet_list); // take -T_sqrt_info*T_a
-        fillInTripet(row_id, POSE_EFF_SIZE*idx_b, T_sqrt_info, triplet_list); //  take +T_sqrt_info*T_b
-        Mat3 Cm; //R * S(v) t_{a->b} => Cm * v
-        Cm <<   Ra(0, 2)*t.y() , -Ra(0, 2)*t.x() + (Ra(0, 0) - Ra(0, 1)) * t.z(), Ra(0, 1)*t.x() - Ra(0, 0)*t.y(),
-                Ra(1, 2)*t.y(), -Ra(1, 2)*t.x() + (Ra(1, 0) - Ra(1, 1)) * t.z(), Ra(1, 1)*t.x() - Ra(1, 0)*t.y(),
-                Ra(2, 2)*t.y(), -Ra(2, 2)*t.x() + (Ra(2, 0) - Ra(2, 1)) * t.z(), Ra(2, 1)*t.x() - Ra(2, 0)*t.y();
-        fillInTripet(row_id, POSE_EFF_SIZE*idx_a + POS_SIZE, -T_sqrt_info*Cm, triplet_list); //  take Cm*T_sqrt_info*v_a
+        fillInTripet(row_id, pose_size*idx_b, T_sqrt_info, triplet_list); //  take +T_sqrt_info*T_b
+        fillInTripet(row_id, pose_size*idx_a, -T_sqrt_info, triplet_list); // take -T_sqrt_info*T_a
         b.segment(row_id, 3) = T_sqrt_info*Ra*t;  // T_sqrt_info*R*T_a->b    
+        if (!finetune_rot) {
+            return row_id + 3;
+        }
+        Mat3 Cm = Ra*(skewSymVec3(t).transpose()); //R * S(v) t_{a->b} => Cm * v
+        fillInTripet(row_id, pose_size*idx_a + POS_SIZE, -T_sqrt_info*Cm, triplet_list); //  take Cm*T_sqrt_info*v_a
         row_id = row_id + 3;
         //Rotation error.
         Matrix<T, 9, 3> Cm_rb;
         Cm_rb << 0,         -Rb(0, 2),  Rb(0, 1),
                 Rb(0, 2),   0,          -Rb(0, 0),
-                0,          Rb(0, 0) - Rb(0, 1), 0,
-                0,          -Rb(1,2),  Rb(1, 1),
+                -Rb(0, 1),  Rb(0, 0),   0,
+                0,         -Rb(1, 2),  Rb(1, 1),
                 Rb(1, 2),   0,          -Rb(1, 0),
-                0,          Rb(1, 0) - Rb(1, 1), 0,
-                0,          -Rb(2, 2),  Rb(2, 1),
+                -Rb(1, 1),  Rb(1, 0),   0,
+                0,         -Rb(2, 2),  Rb(2, 1),
                 Rb(2, 2),   0,          -Rb(2, 0),
-                0,          Rb(2, 0) - Rb(2, 1), 0;
-        fillInTripet(row_id, POSE_EFF_SIZE*idx_b + POS_SIZE, Cm_rb*R_sqrt_info, triplet_list); //  take Cm_rb*v_b
+                -Rb(2, 1),  Rb(2, 0),   0;
+
+        fillInTripet(row_id, pose_size*idx_b + POS_SIZE, Cm_rb*R_sqrt_info, triplet_list); //  take Cm_rb*v_b
         Matrix<T, 9, 3> Cm_ra;
-        Cm_ra << -Ra(0,2)*Rab(0,1) + Ra(0, 1)*Rab(0, 2),       -Ra(0, 2)*Rab(1, 1) + Ra(0, 1)*Rab(1, 2), -Ra(0,2)*Rab(2, 1) + Ra(0, 1)*Rab(2, 2),
-                    Ra(0, 2)*Rab(0, 0) - Ra(0, 0)*Rab(0, 2),    Ra(0, 2)*Rab(1, 0) - Ra(0, 0)*Rab(1, 2), Ra(0, 2)*Rab(2, 0) - Ra(0, 0)*Rab(2, 2),
-                    (Ra(0, 0) - Ra(0, 1))*Rab(0, 1),            (Ra(0, 0) - Ra(0, 1))*Rab(1, 1),            (Ra(0, 0) - Ra(0, 1))*Rab(2, 1),
-                    -Ra(1, 2)*Rab(0, 1) + Ra(1, 1)*Rab(0, 2),   -Ra(1, 2)*Rab(1, 1) + Ra(1, 1)*Rab(1, 2), -Ra(1, 2)*Rab(2, 1) + Ra(1, 1)*Rab(2, 2),
-                    Ra(1, 2)*Rab(0, 0) - Ra(1, 0)*Rab(0, 2),    Ra(1, 2)*Rab(1, 0) - Ra(1, 0)*Rab(1, 2), Ra(1, 2)*Rab(2, 0) - Ra(1, 0)*Rab(2, 2),
-                    (Ra(1, 0) - Ra(1, 1))*Rab(0, 1),            (Ra(1, 0) - Ra(1, 1))*Rab(1, 1),            (Ra(1, 0) - Ra(1, 1))*Rab(2, 1),
-                    -Ra(2, 2)*Rab(0, 1) + Ra(2, 1)*Rab(0, 2),   -Ra(2, 2)*Rab(1, 1) + Ra(2, 1)*Rab(1, 2), -Ra(2, 2)*Rab(2, 1) + Ra(2, 1)*Rab(2, 2),
-                    Ra(2, 2)*Rab(0, 0) - Ra(2, 0)*Rab(0, 2),    Ra(2, 2)*Rab(1, 0) - Ra(2, 0)*Rab(1, 2), Ra(2, 2)*Rab(2, 0) - Ra(2, 0)*Rab(2, 2),
-                    (Ra(2, 0) - Ra(2, 1))*Rab(0, 1),            (Ra(2, 0) - Ra(2, 1))*Rab(1, 1),            (Ra(2, 0) - Ra(2, 1))*Rab(2, 1);
-        fillInTripet(row_id, POSE_EFF_SIZE*idx_a + POS_SIZE, -Cm_ra*R_sqrt_info, triplet_list); //  take -Cm_ra*v_a
-        Matrix<T, 3, 3, RowMajor> right = R_sqrt_info*(-Rb+Ra*Rab); // R_sqrt_info*R_b - R_sqrt_info*R_a*Rab
+        Cm_ra <<    Ra(0, 2)*Rab(1, 0) - Ra(0, 1)*Rab(2, 0), -Ra(0, 2)*Rab(0, 0) + Ra(0, 0)*Rab(2, 0), Ra(0, 1)*Rab(0, 0) - Ra(0, 0) * Rab(1, 0),
+                    Ra(0, 2)*Rab(1, 1) - Ra(0, 1)*Rab(2, 1), -Ra(0, 2)*Rab(0, 1) + Ra(0, 0)*Rab(2, 1), Ra(0, 1)*Rab(0, 1) - Ra(0, 0) * Rab(1, 1),
+                    Ra(0, 2)*Rab(1, 2) - Ra(0, 1)*Rab(2, 2), -Ra(0, 2)*Rab(0, 2) + Ra(0, 0)*Rab(2, 2), Ra(0, 1)*Rab(0, 2) - Ra(0, 0) * Rab(1, 2),
+                    Ra(1, 2)*Rab(1, 0) - Ra(1, 1)*Rab(2, 0), -Ra(1, 2)*Rab(0, 0) + Ra(1, 0)*Rab(2, 0), Ra(1, 1)*Rab(0, 0) - Ra(1, 0) * Rab(1, 0),
+                    Ra(1, 2)*Rab(1, 1) - Ra(1, 1)*Rab(2, 1), -Ra(1, 2)*Rab(0, 1) + Ra(1, 0)*Rab(2, 1), Ra(1, 1)*Rab(0, 1) - Ra(1, 0) * Rab(1, 1),
+                    Ra(1, 2)*Rab(1, 2) - Ra(1, 1)*Rab(2, 2), -Ra(1, 2)*Rab(0, 2) + Ra(1, 0)*Rab(2, 2), Ra(1, 1)*Rab(0, 2) - Ra(1, 0) * Rab(1, 2),
+                    Ra(2, 2)*Rab(1, 0) - Ra(2, 1)*Rab(2, 0), -Ra(2, 2)*Rab(0, 0) + Ra(2, 0)*Rab(2, 0), Ra(2, 1)*Rab(0, 0) - Ra(2, 0) * Rab(1, 0),
+                    Ra(2, 2)*Rab(1, 1) - Ra(2, 1)*Rab(2, 1), -Ra(2, 2)*Rab(0, 1) + Ra(2, 0)*Rab(2, 1), Ra(2, 1)*Rab(0, 1) - Ra(2, 0) * Rab(1, 1),
+                    Ra(2, 2)*Rab(1, 2) - Ra(2, 1)*Rab(2, 2), -Ra(2, 2)*Rab(0, 2) + Ra(2, 0)*Rab(2, 2), Ra(2, 1)*Rab(0, 2) - Ra(2, 0) * Rab(1, 2);
+        fillInTripet(row_id, pose_size*idx_a + POS_SIZE, -Cm_ra*R_sqrt_info, triplet_list); //  take -Cm_ra*v_a
+        Matrix<T, 3, 3, RowMajor> right = R_sqrt_info*(-Rb+Ra*Rab); // R_sqrt_info*(R_b - R_a*Rab)
         Map<Matrix<T, 9, 1>> right_vec(right.data()); // Flat matrix
         b.segment(row_id, 9) = right_vec;
-
-        return row_id + 9;
+        row_id = row_id + 9;
+        return row_id;
     }
 
-    int setupPose6DProblembyPrior(int row_id, const Swarm::PosePrior & prior, std::vector<Tpl> & triplet_list, VecX & b) {
+    int setupPose6DProblembyPrior(int row_id, const Swarm::PosePrior & prior, std::vector<Tpl> & triplet_list, VecX & b, bool finetune_rot=true) {
         auto frame_id = prior.frame_id;
         auto idx = getFrameIdx(frame_id);
+        int pose_size = POSE_EFF_SIZE;
+        if (!finetune_rot) {
+            pose_size = POS_SIZE;
+        }
         if (idx == -1) {
             return row_id;
         }
@@ -284,25 +293,28 @@ protected:
         Vec3 Ta = state->getFramebyId(frame_id)->T().template cast<T>();
         Mat3 sqrt_R = prior.getSqrtInfoMatRot().template cast<T>();
         Mat3 sqrt_T = prior.getSqrtInfoMat().block<3, 3>(0, 0).template cast<T>();
-        sqrt_R = Mat3::Identity() * sqrt_R.norm();
-        sqrt_T = Mat3::Identity() * sqrt_T.norm();
+        sqrt_R = Mat3::Identity() * sqrt_R.norm()/3;
+        sqrt_T = Mat3::Identity() * sqrt_T.norm()/3;
 
         //Translation error.
-        fillInTripet(row_id, POSE_EFF_SIZE*idx, sqrt_T, triplet_list); // take T_sqrt_info*T_a
+        fillInTripet(row_id, pose_size*idx, sqrt_T, triplet_list); // take T_sqrt_info*T_a
         b.segment(row_id, 3) = sqrt_T*Tp;  // T_sqrt_info*T_p
         row_id = row_id + 3;
+        if (!finetune_rot) {
+            return row_id;
+        }
         //Rotation error
         Matrix<T, 9, 3> Cm_ra;
         Cm_ra << 0,         -Ra(0, 2),  Ra(0, 1),
                 Ra(0, 2),   0,          -Ra(0, 0),
-                0,          Ra(0, 0) - Ra(0, 1), 0,
-                0,          -Ra(1,2),  Ra(1, 1),
+                -Ra(0, 1),  Ra(0, 0),   0,
+                0,         -Ra(1, 2),  Ra(1, 1),
                 Ra(1, 2),   0,          -Ra(1, 0),
-                0,          Ra(1, 0) - Ra(1, 1), 0,
-                0,          -Ra(2, 2),  Ra(2, 1),
+                -Ra(1, 1),  Ra(1, 0),   0,
+                0,         -Ra(2, 2),  Ra(2, 1),
                 Ra(2, 2),   0,          -Ra(2, 0),
-                0,          Ra(2, 0) - Ra(2, 1), 0;
-        fillInTripet(row_id, POSE_EFF_SIZE*idx, Cm_ra*sqrt_R, triplet_list); //  take Cm_ra*sqrt_R*R_a
+                -Ra(2, 1),  Ra(2, 0),   0;
+        fillInTripet(row_id, pose_size*idx, Cm_ra*sqrt_R, triplet_list); //  take Cm_ra*sqrt_R*R_a
         Matrix<T, 3, 3, RowMajor> Rp_with_info = sqrt_R*Rp;
         Map<Matrix<T, 9, 1>> right_vec(Rp_with_info.data()); // Flat matrix
         b.segment(row_id, 9) = right_vec; // Rp
@@ -324,7 +336,7 @@ protected:
         double dt_setup = tic.toc();
         tic.tic();
         D2Common::Utility::TicToc tic_solve;
-        auto X = solveLinear(row_id, 6*eff_frame_num, triplet_list, b);
+        auto X = solveLinear(row_id, POSE_EFF_SIZE*eff_frame_num, triplet_list, b);
         double dt_solve = tic_solve.toc();
         //Recover poses from X
         recoverPose6dfromLinear(X);
@@ -352,7 +364,11 @@ protected:
         }
     }
 
-    void recoverPose6dfromLinear(const VecX & X) {
+    void recoverPose6dfromLinear(const VecX & X, bool finetune_rot = true) {
+        int pose_size = POSE_EFF_SIZE;
+        if (!finetune_rot) {
+            pose_size = POS_SIZE;
+        }
         for (auto it : frame_id_to_idx) {
             auto frame_id = it.first;
             auto idx = getFrameIdx(frame_id);
@@ -362,11 +378,14 @@ protected:
             auto frame = state->getFramebyId(frame_id);
             auto & pose = frame->odom.pose();
             Matrix3d R0 = pose.R();
-            Vec3 t = X.segment(idx*POSE_EFF_SIZE, POS_SIZE);
-            Vec3 delta = X.segment(idx*POSE_EFF_SIZE+POS_SIZE, POS_SIZE);
-            Matrix3d R = R0*(Matrix3d::Identity()+D2Common::Utility::skewSymVec3(delta.template cast<double>()));
-            pose.att() = Quaterniond(R);
+            Vec3 t = X.segment(idx*pose_size, POS_SIZE);
             pose.pos() = t.template cast<double>();
+            if (finetune_rot) {
+                Vec3 delta = X.segment(idx*POSE_EFF_SIZE+POS_SIZE, POS_SIZE);
+                Matrix3d R = R0*(Matrix3d::Identity()+skewSymVec3(delta.template cast<double>()));
+                pose.att() = Quaterniond(R);
+                pose.att().normalize();
+            }
         }
     }
 
@@ -406,7 +425,7 @@ public:
         if (config.enable_pose6d_solver) {
             pose_priors.clear(); 
             setPriorFactorsbyFixedParam();
-            for (unsigned int i = 0; i < 100; i ++) {
+            for (int i = 0; i < 100; i ++) {
                 solveLinearPose6d();
             }
         }
