@@ -51,5 +51,11 @@ struct D2BaseFrame {
         reference_frame_id = new_ref_frame_id;
         odom.moveByPose(delta_pose);
     }
+    const Matrix3d R() const {
+        return odom.R();
+    }
+    const Vector3d T() const {
+        return odom.pos();
+    }
 };
 }

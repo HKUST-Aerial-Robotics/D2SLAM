@@ -14,7 +14,7 @@ protected:
     virtual SolverReport solveLocalStep() override {
         SolverReport report;
         D2Common::Utility::TicToc tic;
-        RotationInitialization<T>::solveLinear();
+        RotationInitialization<T>::solveLinearRot();
         report.total_time = tic.toc()/1000;
         report.total_iterations = 1;
         report.succ = true;

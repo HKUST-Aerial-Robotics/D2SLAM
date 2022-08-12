@@ -57,6 +57,16 @@ static Eigen::Matrix<typename Derived::Scalar, 3, 3> skewSymmetric(const Eigen::
 }
 
 template <typename Derived>
+static Eigen::Matrix<typename Derived::Scalar, 3, 3> skewSymVec3(const Eigen::MatrixBase<Derived> &v)
+{
+    Eigen::Matrix<typename Derived::Scalar, 3, 3> ans;
+    ans << typename Derived::Scalar(0), -v(2), v(1),
+        v(2), typename Derived::Scalar(0), -v(1),
+        -v(1), v(0), typename Derived::Scalar(0);
+    return ans;
+}
+
+template <typename Derived>
 static Eigen::Matrix<typename Derived::Scalar, 4, 4> Qleft(const Eigen::QuaternionBase<Derived> &q)
 {
     Eigen::Quaternion<typename Derived::Scalar> qq = positify(q);

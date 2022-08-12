@@ -181,7 +181,7 @@ class RelRotFactor9D {
 public:
     RelRotFactor9D(Swarm::Pose relative_pose, Matrix6d sqrt_info): 
         R_sqrt_info(sqrt_info.block<3,3>(3,3)) {
-        R_rel = relative_pose.att().toRotationMatrix();
+        R_rel = relative_pose.R();
     }
 
     template<typename T>

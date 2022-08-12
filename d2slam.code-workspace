@@ -39,9 +39,6 @@
 		{
 			"name": "ceres-solver",
 			"path": "../../../source/ceres-solver"
-		},
-		{
-			"path": "../TaichiSLAM"
 		}
 	],
 	"settings": {
