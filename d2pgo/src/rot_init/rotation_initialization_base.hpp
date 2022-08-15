@@ -232,8 +232,8 @@ protected:
         Vec3 t = loop.relative_pose.pos().template cast<T>();
         Mat3 Ra = state->getFramebyId(frame_id_a)->R().template cast<T>();
         Mat3 Rb = state->getFramebyId(frame_id_b)->R().template cast<T>();
-        R_sqrt_info = Mat3::Identity() * R_sqrt_info.norm()/3;
-        T_sqrt_info = Mat3::Identity() * T_sqrt_info.norm()/3;
+        R_sqrt_info = Mat3::Identity() * R_sqrt_info.norm()/1.4142;
+        T_sqrt_info = Mat3::Identity() * T_sqrt_info.norm();
         //Translation error.
         //For now a pose has 6 param. XYZ and theta_x, theta_y, theta_z
         //Row of Rotation of keyframe a
@@ -294,8 +294,8 @@ protected:
         Vec3 Ta = state->getFramebyId(frame_id)->T().template cast<T>();
         Mat3 sqrt_R = prior.getSqrtInfoMatRot().template cast<T>();
         Mat3 sqrt_T = prior.getSqrtInfoMat().block<3, 3>(0, 0).template cast<T>();
-        sqrt_R = Mat3::Identity() * sqrt_R.norm()/3;
-        sqrt_T = Mat3::Identity() * sqrt_T.norm()/3;
+        sqrt_R = Mat3::Identity() * sqrt_R.norm()/1.4142;
+        sqrt_T = Mat3::Identity() * sqrt_T.norm();
 
         //Translation error.
         fillInTripet(row_id, pose_size*idx, sqrt_T, triplet_list); // take T_sqrt_info*T_a

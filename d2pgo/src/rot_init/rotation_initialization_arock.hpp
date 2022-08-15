@@ -10,11 +10,16 @@ protected:
     std::recursive_mutex pgo_data_mutex;
     std::vector<DPGOData> pgo_data;
     std::function<void(const DPGOData &)> broadcastDataCallback;
+    bool solve_6d = false;
 
     virtual SolverReport solveLocalStep() override {
         SolverReport report;
         D2Common::Utility::TicToc tic;
-        RotationInitialization<T>::solveLinearRot();
+        if (solve_6d) {
+            RotationInitialization<T>::solveLinearPose6d();
+        } else {
+            RotationInitialization<T>::solveLinearRot();
+        }
         report.total_time = tic.toc()/1000;
         report.total_iterations = 1;
         report.succ = true;
