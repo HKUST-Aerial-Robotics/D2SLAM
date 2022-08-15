@@ -37,8 +37,8 @@ protected:
     void setupEgoMotionFactors(SolverWrapper * solver, int drone_id);
     bool isMain() const;
     bool isRotInitConvergence() const;
-    void postPerturbSolve();
 public:
+    void postPerturbSolve();
     std::function<void(void)> postsolve_callback;
     std::function<void(const DPGOData & )> bd_data_callback;
     D2PGO(D2PGOConfig _config):

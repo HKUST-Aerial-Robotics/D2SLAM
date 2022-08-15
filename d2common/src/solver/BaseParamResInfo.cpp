@@ -6,13 +6,14 @@ ParamInfo createFramePose(D2State * state, FrameIdType id, bool is_perturb) {
     if (is_perturb) {
         info.pointer = state->getPerturbState(id);
         info.size = POSE_EFF_SIZE;
+        info.type = POSE_PERTURB_6D;
     } else {
+        info.type = POSE;
         info.pointer = state->getPoseState(id);
         info.size = POSE_SIZE;
     }
     info.index = -1;
     info.eff_size = POSE_EFF_SIZE;
-    info.type = POSE;
     info.id = id;
     info.data_copied.resize(info.size);
     memcpy(info.data_copied.data(), info.pointer, sizeof(state_type) * info.size);

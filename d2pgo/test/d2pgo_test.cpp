@@ -44,6 +44,7 @@ public:
         nh.param<std::string>("output_path", output_path, "test.g2o");
         nh.param<int>("self_id", self_id, -1);
         nh.param<bool>("is_4dof", is_4dof, true);
+        nh.param<bool>("is_multi", multi, false);
         nh.param<std::string>("solver_type", solver_type, "arock");
 
         if (g2o_path != "")
@@ -165,6 +166,9 @@ public:
                 }
             }
             //Write data
+            if (multi) {
+                pgo->postPerturbSolve();
+            }
             writeDataG2o();
             ros::shutdown();
         });

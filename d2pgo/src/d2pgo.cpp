@@ -166,7 +166,7 @@ bool D2PGO::solve_single() {
     if (config.enable_ego_motion) {
         setupEgoMotionFactors(solver);
     }
-    if (!is_rot_init_convergence) {
+    if (!isRotInitConvergence()) {
         if (config.enable_rotation_initialization || config.rot_init_config.enable_pose6d_solver) {
             rotInitial(used_loops);
             if (config.write_g2o) {
@@ -208,7 +208,7 @@ bool D2PGO::solve_single() {
 }
 
 bool D2PGO::isRotInitConvergence() const {
-    return solve_count > 10;
+    return solve_count > 20 || is_rot_init_convergence;
 }
 
 bool D2PGO::isMain() const {
@@ -270,7 +270,7 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::Lo
                 // this->evalLoop(loop);
             } else {
                 if (config.pgo_use_autodiff) {
-                    if (config.perturb_mode && is_rot_init_convergence) {
+                    if (config.perturb_mode && isRotInitConvergence()) {
                         auto qa = state.getAttitudeInit(loop.keyframe_id_a);
                         auto qb = state.getAttitudeInit(loop.keyframe_id_b);
                         loop_factor = RelPoseFactorPerturbAD::Create(loop, qa, qb);
@@ -324,7 +324,7 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
         } else if (config.pgo_pose_dof == PGO_POSE_6D) {
             ceres::CostFunction * factor;
             if (config.pgo_use_autodiff) {
-                if (config.perturb_mode && is_rot_init_convergence) {
+                if (config.perturb_mode && isRotInitConvergence()) {
                     auto qa = state.getAttitudeInit(frame_a->frame_id);
                     auto qb = state.getAttitudeInit(frame_b->frame_id);
                     factor = RelPoseFactorPerturbAD::Create(loop, qa, qb);
@@ -386,22 +386,11 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
         if (config.perturb_mode) {
             auto pointer = state.getPerturbState(frame_id);
             problem.SetParameterBlockConstant(pointer);
+            printf("[D2PGO::setStateProperties@%d] set perturb state %ld to constant\n", self_id, frame_id);
         } else {
             auto pointer = state.getPoseState(frame_id);
             problem.SetParameterBlockConstant(pointer);
-        } // } else {
-    //     if (config.mode >= PGO_MODE_DISTRIBUTED_AROCK && self_id != main_id) {
-    //         //In this case we found the first frame of the self drone which reference_frame_id is main_id
-    //         auto frames = state.getFrames(self_id);
-    //         for (auto frame : frames) {
-    //             if (frame->reference_frame_id == main_id) {
-    //                 // printf("[D2PGO%d] Set frame %ld constant reference_frame %d \n", self_id, frame->frame_id, frame->reference_frame_id);
-    //                 auto pointer = state.getPoseState(frame->frame_id);
-    //                 problem.SetParameterBlockConstant(pointer);
-    //                 break;
-    //             }
-    //         }
-    //     }
+        }
     }
 }
 
@@ -413,6 +402,7 @@ void D2PGO::postPerturbSolve() {
         Quaterniond q_perturb = Utility::quatfromRotationVector(perturb_theta);
         Swarm::Pose optimized_pose(pos, state.getAttitudeInit(frame_id)*q_perturb);
         state.getFramebyId(frame_id)->odom.pose() = optimized_pose;
+        perturb_theta.setZero();
     }
 }
 

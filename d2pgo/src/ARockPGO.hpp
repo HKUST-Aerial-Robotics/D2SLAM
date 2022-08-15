@@ -15,6 +15,7 @@ protected:
     D2PGO * pgo = nullptr;
     std::recursive_mutex pgo_data_mutex;
     std::vector<DPGOData> pgo_data;
+    bool perturb_mode = true;
 public:
     void inputDPGOData(const DPGOData & data);
     ARockPGO(D2State * _state, D2PGO * _pgo, ARockSolverConfig _config):

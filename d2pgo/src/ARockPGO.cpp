@@ -16,7 +16,12 @@ void ARockPGO::processPGOData(const DPGOData & data) {
         auto frame_id = it.first;
         auto & dual = it.second;
         if (SolverWrapper::state->hasFrame(frame_id)) {
-            auto * ptr = SolverWrapper::state->getPoseState(frame_id);
+            state_type * ptr;
+            if (perturb_mode) {
+                ptr = SolverWrapper::state->getPerturbState(frame_id);
+            } else {
+                ptr = SolverWrapper::state->getPoseState(frame_id);
+            }
             if (all_estimating_params.find(ptr) != all_estimating_params.end()) {
                 if (data.target_id == self_id || !hasDualState(ptr, drone_id)) {
                     // if (data.target_id != self_id) {
@@ -28,7 +33,7 @@ void ARockPGO::processPGOData(const DPGOData & data) {
                     //Then we check it this param has dual.
                     if (!hasDualState(ptr, drone_id)) {
                         //Then we create a new dual state.
-                        createDualState(param_info, drone_id);
+                        createDualState(param_info, drone_id, true);
                         create = true;
                     }
                     //Then we update the dual state.
@@ -37,22 +42,14 @@ void ARockPGO::processPGOData(const DPGOData & data) {
                         pose.to_vector(dual_states_remote[drone_id][ptr].data());
                         if (create)
                             pose.to_vector(dual_states_local[drone_id][ptr].data());
-                        // printf("[ARockPGO@%d]dual remote for frame_id %ld drone_id %d: %s\n", 
-                        //         self_id, frame_id, drone_id, pose.toStr().c_str());
-                        // printf("[ARockPGO@%d]dual local: %s\n", 
-                        //         self_id, Swarm::Pose(dual_states_local[drone_id][ptr]).toStr().c_str());
-                        // printf("[ARockPGO@%d]state     : %s\n", 
-                        //         self_id, Swarm::Pose(ptr, true).toStr().c_str());
                     } else if (param_info.type == ParamsType::POSE_4D) {
                         dual_states_remote[drone_id][ptr] = dual;
                         if (create)
                             dual_states_local[drone_id][ptr] = dual;
-                        printf("[ARockPGO@%d]dual remote for frame_id %ld drone_id %d: %s\n", 
-                                self_id, frame_id, drone_id, Swarm::Pose(dual).toStr().c_str());
-                        printf("[ARockPGO@%d]dual local: %s\n", 
-                                self_id, Swarm::Pose(dual_states_local[drone_id][ptr]).toStr().c_str());
-                        printf("[ARockPGO@%d]state     : %s\n", 
-                                self_id, Swarm::Pose(ptr, true).toStr().c_str());
+                    } else if (param_info.type == ParamsType::POSE_PERTURB_6D) { 
+                        dual_states_remote[drone_id][ptr] = dual;
+                        if (create)
+                            dual_states_local[drone_id][ptr] = dual;
                     }
                 }
             }
@@ -90,7 +87,7 @@ void ARockPGO::broadcastData() {
                 pose = Swarm::Pose(dual_state.data());
             } else if (param.type == ParamsType::POSE_4D) {
                 pose = Swarm::Pose(dual_state.data(), true);
-            }
+            } //TODO:If perturb 
             data.frame_duals[param.id] = dual_state;
             data.frame_poses[param.id] = pose;
         }

@@ -52,15 +52,6 @@ void ARockBase::updateDualStates() {
                     dual_state_local(3) = Utility::NormalizeAngle(dual_state_local(3));
                     ROS_WARN("Normed angle: %f", dual_state_local(3));
                 }
-                // printf("\n[ARockSolver%d] Pose %d:\n", self_id, param_info.id);
-                // std::cout << "dual_state_local" << dual_state_local.transpose() << std::endl;
-                // std::cout << "dual_state_remote" << dual_state_remote.transpose() << std::endl;
-                // std::cout << "avg_dual_state" << avg_state.transpose() << std::endl  << std::endl;
-                // std::cout << "cur_state" << cur_est_state.transpose() << std::endl  << std::endl;
-                // std::cout << "delta " << delta.transpose() << std::endl;
-                // avg_state = (dual_state_local + dual_state_remote)/2;
-                // std::cout << "dual_state_local new " << dual_state_local.transpose() << std::endl;
-                // std::cout << "avg_dual_state   new " << avg_state.transpose() << std::endl;
             } else {
                 //Is a vector.
                 VectorXd dual_state_remote = dual_states_remote.at(remote_drone_id).at(state_pointer);
@@ -74,7 +65,8 @@ void ARockBase::updateDualStates() {
 }
 
 bool ARockBase::isRemoteParam(const ParamInfo & param_info) {
-    if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D || param_info.type == ParamsType::ROTMAT) {
+    if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D || 
+        param_info.type == ParamsType::ROTMAT || param_info.type == ParamsType::POSE_PERTURB_6D) {
         auto frame = state->getFramebyId(param_info.id);
         if (frame->drone_id != self_id) {
             return true;
@@ -84,7 +76,8 @@ bool ARockBase::isRemoteParam(const ParamInfo & param_info) {
 }
 
 int ARockBase::solverId(const ParamInfo & param_info) {
-    if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D || param_info.type == ParamsType::ROTMAT) {
+    if (param_info.type == ParamsType::POSE || param_info.type == ParamsType::POSE_4D || param_info.type == ParamsType::ROTMAT
+     || param_info.type == ParamsType::POSE_PERTURB_6D) {
         auto frame = state->getFramebyId(param_info.id);
         return frame->drone_id;
     }
@@ -238,7 +231,14 @@ void ARockSolver::setDualStateFactors() {
                 //     param_info.id, param_pair.first, pose_dual.toStr().c_str(), Swarm::Pose(state_pointer, true).toStr().c_str());
                 auto factor = ConsenusPoseFactor4D::Create(pose_dual, rho_T, rho_theta, true);
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
-            } else {
+            } else if (param_info.type == D2Common::POSE_PERTURB_6D) {
+                MatrixXd A(param_info.size, param_info.size);
+                A.setIdentity();
+                A.block<3, 3>(0, 0) *= rho_T;
+                A.block<3, 3>(3, 3) *= rho_theta;
+                auto factor = new ceres::NormalPrior(A, dual_state);
+                problem->AddResidualBlock(factor, nullptr, state_pointer);
+            } else  {
                 //Is euclidean.
                 MatrixXd A(param_info.size, param_info.size);
                 A.setIdentity();
