@@ -243,9 +243,10 @@ protected:
         if (!finetune_rot) {
             return row_id + 3;
         }
-        Mat3 Cm = Ra*(skewSymVec3(t).transpose()); //R * S(v) t_{a->b} => Cm * v
+        Mat3 Cm = Ra*(skewSymVec3(t).transpose()); //R * S(v_a) t_{a->b} => Cm * v
         fillInTripet(row_id, pose_size*idx_a + POS_SIZE, -T_sqrt_info*Cm, triplet_list); //  take Cm*T_sqrt_info*v_a
         row_id = row_id + 3;
+        //Finish translation error.
         //Rotation error.
         Matrix<T, 9, 3> Cm_rb;
         Cm_rb << 0,         -Rb(0, 2),  Rb(0, 1),
@@ -314,7 +315,7 @@ protected:
                 0,         -Ra(2, 2),  Ra(2, 1),
                 Ra(2, 2),   0,          -Ra(2, 0),
                 -Ra(2, 1),  Ra(2, 0),   0;
-        fillInTripet(row_id, pose_size*idx, Cm_ra*sqrt_R, triplet_list); //  take Cm_ra*sqrt_R*R_a
+        fillInTripet(row_id, pose_size*idx + POS_SIZE, Cm_ra*sqrt_R, triplet_list); //  take Cm_ra*sqrt_R*R_a
         Matrix<T, 3, 3, RowMajor> Rp_with_info = sqrt_R*Rp;
         Map<Matrix<T, 9, 1>> right_vec(Rp_with_info.data()); // Flat matrix
         b.segment(row_id, 9) = right_vec; // Rp
@@ -425,7 +426,7 @@ public:
         if (config.enable_pose6d_solver) {
             pose_priors.clear(); 
             setPriorFactorsbyFixedParam();
-            for (int i = 0; i < 100; i ++) {
+            for (int i = 0; i < config.pose6d_iterations; i ++) {
                 solveLinearPose6d();
             }
         }

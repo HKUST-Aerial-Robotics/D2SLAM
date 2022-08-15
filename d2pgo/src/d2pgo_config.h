@@ -13,6 +13,7 @@ struct RotInitConfig {
     double gravity_sqrt_info = 10;
     bool enable_float32 = true;
     bool enable_pose6d_solver = false;
+    int pose6d_iterations = 1;
     int self_id;
 };
 

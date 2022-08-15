@@ -81,6 +81,7 @@ public:
         nh.param<double>("rot_init_gravity_sqrt_info", config.rot_init_config.gravity_sqrt_info, 10);
         nh.param<bool>("rot_init_enable_float32", config.rot_init_config.enable_float32, false);
         nh.param<bool>("enable_linear_pose6d_solver", config.rot_init_config.enable_pose6d_solver, false);
+        nh.param<int>("linear_pose6d_iterations", config.rot_init_config.pose6d_iterations, 10);
         nh.param<bool>("debug_rot_init_only", config.debug_rot_init_only, true);
         config.rot_init_config.self_id = self_id;
         if (solver_type == "ceres") {

@@ -17,6 +17,7 @@
     <arg name="rot_init_enable_gravity_prior" default="false" />
     <arg name="debug_rot_init_only" default="false" />
     <arg name="enable_linear_pose6d_solver" default="false" />
+    <arg name="linear_pose6d_iterations" default="2" />
 
     <node name="d2pgo_test_$(arg self_id)" pkg="d2pgo" type="d2pgo_test" output="screen" >
         <param name="self_id" value="$(arg self_id)" type="int" />
@@ -37,5 +38,6 @@
         <param name="rot_init_enable_float32" value="$(arg rot_init_enable_float32)" type="bool" />
         <param name="debug_rot_init_only" value="$(arg debug_rot_init_only)" type="bool" />
         <param name="enable_linear_pose6d_solver" value="$(arg enable_linear_pose6d_solver)" type="bool" />
+        <param name="linear_pose6d_iterations" value="$(arg linear_pose6d_iterations)" type="int" />
     </node>
 </launch>
