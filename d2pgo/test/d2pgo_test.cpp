@@ -25,7 +25,7 @@ class D2PGOTester {
     std::thread th;
     std::string output_path;
     ros::NodeHandle & _nh;
-
+    bool multi = false;
     int max_steps = 100;
 
     std::map<int, ros::Publisher> path_pubs;
@@ -157,11 +157,13 @@ public:
 
     void startSolve() {
         th = std::thread([&]() {
-            ROS_INFO("[D2PGO@%d] Start solve", self_id);
             for (int i = 0; i < max_steps; i ++) {
-                pgo->solve(true);
+                if (multi) {
+                    pgo->solve_multi(true);
+                } else {
+                    pgo->solve_single();
+                }
             }
-            ROS_INFO("[D2PGO@%d] End solve, writing reslts", self_id);
             //Write data
             writeDataG2o();
             ros::shutdown();

@@ -21,6 +21,7 @@ class D2PGONode {
     ros::Publisher dpgo_data_pub;
     ros::Publisher drone_traj_pub;
     bool write_to_file = false;
+    bool multi = false;
     int write_to_file_step = 5;
     int pub_count = 0;
     std::string output_folder;
@@ -71,7 +72,12 @@ protected:
     }
 
     void solverTimerCallback(const ros::TimerEvent & event) {
-        if (pgo->solve()) { 
+        bool succ;
+        if (multi)
+            succ = pgo->solve_multi();
+        else 
+            succ = pgo->solve_single();
+        if (succ) { 
             auto trajs = pgo->getOptimizedTrajs();
             pubTrajs(trajs);
         }

@@ -20,7 +20,7 @@ SolverReport CeresSolver::solve() {
     report.initial_cost = summary.initial_cost;
     report.final_cost = summary.final_cost;
     report.summary = summary;
-    // std::cout << summary.FullReport() << std::endl;
+    std::cout << summary.FullReport() << std::endl;
     return report;
 }
 
