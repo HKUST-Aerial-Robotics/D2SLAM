@@ -38,13 +38,17 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
 
     camodocal::CameraFactory cam_factory;
     for (auto & cam_calib_path : config.camera_config_paths) {
-        ROS_INFO("Read camera from %s", cam_calib_path.c_str());
+        ROS_INFO("[D2FrontEnd::LoopCam] Read camera from %s", cam_calib_path.c_str());
         auto cam = cam_factory.generateCameraFromYamlFile(cam_calib_path);
         if (cam) {
             cams.push_back(cam);
         } else {
             ROS_ERROR("Failed to read camera from %s", cam_calib_path.c_str());
         }
+    }
+    if (config.camera_ptrs.size() > 0) {
+        printf("[D2FrontEnd::LoopCam] Use camera ptrs: %d cameras\n", config.camera_ptrs.size());
+        cams = config.camera_ptrs;
     }
     printf("[D2FrontEnd::LoopCam] Deepnet ready\n");
     if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
@@ -181,11 +185,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
     for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
         if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             visual_array.images.push_back(generateGrayDepthImageDescriptor(msg, imgs[i], i, tmp));
-        } else {
-            int camera_index_num = 2;
-            if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
-                camera_index_num = 5;
-            }
+        } else if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             auto _imgs = generateStereoImageDescriptor(msg, imgs[i], i, tmp);
             if (_config.stereo_as_depth_cam) {
                 if (_config.right_cam_as_main) {
@@ -197,6 +197,9 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
                 visual_array.images.push_back(_imgs[0]);
                 visual_array.images.push_back(_imgs[1]);
             }
+        } else if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
+            auto _img = generateImageDescriptor(msg, imgs[i], i, tmp);
+            visual_array.images.push_back(_img);
         }
 
         if (_show.cols == 0) {
@@ -226,6 +229,65 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
     kf_count ++;
     visual_array.sync_landmark_ids();
     return visual_array;
+}
+
+VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, cv::Mat &_show) {
+    if (vcam_id > msg.left_images.size()) {
+        ROS_WARN("Flatten images too few");
+        VisualImageDesc ides;
+        ides.stamp = msg.stamp.toSec();
+        return ides;
+    }
+    
+    VisualImageDesc vframe = extractorImgDescDeepnet(msg.stamp, msg.left_images[vcam_id], msg.left_camera_indices[vcam_id], msg.left_camera_ids[vcam_id], false);
+
+    if (vframe.image_desc.size() == 0)
+    {
+        ROS_WARN("Failed on deepnet: vframe.image_desc.size() == 0.");
+        cv::Mat _img;
+        // return ides;
+    }
+
+    auto start = high_resolution_clock::now();
+    // std::cout << "Downsample and encode Cost " << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 << "ms" << std::endl;
+
+    vframe.extrinsic = msg.left_extrisincs[vcam_id];
+    vframe.pose_drone = msg.pose_drone;
+    vframe.frame_id = msg.keyframe_id;
+    if (params->debug_plot_superpoint_features || params->ftconfig->enable_lk_optical_flow || params->show) {
+        vframe.raw_image = msg.left_images[vcam_id];
+        vframe.raw_depth_image = msg.depth_images[vcam_id];
+    }
+
+    auto image_left = msg.left_images[vcam_id];
+    auto pts_up = vframe.landmarks2D();
+    std::vector<int> ids_up, ids_down;
+    if (_config.send_img) {
+        encodeImage(image_left, vframe);
+    }
+    if (_config.show) {
+        cv::Mat img_up = image_left;
+        img_up.copyTo(img);
+        if (!_config.send_img) {
+            encodeImage(img_up, vframe);
+        }
+        cv::cvtColor(img_up, img_up, cv::COLOR_GRAY2BGR);
+        for (unsigned int i = 0; i < vframe.landmarkNum(); i++ ) {
+            if (vframe.landmarks[i].depth_mea) { 
+                auto pt = vframe.landmarks[i].pt2d;
+                auto dep = vframe.landmarks[i].depth;
+                cv::circle(img_up, pt, 3, cv::Scalar(0, 255, 0), 1);
+                char idtext[100] = {};
+                sprintf(idtext, "%3.2f", dep);
+                cv::putText(img_up, idtext, pt - cv::Point2f(5, 0), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 255), 1);
+            }
+        }
+        _show = img_up;
+        char text[100] = {0};
+        sprintf(text, "Frame %d: %ld Features %d", kf_count, msg.keyframe_id, pts_up.size());
+        cv::putText(_show, text, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+    }
+    return vframe;
 }
 
 VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, cv::Mat & _show)
@@ -260,10 +322,6 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
     auto image_left = msg.left_images[vcam_id];
     auto pts_up = vframe.landmarks2D();
     std::vector<int> ids_up, ids_down;
-    if (vframe.landmarkNum() < _config.ACCEPT_MIN_3D_PTS) {
-        return vframe;
-    }
-    
     Swarm::Pose pose_drone(msg.pose_drone);
     Swarm::Pose pose_cam = pose_drone * Swarm::Pose(msg.left_extrisincs[vcam_id]);
 

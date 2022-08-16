@@ -69,7 +69,6 @@ int test_loop_detector(ros::NodeHandle & nh) {
 
 int test_single_loop(ros::NodeHandle & nh) {
     auto sb = nh.subscribe(camera_topic, 1000, image_callback_1);
-    auto sb2 = nh.subscribe(viokeyframe_topic, 1000, vioKFCallback);
     ros::spin();
 }
 

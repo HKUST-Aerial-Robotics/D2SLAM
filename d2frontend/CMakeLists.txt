@@ -23,12 +23,14 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   camera_models
   message_filters
+  image_transport
 )
 
 SET("OpenCV_DIR"  "/usr/local/share/OpenCV/")
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(lcm REQUIRED)
+find_package(yaml-cpp REQUIRED)
 # find_package(Backward)
 set(TENSORRT_ROOT $ENV{HOME}/source/TensorRT-7.1.3.4)
 
@@ -67,6 +69,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
+  ${YAML_CPP_INCLUDE_DIRS}
 )
 
 add_library(libd2frontend
@@ -136,6 +139,7 @@ add_executable(loop_tensorrt_test
 target_link_libraries(loop_tensorrt_test
   loop_cnn
   dw
+  ${YAML_CPP_LIBRARIES}
   ${TORCH_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${catkin_LIBRARIES}
@@ -152,6 +156,7 @@ target_link_libraries(libd2frontend
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${TORCH_LIBRARIES}
+  ${YAML_CPP_LIBRARIES}
   lcm
   faiss
   dw

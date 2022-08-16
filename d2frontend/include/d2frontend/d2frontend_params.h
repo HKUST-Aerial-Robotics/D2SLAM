@@ -64,9 +64,6 @@ struct D2FrontendParams {
     std::string _lcm_uri = "0.0.0.0";
     CameraConfig camera_configuration;
 
-    D2FrontendParams(ros::NodeHandle &);
-    D2FrontendParams() {}
-
     D2Common::PGO_MODE pgo_mode;
 
     //Debug params
@@ -92,6 +89,10 @@ struct D2FrontendParams {
     LoopCamConfig * loopcamconfig;
     LoopDetectorConfig * loopdetectorconfig;
     D2FTConfig * ftconfig;
+
+    D2FrontendParams(ros::NodeHandle &);
+    D2FrontendParams() {}
+    void readCameraCalibrationfromFile(const std::string & path);
 
 };
 extern D2FrontendParams * params;

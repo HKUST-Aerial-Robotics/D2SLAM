@@ -15,6 +15,8 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <queue>
+#include <image_transport/image_transport.h>
+#include <image_transport/subscriber_filter.h>
 
 using namespace std::chrono; 
 using namespace swarm_msgs;
@@ -26,6 +28,7 @@ class LoopNet;
 class D2FeatureTracker;
 class LoopDetector;
 class D2Frontend {
+    typedef image_transport::SubscriberFilter ImageSubscriber;
 protected:
     LoopDetector * loop_detector = nullptr;
     LoopCam * loop_cam = nullptr;
@@ -38,7 +41,7 @@ protected:
     std::set<ros::Time> received_keyframe_stamps;
     std::queue<VisualImageDescArray> loop_queue;
     std::mutex loop_lock;
-
+    image_transport::ImageTransport * it_;
 
     virtual void frameCallback(const VisualImageDescArray & viokf) {};
 
@@ -51,18 +54,10 @@ protected:
 
     // void flatten_raw_callback(const ::FlattenImages & viokf);
     void stereoImagesCallback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right);
-    void compStereoImagesCallback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::CompressedImageConstPtr right);
-    void compDepthImagesCallback(const sensor_msgs::CompressedImageConstPtr left, const sensor_msgs::ImageConstPtr right);
     void depthImagesCallback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr depth);
+    void monoImageCallback(const sensor_msgs::ImageConstPtr & left);
     double last_invoke = 0;
     
-    void odometryCallback(const nav_msgs::Odometry & odometry);
-
-    void odometryKeyframeCallback(const nav_msgs::Odometry & odometry);
-
-    void viononKFCallback(const StereoFrame & viokf);
-    void vioKFCallback(const StereoFrame & viokf, bool nonkeyframe = false);
-
     void pubNodeFrame(const VisualImageDescArray & viokf);
 
     void onRemoteFrameROS(const swarm_msgs::ImageArrayDescriptor & remote_img_desc);
@@ -75,24 +70,15 @@ protected:
 
     void addToLoopQueue(const VisualImageDescArray & viokf);
 
-    ros::Subscriber camera_sub;
-    ros::Subscriber viokeyframe_sub;
-    ros::Subscriber odometry_sub;
-    ros::Subscriber keyframe_odometry_sub;
-    ros::Subscriber flatten_raw_sub;
     ros::Subscriber remote_img_sub;
-    ros::Subscriber viononkeyframe_sub;
     ros::Publisher loopconn_pub;
     ros::Publisher remote_image_desc_pub;
     ros::Publisher local_image_desc_pub;
     ros::Publisher keyframe_pub;
 
-    message_filters::Subscriber<sensor_msgs::Image> * image_sub_l, *image_sub_r;
-    message_filters::Subscriber<sensor_msgs::CompressedImage> * comp_image_sub_l, *comp_image_sub_r;
+    ImageSubscriber * image_sub_l, *image_sub_r;
     message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> * sync;
-    message_filters::TimeSynchronizer<sensor_msgs::CompressedImage, sensor_msgs::CompressedImage> * comp_sync;
-    message_filters::TimeSynchronizer<sensor_msgs::CompressedImage, sensor_msgs::Image> * comp_depth_sync;
-
+    image_transport::Subscriber image_sub_single;
 
     std::thread th, th_loop_det;
     bool received_image = false;

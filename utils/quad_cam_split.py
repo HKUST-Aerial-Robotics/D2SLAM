@@ -26,7 +26,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Split quadcam images')
     parser.add_argument("-i","--input", type=str, help="input bag file")
     parser.add_argument('-v', '--show', action='store_true', help='compress the image topics')
-    parser.add_argument('-s', '--step', type=int, nargs="?", help="step for images, default 5", default=5)
+    parser.add_argument('-s', '--step', type=int, nargs="?", help="step for images, default 5", default=1)
     parser.add_argument('-t', '--start', type=float, nargs="?", help="start time of the first image, default 0", default=0)
     args = parser.parse_args()
     output_bag = generate_bagname(args.input)
@@ -47,11 +47,11 @@ if __name__ == '__main__':
         c = 0
         t0 = None
         for topic, msg, t in bag.read_messages():
+            if t0 is None:
+                t0 = t
+            if (t - t0).to_sec() < args.start:
+                continue
             if topic == "/arducam/image/compressed" or topic == "/arducam/image/raw":
-                if t0 is None:
-                    t0 = t
-                if (t - t0).to_sec() < args.start:
-                    continue
                 c += 1
                 if c % args.step != 0:
                     continue

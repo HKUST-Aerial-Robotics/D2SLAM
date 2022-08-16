@@ -36,6 +36,7 @@ struct LoopCamConfig
     /* data */
     CameraConfig camera_configuration;
     std::vector<std::string> camera_config_paths;
+    std::vector<camodocal::CameraPtr> camera_ptrs;
     std::string superpoint_model;
     std::string pca_comp;
     std::string pca_mean;
@@ -86,6 +87,7 @@ public:
     VisualImageDesc extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, int index, int camera_id, bool superpoint_mode=false);
     std::vector<VisualImageDesc> generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int i, cv::Mat &_show);
     VisualImageDesc generateGrayDepthImageDescriptor(const StereoFrame & msg, cv::Mat & img, int i, cv::Mat &_show);
+    VisualImageDesc generateImageDescriptor(const StereoFrame & msg, cv::Mat & img, int i, cv::Mat &_show);
     VisualImageDescArray processStereoframe(const StereoFrame & msg, std::vector<cv::Mat> & imgs);
 
     void encodeImage(const cv::Mat & _img, VisualImageDesc & _img_desc);

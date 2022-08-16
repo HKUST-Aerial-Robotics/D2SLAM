@@ -4,9 +4,12 @@
 #include "d2frontend/d2featuretracker.h"
 #include "swarm_msgs/swarm_lcm_converter.hpp"
 #include <opencv2/core/eigen.hpp>
+#include <yaml-cpp/yaml.h>
+#include <camodocal/camera_models/CataCamera.h>
 
 namespace D2FrontEnd {
     D2FrontendParams * params;
+    std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(const std::string & camera_name, const YAML::Node & config);
     D2FrontendParams::D2FrontendParams(ros::NodeHandle & nh)
     {
         //Read VINS params.
@@ -114,45 +117,104 @@ namespace D2FrontEnd {
             loopdetectorconfig->MAX_DIRS = 4;
         } else if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             loopdetectorconfig->MAX_DIRS = 1;
+        } else if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE)  {
+            loopdetectorconfig->MAX_DIRS = 4;
         } else {
-            loopdetectorconfig->MAX_DIRS = 0;
             ROS_ERROR("[SWARM_LOOP] Camera configuration %d not implement yet.", camera_configuration);
             exit(-1);
         }
 
-        //Camera configurations from VINS config.
-        int camera_num = fsSettings["num_of_cam"];
-        for (auto i = 0; i < camera_num; i++) {
-            std::string index = std::to_string(i);
-            char param_name[64] = {0};
-            sprintf(param_name, "image%d_topic", i);
-            std::string topic = (std::string)  fsSettings[param_name];
+        std::string calib_file_path = fsSettings["calib_file_path"];
+        if (calib_file_path != "") {
+            calib_file_path = configPath + "/" + calib_file_path;
+            ROS_INFO("Will read camera calibration from %s", calib_file_path.c_str());
+            readCameraCalibrationfromFile(calib_file_path);
+        } else {
+            ROS_INFO("Camera calibration not found");
+            //Camera configurations from VINS config.
+            int camera_num = fsSettings["num_of_cam"];
+            for (auto i = 0; i < camera_num; i++) {
+                std::string index = std::to_string(i);
+                char param_name[64] = {0};
+                sprintf(param_name, "image%d_topic", i);
+                std::string topic = (std::string)  fsSettings[param_name];
 
-            sprintf(param_name, "compressed_image%d_topic", i);
-            std::string comp_topic = (std::string) fsSettings[param_name];
+                sprintf(param_name, "compressed_image%d_topic", i);
+                std::string comp_topic = (std::string) fsSettings[param_name];
 
-            sprintf(param_name, "cam%d_calib", i);
-            std::string camera_calib_path = (std::string) fsSettings[param_name];
-            camera_calib_path = configPath + "/" + camera_calib_path;
+                sprintf(param_name, "cam%d_calib", i);
+                std::string camera_calib_path = (std::string) fsSettings[param_name];
+                camera_calib_path = configPath + "/" + camera_calib_path;
 
-            sprintf(param_name, "body_T_cam%d", i);
-            cv::Mat cv_T;
-            fsSettings[param_name] >> cv_T;
-            Eigen::Matrix4d T;
-            cv::cv2eigen(cv_T, T);
-            Swarm::Pose pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
-            
-            image_topics.emplace_back(topic);
-            comp_image_topics.emplace_back(comp_topic);
-            loopcamconfig->camera_config_paths.emplace_back(camera_calib_path);
-            extrinsics.emplace_back(pose);
+                sprintf(param_name, "body_T_cam%d", i);
+                cv::Mat cv_T;
+                fsSettings[param_name] >> cv_T;
+                Eigen::Matrix4d T;
+                cv::cv2eigen(cv_T, T);
+                Swarm::Pose pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
+                
+                image_topics.emplace_back(topic);
+                comp_image_topics.emplace_back(comp_topic);
+                loopcamconfig->camera_config_paths.emplace_back(camera_calib_path);
+                extrinsics.emplace_back(pose);
 
-            ROS_INFO("[SWARM_LOOP] Camera %d: topic: %s, comp_topic: %s, calib: %s, T: %s", 
-                i, topic.c_str(), comp_topic.c_str(), camera_calib_path.c_str(), pose.toStr().c_str());
+                ROS_INFO("[SWARM_LOOP] Camera %d: topic: %s, comp_topic: %s, calib: %s, T: %s", 
+                    i, topic.c_str(), comp_topic.c_str(), camera_calib_path.c_str(), pose.toStr().c_str());
+            }
         }
 
         depth_topics.emplace_back((std::string) fsSettings["depth_topic"]);
         is_comp_images = (int) fsSettings["is_compressed_images"];
 
     }
+
+    void D2FrontendParams::readCameraCalibrationfromFile(const std::string & path) {
+        YAML::Node config = YAML::LoadFile(path);
+        for (const auto& kv : config) {
+                std::string camera_name = kv.first.as<std::string>();
+                std::cout << camera_name << "\n";
+                const YAML::Node& value = kv.second;
+                auto ret = readCameraConfig(camera_name, value);
+                loopcamconfig->camera_ptrs.emplace_back(ret.first);
+                extrinsics.emplace_back(ret.second);
+        }
+    }
+
+    std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(const std::string & camera_name, const YAML::Node & config) {
+        //In this case, we generate camera ptr.
+        //Now only accept omni-radtan.
+        camodocal::CameraPtr camera;
+        if (config["camera_model"].as<std::string>() == "omni" && 
+            config["distortion_model"].as<std::string>() == "radtan" ) {
+            int width = config["resolution"][0].as<int>();
+            int height = config["resolution"][1].as<int>();
+            double xi = config["intrinsics"][0].as<double>();
+            double gamma1 = config["intrinsics"][1].as<double>();
+            double gamma2 = config["intrinsics"][2].as<double>();
+            double u0 = config["intrinsics"][3].as<double>();
+            double v0 = config["intrinsics"][4].as<double>();
+            double k1 = config["distortion_coeffs"][0].as<double>();
+            double k2 = config["distortion_coeffs"][1].as<double>();
+            double p1 = config["distortion_coeffs"][2].as<double>();
+            double p2 = config["distortion_coeffs"][3].as<double>();
+            printf("Camera %s model omni-radtan\n width: %d, height: %d, xi: %f, gamma1: %f, gamma2: %f, u0: %f, v0: %f, k1: %f, k2: %f, p1: %f, p2: %f\n", 
+                camera_name.c_str(), width, height, xi, gamma1, gamma2, u0, v0, k1, k2, p1, p2);
+            camera = camodocal::CataCameraPtr(new camodocal::CataCamera(camera_name,
+               width, height, xi, k1, k2, p1, p2,
+               gamma1, gamma2, u0, v0));
+        }   
+        Matrix4d T;
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                T(i, j) = config["T_cam_imu"][i][j].as<double>();
+            }
+        }
+        Matrix3d R = T.block<3, 3>(0, 0);
+        Vector3d t = T.block<3, 1>(0, 3);
+        Swarm::Pose pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
+        std::cout << "T_cam_imu:\n" << T << std::endl;
+        std::cout << "pose:\n" << pose.toStr() << std::endl;
+        return std::make_pair(camera, pose);
+    }
+
 }
