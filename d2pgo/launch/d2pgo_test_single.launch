@@ -12,7 +12,7 @@
     <arg name="rho_frame_theta" default="0.02" />
     <arg name="rho_rot_mat" default="0.1" />
     <arg name="eta_k" default="0.9" />
-    <arg name="enable_rot_int" default="true" />
+    <arg name="enable_rot_int" default="false" />
     <arg name="rot_init_enable_float32" default="true" />
     <arg name="rot_init_enable_gravity_prior" default="false" />
     <arg name="debug_rot_init_only" default="false" />

@@ -72,6 +72,8 @@ public:
         config.arock_config.verbose = true;
         config.arock_config.ceres_options = config.ceres_options;
         config.arock_config.max_steps = 1;
+        config.g2o_output_path = output_path;
+        config.write_g2o = true;
         nh.param<int>("max_steps", max_steps, 10);
         nh.param<double>("rho_frame_T", config.arock_config.rho_frame_T, 0.1);
         nh.param<double>("rho_frame_theta", config.arock_config.rho_frame_theta, 0.1);

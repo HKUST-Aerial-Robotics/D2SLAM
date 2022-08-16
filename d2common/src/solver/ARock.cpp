@@ -55,9 +55,14 @@ void ARockBase::updateDualStates() {
             } else {
                 //Is a vector.
                 VectorXd dual_state_remote = dual_states_remote.at(remote_drone_id).at(state_pointer);
+                // printf("\nFrame %d \n", param_info.id);
+                // std::cout << "Dual state remote:\n" << dual_state_remote.transpose() << std::endl;
+                // std::cout << "Dual state local :\n" << dual_state_local.transpose() << std::endl;
                 VectorXd avg_state = (dual_state_local + dual_state_remote)/2;
+                // std::cout << "avg_state: \n" << avg_state.transpose() << std::endl;
                 Map<VectorXd> cur_est_state(state_pointer, param_info.size);
                 VectorXd delta = (avg_state - cur_est_state)*config.eta_k;
+                // std::cout << "delta: \n" << delta.transpose() << std::endl;
                 dual_state_local -= delta;
             }
         }

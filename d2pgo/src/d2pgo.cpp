@@ -208,7 +208,7 @@ bool D2PGO::solve_single() {
 }
 
 bool D2PGO::isRotInitConvergence() const {
-    return solve_count > 20 || is_rot_init_convergence;
+    return solve_count > 20 || is_rot_init_convergence || !config.enable_rotation_initialization;
 }
 
 bool D2PGO::isMain() const {
