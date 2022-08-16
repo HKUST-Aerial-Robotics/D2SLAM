@@ -2,16 +2,13 @@
 
 #inputs
 imu: 1         
-imu_topic: "/dji_sdk_1/dji_sdk/imu"
-image0_topic: "/camera/infra1/image_rect_raw"
-image1_topic: "/camera/infra2/image_rect_raw"
-compressed_image0_topic: "/camera/infra1/image_rect_raw/compressed"
-compressed_image1_topic: "/camera/infra2/image_rect_raw/compressed"
+imu_topic: "/mavros/imu/data_raw"
+image0_topic: "/arducam/image"
 
 is_compressed_images: 1
 
-imu_freq: 400
-image_freq: 30
+imu_freq: 220
+image_freq: 16
 frame_step: 2
 
 #Camera configuration

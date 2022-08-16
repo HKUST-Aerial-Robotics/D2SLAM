@@ -81,6 +81,7 @@ class D2FeatureTracker {
     bool isKeyframe(const TrackReport & reports);
     void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
     void draw(VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const;
+    void draw(std::vector<VisualImageDesc> frames, bool is_keyframe, const TrackReport & report) const;
     void drawRemote(VisualImageDesc & frame, const TrackReport & report) const;
     void cvtRemoteLandmarkId(VisualImageDesc & frame) const;
     cv::Mat drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right=false, bool is_remote=false) const;

@@ -10,7 +10,9 @@ namespace D2FrontEnd {
 D2FeatureTracker::D2FeatureTracker(D2FTConfig config):
     _config(config) {
     lmanager = new LandmarkManager;
-    superglue = new SuperGlueOnnx(config.superglue_model_path);
+    if (config.enable_superglue_local || config.enable_superglue_remote) {
+        superglue = new SuperGlueOnnx(config.superglue_model_path);
+    }
 }
 
 bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
@@ -29,10 +31,19 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
         report.compose(track(frames.images[0]));
         report.compose(track(frames.images[0], frames.images[1]));
-    } else {
+    } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         for (auto & frame : frames.images) {
             report.compose(track(frame));
         }
+    } else if(params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
+        report.compose(track(frames.images[0]));
+        report.compose(track(frames.images[1]));
+        report.compose(track(frames.images[2]));
+        report.compose(track(frames.images[3]));
+        report.compose(track(frames.images[0], frames.images[1]));
+        report.compose(track(frames.images[1], frames.images[2]));
+        report.compose(track(frames.images[2], frames.images[3]));
+        report.compose(track(frames.images[3], frames.images[4]));
     }
     
     if (isKeyframe(report)) {
@@ -45,10 +56,12 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
             draw(frames.images[0], frames.images[1], iskeyframe, report);
-        } else {
+        } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             for (auto & frame : frames.images) {
                 draw(frame, iskeyframe, report);
             }
+        } else if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
+            draw(frames.images, iskeyframe, report);
         }
     }
     return iskeyframe;
@@ -515,6 +528,22 @@ void D2FeatureTracker::draw(VisualImageDesc & lframe, VisualImageDesc & rframe, 
     cv::Mat img = drawToImage(lframe, is_keyframe, report);
     cv::Mat img_r = drawToImage(rframe, is_keyframe, report, true);
     cv::hconcat(img, img_r, img);
+    char buf[64] = {0};
+    sprintf(buf, "featureTracker @ Drone %d", params->self_id);
+    cv::imshow(buf, img);
+    cv::waitKey(1);
+    if (_config.write_to_file) {
+        sprintf(buf, "%s/featureTracker%06d.jpg", _config.output_folder.c_str(), frame_count);
+        cv::imwrite(buf, img);
+    }
+}
+
+void D2FeatureTracker::draw(std::vector<VisualImageDesc> frames, bool is_keyframe, const TrackReport & report) const {
+    cv::Mat img = drawToImage(frames[0], is_keyframe, report);
+    for (int i = 1; i < frames.size(); i++) {
+        cv::Mat img_r = drawToImage(frames[i], is_keyframe, report, true);
+        cv::vconcat(img, img_r, img);
+    }
     char buf[64] = {0};
     sprintf(buf, "featureTracker @ Drone %d", params->self_id);
     cv::imshow(buf, img);

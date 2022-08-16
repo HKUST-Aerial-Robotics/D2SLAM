@@ -81,7 +81,7 @@ struct D2FrontendParams {
     bool print_network_status = false;
 
     bool is_comp_images;
-    std::vector<std::string> image_topics, comp_image_topics, depth_topics;
+    std::vector<std::string> image_topics, depth_topics;
 
     //Extrinsics
     std::vector<Swarm::Pose> extrinsics;

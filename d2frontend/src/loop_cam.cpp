@@ -238,7 +238,6 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, cv::Ma
         ides.stamp = msg.stamp.toSec();
         return ides;
     }
-    
     VisualImageDesc vframe = extractorImgDescDeepnet(msg.stamp, msg.left_images[vcam_id], msg.left_camera_indices[vcam_id], msg.left_camera_ids[vcam_id], false);
 
     if (vframe.image_desc.size() == 0)
@@ -256,7 +255,6 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, cv::Ma
     vframe.frame_id = msg.keyframe_id;
     if (params->debug_plot_superpoint_features || params->ftconfig->enable_lk_optical_flow || params->show) {
         vframe.raw_image = msg.left_images[vcam_id];
-        vframe.raw_depth_image = msg.depth_images[vcam_id];
     }
 
     auto image_left = msg.left_images[vcam_id];

@@ -129,6 +129,13 @@ namespace D2FrontEnd {
             calib_file_path = configPath + "/" + calib_file_path;
             ROS_INFO("Will read camera calibration from %s", calib_file_path.c_str());
             readCameraCalibrationfromFile(calib_file_path);
+            int camera_num = extrinsics.size();
+            for (auto i = 0; i < camera_num; i++) {
+                char param_name[64] = {0};
+                sprintf(param_name, "image%d_topic", i);
+                std::string topic = (std::string)  fsSettings[param_name];
+                image_topics.emplace_back(topic);
+            }
         } else {
             ROS_INFO("Camera calibration not found");
             //Camera configurations from VINS config.
@@ -138,9 +145,6 @@ namespace D2FrontEnd {
                 char param_name[64] = {0};
                 sprintf(param_name, "image%d_topic", i);
                 std::string topic = (std::string)  fsSettings[param_name];
-
-                sprintf(param_name, "compressed_image%d_topic", i);
-                std::string comp_topic = (std::string) fsSettings[param_name];
 
                 sprintf(param_name, "cam%d_calib", i);
                 std::string camera_calib_path = (std::string) fsSettings[param_name];
@@ -154,12 +158,11 @@ namespace D2FrontEnd {
                 Swarm::Pose pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
                 
                 image_topics.emplace_back(topic);
-                comp_image_topics.emplace_back(comp_topic);
                 loopcamconfig->camera_config_paths.emplace_back(camera_calib_path);
                 extrinsics.emplace_back(pose);
 
-                ROS_INFO("[SWARM_LOOP] Camera %d: topic: %s, comp_topic: %s, calib: %s, T: %s", 
-                    i, topic.c_str(), comp_topic.c_str(), camera_calib_path.c_str(), pose.toStr().c_str());
+                ROS_INFO("[SWARM_LOOP] Camera %d: topic: %s, calib: %s, T: %s", 
+                    i, topic.c_str(), camera_calib_path.c_str(), pose.toStr().c_str());
             }
         }
 
