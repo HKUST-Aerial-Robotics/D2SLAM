@@ -123,8 +123,8 @@ protected:
     }
 
     void Init(ros::NodeHandle & nh) {
-        initParams(nh);
         D2Frontend::Init(nh);
+        initParams(nh);
         estimator = new D2Estimator(params->self_id);
         d2vins_net = new D2VINSNet(estimator, params->lcm_uri);
         estimator->init(nh, d2vins_net);

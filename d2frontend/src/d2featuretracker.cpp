@@ -40,10 +40,10 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
         report.compose(track(frames.images[1]));
         report.compose(track(frames.images[2]));
         report.compose(track(frames.images[3]));
-        report.compose(track(frames.images[0], frames.images[1]));
-        report.compose(track(frames.images[1], frames.images[2]));
-        report.compose(track(frames.images[2], frames.images[3]));
-        report.compose(track(frames.images[3], frames.images[4]));
+        report.compose(track(frames.images[0], frames.images[1], false));
+        report.compose(track(frames.images[1], frames.images[2], false));
+        report.compose(track(frames.images[2], frames.images[3], false));
+        report.compose(track(frames.images[3], frames.images[0], false));
     }
     
     if (isKeyframe(report)) {
@@ -289,7 +289,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     return report;
 }
 
-TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame) {
+TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk) {
     auto prev_pts = left_frame.landmarks2D();
     auto cur_pts = right_frame.landmarks2D();
     std::vector<int> ids_b_to_a;
@@ -316,7 +316,7 @@ TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualIm
             report.stereo_point_num ++;
         }
     }
-    if (_config.enable_lk_optical_flow) {
+    if (_config.enable_lk_optical_flow && enable_lk) {
         trackLK(left_frame, right_frame);
     }
     return report;
@@ -540,10 +540,13 @@ void D2FeatureTracker::draw(VisualImageDesc & lframe, VisualImageDesc & rframe, 
 
 void D2FeatureTracker::draw(std::vector<VisualImageDesc> frames, bool is_keyframe, const TrackReport & report) const {
     cv::Mat img = drawToImage(frames[0], is_keyframe, report);
-    for (int i = 1; i < frames.size(); i++) {
-        cv::Mat img_r = drawToImage(frames[i], is_keyframe, report, true);
-        cv::vconcat(img, img_r, img);
-    }
+    cv::Mat img_r = drawToImage(frames[1], is_keyframe, report, true);
+    cv::hconcat(img, img_r, img);
+    cv::Mat img1 = drawToImage(frames[2], is_keyframe, report);
+    cv::Mat img1_r = drawToImage(frames[3], is_keyframe, report, true);
+    cv::hconcat(img1, img1_r, img1);
+    cv::vconcat(img, img1, img);
+    
     char buf[64] = {0};
     sprintf(buf, "featureTracker @ Drone %d", params->self_id);
     cv::imshow(buf, img);

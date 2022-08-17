@@ -3,6 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <d2common/solver/ConsensusSolver.hpp>
+#include <d2frontend/d2frontend_params.h>
 
 using namespace D2Common;
 
@@ -91,15 +92,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     enable_marginalization = (int)fsSettings["enable_marginalization"];
     remove_base_when_margin_remote = (int)fsSettings["remove_base_when_margin_remote"];
     
-    for (auto i = 0; i < camera_num; i ++) {
-        char name[32] = {0};
-        sprintf(name, "body_T_cam%d", i);
-        cv::Mat cv_T;
-        fsSettings[name] >> cv_T;
-        Eigen::Matrix4d T;
-        cv::cv2eigen(cv_T, T);
-        camera_extrinsics.push_back(Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3)));
-    }
+    camera_extrinsics = D2FrontEnd::params->extrinsics;
 
     //Solver
     solver_time = fsSettings["max_solver_time"];

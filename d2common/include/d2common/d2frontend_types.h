@@ -59,14 +59,16 @@ struct StereoFrame {
 
     StereoFrame(ros::Time _stamp, std::vector<cv::Mat> imgs, 
         std::vector<Swarm::Pose> extrinsics, int self_id): 
+        stamp(_stamp),
         left_images{imgs},
         left_extrisincs{extrinsics},
         left_camera_indices{0, 1, 2, 3},
         left_camera_ids{generateCameraId(self_id, 0),
             generateCameraId(self_id, 1), 
             generateCameraId(self_id, 2), 
-            generateCameraId(self_id, 3)}
-    {}
+            generateCameraId(self_id, 3)},
+            keyframe_id(generateKeyframeId(_stamp, self_id))
+    { }
 };
 
 struct VisualImageDesc {

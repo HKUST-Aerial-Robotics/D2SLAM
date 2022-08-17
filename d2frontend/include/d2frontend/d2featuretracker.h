@@ -73,7 +73,7 @@ class D2FeatureTracker {
     LandmarkPerFrame createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id = -1);
 
     TrackReport trackLK(VisualImageDesc & frame);
-    TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame);
+    TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk=true);
     TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame);
     TrackReport track(VisualImageDesc & frame);
     TrackReport trackRemote(VisualImageDesc & frame, bool skip_whole_frame_match=false);

@@ -65,6 +65,7 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
     auto ret = imu_bufs[self_id].periodIMU(-1, frame.stamp + state.getTd(frame.drone_id));
     auto _imubuf = ret.first;
     if (_imubuf.size() < params->init_imu_num) {
+        printf("[D2Estimator::tryinitFirstPose] not enough imu data %d/%d for init\n", _imubuf.size(), imu_bufs[self_id].size());
         return false;
     }
     auto q0 = Utility::g2R(_imubuf.mean_acc());
@@ -277,7 +278,7 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     //We MUST make sure this function is running by only one thread.
     //It is not thread safe.
     if(!initFirstPoseFlag) {
-        printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imu_bufs.size());
+        printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imu_bufs[self_id].size());
         initFirstPoseFlag = tryinitFirstPose(_frame);
         return initFirstPoseFlag;
     }
