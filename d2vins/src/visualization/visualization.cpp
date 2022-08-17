@@ -109,14 +109,13 @@ void D2Visualization::postSolve() {
                 camera_pose_pubs[i].publish(camera_pose_ros);
                 camera_visual.addPose(pose.pos(), pose.att(), Vector3d(0.1, 0.1, 0.5), display_alpha);
                 Eigen::Matrix4d eigen_T = Eigen::Matrix4d::Identity();
-                eigen_T.block<3, 3>(0, 0) = pose.R();
-                eigen_T.block<3, 1>(0, 3) = pose.pos();
+                eigen_T.block<3, 3>(0, 0) = camera_pose.R();
+                eigen_T.block<3, 1>(0, 3) = camera_pose.pos();
                 cv::Mat cv_T;
                 cv::eigen2cv(eigen_T, cv_T);
-                if (camera_extrinsics_output.find(i) == camera_extrinsics_output.end()) {
-                    csv_output_files[drone_id] = std::ofstream(params->output_folder + "/extrinsic" + std::to_string(i) + ".csv", std::ios::out);
-                    camera_extrinsics_output[i] << "body_T_cam" <<  std::to_string(i) << cv_T ;
-                }
+                std::ofstream ofs(params->output_folder + "/extrinsic" + std::to_string(i) + ".csv", std::ios::out);
+                ofs << "body_T_cam" <<  std::to_string(i) << cv_T ;
+                ofs.close();
             }
         }
         csv_output_files[drone_id] << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << odom.stamp << " " << odom.pose().toStr(true) << std::endl;

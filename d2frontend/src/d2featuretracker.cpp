@@ -42,9 +42,9 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
         report.compose(track(frames.images[2]));
         report.compose(track(frames.images[3]));
         // report.compose(track(frames.images[0], frames.images[1], false));
-        report.compose(track(frames.images[1], frames.images[2], false));
+        // report.compose(track(frames.images[1], frames.images[2], false));
         report.compose(track(frames.images[2], frames.images[3], false));
-        report.compose(track(frames.images[3], frames.images[0], false));
+        // report.compose(track(frames.images[3], frames.images[0], false));
     }
     
     if (isKeyframe(report)) {
@@ -623,6 +623,9 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             reduceVector(ids_b, mask);
     }
     for (auto i = 0; i < ids_a.size(); i++) {
+        if (ids_a[i] > pts_a.size()) {
+            continue;
+        }
         ids_b_to_a[ids_b[i]] = ids_a[i];
     }
     if (params->verbose || params->enable_perf_output)

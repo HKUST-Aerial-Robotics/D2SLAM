@@ -78,13 +78,14 @@ remove_base_when_margin_remote: 2
 #  set to 0 those measurements (which on a landmark's baseFrame is not been removed) will be ignore.
 
 #feature tracker parameters
-max_cnt: 150            # max feature number in feature tracking
-max_superpoint_cnt: 0 # max feature extraction by superpoint
+max_cnt: 100            # max feature number in feature tracking
+max_superpoint_cnt: 100 # max feature extraction by superpoint
 max_solve_cnt: 150
 show_track_id: 0
 check_homography: 1
-enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
+enable_lk_optical_flow: 0 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
 remote_min_match_num: 40
+enable_superglue_local: 0
 
 #CNN
 cnn_use_onnx: 1
@@ -111,7 +112,7 @@ loop_inlier_feature_num: 50
 pgo_solver_time: 0.5
 
 #outputs
-output_path: "/root/output/"
+output_path: "/home/xuhao/output/quadvins-output"
 debug_print_sldwin: 0
 debug_print_states: 0
 enable_perf_output: 0
