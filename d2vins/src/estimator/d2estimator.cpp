@@ -8,7 +8,6 @@
 #include "../factors/projectionTwoFrameOneCamFactor.h"
 #include "../factors/projectionOneFrameTwoCamFactor.h"
 #include "../factors/projectionTwoFrameTwoCamFactor.h"
-#include "../factors/ProjectionTwoDroneTwoCamFactor.h"
 #include <d2common/solver/pose_local_parameterization.h>
 #include <d2frontend/utils.h>
 #include "marginalization/marginalization.hpp"
@@ -28,7 +27,6 @@ void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
     ProjectionTwoFrameOneCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionOneFrameTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionTwoFrameTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
-    ProjectionTwoDroneTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info = params->focal_length / 1.5 * Matrix3d::Identity();
     ProjectionTwoFrameOneCamDepthFactor::sqrt_info(2,2) = params->depth_sqrt_inf;
     visual.init(nh, this);
