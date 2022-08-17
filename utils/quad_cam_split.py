@@ -4,6 +4,7 @@ from os.path import exists
 from cv_bridge import CvBridge
 import cv2 as cv
 import tqdm
+import numpy as np
 
 def generate_bagname(bag, comp=False):
     from pathlib import Path
@@ -20,6 +21,17 @@ def split_image(img, num_subimages = 4):
     for i in range(num_subimages):
         sub_imgs.append(img[:, i*sub_w:(i+1)*sub_w])
     return sub_imgs
+
+def show_undist(img, K, D, xi):
+    img = cv.omnidir.undistortImage(img, K, D, xi, cv.omnidir.RECTIFY_STEREOGRAPHIC)
+    cv.imshow("undistorted", img)
+    cv.waitKey(1)
+
+K = np.array([[1162.5434300524314, 0, 660.6393183718625],
+            [0, 1161.839362615319,  386.1663300322095],
+            [0, 0, 1]])
+D = np.array([-0.17703529535292872, 0.7517933338735744, -0.0008911425891703079, 2.1653595535258756e-05])
+xi = np.array(2.2176903753419963)
 
 if __name__ == '__main__':
     import argparse
@@ -65,6 +77,8 @@ if __name__ == '__main__':
                     comp_img = bridge.cv2_to_compressed_imgmsg(_img)
                     comp_img.header = msg.header
                     outbag.write(f"/arducam/image_{i}/compressed", comp_img, t)
+                    # if i == 0:
+                        # show_undist(_img, K, D, xi)
                 if args.show:
                     for i in range(len(imgs)):
                         cv.imshow(f"{topic}-{i}", imgs[i])

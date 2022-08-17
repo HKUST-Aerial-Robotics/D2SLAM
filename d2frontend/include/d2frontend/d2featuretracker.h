@@ -70,7 +70,7 @@ class D2FeatureTracker {
     int frame_count = 0;
     bool inited = false;
     std::map<int, LKImageInfo> prev_lk_info; //frame.camera_index->image
-    LandmarkPerFrame createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id = -1);
+    std::pair<bool, LandmarkPerFrame> createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id = -1);
 
     TrackReport trackLK(VisualImageDesc & frame);
     TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk=true);

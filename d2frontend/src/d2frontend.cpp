@@ -79,6 +79,9 @@ void D2Frontend::monoImageCallback(const sensor_msgs::ImageConstPtr & image) {
     const int num_imgs = 4;
     for (int i = 0; i < 4; i++) {
         imgs.emplace_back(img(cv::Rect(i * img.cols /num_imgs, 0, img.cols /num_imgs, img.rows)));
+        if (imgs.back().channels() == 3) {
+            cv::cvtColor(imgs.back(), imgs.back(), cv::COLOR_BGR2GRAY);
+        }
     }
     StereoFrame sframe(image->header.stamp, imgs, params->extrinsics, params->self_id);
     processStereoframe(sframe);

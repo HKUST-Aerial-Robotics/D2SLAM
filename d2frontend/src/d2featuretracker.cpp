@@ -1,6 +1,7 @@
 #include <d2frontend/d2featuretracker.h>
 #include <camodocal/camera_models/Camera.h>
 #include <d2frontend/CNN/superglue_onnx.h>
+#include <opencv2/ccalib/omnidir.hpp>
 
 #define MIN_HOMOGRAPHY 6
 #define PYR_LEVEL 3
@@ -40,7 +41,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
         report.compose(track(frames.images[1]));
         report.compose(track(frames.images[2]));
         report.compose(track(frames.images[3]));
-        report.compose(track(frames.images[0], frames.images[1], false));
+        // report.compose(track(frames.images[0], frames.images[1], false));
         report.compose(track(frames.images[1], frames.images[2], false));
         report.compose(track(frames.images[2], frames.images[3], false));
         report.compose(track(frames.images[3], frames.images[0], false));
@@ -203,10 +204,11 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
                 cur_lm.stamp_discover = prev_lm.stamp_discover;
                 report.sum_parallex += (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm();
                 report.parallex_num ++;
-                // printf("[D2FeatureTracker] landmark %d, prev_pt %f %f, cur_pt %f %f norm prev_pt %f %f, cur_pt %f %f parallex %f\%\n", 
+                // printf("[D2FeatureTracker] landmark %d, prev_pt %f %f, cur_pt %f %f velocity %.2f %.2f %.2f norm prev_pt %f %f, cur_pt %f %f parallex %f\%\n", 
                 //     landmark_id, 
                 //     prev_lm.pt2d.x, prev_lm.pt2d.y,
                 //     cur_lm.pt2d.x, cur_lm.pt2d.y,
+                //     cur_lm.velocity.x(), cur_lm.velocity.y(), cur_lm.velocity.z(),
                 //     prev_lm.pt3d_norm.x(), prev_lm.pt3d_norm.y(), cur_lm.pt3d_norm.x(), cur_lm.pt3d_norm.y(), 
                 //     (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm()*100);
                 if (lmanager->at(landmark_id).track.size() >= _config.long_track_frames) {
@@ -245,12 +247,23 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     }
     report.unmatched_num += n_pts.size();
     for (int i = 0; i < cur_lk_pts.size(); i++) {
-        auto lm = createLKLandmark(frame, cur_lk_pts[i], cur_lk_ids[i]);
+        auto ret = createLKLandmark(frame, cur_lk_pts[i], cur_lk_ids[i]);
+        if (!ret.first) {
+            continue;
+        }
+        auto &lm = ret.second;
         auto track = lmanager->at(cur_lk_ids[i]).track;
         LandmarkPerFrame prev_lm = track.back();
         if (lm.frame_id != prev_lm.frame_id) {
             lm.velocity = lm.pt3d_norm - prev_lm.pt3d_norm;
             lm.velocity /= (lm.stamp - prev_lm.stamp);
+            // printf("Landmark id %d, prev_pt %f %f, cur_pt %f %f velocity %.2f %.2f %.2f norm prev_pt %f %f, cur_pt %f %f parallex %f\n", 
+            //     lm.landmark_id, 
+            //     prev_lm.pt2d.x, prev_lm.pt2d.y,
+            //     lm.pt2d.x, lm.pt2d.y,
+            //     lm.velocity.x(), lm.velocity.y(), lm.velocity.z(),
+            //     prev_lm.pt3d_norm.x(), prev_lm.pt3d_norm.y(), lm.pt3d_norm.x(), lm.pt3d_norm.y(), 
+            //     (prev_lm.pt3d_norm - lm.pt3d_norm).norm()*100);
         }
         lm.stamp_discover = prev_lm.stamp_discover;
         lmanager->updateLandmark(lm);
@@ -275,7 +288,11 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
         report.parallex_num ++;
     }
     for (auto & pt : n_pts) {
-        auto lm = createLKLandmark(frame, pt);
+        auto ret = createLKLandmark(frame, pt);
+        if (!ret.first) {
+            continue;
+        }
+        auto &lm = ret.second;
         auto _id = lmanager->addLandmark(lm);
         lm.landmark_id = _id;
         frame.landmarks.emplace_back(lm);
@@ -332,7 +349,11 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
     if (!cur_lk_ids.empty())
         cur_lk_pts = opticalflowTrack(right_frame.raw_image, left_frame.raw_image, cur_lk_pts, cur_lk_ids);
     for (int i = 0; i < cur_lk_pts.size(); i++) {
-        auto lm = createLKLandmark(right_frame, cur_lk_pts[i], cur_lk_ids[i]);
+        auto ret = createLKLandmark(right_frame, cur_lk_pts[i], cur_lk_ids[i]);
+        if (!ret.first) {
+            continue;
+        }
+        auto &lm = ret.second;
         lm.stamp_discover = lmanager->at(cur_lk_ids[i]).stamp_discover;
         lmanager->updateLandmark(lm);
         right_frame.landmarks.emplace_back(lm);
@@ -370,10 +391,13 @@ bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
     return false;
 }
 
-LandmarkPerFrame D2FeatureTracker::createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id) {
+std::pair<bool, LandmarkPerFrame> D2FeatureTracker::createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id) {
     Vector3d pt3d_norm;
     cams.at(frame.camera_index)->liftProjective(Eigen::Vector2d(pt.x, pt.y), pt3d_norm);
     pt3d_norm.normalize();
+    if (pt3d_norm.hasNaN()) {
+        return std::make_pair(false, LandmarkPerFrame());
+    }
     LandmarkPerFrame lm = LandmarkPerFrame::createLandmarkPerFrame(landmark_id, frame.frame_id, frame.stamp, 
         LandmarkType::FlowLandmark, params->self_id, frame.camera_index, frame.camera_id, pt, pt3d_norm);
     if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
@@ -386,7 +410,7 @@ LandmarkPerFrame D2FeatureTracker::createLKLandmark(const VisualImageDesc & fram
         }
     }
     lm.color = extractColor(frame.raw_image, pt);
-    return lm;
+    return std::make_pair(true, lm);
 }
 
 void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
@@ -492,7 +516,7 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
             report.ft_time, report.parallex_num, report.long_track_num, report.meanParallex()*100, _config.parallex_thres*100);
         cv::putText(img, buf, cv::Point2f(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
     }
-
+    // cv::omnidir::undistortImage(img, img, K, D, xi, RECTIFY_CYLINDRICAL);
     return img;
 }
 

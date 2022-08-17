@@ -85,6 +85,9 @@ struct D2FrontendParams {
 
     //Extrinsics
     std::vector<Swarm::Pose> extrinsics;
+    std::vector<cv::Mat> cam_Ks;
+    std::vector<cv::Mat> cam_Ds;
+    std::vector<double> cam_xis;
 
     LoopCamConfig * loopcamconfig;
     LoopDetectorConfig * loopdetectorconfig;

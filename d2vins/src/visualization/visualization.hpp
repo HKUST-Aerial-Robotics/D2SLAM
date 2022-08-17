@@ -14,10 +14,12 @@ class D2Visualization {
     std::vector<ros::Publisher> camera_pose_pubs;
     std::map<int, ros::Publisher> path_pubs, odom_pubs;
     ros::Publisher sld_win_pub;
+    ros::Publisher cam_pub;
     std::map<int, nav_msgs::Path> paths;
     double display_alpha = 0.5;
     ros::NodeHandle * _nh = nullptr;
     std::map<int, std::ofstream> csv_output_files;
+    std::map<int, std::ofstream> camera_extrinsics_output;
 public:
     D2Visualization();
     void init(ros::NodeHandle & nh, D2Estimator * estimator);

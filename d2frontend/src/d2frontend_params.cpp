@@ -217,6 +217,7 @@ namespace D2FrontEnd {
         Swarm::Pose pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
         std::cout << "T_cam_imu:\n" << T << std::endl;
         std::cout << "pose:\n" << pose.toStr() << std::endl;
+
         return std::make_pair(camera, pose);
     }
 

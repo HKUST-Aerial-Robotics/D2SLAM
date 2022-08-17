@@ -572,6 +572,9 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         LandmarkPerFrame lm;
         lm.pt2d = pt_up;
         pt_up3d.normalize();
+        if (pt_up3d.hasNaN()) {
+            continue;
+        }
         lm.pt3d_norm = pt_up3d;
         lm.camera_index = camera_index;
         lm.camera_id = camera_id;

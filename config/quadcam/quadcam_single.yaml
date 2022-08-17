@@ -52,7 +52,7 @@ vlad_threshold: 0.5
 
 #Initialization
 init_method: 0 #0 IMU, 1 PnP
-depth_estimate_baseline: 0.03
+depth_estimate_baseline: 0.0
 
 #sliding window
 max_sld_win_size: 11
@@ -63,7 +63,7 @@ min_solve_frames: 6
 multiple_thread: 1
 
 #outlier rejection
-thres_outlier : 10.0
+thres_outlier : 10000.0
 perform_outlier_rejection_num: 100000
 tri_max_err: 1000000.0
 
@@ -79,11 +79,11 @@ remove_base_when_margin_remote: 2
 
 #feature tracker parameters
 max_cnt: 150            # max feature number in feature tracking
-max_superpoint_cnt: 150 # max feature extraction by superpoint
+max_superpoint_cnt: 0 # max feature extraction by superpoint
 max_solve_cnt: 150
 show_track_id: 0
 check_homography: 1
-enable_lk_optical_flow: 0 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
+enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
 remote_min_match_num: 40
 
 #CNN
