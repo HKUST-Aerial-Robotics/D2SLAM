@@ -27,6 +27,7 @@ typedef boost::shared_ptr< Camera > CameraPtr;
 }
 
 namespace D2FrontEnd {
+class FisheyeUndist;
 void matchLocalFeatures(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point2f> & pts_down, 
     std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
     std::vector<int> & ids_up, std::vector<int> & ids_down);
@@ -58,6 +59,11 @@ struct LoopCamConfig
     bool cnn_use_onnx = true;
     bool send_img;
     bool show = false;
+
+    bool enable_undistort_image; //Undistort image before feature detection
+    double undistort_fov = 200;
+    int width_undistort = 800;
+    int height_undistort = 400;
 };
 
 class LoopCam {
@@ -70,6 +76,7 @@ class LoopCam {
     ros::ServiceClient superpoint_client;
     CameraConfig camera_configuration;
     std::fstream fsp;
+    std::vector<FisheyeUndist*> undistortors;
 #ifdef USE_TENSORRT
     SuperPointTensorRT * superpoint_net = nullptr;
     MobileNetVLADTensorRT * netvlad_net = nullptr;
@@ -85,14 +92,15 @@ public:
     LoopCam(LoopCamConfig config, ros::NodeHandle & nh);
     
     VisualImageDesc extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, int index, int camera_id, bool superpoint_mode=false);
-    std::vector<VisualImageDesc> generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int i, cv::Mat &_show);
-    VisualImageDesc generateGrayDepthImageDescriptor(const StereoFrame & msg, cv::Mat & img, int i, cv::Mat &_show);
-    VisualImageDesc generateImageDescriptor(const StereoFrame & msg, cv::Mat & img, int i, cv::Mat &_show);
-    VisualImageDescArray processStereoframe(const StereoFrame & msg, std::vector<cv::Mat> & imgs);
+    std::vector<VisualImageDesc> generateStereoImageDescriptor(const StereoFrame & msg, int i, cv::Mat &_show);
+    VisualImageDesc generateGrayDepthImageDescriptor(const StereoFrame & msg, int i, cv::Mat &_show);
+    VisualImageDesc generateImageDescriptor(const StereoFrame & msg, int i, cv::Mat &_show);
+    VisualImageDescArray processStereoframe(const StereoFrame & msg);
 
     void encodeImage(const cv::Mat & _img, VisualImageDesc & _img_desc);
     
     std::vector<camodocal::CameraPtr> cams;
+    std::vector<camodocal::CameraPtr> raw_cams;
 
     CameraConfig getCameraConfiguration() const {
         return camera_configuration;

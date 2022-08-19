@@ -9,6 +9,7 @@
 #include <camodocal/camera_models/Camera.h>
 #include <camodocal/camera_models/PinholeCamera.h>
 #include <d2frontend/d2featuretracker.h>
+#include <d2frontend/fisheye_undistort.h>
 
 using namespace std::chrono;
 
@@ -20,18 +21,21 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     self_id(config.self_id),
     _config(config)
 {
+    int img_width = config.enable_undistort_image ? config.width_undistort: config.width;
+    int img_height = config.enable_undistort_image ? config.height_undistort: config.height;
+
     if (config.cnn_use_onnx) {
         printf("[D2FrontEnd::LoopCam] Init CNNs using onnx\n");
 #ifdef USE_ONNX
         netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, config.netvlad_width, config.netvlad_height);
         superpoint_onnx = new SuperPointONNX(config.superpoint_model, config.pca_comp, 
-            config.pca_mean, config.width, config.height, config.superpoint_thres, config.superpoint_max_num); 
+            config.pca_mean, img_width, img_height, config.superpoint_thres, config.superpoint_max_num); 
 #endif
     }else {
         printf("[D2FrontEnd::LoopCam] Try to init CNNs using TensorRT\n");
 #ifdef USE_TENSORRT
         superpoint_net = new SuperPointTensorRT(config.superpoint_model, config.pca_comp, 
-            config.pca_mean, config.width, config.height, config.superpoint_thres, config.superpoint_max_num); 
+            config.pca_mean, img_width, img_height, config.superpoint_thres, config.superpoint_max_num); 
         netvlad_net = new MobileNetVLADTensorRT(config.netvlad_model, config.netvlad_width, config.netvlad_height); 
 #endif
     }
@@ -49,6 +53,17 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     if (config.camera_ptrs.size() > 0) {
         printf("[D2FrontEnd::LoopCam] Use camera ptrs: %d cameras\n", config.camera_ptrs.size());
         cams = config.camera_ptrs;
+    }
+
+    if (config.enable_undistort_image) {
+        raw_cams = cams;
+        cams.clear();
+        for (auto cam: raw_cams) { 
+            auto ptr = new FisheyeUndist(cam, 0, config.undistort_fov, true, FisheyeUndist::UndistortCylindrical, 
+                config.width_undistort, config.height_undistort);
+            cams.push_back(ptr->cam_top);
+            undistortors.emplace_back(ptr);
+        }
     }
     printf("[D2FrontEnd::LoopCam] Deepnet ready\n");
     if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
@@ -171,12 +186,10 @@ void matchLocalFeatures(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point
     pts_down = std::vector<cv::Point2f>(_pts_down);
 }
 
-VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::vector<cv::Mat> &imgs) {
+VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
     VisualImageDescArray visual_array;
     visual_array.stamp = msg.stamp.toSec();
     
-    imgs.resize(msg.left_images.size());
-
     cv::Mat _show, tmp;
     TicToc tt;
     static int t_count = 0;
@@ -184,9 +197,9 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
 
     for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
         if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
-            visual_array.images.push_back(generateGrayDepthImageDescriptor(msg, imgs[i], i, tmp));
+            visual_array.images.push_back(generateGrayDepthImageDescriptor(msg, i, tmp));
         } else if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
-            auto _imgs = generateStereoImageDescriptor(msg, imgs[i], i, tmp);
+            auto _imgs = generateStereoImageDescriptor(msg, i, tmp);
             if (_config.stereo_as_depth_cam) {
                 if (_config.right_cam_as_main) {
                     visual_array.images.push_back(_imgs[1]);
@@ -198,7 +211,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
                 visual_array.images.push_back(_imgs[1]);
             }
         } else if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
-            auto _img = generateImageDescriptor(msg, imgs[i], i, tmp);
+            auto _img = generateImageDescriptor(msg, i, tmp);
             visual_array.images.push_back(_img);
         }
 
@@ -231,14 +244,18 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
     return visual_array;
 }
 
-VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, cv::Mat &_show) {
+VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vcam_id, cv::Mat &_show) {
     if (vcam_id > msg.left_images.size()) {
         ROS_WARN("Flatten images too few");
         VisualImageDesc ides;
         ides.stamp = msg.stamp.toSec();
         return ides;
     }
-    VisualImageDesc vframe = extractorImgDescDeepnet(msg.stamp, msg.left_images[vcam_id], msg.left_camera_indices[vcam_id], msg.left_camera_ids[vcam_id], false);
+    cv::Mat undist = msg.left_images[vcam_id];
+    if (_config.enable_undistort_image) {
+        undist = cv::Mat(undistortors[vcam_id]->undist_id_cuda(undist, 0));
+    }
+    VisualImageDesc vframe = extractorImgDescDeepnet(msg.stamp, undist, msg.left_camera_indices[vcam_id], msg.left_camera_ids[vcam_id], false);
 
     if (vframe.image_desc.size() == 0)
     {
@@ -254,10 +271,10 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, cv::Ma
     vframe.pose_drone = msg.pose_drone;
     vframe.frame_id = msg.keyframe_id;
     if (params->debug_plot_superpoint_features || params->ftconfig->enable_lk_optical_flow || params->show) {
-        vframe.raw_image = msg.left_images[vcam_id];
+        vframe.raw_image = undist;
     }
 
-    auto image_left = msg.left_images[vcam_id];
+    auto image_left = undist;
     auto pts_up = vframe.landmarks2D();
     std::vector<int> ids_up, ids_down;
     if (_config.send_img) {
@@ -265,7 +282,6 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, cv::Ma
     }
     if (_config.show) {
         cv::Mat img_up = image_left;
-        img_up.copyTo(img);
         if (!_config.send_img) {
             encodeImage(img_up, vframe);
         }
@@ -288,7 +304,7 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, cv::Ma
     return vframe;
 }
 
-VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, cv::Mat & _show)
+VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & msg, int vcam_id, cv::Mat & _show)
 {
     if (vcam_id > msg.left_images.size()) {
         ROS_WARN("Flatten images too few");
@@ -361,7 +377,6 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
     if (_config.show) {
         cv::Mat img_up = image_left;
 
-        img_up.copyTo(img);
         if (!_config.send_img) {
             encodeImage(img_up, vframe);
         }
@@ -388,7 +403,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
     return vframe;
 }
 
-std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, cv::Mat & img, int vcam_id, cv::Mat & _show)
+std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const StereoFrame & msg, int vcam_id, cv::Mat & _show)
 {
     //This function currently only support pinhole-like stereo camera.
     auto vframe0 = extractorImgDescDeepnet(msg.stamp, msg.left_images[vcam_id], msg.left_camera_indices[vcam_id], 
@@ -475,13 +490,10 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
     if (_config.show) {
         cv::Mat img_up = image_left;
         cv::Mat img_down = image_right;
-
-        img_up.copyTo(img);
         if (!_config.send_img) {
             encodeImage(img_up, vframe0);
             encodeImage(img_down, vframe1);
         }
-
         cv::cvtColor(img_up, img_up, cv::COLOR_GRAY2BGR);
         cv::cvtColor(img_down, img_down, cv::COLOR_GRAY2BGR);
 

@@ -88,10 +88,9 @@ void D2Frontend::monoImageCallback(const sensor_msgs::ImageConstPtr & image) {
 }
 
 void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
-    std::vector<cv::Mat> debug_imgs;
     static int count = 0;
     // ROS_INFO("[D2Frontend::processStereoframe] %d", count ++);
-    auto vframearry = loop_cam->processStereoframe(stereoframe, debug_imgs);
+    auto vframearry = loop_cam->processStereoframe(stereoframe);
     bool is_keyframe = feature_tracker->trackLocalFrames(vframearry);
     vframearry.prevent_adding_db = !is_keyframe;
     vframearry.is_keyframe = is_keyframe;

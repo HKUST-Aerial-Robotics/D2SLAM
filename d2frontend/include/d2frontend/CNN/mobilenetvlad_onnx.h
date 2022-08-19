@@ -1,7 +1,10 @@
 #include "onnx_generic.h"
 #include "../utils.h"
+#include "d2common/utils.hpp"
+
 #ifdef USE_ONNX
 namespace D2FrontEnd {
+using D2Common::Utility::TicToc;
 class MobileNetVLADONNX: public ONNXInferenceGeneric {
 protected:
     std::array<float, NETVLAD_DESC_SIZE> results_;

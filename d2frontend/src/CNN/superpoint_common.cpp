@@ -1,6 +1,8 @@
 #include <d2frontend/CNN/superpoint_common.h>
 #include <d2frontend/utils.h>
 #include <d2frontend/d2frontend_params.h>
+#include "d2common/utils.hpp"
+using D2Common::Utility::TicToc;
 
 namespace D2FrontEnd {
 void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts, std::vector<float>& scores,

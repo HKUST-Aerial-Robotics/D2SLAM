@@ -7,6 +7,8 @@ namespace D2FrontEnd {
 std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(const std::string & camera_name, const YAML::Node & config);
 }
 
+using namespace D2FrontEnd;
+
 int main(int argc, char** argv) {
     namespace po = boost::program_options;
     po::options_description desc("Allowed options");
@@ -32,12 +34,15 @@ int main(int argc, char** argv) {
     auto ret = D2FrontEnd::readCameraConfig(camera_name, config[camera_name]);
     printf("Read camera %s fov %f calib from file %s OK", camera_name.c_str(), fov, calib_path.c_str());
 
-    //Initialize undistor
+    //Initialize undistort
     int undistort_width = img.cols;
     int undistort_height = img.cols/2;
-    FisheyeUndist undistort(ret.first, 0, fov, true, undistort_width, undistort_height);
+    FisheyeUndist undistort(ret.first, 0, fov, true, FisheyeUndist::UndistortCylindrical, undistort_width, undistort_height);
     auto imgs = undistort.undist_all(img, true);
     cv::imshow("Undistort", imgs[0]);
+    auto img_cuda = undistort.undist_id_cuda(img, 0);
+    cv::Mat img_cpu(img_cuda);
+    cv::imshow("Undistort_cuda", img_cpu);
 
     double err = 0;
     for (int i = 0; i< undistort_width; i ++ ) {

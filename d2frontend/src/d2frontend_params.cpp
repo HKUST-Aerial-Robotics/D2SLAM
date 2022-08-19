@@ -52,6 +52,9 @@ namespace D2FrontEnd {
         loopcamconfig->DEPTH_FAR_THRES = fsSettings["depth_far_thres"];
         loopcamconfig->DEPTH_NEAR_THRES = fsSettings["depth_near_thres"];
         loopcamconfig->show = (int) fsSettings["show_feature_extraction"];
+        loopcamconfig->enable_undistort_image = (int) fsSettings["enable_undistort_image"];
+        loopcamconfig->width_undistort = (int) fsSettings["width_undistort"];
+        loopcamconfig->height_undistort = (int) fsSettings["height_undistort"];
         nh.param<double>("superpoint_thres", loopcamconfig->superpoint_thres, 0.012);
         nh.param<std::string>("pca_comp_path",loopcamconfig->pca_comp, "");
         nh.param<std::string>("pca_mean_path",loopcamconfig->pca_mean, "");

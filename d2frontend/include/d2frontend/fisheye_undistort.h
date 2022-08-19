@@ -13,6 +13,8 @@
 #include <opencv2/cudawarping.hpp>
 #include <d2common/utils.hpp>
 
+namespace D2FrontEnd {
+
 using D2Common::Utility::TicToc;
 
 #define DEG_TO_RAD (M_PI / 180.0)
@@ -25,6 +27,10 @@ class FisheyeUndist {
     std::vector<cv::cuda::GpuMat> undistMapsGPUX;
     std::vector<cv::cuda::GpuMat> undistMapsGPUY;
 public:
+    enum UndistortType {
+        UndistortPinhole,
+        UndistortCylindrical
+    };
     std::vector<std::pair<cv::Mat, cv::Mat>> undistMaps;
 
     cv::Mat fisheye2cam_pt;
@@ -69,15 +75,18 @@ public:
         }
     }
 
-    FisheyeUndist(camodocal::CameraPtr cam, int _id, double _fov, bool _enable_cuda = true, int imgWidth = 600, int imgHeight = 200):
+    FisheyeUndist(camodocal::CameraPtr cam, int _id, double _fov, bool _enable_cuda = true, UndistortType mode=UndistortPinhole, int imgWidth = 600, int imgHeight = 200):
             imgWidth(imgWidth), fov(_fov), cameraRotation(0, 0, 0), enable_cuda(_enable_cuda), cam_id(_id) {
         raw_width = cam->imageWidth();
         raw_height = cam->imageHeight();
         fisheye2cam_pt = cv::Mat::zeros(raw_width, raw_height, CV_32FC2);
         fisheye2cam_id = cv::Mat::ones(raw_width, raw_height, CV_8UC1);
         fisheye2cam_id = fisheye2cam_id * 255;
-        // undistMaps = generateAllUndistMap(cam, cameraRotation, imgWidth, fov);
-        undistMaps = generateCylinderMap(cam, cameraRotation, imgWidth, imgHeight, fov);
+        if (mode == UndistortPinhole) {
+            undistMaps = generateAllUndistMap(cam, cameraRotation, imgWidth, fov);
+        } else {
+            undistMaps = generateCylinderMap(cam, cameraRotation, imgWidth, imgHeight, fov);
+        }
         // ROS_INFO("undismap size %ld", undistMaps.size());
         if (enable_cuda) {
             for (auto mat : undistMaps) {
@@ -542,5 +551,5 @@ std::pair<cv::Mat, cv::Mat> genOneUndistMap(
         return std::make_pair(map, cv::Mat());
         // return std::make_pair(map1, map2);
     }
-
 };
+}

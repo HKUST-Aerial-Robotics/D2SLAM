@@ -3,6 +3,8 @@
 #include <d2frontend/CNN/superpoint_common.h>
 #include <d2frontend/utils.h>
 #include "ATen/Parallel.h"
+#include "d2common/utils.hpp"
+using D2Common::Utility::TicToc;
 
 #ifdef USE_ONNX
 namespace D2FrontEnd {
