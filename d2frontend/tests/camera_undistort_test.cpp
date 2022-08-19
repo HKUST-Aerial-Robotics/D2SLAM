@@ -33,9 +33,23 @@ int main(int argc, char** argv) {
     printf("Read camera %s fov %f calib from file %s OK", camera_name.c_str(), fov, calib_path.c_str());
 
     //Initialize undistor
-    FisheyeUndist undistort(ret.first, 0, fov, true, img.cols, img.cols/2);
+    int undistort_width = img.cols;
+    int undistort_height = img.cols/2;
+    FisheyeUndist undistort(ret.first, 0, fov, true, undistort_width, undistort_height);
     auto imgs = undistort.undist_all(img, true);
     cv::imshow("Undistort", imgs[0]);
+
+    double err = 0;
+    for (int i = 0; i< undistort_width; i ++ ) {
+        for (int j = 0; j < undistort_height; j ++ ) {
+            Vector2d p(i, j), p_rep;
+            Vector3d p3d;
+            undistort.cam_top->liftProjective(p, p3d);
+            undistort.cam_top->spaceToPlane(p3d, p_rep);
+            err = err + (p_rep - p).norm();
+        }
+    }
+    printf("Undistort error %f\n", err);
 
     cv::waitKey(0);
 }
