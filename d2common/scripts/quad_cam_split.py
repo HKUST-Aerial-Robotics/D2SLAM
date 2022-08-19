@@ -22,16 +22,6 @@ def split_image(img, num_subimages = 4):
         sub_imgs.append(img[:, i*sub_w:(i+1)*sub_w])
     return sub_imgs
 
-def show_undist(img, K, D, xi):
-    img = cv.omnidir.undistortImage(img, K, D, xi, cv.omnidir.RECTIFY_STEREOGRAPHIC)
-    cv.imshow("undistorted", img)
-    cv.waitKey(1)
-
-K = np.array([[1162.5434300524314, 0, 660.6393183718625],
-            [0, 1161.839362615319,  386.1663300322095],
-            [0, 0, 1]])
-D = np.array([-0.17703529535292872, 0.7517933338735744, -0.0008911425891703079, 2.1653595535258756e-05])
-xi = np.array(2.2176903753419963)
 
 if __name__ == '__main__':
     import argparse

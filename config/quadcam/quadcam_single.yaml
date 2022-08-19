@@ -78,14 +78,15 @@ remove_base_when_margin_remote: 2
 #  set to 0 those measurements (which on a landmark's baseFrame is not been removed) will be ignore.
 
 #feature tracker parameters
-max_cnt: 100            # max feature number in feature tracking
+max_cnt: 150            # max feature number in feature tracking
 max_superpoint_cnt: 100 # max feature extraction by superpoint
 max_solve_cnt: 150
-show_track_id: 0
-check_homography: 1
-enable_lk_optical_flow: 0 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
+show_track_id: 1
+check_homography: 0
+enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
 remote_min_match_num: 40
 enable_superglue_local: 0
+enable_superglue_remote: 0
 
 #CNN
 cnn_use_onnx: 1

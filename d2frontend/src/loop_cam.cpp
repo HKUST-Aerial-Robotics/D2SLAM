@@ -185,7 +185,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg, std::v
     for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
         if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             visual_array.images.push_back(generateGrayDepthImageDescriptor(msg, imgs[i], i, tmp));
-        } else if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+        } else if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
             auto _imgs = generateStereoImageDescriptor(msg, imgs[i], i, tmp);
             if (_config.stereo_as_depth_cam) {
                 if (_config.right_cam_as_main) {

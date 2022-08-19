@@ -4,7 +4,6 @@ project(d2frontend)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 add_compile_options(-Wno-deprecated-declarations -Wno-reorder  -Wno-format -Wno-sign-compare)
@@ -123,6 +122,7 @@ else()
     src/d2frontend_params.cpp
   )
 endif()
+set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 14)
 
 
 #Use tensorrt and onnx
@@ -144,7 +144,19 @@ target_link_libraries(loop_tensorrt_test
   ${OpenCV_LIBRARIES}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES})
-  set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 14)
+
+add_executable(camera_undistort_test
+  tests/camera_undistort_test.cpp
+  src/d2frontend_params.cpp
+)
+
+target_link_libraries(camera_undistort_test
+  dw
+  loop_cnn
+  ${YAML_CPP_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES})
 
 add_dependencies(${PROJECT_NAME}_nodelet
     ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

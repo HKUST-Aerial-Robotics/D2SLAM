@@ -37,8 +37,8 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
             report.compose(track(frame));
         }
     } else if(params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
-        report.compose(track(frames.images[0]));
-        report.compose(track(frames.images[1]));
+        // report.compose(track(frames.images[0]));
+        // report.compose(track(frames.images[1]));
         report.compose(track(frames.images[2]));
         report.compose(track(frames.images[3]));
         // report.compose(track(frames.images[0], frames.images[1], false));
@@ -193,7 +193,7 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
         matchLocalFeatures(previous, frame, ids_b_to_a, _config.enable_superglue_local);
         for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
             if (ids_b_to_a[i] >= 0) {
-                assert(ids_b_to_a[i] < previous.landmarkNum() && "too large");
+                assert(ids_b_to_a[i] < previous.spLandmarkNum() && "too large");
                 auto prev_index = ids_b_to_a[i];
                 auto landmark_id = previous.landmarks[prev_index].landmark_id;
                 auto &cur_lm = frame.landmarks[i];
@@ -314,7 +314,7 @@ TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualIm
     matchLocalFeatures(left_frame, right_frame, ids_b_to_a, _config.enable_superglue_local);
     for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
         if (ids_b_to_a[i] >= 0) {
-            assert(ids_b_to_a[i] < left_frame.landmarkNum() && "too large");
+            assert(ids_b_to_a[i] < left_frame.spLandmarkNum() && "too large");
             auto prev_index = ids_b_to_a[i];
             auto landmark_id = left_frame.landmarks[prev_index].landmark_id;
             auto &cur_lm = right_frame.landmarks[i];
@@ -494,7 +494,7 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
         }
         if (_config.show_feature_id && frame.landmarks[j].landmark_id >= 0) {
             sprintf(buf, "%d", frame.landmarks[j].landmark_id%MAX_FEATURE_NUM);
-            cv::putText(img, buf, cur_pts[j] - cv::Point2f(5, 0), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1);
+            cv::putText(img, buf, cur_pts[j] - cv::Point2f(5, 0), cv::FONT_HERSHEY_SIMPLEX, 1, color, 1);
         }
     }
     cv::Scalar color = cv::Scalar(255, 0, 0);
@@ -623,7 +623,8 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             reduceVector(ids_b, mask);
     }
     for (auto i = 0; i < ids_a.size(); i++) {
-        if (ids_a[i] > pts_a.size()) {
+        if (ids_a[i] >= pts_a.size()) {
+            printf("ids_a[i] > pts_a.size() why is this case?\n");
             continue;
         }
         ids_b_to_a[ids_b[i]] = ids_a[i];
