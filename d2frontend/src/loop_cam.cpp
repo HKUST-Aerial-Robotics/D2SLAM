@@ -585,6 +585,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         lm.pt2d = pt_up;
         pt_up3d.normalize();
         if (pt_up3d.hasNaN()) {
+            ROS_WARN("NaN detected!!! This will inference landmark_descriptor\n");
             continue;
         }
         lm.pt3d_norm = pt_up3d;

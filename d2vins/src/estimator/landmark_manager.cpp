@@ -96,11 +96,10 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
         Eigen::Vector3d _min = (firstFrame.odom.pose()*ext_base).pos();
         Eigen::Vector3d _max = (firstFrame.odom.pose()*ext_base).pos();
         for (auto & it: lm.track) {
-            // printf("[D2VINS::D2LandmarkManager] Initialize landmark %ld by motion frame %d camera_id %d index %d\n", 
-                // lm_id, it.frame_id, it.camera_id, it.camera_index);
             auto frame = *state->getFramebyId(it.frame_id);
             auto ext = state->getExtrinsic(it.camera_id);
-            poses.push_back(frame.odom.pose()*ext);
+            auto cam_pose = frame.odom.pose()*ext;
+            poses.push_back(cam_pose);
             points.push_back(it.pt3d_norm);
             _min = _min.cwiseMin((frame.odom.pose()*ext).pos());
             _max = _max.cwiseMax((frame.odom.pose()*ext).pos());
@@ -131,6 +130,16 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
                 } else {
                     lm.flag = LandmarkFlag::INITIALIZED;
                     memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
+                }
+                for (auto & it: lm.track) {
+                    auto frame = *state->getFramebyId(it.frame_id);
+                    auto ext = state->getExtrinsic(it.camera_id);
+                    auto cam_pose = frame.odom.pose()*ext;
+                    auto reproject_pos = cam_pose.inverse()*point_3d;
+                    reproject_pos.normalize();
+                    // printf("Frame %ld camera_id %d index %d cam pose: %s pt3d norm %.3f %.3f %.3f reproject %.3f %.3f %.3f\n", 
+                    //         it.frame_id, it.camera_id, it.camera_index, cam_pose.toStr().c_str(), it.pt3d_norm.x(), it.pt3d_norm.y(), it.pt3d_norm.z(), 
+                    //         reproject_pos.x(), reproject_pos.y(), reproject_pos.z());
                 }
             } else {
                 if (params->debug_print_states) {

@@ -25,7 +25,7 @@ height_undistort: 400
 #estimation
 estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
 estimate_td: 0                      # online estimate time offset between camera and imu
-td: 0.000                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
+td: -0.23                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 estimation_mode: 0
 double_counting_common_feature: 1
 #0:single; 1:solve all; 2: distributed; 3:server
@@ -56,7 +56,7 @@ vlad_threshold: 0.5
 
 #Initialization
 init_method: 0 #0 IMU, 1 PnP
-depth_estimate_baseline: 0.0
+depth_estimate_baseline: 0.03
 
 #sliding window
 max_sld_win_size: 11
@@ -67,7 +67,7 @@ min_solve_frames: 6
 multiple_thread: 1
 
 #outlier rejection
-thres_outlier : 10000.0
+thres_outlier : 10.0
 perform_outlier_rejection_num: 100000
 tri_max_err: 1000000.0
 
@@ -83,10 +83,9 @@ remove_base_when_margin_remote: 2
 
 #feature tracker parameters
 max_cnt: 150            # max feature number in feature tracking
-max_superpoint_cnt: 100 # max feature extraction by superpoint
-max_solve_cnt: 150
-show_track_id: 1
-check_homography: 0
+max_superpoint_cnt: 0 # max feature extraction by superpoint
+max_solve_cnt: 1000
+check_homography: 1
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
 remote_min_match_num: 40
 enable_superglue_local: 0
@@ -95,11 +94,6 @@ enable_superglue_remote: 0
 #CNN
 cnn_use_onnx: 1
 
-# #Measurement parameters       The more accurate parameters you provide, the better performance
-# acc_n: 0.0028         # accelerometer measurement noise standard deviation. #0.2   0.04
-# gyr_n: 0.00016        # gyroscope measurement noise standard deviation.     #0.05  0.004
-# acc_w: 0.00086        # accelerometer bias random work noise standard deviation.  #0.002
-# gyr_w: 0.000022       # gyroscope bias random work noise standard deviation.     #4.0e-5
 acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2   0.04
 gyr_n: 0.05         # gyroscope measurement noise standard deviation.     #0.05  0.004
 acc_w: 0.002         # accelerometer bias random work noise standard deviation.  #0.002
@@ -122,3 +116,4 @@ debug_print_sldwin: 0
 debug_print_states: 0
 enable_perf_output: 0
 debug_write_margin_matrix: 0
+show_track_id: 0

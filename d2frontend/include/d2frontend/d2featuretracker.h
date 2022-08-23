@@ -52,7 +52,6 @@ struct TrackReport {
     }
 };
 
-
 struct LKImageInfo {
     FrameIdType frame_id;
     std::vector<cv::Point2f> lk_pts;
@@ -63,6 +62,13 @@ struct LKImageInfo {
 class SuperGlueOnnx;
 
 class D2FeatureTracker {
+public:
+    enum TrackLRType {
+        WHOLE_IMG_MATCH = 0,
+        LEFT_RIGHT_IMG_MATCH,
+        RIGHT_LEFT_IMG_MATCH
+    };
+protected:
     D2FTConfig _config;
     std::vector<VisualImageDescArray> current_keyframes;
     LandmarkManager * lmanager = nullptr;
@@ -73,8 +79,8 @@ class D2FeatureTracker {
     std::pair<bool, LandmarkPerFrame> createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id = -1);
 
     TrackReport trackLK(VisualImageDesc & frame);
-    TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk=true);
-    TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame);
+    TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk=true, TrackLRType type=WHOLE_IMG_MATCH);
+    TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame, TrackLRType type=WHOLE_IMG_MATCH);
     TrackReport track(VisualImageDesc & frame);
     TrackReport trackRemote(VisualImageDesc & frame, bool skip_whole_frame_match=false);
     void processKeyframe(VisualImageDescArray & frames);
@@ -90,7 +96,8 @@ class D2FeatureTracker {
     typedef std::lock_guard<std::recursive_mutex> Guard;
     std::recursive_mutex track_lock;
     SuperGlueOnnx * superglue = nullptr;
-    bool matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, std::vector<int> & ids_down_to_up, bool enable_superglue=true);
+    bool matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, std::vector<int> & ids_down_to_up, 
+            bool enable_superglue=true, TrackLRType type=WHOLE_IMG_MATCH);
 public:
     D2FeatureTracker(D2FTConfig config);
     bool trackLocalFrames(VisualImageDescArray & frames);
@@ -102,6 +109,6 @@ public:
 
 void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts);
 std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
-                        std::vector<LandmarkIdType> & ids);
+                        std::vector<LandmarkIdType> & ids, D2FeatureTracker::TrackLRType type=D2FeatureTracker::WHOLE_IMG_MATCH);
 
 } 

@@ -37,14 +37,14 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
             report.compose(track(frame));
         }
     } else if(params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
-        // report.compose(track(frames.images[0]));
-        // report.compose(track(frames.images[1]));
+        report.compose(track(frames.images[0]));
+        report.compose(track(frames.images[1]));
         report.compose(track(frames.images[2]));
         report.compose(track(frames.images[3]));
-        // report.compose(track(frames.images[0], frames.images[1], false));
-        // report.compose(track(frames.images[1], frames.images[2], false));
-        report.compose(track(frames.images[2], frames.images[3], false));
-        // report.compose(track(frames.images[3], frames.images[0], false));
+        report.compose(track(frames.images[0], frames.images[1], true, LEFT_RIGHT_IMG_MATCH));
+        report.compose(track(frames.images[1], frames.images[2], true, LEFT_RIGHT_IMG_MATCH));
+        report.compose(track(frames.images[2], frames.images[3], true, LEFT_RIGHT_IMG_MATCH));
+        report.compose(track(frames.images[0], frames.images[3], true, RIGHT_LEFT_IMG_MATCH));
     }
     
     if (isKeyframe(report)) {
@@ -306,12 +306,12 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     return report;
 }
 
-TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk) {
+TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk, TrackLRType type) {
     auto prev_pts = left_frame.landmarks2D();
     auto cur_pts = right_frame.landmarks2D();
     std::vector<int> ids_b_to_a;
     TrackReport report;
-    matchLocalFeatures(left_frame, right_frame, ids_b_to_a, _config.enable_superglue_local);
+    matchLocalFeatures(left_frame, right_frame, ids_b_to_a, _config.enable_superglue_local, type);
     for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
         if (ids_b_to_a[i] >= 0) {
             assert(ids_b_to_a[i] < left_frame.spLandmarkNum() && "too large");
@@ -334,12 +334,12 @@ TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualIm
         }
     }
     if (_config.enable_lk_optical_flow && enable_lk) {
-        trackLK(left_frame, right_frame);
+        trackLK(left_frame, right_frame, type);
     }
     return report;
 }
 
-TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, VisualImageDesc & right_frame) {
+TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, TrackLRType type) {
     //Track LK points
     //This function MUST run after track(...)
     TrackReport report;
@@ -347,7 +347,8 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
     auto cur_lk_ids = prev_lk_info[left_frame.camera_index].lk_ids;
     assert(left_frame.frame_id == prev_lk_info[left_frame.camera_index].frame_id);
     if (!cur_lk_ids.empty())
-        cur_lk_pts = opticalflowTrack(right_frame.raw_image, left_frame.raw_image, cur_lk_pts, cur_lk_ids);
+        cur_lk_pts = opticalflowTrack(right_frame.raw_image, left_frame.raw_image, cur_lk_pts, cur_lk_ids, type);
+    // printf("[trackLK] indices %d<->%d track type %d LK points: %lu\n", left_frame.camera_index, right_frame.camera_index, type, cur_lk_pts.size());
     for (int i = 0; i < cur_lk_pts.size(); i++) {
         auto ret = createLKLandmark(right_frame, cur_lk_pts[i], cur_lk_ids[i]);
         if (!ret.first) {
@@ -467,6 +468,7 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
         auto lm = lmanager->at(_id);
         if (_id >= 0) {
             cv::Point2f prev;
+            bool prev_found = false;
             if (!lmanager->hasLandmark(_id)) {
                 continue;
             }
@@ -475,13 +477,18 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
                 continue;
             if (!is_keyframe || pts2d.size() < 2 || is_right) {
                 prev = pts2d.back().pt2d;
+                prev_found = true;
             } else {
                 for (int  index = pts2d.size()-2; index >= 0; index--) {
                     if (pts2d[index].camera_id == frame.camera_id) {
                         prev = lmanager->at(_id).track[index].pt2d;
+                        prev_found = true;
                         break;
                     }
                 }
+            }
+            if (!prev_found) {
+                continue;
             }
             if (is_remote) {
                 cv::line(img, prev + cv::Point2f(width, 0), cur_pts[j], cv::Scalar(0, 255, 0));
@@ -564,9 +571,9 @@ void D2FeatureTracker::draw(VisualImageDesc & lframe, VisualImageDesc & rframe, 
 
 void D2FeatureTracker::draw(std::vector<VisualImageDesc> frames, bool is_keyframe, const TrackReport & report) const {
     cv::Mat img = drawToImage(frames[0], is_keyframe, report);
-    cv::Mat img_r = drawToImage(frames[1], is_keyframe, report, true);
+    cv::Mat img_r = drawToImage(frames[2], is_keyframe, report);
     cv::hconcat(img, img_r, img);
-    cv::Mat img1 = drawToImage(frames[2], is_keyframe, report);
+    cv::Mat img1 = drawToImage(frames[1], is_keyframe, report);
     cv::Mat img1_r = drawToImage(frames[3], is_keyframe, report, true);
     cv::hconcat(img1, img1_r, img1);
     cv::vconcat(img, img1, img);
@@ -581,37 +588,67 @@ void D2FeatureTracker::draw(std::vector<VisualImageDesc> frames, bool is_keyfram
     }
 }
 
+std::vector<float> getFeatureHalfImg(const std::vector<cv::Point2f> & pts, const std::vector<float> & desc, bool require_left, int width, 
+        std::map<int, int> & tmp_to_idx) {
+    std::vector<float> desc_half;
+    desc_half.reserve(desc.size());
+    int c = 0;
+    for (int i = 0; i < pts.size(); i++) {
+        if (require_left && pts[i].x < width/2 || !require_left && pts[i].x >= params->width/2) {
+            tmp_to_idx[c] = i;
+            //Copy from desc to desc_half
+            std::copy(desc.begin() + i*FEATURE_DESC_SIZE, desc.begin() + (i+1)*FEATURE_DESC_SIZE, desc_half.begin() + c*FEATURE_DESC_SIZE);
+            c += 1;
+        }
+    }
+    return desc_half;
+}
+
 bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, 
-        std::vector<int> & ids_b_to_a, bool enable_superglue) {
+        std::vector<int> & ids_b_to_a, bool enable_superglue, TrackLRType type) {
     TicToc tic;
-    auto & _desc_a = img_desc_a.landmark_descriptor;
-    auto & _desc_b = img_desc_b.landmark_descriptor;
+    auto & raw_desc_a = img_desc_a.landmark_descriptor;
+    auto & raw_desc_b = img_desc_b.landmark_descriptor;
     auto pts_a = img_desc_a.landmarks2D(true);
     auto pts_b = img_desc_b.landmarks2D(true);
+    auto pts_a_normed = img_desc_a.landmarks2D(true, true);
+    auto pts_b_normed = img_desc_b.landmarks2D(true, true);
+
     std::vector<int> ids_a, ids_b;
     std::vector<cv::DMatch> _matches;
     ids_b_to_a.resize(pts_b.size());
     std::fill(ids_b_to_a.begin(), ids_b_to_a.end(), -1);
     if (enable_superglue) {
-        auto kpts_a = img_desc_a.landmarks2D(true, true);
-        auto kpts_b = img_desc_b.landmarks2D(true, true);
-        auto & desc0 = img_desc_a.landmark_descriptor;
-        auto & desc1 = img_desc_b.landmark_descriptor;
+        //Superglue only support whole image matching
         auto & scores0 = img_desc_a.landmark_scores;
         auto & scores1 = img_desc_b.landmark_scores;
-        _matches = superglue->inference(kpts_a, kpts_b, desc0, desc1, scores0, scores1);
+        _matches = superglue->inference(pts_a, pts_b, raw_desc_a, raw_desc_b, scores0, scores1);
     } else {
-        const cv::Mat desc_a(_desc_a.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(_desc_a.data()));
-        const cv::Mat desc_b(_desc_b.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(_desc_b.data()));
-        cv::BFMatcher bfmatcher(cv::NORM_L2, true);
-        bfmatcher.match(desc_a, desc_b, _matches); //Query train result
+        if (type == WHOLE_IMG_MATCH) {
+            const cv::Mat desc_a(raw_desc_a.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(raw_desc_a.data()));
+            const cv::Mat desc_b(raw_desc_b.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(raw_desc_b.data()));
+            cv::BFMatcher bfmatcher(cv::NORM_L2, true);
+            bfmatcher.match(desc_a, desc_b, _matches); //Query train result
+        } else {
+            std::map<int, int> tmp_to_idx_a, tmp_to_idx_b;
+            const auto desc_a_filtered = getFeatureHalfImg(pts_a, raw_desc_a, type==LEFT_RIGHT_IMG_MATCH, params->width, tmp_to_idx_a);
+            const auto desc_b_filtered = getFeatureHalfImg(pts_b, raw_desc_b, type==RIGHT_LEFT_IMG_MATCH, params->width, tmp_to_idx_b);
+            cv::BFMatcher bfmatcher(cv::NORM_L2, true);
+            const cv::Mat desc_a(tmp_to_idx_a.size(), FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(desc_a_filtered.data()));
+            const cv::Mat desc_b(tmp_to_idx_b.size(), FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(desc_b_filtered.data()));
+            bfmatcher.match(desc_a, desc_b, _matches); //Query train result
+            for (auto & match : _matches) {
+                match.queryIdx = tmp_to_idx_a[match.queryIdx];
+                match.trainIdx = tmp_to_idx_b[match.trainIdx];
+            }
+        }
     }
     std::vector<cv::Point2f> up_2d, down_2d;
     for (auto match : _matches) {
         ids_a.push_back(match.queryIdx);
         ids_b.push_back(match.trainIdx);
-        up_2d.push_back(pts_a[match.queryIdx]);
-        down_2d.push_back(pts_b[match.trainIdx]);
+        up_2d.push_back(pts_a_normed[match.queryIdx]);
+        down_2d.push_back(pts_b_normed[match.trainIdx]);
     }
     if (params->ftconfig->check_homography && !enable_superglue) {
         std::vector<unsigned char> mask;
@@ -683,26 +720,83 @@ bool inBorder(const cv::Point2f &pt, cv::Size shape)
     return BORDER_SIZE <= img_x && img_x < shape.width - BORDER_SIZE && BORDER_SIZE <= img_y && img_y < shape.height - BORDER_SIZE;
 }
 
-std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, std::vector<LandmarkIdType> & ids) {
+std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
+        std::vector<LandmarkIdType> & ids, D2FeatureTracker::TrackLRType type) {
     if (prev_pts.size() == 0) {
         return std::vector<cv::Point2f>();
     }
     TicToc tic;
     std::vector<uchar> status;
+    std::vector<cv::Point2f> cur_pts;
+    float move_cols = cur_img.cols*90.0/params->loopcamconfig->undistort_fov; //slightly lower than 0.5 cols when fov=200
 
     if (prev_pts.size() == 0) {
         return std::vector<cv::Point2f>();
     }
 
-    // vector<cv::Point2f> cur_pts = get_predict_pts(ids, prev_pts, prediction_points);
-    std::vector<cv::Point2f> cur_pts = prev_pts;
-
+    if (type == D2FeatureTracker::WHOLE_IMG_MATCH) {
+        cur_pts = prev_pts;
+    } else  {
+        status.resize(prev_pts.size());
+        std::fill(status.begin(), status.end(), 0);
+        if (type == D2FeatureTracker::LEFT_RIGHT_IMG_MATCH) {
+            for (unsigned int i = 0; i < prev_pts.size(); i++) {
+                auto pt = prev_pts[i];
+                if (pt.x < cur_img.cols - move_cols) {
+                    pt.x += move_cols;
+                    status[i] = 1;
+                    cur_pts.push_back(pt);
+                }
+            }
+        } else {
+            for (unsigned int i = 0; i < prev_pts.size(); i++) {
+                auto pt = prev_pts[i];
+                if (pt.x >= move_cols) {
+                    pt.x -= move_cols;
+                    status[i] = 1;
+                    cur_pts.push_back(pt);
+                }
+            }
+        }
+        reduceVector(prev_pts, status);
+        reduceVector(ids, status);
+    }
+    status.resize(0);
+    if (cur_pts.size() == 0) {
+        return std::vector<cv::Point2f>();
+    }
     std::vector<float> err;
-    cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, WIN_SIZE, PYR_LEVEL);
-    std::vector<cv::Point2f> reverse_pts;
+    cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, WIN_SIZE, PYR_LEVEL, 
+            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
     std::vector<uchar> reverse_status;
-    cv::calcOpticalFlowPyrLK(cur_img, prev_img, cur_pts, reverse_pts, reverse_status, err, WIN_SIZE, PYR_LEVEL);
-
+    std::vector<cv::Point2f> reverse_pts = cur_pts;
+    for (unsigned int i = 0; i < prev_pts.size(); i++) {
+        auto & pt = reverse_pts[i];
+        if (type == D2FeatureTracker::LEFT_RIGHT_IMG_MATCH && status[i] == 1) {
+            pt.x -= move_cols;
+        }
+        if (type == D2FeatureTracker::RIGHT_LEFT_IMG_MATCH && status[i] == 1) {
+            pt.x += move_cols;
+        }
+    }
+    cv::calcOpticalFlowPyrLK(cur_img, prev_img, cur_pts, reverse_pts, reverse_status, err, WIN_SIZE, PYR_LEVEL, 
+            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
+    // if (type == D2FeatureTracker::LEFT_RIGHT_IMG_MATCH) {
+    //     cv::Mat show;
+    //     cv::vconcat(prev_img, cur_img, show);
+    //     for (unsigned int i = 0; i < cur_pts.size(); i++) {
+    //         //Draw arrows on the flow field if status[i]
+    //         if (status[i] && reverse_status[i] && cv::norm(prev_pts[i] - reverse_pts[i]) <= 0.5) {
+    //             cv::Point2f prev_pt = prev_pts[i];
+    //             cv::Point2f cur_pt = cur_pts[i];
+    //             cv::Point2f reverse_pt = reverse_pts[i];
+    //             // cv::Point2f reverse_diff = reverse_pt - cur_pt;
+    //             cv::arrowedLine(show, prev_pt, cur_pt, cv::Scalar(0, 255, 0), 2);
+    //             cv::arrowedLine(show, cur_pt, reverse_pt, cv::Scalar(0, 0, 255), 2);
+    //         }
+    //     }
+    //     cv::imshow("opticalflowTrack", show);
+    // }
     for(size_t i = 0; i < status.size(); i++)
     {
         if(status[i] && reverse_status[i] && cv::norm(prev_pts[i] - reverse_pts[i]) <= 0.5)

@@ -39,10 +39,14 @@ int main(int argc, char** argv) {
     int undistort_height = img.cols/2;
     FisheyeUndist undistort(ret.first, 0, fov, true, FisheyeUndist::UndistortCylindrical, undistort_width, undistort_height);
     auto imgs = undistort.undist_all(img, true);
-    cv::imshow("Undistort", imgs[0]);
+    cv::imshow("UndistortCylindrical", imgs[0]);
     auto img_cuda = undistort.undist_id_cuda(img, 0);
     cv::Mat img_cpu(img_cuda);
-    cv::imshow("Undistort_cuda", img_cpu);
+    cv::imshow("UndistortCylindrical_cuda", img_cpu);
+
+    FisheyeUndist undistort2(ret.first, 0, fov, true, FisheyeUndist::UndistortPinhole, undistort_width, undistort_height);
+    imgs = undistort2.undist_all(img, true);
+    cv::imshow("UndistortPinhole", imgs[0]);
 
     double err = 0;
     for (int i = 0; i< undistort_width; i ++ ) {
