@@ -6,6 +6,8 @@
 
 namespace D2PGO {
 using D2Common::Utility::skewSymVec3;
+using D2Common::Utility::recoverRotationSVD;
+
 template <typename Derived, typename T>
 inline void fillInTripet(int i0, int j0, const MatrixBase<Derived> & M, std::vector<Eigen::Triplet<T>> & triplets) {
     for (int i = 0; i < M.rows(); i ++) { //Row, col of relative rotation R
@@ -13,17 +15,6 @@ inline void fillInTripet(int i0, int j0, const MatrixBase<Derived> & M, std::vec
             triplets.emplace_back(Eigen::Triplet<T>(i0 + i, j0 + j, M(i, j)));
         }
     }
-}
-
-template <typename T>
-inline Eigen::Matrix<T, 3, 3> recoverRotationSVD(Eigen::Matrix<T, 3, 3> M) {
-    // This function compute argmin_R (||R - M||_F) sub to R, R is a rotation matrix
-    auto svd = M.jacobiSvd(ComputeFullV|ComputeFullU);
-    auto S = svd.matrixU();
-    auto Vt = svd.matrixV().transpose();
-    auto detSV = (S*Vt).determinant();
-    Eigen::Matrix<T, 3, 3> R = S*Eigen::Matrix<T, 3, 1>(1, 1, detSV).asDiagonal()*Vt;
-    return R;
 }
 
 template<typename T>
@@ -350,15 +341,18 @@ protected:
         for (auto it : frame_id_to_idx) {
             auto frame_id = it.first;
             auto idx = getFrameIdx(frame_id);
+            auto frame = state->getFramebyId(frame_id);
             if (idx == -1) {
+                state->setAttitudeInit(frame_id, frame->odom.att());
                 continue;
             }
-            auto frame = state->getFramebyId(frame_id);
             auto & pose = frame->odom.pose();
             Map<const Matrix<T, 3, 3, RowMajor>> M(X.data() + idx*ROTMAT_SIZE);
             //Note in X the rotation is stored in row major order.
             auto R = recoverRotationSVD(Mat3(M));
-            pose.att() = Quaternion<T>(R).template cast<double>();
+            auto q = Quaternion<T>(R).template cast<double>();
+            pose.att() = q;
+            state->setAttitudeInit(frame_id, q);
             pose.to_vector(state->getPoseState(frame_id));
             Map<Matrix<double, 3, 3, RowMajor>> R_state(state->getRotState(frame_id));
             R_state = M.template cast<double>(); //Not essential to be rotation matrix. For ARock.

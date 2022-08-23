@@ -24,11 +24,11 @@ protected:
     int used_loops_count;
     int solve_count = 0;
     bool updated = false;
+    bool is_rot_init_convergence = false;
     SolverWrapper * solver = nullptr;
     std::vector<Swarm::LoopEdge> used_loops;
     std::map<int, Swarm::DroneTrajectory> ego_motion_trajs;
     SwarmLocalOutlierRejection rejection;
-
     RotInit * rot_init = nullptr;
 
     void saveG2O();
@@ -38,6 +38,7 @@ protected:
     bool isMain() const;
     bool isRotInitConvergence() const;
 public:
+    void postPerturbSolve();
     std::function<void(void)> postsolve_callback;
     std::function<void(const DPGOData & )> bd_data_callback;
     D2PGO(D2PGOConfig _config):
@@ -49,7 +50,8 @@ public:
     void addFrame(D2BaseFrame frame_desc);
     void addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop=false);
     void setStateProperties(ceres::Problem & problem);
-    bool solve(bool force_solve=false);
+    bool solve_multi(bool force_solve=false);
+    bool solve_single();
     void broadcastData(const DPGOData & data);
     void inputDPGOData(const DPGOData & data);
     void rotInitial(const std::vector<Swarm::LoopEdge> & good_loops);

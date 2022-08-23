@@ -38,6 +38,22 @@ Eigen::Quaternion<typename Derived::Scalar> deltaQ(const Eigen::MatrixBase<Deriv
 }
 
 template <typename Derived>
+Eigen::Quaternion<typename Derived::Scalar> quatfromRotationVector(const Eigen::MatrixBase<Derived> &theta, double eps=1e-2)
+{
+    typedef typename Derived::Scalar Scalar_t;
+    if (theta.norm() < eps) {
+        return deltaQ(theta);
+    } else {
+        Eigen::Quaternion<Scalar_t> dq;
+        Scalar_t angle = theta.norm();
+        Scalar_t half_angle = angle / static_cast<Scalar_t>(2.0);
+        auto xyz = theta / angle * sin(half_angle);
+        return Eigen::Quaternion<Scalar_t>(cos(half_angle), xyz.x(), xyz.y(), xyz.z());
+    }
+    return Eigen::Quaternion<Scalar_t>::Identity();
+}
+
+template <typename Derived>
 static Eigen::Quaternion<typename Derived::Scalar> positify(const Eigen::QuaternionBase<Derived> &q)
 {
     //printf("a: %f %f %f %f", q.w(), q.x(), q.y(), q.z());
@@ -99,6 +115,17 @@ static Eigen::SparseMatrix<Derived> inverse(const Eigen::SparseMatrix<Derived> &
     assert(solver.info() == Eigen::Success && "LLT failed");
     Eigen::SparseMatrix<Derived> A_inv = solver.solve(I);
     return A_inv;
+}
+
+template <typename T>
+inline Eigen::Matrix<T, 3, 3> recoverRotationSVD(Eigen::Matrix<T, 3, 3> M) {
+    // This function compute argmin_R (||R - M||_F) sub to R, R is a rotation matrix
+    auto svd = M.jacobiSvd(ComputeFullV|ComputeFullU);
+    auto S = svd.matrixU();
+    auto Vt = svd.matrixV().transpose();
+    auto detSV = (S*Vt).determinant();
+    Eigen::Matrix<T, 3, 3> R = S*Eigen::Matrix<T, 3, 1>(1, 1, detSV).asDiagonal()*Vt;
+    return R;
 }
 
 template <typename Derived>

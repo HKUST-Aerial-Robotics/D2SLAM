@@ -25,7 +25,7 @@ class D2PGOTester {
     std::thread th;
     std::string output_path;
     ros::NodeHandle & _nh;
-
+    bool multi = false;
     int max_steps = 100;
 
     std::map<int, ros::Publisher> path_pubs;
@@ -44,6 +44,7 @@ public:
         nh.param<std::string>("output_path", output_path, "test.g2o");
         nh.param<int>("self_id", self_id, -1);
         nh.param<bool>("is_4dof", is_4dof, true);
+        nh.param<bool>("is_multi", multi, false);
         nh.param<std::string>("solver_type", solver_type, "arock");
 
         if (g2o_path != "")
@@ -71,6 +72,8 @@ public:
         config.arock_config.verbose = true;
         config.arock_config.ceres_options = config.ceres_options;
         config.arock_config.max_steps = 1;
+        config.g2o_output_path = output_path;
+        config.write_g2o = true;
         nh.param<int>("max_steps", max_steps, 10);
         nh.param<double>("rho_frame_T", config.arock_config.rho_frame_T, 0.1);
         nh.param<double>("rho_frame_theta", config.arock_config.rho_frame_theta, 0.1);
@@ -157,12 +160,17 @@ public:
 
     void startSolve() {
         th = std::thread([&]() {
-            ROS_INFO("[D2PGO@%d] Start solve", self_id);
             for (int i = 0; i < max_steps; i ++) {
-                pgo->solve(true);
+                if (multi) {
+                    pgo->solve_multi(true);
+                } else {
+                    pgo->solve_single();
+                }
             }
-            ROS_INFO("[D2PGO@%d] End solve, writing reslts", self_id);
             //Write data
+            if (multi) {
+                pgo->postPerturbSolve();
+            }
             writeDataG2o();
             ros::shutdown();
         });

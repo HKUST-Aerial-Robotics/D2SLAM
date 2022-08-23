@@ -53,9 +53,8 @@ public:
         return new RelPoseFactor(_relative_pose, _sqrt_inf);
     }
     
-    static ceres::CostFunction* Create(const Swarm::GeneralMeasurement2Drones* _loc) {
-        auto loop = static_cast<const Swarm::LoopEdge*>(_loc);
-        return new RelPoseFactor(loop->relative_pose, loop->getSqrtInfoMat());
+    static ceres::CostFunction* Create(const Swarm::LoopEdge loop) {
+        return new RelPoseFactor(loop.relative_pose, loop.getSqrtInfoMat());
     }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -66,9 +65,9 @@ private:
     const Eigen::Matrix6d sqrt_information_;
 };
 
-class RelPoseFactorManifold {
+class RelPoseFactorAD { //AD stands for AutoDiff
 public:
-    RelPoseFactorManifold(const Swarm::Pose &t_ab_measured,
+    RelPoseFactorAD(const Swarm::Pose &t_ab_measured,
                          const Eigen::Matrix6d &sqrt_information)
         : t_ab_measured_(t_ab_measured), sqrt_information_(sqrt_information) {
             // std::cout << "sqrt_information_diag_" << sqrt_information_diag_.transpose() << std::endl;
@@ -118,14 +117,13 @@ public:
         const Swarm::Pose &t_ab_measured,
         const Eigen::Matrix6d &sqrt_information)
     {
-        return new ceres::AutoDiffCostFunction<RelPoseFactorManifold, 6, 7, 7>(
-            new RelPoseFactorManifold(t_ab_measured, sqrt_information));
+        return new ceres::AutoDiffCostFunction<RelPoseFactorAD, 6, 7, 7>(
+            new RelPoseFactorAD(t_ab_measured, sqrt_information));
     }
 
-    static ceres::CostFunction* Create(const Swarm::GeneralMeasurement2Drones* _loc) {
-        auto loop = static_cast<const Swarm::LoopEdge*>(_loc);
-        return new ceres::AutoDiffCostFunction<RelPoseFactorManifold, 6, 7, 7>(
-            new RelPoseFactorManifold(loop->relative_pose, loop->getSqrtInfoMat()));
+    static ceres::CostFunction* Create(const Swarm::LoopEdge & loop) {
+        return new ceres::AutoDiffCostFunction<RelPoseFactorAD, 6, 7, 7>(
+            new RelPoseFactorAD(loop.relative_pose, loop.getSqrtInfoMat()));
     }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -134,6 +132,66 @@ private:
     const Swarm::Pose t_ab_measured_;
     // The square root of the measurement information matrix.
     const Eigen::Matrix6d sqrt_information_;
+};
+
+
+class RelPoseFactorPerturbAD { //Perturb Relpose.
+public:
+    template <typename T>
+    bool operator()(const T *const pose_a_ptr,
+                    const T *const pose_b_ptr,
+                    T *residuals_ptr) const {
+        Eigen::Map<const Eigen::Matrix<T, 3, 1>> p_a(pose_a_ptr);
+        Eigen::Map<const Eigen::Matrix<T, 3, 1>> theta_a(pose_a_ptr + 3);
+
+        Eigen::Map<const Eigen::Matrix<T, 3, 1>> p_b(pose_b_ptr);
+        Eigen::Map<const Eigen::Matrix<T, 3, 1>> theta_b(pose_b_ptr + 3);
+        Eigen::Quaternion<T> q_a = qa0.template cast<T>()*Utility::quatfromRotationVector(theta_a);
+        Eigen::Quaternion<T> q_b = qb0.template cast<T>()*Utility::quatfromRotationVector(theta_b);
+        // Compute the relative transformation between the two frames.
+        Eigen::Quaternion<T> q_a_inverse = q_a.conjugate();
+        Eigen::Quaternion<T> q_ab_estimated = q_a_inverse * q_b;
+
+        // Represent the displacement between the two frames in the A frame.
+        Eigen::Matrix<T, 3, 1> p_ab_estimated = q_a_inverse * (p_b - p_a);
+
+        // Compute the error between the two orientation estimates.
+        Eigen::Quaternion<T> delta_q =
+            t_ab_measured_.att().template cast<T>() * q_ab_estimated.conjugate();
+
+        // Compute the residuals.
+        // [ position         ]   [ delta_p          ]
+        // [ orientation (3x1)] = [ 2 * delta_q(0:2) ]
+        Eigen::Map<Eigen::Matrix<T, 6, 1>> residuals(residuals_ptr);
+        residuals.template block<3, 1>(0, 0) =
+            p_ab_estimated - t_ab_measured_.pos().template cast<T>();
+        residuals.template block<3, 1>(3, 0) = T(2.0) * delta_q.vec();
+
+        // Scale the residuals by the measurement uncertainty.
+        residuals.applyOnTheLeft(sqrt_information_.template cast<T>());
+        return true;
+    }
+
+    RelPoseFactorPerturbAD(const Swarm::Pose &t_ab_measured,
+                         const Eigen::Matrix6d &sqrt_information, 
+                         const Eigen::Quaterniond & q0, const Eigen::Quaterniond & q1)
+        : t_ab_measured_(t_ab_measured), sqrt_information_(sqrt_information), qa0(q0), qb0(q1) {
+            // std::cout << "sqrt_information_diag_" << sqrt_information_diag_.transpose() << std::endl;
+    }
+
+    static ceres::CostFunction* Create(const Swarm::LoopEdge & loop, Eigen::Quaterniond & q0, Eigen::Quaterniond & q1) {
+        return new ceres::AutoDiffCostFunction<RelPoseFactorPerturbAD, 6, 6, 6>(
+            new RelPoseFactorPerturbAD(loop.relative_pose, loop.getSqrtInfoMat(), q0, q1));
+    }
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+private:
+    // The measurement for the position of B relative to A in the A frame.
+    const Swarm::Pose t_ab_measured_;
+    // The square root of the measurement information matrix.
+    const Eigen::Matrix6d sqrt_information_;
+    const Eigen::Quaterniond qa0;
+    const Eigen::Quaterniond qb0;
 };
 
 class RelPoseFactor4D {
@@ -169,11 +227,9 @@ public:
         return true;
     }
 
-    static ceres::CostFunction* Create(const Swarm::GeneralMeasurement2Drones* _loc) {
-        auto loop = static_cast<const Swarm::LoopEdge*>(_loc);
-        // std::cout << "Loop" << "sqrt_inf\n" << loop->getSqrtInfoMat4D() << std::endl;
+    static ceres::CostFunction* Create(const Swarm::LoopEdge & loop) {
         return new ceres::AutoDiffCostFunction<RelPoseFactor4D, 4, 4, 4>(
-            new RelPoseFactor4D(loop->relative_pose, loop->getSqrtInfoMat4D()));
+            new RelPoseFactor4D(loop.relative_pose, loop.getSqrtInfoMat4D()));
     }
 
     static ceres::CostFunction * Create(const Swarm::Pose & _relative_pose, const Eigen::Matrix3d & _sqrt_inf_pos, double sqrt_info_yaw) {
@@ -249,6 +305,7 @@ public:
     FrameIdType frame_ida;
     FrameIdType frame_idb;
     bool is_4dof = false;
+    bool is_perturb = false;
     RelPoseResInfo():ResidualInfo(ResidualType::RelPoseResidual) {}
     bool relavant(const std::set<FrameIdType> & frame_id) const override {
         return frame_id.find(frame_ida) != frame_id.end() || frame_id.find(frame_idb) != frame_id.end();
@@ -259,20 +316,21 @@ public:
             params_list.push_back(createFramePose4D(state, frame_ida));
             params_list.push_back(createFramePose4D(state, frame_idb));
         } else {
-            params_list.push_back(createFramePose(state, frame_ida));
-            params_list.push_back(createFramePose(state, frame_idb));
+            params_list.push_back(createFramePose(state, frame_ida, is_perturb));
+            params_list.push_back(createFramePose(state, frame_idb, is_perturb));
         }
         return params_list;
     }
     static RelPoseResInfo * create(
             ceres::CostFunction * cost_function, ceres::LossFunction * loss_function, 
-            FrameIdType frame_ida, FrameIdType frame_idb, bool is_4dof=false) {
+            FrameIdType frame_ida, FrameIdType frame_idb, bool is_4dof=false, bool is_perturb=false) {
         auto * info = new RelPoseResInfo();
         info->frame_ida = frame_ida;
         info->frame_idb = frame_idb;
         info->cost_function = cost_function;
         info->loss_function = loss_function;
         info->is_4dof = is_4dof;
+        info->is_perturb = is_perturb;
         return info;
     }
 };

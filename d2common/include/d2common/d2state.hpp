@@ -10,10 +10,16 @@ protected:
     std::set<int> all_drones;
     int reference_frame_id = -1;
     std::map<FrameIdType, D2BaseFrame*> frame_db;
-    std::map<FrameIdType, state_type*> _frame_pose_state;
+    std::map<FrameIdType, state_type*> _frame_pose_state; 
 
+    //This returns the perturb of the frame. per = [T, v], where v is the rotation vector representation of a small R.
+    //v = \theta * unit(v)
+    //pose = (T, R0*exp(\theta * K)), where K = skewMatrix(unit(v))
+    std::map<FrameIdType, state_type*> _frame_pose_pertub_state;
+
+    //This returns the R matrix pointer which is the rotation of the frame.
     // Note that this rot state is not esstentially a rotation matrix. 
-    // To get real rotation matrix from it, need recoverRotationSVD
+    // To get real rotation matrix from it, use recoverRotationSVD.
     std::map<FrameIdType, state_type*> _frame_rot_state; 
 
     mutable std::recursive_mutex state_lock;
@@ -86,6 +92,15 @@ public:
             assert(false && "Frame not found");
         }
         return _frame_rot_state.at(frame_id);
+    }
+
+    double * getPerturbState(FrameIdType frame_id) const {
+        const Guard lock(state_lock);
+        if (_frame_pose_pertub_state.find(frame_id) == _frame_pose_pertub_state.end()) {
+            printf("\033[0;31m[D2State::getRotState] frame %ld not found\033[0m\n", frame_id);
+            assert(false && "Frame not found");
+        }
+        return _frame_pose_pertub_state.at(frame_id);
     }
 };
 }

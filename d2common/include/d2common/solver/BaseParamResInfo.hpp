@@ -7,6 +7,7 @@ namespace D2Common {
 enum ParamsType {
     POSE = 0,
     POSE_4D,
+    POSE_PERTURB_6D,
     ROTMAT,
     REL_COOR, //Relative cooridinate frame pose (P_w_i_k)
     SPEED_BIAS,
@@ -72,7 +73,7 @@ public:
     virtual ~ResidualInfo(){}
 };
 
-ParamInfo createFramePose(D2State * state, FrameIdType id);
+ParamInfo createFramePose(D2State * state, FrameIdType id, bool is_perturb=false);
 ParamInfo createFrameRotMat(D2State * state, FrameIdType id);
 ParamInfo createFramePose4D(D2State * state, FrameIdType id);
 

@@ -9,6 +9,7 @@ class PGOState : public D2State {
 protected:
     std::map<int, std::vector<D2BaseFrame*>> drone_frames;
     std::map<int, Swarm::DroneTrajectory> ego_drone_trajs;
+    std::map<int, Eigen::Quaterniond> initial_attitude;
 
 public:
     PGOState(int _self_id, bool _is_4dof = false) :
@@ -35,9 +36,16 @@ public:
         } else {
             _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
             _frame_rot_state[frame->frame_id] = new state_type[ROTMAT_SIZE];
+            _frame_pose_pertub_state[frame->frame_id] = new state_type[POSE_EFF_SIZE];
             _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
             Map<Matrix<state_type, 3, 3, RowMajor>> rot(_frame_rot_state[frame->frame_id]);
             rot = _frame.odom.pose().R();
+
+            Map<Eigen::Vector6d> pose_pertub(_frame_pose_pertub_state[frame->frame_id]);
+            pose_pertub.setZero();
+            pose_pertub.segment<3>(0) = _frame.T();
+
+            initial_attitude[frame->drone_id] = _frame.odom.att();
         }
         if (drone_frames.find(_frame.drone_id) == drone_frames.end()) {
             drone_frames[_frame.drone_id] = std::vector<D2BaseFrame*>();
@@ -84,6 +92,14 @@ public:
                 frame->odom.pose().from_vector(it.second);
             }
         }
+    }
+
+    void setAttitudeInit(FrameIdType frame_id, const Eigen::Quaterniond & _attitude) {
+        initial_attitude[frame_id] = _attitude;
+    }
+
+    Eigen::Quaterniond getAttitudeInit(FrameIdType frame_id) {
+        return initial_attitude.at(frame_id);
     }
 };
 }

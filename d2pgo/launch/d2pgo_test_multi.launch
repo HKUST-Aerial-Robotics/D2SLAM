@@ -31,6 +31,7 @@
         <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
         <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
+        <arg name="is_multi" value="true" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 1)" >
@@ -48,6 +49,7 @@
         <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
         <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
+        <arg name="is_multi" value="true" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 2)" >
@@ -65,6 +67,7 @@
         <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
         <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
+        <arg name="is_multi" value="true" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 3)" >
@@ -82,6 +85,7 @@
         <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
         <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
+        <arg name="is_multi" value="true" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 4)" >
@@ -99,6 +103,7 @@
         <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
         <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
+        <arg name="is_multi" value="true" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 5)" >
@@ -116,6 +121,7 @@
         <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
         <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
+        <arg name="is_multi" value="true" />
     </include>
     <node name="d2pgo" pkg="d2pgo" type="delay_launch_dpgo.sh" args="$(arg delay_launch)" if="$(arg wait_for_start)" />
     <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2pgo.rviz" if="$(arg rviz)" />
