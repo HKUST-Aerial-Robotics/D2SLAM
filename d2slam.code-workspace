@@ -39,9 +39,6 @@
 		{
 			"name": "ceres-solver",
 			"path": "../../../source/ceres-solver"
-		},
-		{
-			"path": "../TaichiSLAM"
 		}
 	],
 	"settings": {
@@ -136,7 +133,10 @@
 			"*.txx": "cpp",
 			"dense": "cpp",
 			"__functional_base": "cpp",
-			"__config": "cpp"
+			"__config": "cpp",
+			"__mutex_base": "cpp",
+			"orderingmethods": "cpp",
+			"regex": "cpp"
 		}
 	}
 }

@@ -39,6 +39,7 @@ include_directories(
 add_library(${PROJECT_NAME}
   src/d2pgo.cpp
   src/ARockPGO.cpp
+  src/rot_init/rotation_initialization.cpp
   src/swarm_outlier_rejection/swarm_outlier_rejection.cpp
   third_party/fast_max-clique_finder/src/findCliqueHeu.cpp
   third_party/fast_max-clique_finder/src/findClique.cpp
@@ -66,9 +67,18 @@ target_link_libraries(${PROJECT_NAME}_node
 add_executable(${PROJECT_NAME}_test 
   test/d2pgo_test.cpp 
 )
-
 add_dependencies(${PROJECT_NAME}_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_test
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+  dw
+)
+
+add_executable(test_pgo
+  test/test_pgo.cpp 
+)
+add_dependencies(test_pgo ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(test_pgo
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
   dw

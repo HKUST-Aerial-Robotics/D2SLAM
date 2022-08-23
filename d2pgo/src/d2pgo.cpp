@@ -4,7 +4,7 @@
 #include <d2common/solver/pose_local_parameterization.h>
 #include <d2common/solver/angle_manifold.h>
 #include "../test/posegraph_g2o.hpp"
-
+#include "rot_init/rotation_initialization.hpp"
 
 namespace D2PGO {
 
@@ -19,8 +19,8 @@ void D2PGO::addFrame(D2BaseFrame frame) {
         frame.odom.pose() = pose;
     }
     state.addFrame(frame);
-    printf("[D2PGO@%d]add frame %ld ref %d ego_pose %s pose %s from drone %d\n", self_id, frame.frame_id, frame.reference_frame_id,
-        frame.initial_ego_pose.toStr().c_str(), frame.odom.pose().toStr().c_str(), frame.drone_id);
+    // printf("[D2PGO@%d]add frame %ld ref %d ego_pose %s pose %s from drone %d\n", self_id, frame.frame_id, frame.reference_frame_id,
+    //     frame.initial_ego_pose.toStr().c_str(), frame.odom.pose().toStr().c_str(), frame.drone_id);
     updated = true;
     if (ego_motion_trajs.find(frame.drone_id) == ego_motion_trajs.end()) {
         Swarm::DroneTrajectory traj(frame.drone_id, true);
@@ -37,8 +37,8 @@ void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
     }
     all_loops.emplace_back(loop_info);
     all_loops.back().id = all_loops.size() - 1;
-    printf("[D2PGO::addLoop@%d] Add edge %ld<->%ld drone %d<->%d hasKF %d %d\n ", self_id, loop_info.keyframe_id_a,
-        loop_info.keyframe_id_b, loop_info.id_a, loop_info.id_b, state.hasFrame(loop_info.keyframe_id_a), state.hasFrame(loop_info.keyframe_id_b));
+    // printf("[D2PGO::addLoop@%d] Add edge %ld<->%ld drone %d<->%d hasKF %d %d\n ", self_id, loop_info.keyframe_id_a,
+    //     loop_info.keyframe_id_b, loop_info.id_a, loop_info.id_b, state.hasFrame(loop_info.keyframe_id_a), state.hasFrame(loop_info.keyframe_id_b));
     if (add_state_by_loop) {
         // This is for debug...
         if (state.hasFrame(loop_info.keyframe_id_a) && !state.hasFrame(loop_info.keyframe_id_b)) {
@@ -69,8 +69,14 @@ void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
 }
 
 void D2PGO::inputDPGOData(const DPGOData & data) {
-    if (solver!=nullptr && config.mode == PGO_MODE_DISTRIBUTED_AROCK) {
-        static_cast<ARockPGO*>(solver)->inputDPGOData(data);
+    if (config.mode == PGO_MODE_DISTRIBUTED_AROCK) {
+        if (data.type == DPGODataType::DPGO_POSE_DUAL && solver!=nullptr) {
+            static_cast<ARockPGO*>(solver)->inputDPGOData(data);
+        } else {
+            if (rot_init!=nullptr) {
+                rot_init->inputDPGOData(data);
+            }
+        }
     }
 }
 
@@ -109,23 +115,67 @@ bool D2PGO::solve(bool force_solve) {
         setupEgoMotionFactors(solver);
     }
 
+    if (config.enable_rotation_initialization && !isRotInitConvergence() || 
+            config.rot_init_config.enable_pose6d_solver) {
+        rotInitial(used_loops);
+        if (config.write_g2o) {
+            saveG2O();
+        }
+    }
+
+    if (config.debug_rot_init_only || 
+            config.rot_init_config.enable_pose6d_solver ||
+            config.enable_rotation_initialization  && !isRotInitConvergence()) {
+        //When use pose6d in rot init, we do not solve ceres.
+        solve_count ++;
+        updated = false;
+        usleep(50000); //In this case we sleep 50ms to let the other drones to initialize rotation 
+        return true;
+    }
+    
     if (config.mode == PGO_MODE_NON_DIST) {
         setStateProperties(solver->getProblem());
     }
-    if (config.write_g2o) {
-        saveG2O();
-    }
+    
     auto report = solver->solve();
     state.syncFromState();
     if (postsolve_callback != nullptr) {
         postsolve_callback();
     }
-    printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms initial cost %.2e final cost %.2e\n", 
+    if (config.write_g2o) {
+        saveG2O();
+    }
+    printf("[D2PGO::solve@%d] solve_count %d mode %d total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
             self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
-            report.initial_cost, report.final_cost);
+            report.total_iterations, report.initial_cost, report.final_cost);
     solve_count ++;
     updated = false;
     return true;
+}
+
+bool D2PGO::isRotInitConvergence() const {
+    return solve_count > 10;
+}
+
+bool D2PGO::isMain() const {
+    return main_id == self_id;
+}
+
+void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge> & good_loops) {
+    if (rot_init == nullptr) {
+        rot_init = new RotInit(&state, config.rot_init_config, config.arock_config, 
+            config.mode==PGO_MODE_DISTRIBUTED_AROCK, [&](const DPGOData & data) {
+            this->broadcastData(data);
+        });
+    } else {
+        rot_init->reset();
+    }
+    rot_init->addLoops(good_loops);
+    if (isMain()) {
+        printf("[D2PGO@%d]rotInitial: set first frame fixed\n", self_id);
+        rot_init->setFixedFrameId(state.headId(self_id));
+    }
+    rot_init->solve();
 }
 
 void D2PGO::saveG2O() {
@@ -164,7 +214,11 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::Lo
             loop_factor = RelPoseFactor4D::Create(&loop);
             // this->evalLoop(loop);
         } else {
-            loop_factor = RelPoseFactor::Create(&loop);
+            if (config.pgo_use_autodiff) {
+                loop_factor = RelPoseFactorManifold::Create(&loop);
+            } else {
+                loop_factor = RelPoseFactor::Create(&loop);
+            }
         }
         if (state.hasFrame(loop.keyframe_id_a) && state.hasFrame(loop.keyframe_id_b)) {
             auto res_info = RelPoseResInfo::create(loop_factor, 
@@ -173,9 +227,7 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::Lo
             used_frames.insert(loop.keyframe_id_a);
             used_frames.insert(loop.keyframe_id_b);
             used_loops_count ++;
-            if (config.write_g2o) {
-                used_loops.emplace_back(loop);
-            }
+            used_loops.emplace_back(loop);
             // if (loop.id_a != loop.id_b) 
             //     printf("[D2PGO::setupLoopFactors@%d] add loop %ld->%ld pose: %s\n", 
             //         self_id, loop.keyframe_id_a, loop.keyframe_id_b, loop.relative_pose.toStr().c_str());
@@ -210,15 +262,18 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
             auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id, true);
             solver->addResidual(res_info);
         } else if (config.pgo_pose_dof == PGO_POSE_6D) {
-            auto factor = RelPoseFactor::Create(&loop);
+            ceres::CostFunction * factor;
+            if (config.pgo_use_autodiff) {
+                factor = RelPoseFactorManifold::Create(&loop);
+            } else {
+                factor = RelPoseFactor::Create(&loop);
+            }
             auto res_info = RelPoseResInfo::create(factor, nullptr, frame_a->frame_id, frame_b->frame_id, false);
             solver->addResidual(res_info);
         }
         used_frames.insert(frame_a->frame_id);
         used_frames.insert(frame_b->frame_id);
-        if (config.write_g2o) {
-            used_loops.emplace_back(loop);
-        }
+        used_loops.emplace_back(loop);
     }
 }
 
@@ -238,10 +293,13 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
     if (config.pgo_pose_dof == PGO_POSE_4D) {
         manifold = PosAngleManifold::Create();
     } else {
-        // ceres::EigenQuaternionManifold quat_manifold;
-        // ceres::EuclideanManifold<3> euc_manifold;
-        // manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
+        if (config.pgo_use_autodiff) {
+            ceres::EigenQuaternionManifold quat_manifold;
+            ceres::EuclideanManifold<3> euc_manifold;
+            manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
+        } else {
         local_parameterization = new PoseLocalParameterization;
+        }
     }
 
     for (auto frame_id : used_frames) {
@@ -249,7 +307,7 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
         if (!problem.HasParameterBlock(pointer)) {
             continue;
         }
-        if (config.pgo_pose_dof == PGO_POSE_4D) {
+        if (config.pgo_pose_dof == PGO_POSE_4D || config.pgo_use_autodiff) {
             problem.SetManifold(pointer, manifold);
         } else {
             problem.SetParameterization(pointer, local_parameterization);

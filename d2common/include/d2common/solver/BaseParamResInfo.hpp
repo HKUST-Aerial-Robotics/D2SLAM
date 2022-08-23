@@ -7,6 +7,7 @@ namespace D2Common {
 enum ParamsType {
     POSE = 0,
     POSE_4D,
+    ROTMAT,
     REL_COOR, //Relative cooridinate frame pose (P_w_i_k)
     SPEED_BIAS,
     EXTRINSIC,
@@ -43,7 +44,8 @@ enum ResidualType {
     LandmarkOneFrameTwoCamResidual, // 5
     PriorResidual, // 7
     DepthResidual, // 8
-    RelPoseResidual //9
+    RelPoseResidual, //9
+    RelRotResidual //10
 };
 
 class ResidualInfo {
@@ -71,6 +73,7 @@ public:
 };
 
 ParamInfo createFramePose(D2State * state, FrameIdType id);
+ParamInfo createFrameRotMat(D2State * state, FrameIdType id);
 ParamInfo createFramePose4D(D2State * state, FrameIdType id);
 
 }

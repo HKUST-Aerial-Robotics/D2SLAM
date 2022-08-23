@@ -1,3 +1,4 @@
+#pragma once
 #include <d2common/d2state.hpp>
 #include <swarm_msgs/drone_trajectory.hpp>
 
@@ -33,7 +34,10 @@ public:
             _frame.odom.pose().to_vector_xyzyaw(_frame_pose_state[frame->frame_id]);
         } else {
             _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
+            _frame_rot_state[frame->frame_id] = new state_type[ROTMAT_SIZE];
             _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
+            Map<Matrix<state_type, 3, 3, RowMajor>> rot(_frame_rot_state[frame->frame_id]);
+            rot = _frame.odom.pose().R();
         }
         if (drone_frames.find(_frame.drone_id) == drone_frames.end()) {
             drone_frames[_frame.drone_id] = std::vector<D2BaseFrame*>();

@@ -19,6 +19,7 @@ SolverReport CeresSolver::solve() {
     report.total_time = summary.total_time_in_seconds;
     report.initial_cost = summary.initial_cost;
     report.final_cost = summary.final_cost;
+    report.summary = summary;
     // std::cout << summary.FullReport() << std::endl;
     return report;
 }

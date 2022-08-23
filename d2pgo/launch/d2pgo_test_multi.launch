@@ -4,14 +4,17 @@
     <arg name="g2o_path" default="" />
     <arg name="output_path" default="" />
     <arg name="wait_for_start" default="true" />
-    <arg name="max_solver_time" default="0.5" />
+    <arg name="ceres_max_solver_time" default="0.5" />
     <arg name="max_steps" default="10" />
     <arg name="agent_num" default="2" />
     <arg name="delay_launch" default="0.5" />
     <arg name="rho_frame_T" default="0.006" />
     <arg name="rho_frame_theta" default="0.02" />
+    <arg name="rho_rot_mat" default="0.16" />
     <arg name="eta_k" default="0.9" />
     <arg name="rviz" default="false" />
+    <arg name="rot_init_enable_gravity_prior" default="false" />
+    <arg name="debug_rot_init_only" default="false" />
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 0)" >
         <arg name="self_id" value="0" />
@@ -20,10 +23,13 @@
         <arg name="g2o_path" value="$(arg g2o_path)/0.g2o" />
         <arg name="output_path" value="$(arg output_path)/0.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
-        <arg name="max_solver_time" value="$(arg max_solver_time)" />
+        <arg name="ceres_max_solver_time" value="$(arg ceres_max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="rho_rot_mat" value="$(arg rho_rot_mat)" />
+        <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
+        <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
     </include>
 
@@ -34,10 +40,13 @@
         <arg name="g2o_path" value="$(arg g2o_path)/1.g2o" />
         <arg name="output_path" value="$(arg output_path)/1.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
-        <arg name="max_solver_time" value="$(arg max_solver_time)" />
+        <arg name="ceres_max_solver_time" value="$(arg ceres_max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="rho_rot_mat" value="$(arg rho_rot_mat)" />
+        <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
+        <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
     </include>
 
@@ -48,10 +57,13 @@
         <arg name="g2o_path" value="$(arg g2o_path)/2.g2o" />
         <arg name="output_path" value="$(arg output_path)/2.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
-        <arg name="max_solver_time" value="$(arg max_solver_time)" />
+        <arg name="ceres_max_solver_time" value="$(arg ceres_max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="rho_rot_mat" value="$(arg rho_rot_mat)" />
+        <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
+        <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
     </include>
 
@@ -62,10 +74,13 @@
         <arg name="g2o_path" value="$(arg g2o_path)/3.g2o" />
         <arg name="output_path" value="$(arg output_path)/3.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
-        <arg name="max_solver_time" value="$(arg max_solver_time)" />
+        <arg name="ceres_max_solver_time" value="$(arg ceres_max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="rho_rot_mat" value="$(arg rho_rot_mat)" />
+        <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
+        <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
     </include>
 
@@ -76,10 +91,13 @@
         <arg name="g2o_path" value="$(arg g2o_path)/4.g2o" />
         <arg name="output_path" value="$(arg output_path)/4.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
-        <arg name="max_solver_time" value="$(arg max_solver_time)" />
+        <arg name="ceres_max_solver_time" value="$(arg ceres_max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="rho_rot_mat" value="$(arg rho_rot_mat)" />
+        <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
+        <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
     </include>
 
@@ -90,10 +108,13 @@
         <arg name="g2o_path" value="$(arg g2o_path)/5.g2o" />
         <arg name="output_path" value="$(arg output_path)/5.g2o" />
         <arg name="wait_for_start" value="$(arg wait_for_start)" />
-        <arg name="max_solver_time" value="$(arg max_solver_time)" />
+        <arg name="ceres_max_solver_time" value="$(arg ceres_max_solver_time)" />
         <arg name="max_steps" value="$(arg max_steps)" />
         <arg name="rho_frame_T" value="$(arg rho_frame_T)" />
         <arg name="rho_frame_theta" value="$(arg rho_frame_theta)" />
+        <arg name="rho_rot_mat" value="$(arg rho_rot_mat)" />
+        <arg name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" />
+        <arg name="debug_rot_init_only" value="$(arg debug_rot_init_only)" />
         <arg name="eta_k" value="$(arg eta_k)" />
     </include>
     <node name="d2pgo" pkg="d2pgo" type="delay_launch_dpgo.sh" args="$(arg delay_launch)" if="$(arg wait_for_start)" />

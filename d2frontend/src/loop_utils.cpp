@@ -59,7 +59,7 @@ Swarm::Pose AffineRestoCamPose(Eigen::Matrix4d affine) {
 }
 
 void PnPInitialFromCamPose(const Swarm::Pose &p, cv::Mat & rvec, cv::Mat & tvec) {
-    Eigen::Matrix3d R_w_c = p.att().toRotationMatrix();
+    Eigen::Matrix3d R_w_c = p.R();
     Eigen::Matrix3d R_inital = R_w_c.inverse();
     Eigen::Vector3d T_w_c = p.pos();
     cv::Mat tmp_r;

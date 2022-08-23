@@ -8,6 +8,13 @@
 
 using namespace D2PGO;
 
+#define BACKWARD_HAS_DW 1
+#include <backward.hpp>
+namespace backward
+{
+    backward::SignalHandling sh;
+}
+
 class D2PGOTester {
     D2PGO::D2PGO * pgo = nullptr;
     std::string g2o_path;
@@ -52,12 +59,13 @@ public:
             config.pgo_pose_dof = PGO_POSE_4D;
         else
             config.pgo_pose_dof = PGO_POSE_6D;
+        nh.param<double>("loop_distance_threshold", config.loop_distance_threshold, 1000);
         config.enable_ego_motion = false;
         config.ceres_options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
         config.ceres_options.num_threads = 1;
-        config.ceres_options.max_num_iterations = 10000;
         config.ceres_options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;// ceres::DOGLEG;
-        nh.param<double>("max_solver_time", config.ceres_options.max_solver_time_in_seconds, 0.1);
+        nh.param<double>("ceres_max_solver_time", config.ceres_options.max_solver_time_in_seconds, 0.1);
+        nh.param<int>("ceres_max_num_iterations", config.ceres_options.max_num_iterations, 50);
         config.main_id = 0;
         config.arock_config.self_id = config.self_id;
         config.arock_config.verbose = true;
@@ -66,7 +74,16 @@ public:
         nh.param<int>("max_steps", max_steps, 10);
         nh.param<double>("rho_frame_T", config.arock_config.rho_frame_T, 0.1);
         nh.param<double>("rho_frame_theta", config.arock_config.rho_frame_theta, 0.1);
+        nh.param<double>("rho_rot_mat", config.arock_config.rho_rot_mat, 0.1);
         nh.param<double>("eta_k", config.arock_config.eta_k, 0.9);
+        nh.param<bool>("enable_rot_int", config.enable_rotation_initialization, true);
+        nh.param<bool>("rot_init_enable_gravity_prior", config.rot_init_config.enable_gravity_prior, true);
+        nh.param<double>("rot_init_gravity_sqrt_info", config.rot_init_config.gravity_sqrt_info, 10);
+        nh.param<bool>("rot_init_enable_float32", config.rot_init_config.enable_float32, false);
+        nh.param<bool>("enable_linear_pose6d_solver", config.rot_init_config.enable_pose6d_solver, false);
+        nh.param<int>("linear_pose6d_iterations", config.rot_init_config.pose6d_iterations, 10);
+        nh.param<bool>("debug_rot_init_only", config.debug_rot_init_only, true);
+        config.rot_init_config.self_id = self_id;
         if (solver_type == "ceres") {
             config.mode = PGO_MODE_NON_DIST;
         } else {
@@ -87,7 +104,6 @@ public:
         };
 
         pgo->postsolve_callback = [&] (void) {
-            printf("Publish path\n");
             auto trajs = pgo->getOptimizedTrajs();
             pubTrajs(trajs);
             //Sleep for visualization.

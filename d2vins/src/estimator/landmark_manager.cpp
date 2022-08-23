@@ -318,7 +318,7 @@ double triangulatePoint3DPts(std::vector<Swarm::Pose> poses, std::vector<Vector3
         double p0y = points[i][1];
         double p0z = points[i][2];
         Eigen::Matrix<double, 3, 4> pose;
-        auto R0 = poses[i].att().toRotationMatrix();
+        auto R0 = poses[i].R();
         auto t0 = poses[i].pos();
         pose.leftCols<3>() = R0.transpose();
         pose.rightCols<1>() = -R0.transpose() * t0;

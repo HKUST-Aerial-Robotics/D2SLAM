@@ -1,15 +1,23 @@
 <launch>
-    <arg name="self_id" default="1" />
-    <arg name="is_4dof" default="true" />
+    <arg name="self_id" default="0" />
+    <arg name="is_4dof" default="false" />
     <arg name="solver_type" default="arock" />
     <arg name="g2o_path" default="" />
     <arg name="output_path" default="" />
     <arg name="wait_for_start" default="false" />
-    <arg name="max_solver_time" default="0.5" />
+    <arg name="ceres_max_solver_time" default="0.5" />
+    <arg name="ceres_max_num_iterations" default="50" />
     <arg name="max_steps" default="10" />
     <arg name="rho_frame_T" default="0.006" />
     <arg name="rho_frame_theta" default="0.02" />
+    <arg name="rho_rot_mat" default="0.1" />
     <arg name="eta_k" default="0.9" />
+    <arg name="enable_rot_int" default="true" />
+    <arg name="rot_init_enable_float32" default="true" />
+    <arg name="rot_init_enable_gravity_prior" default="false" />
+    <arg name="debug_rot_init_only" default="false" />
+    <arg name="enable_linear_pose6d_solver" default="false" />
+    <arg name="linear_pose6d_iterations" default="2" />
 
     <node name="d2pgo_test_$(arg self_id)" pkg="d2pgo" type="d2pgo_test" output="screen" >
         <param name="self_id" value="$(arg self_id)" type="int" />
@@ -18,10 +26,18 @@
         <param name="g2o_path" value="$(arg g2o_path)" type="string" />
         <param name="output_path" value="$(arg output_path)" type="string" />
         <param name="wait_for_start" value="$(arg wait_for_start)" type="bool" />
-        <param name="max_solver_time" value="$(arg max_solver_time)" type="double" />
+        <param name="ceres_max_solver_time" value="$(arg ceres_max_solver_time)" type="double" />
+        <param name="ceres_max_num_iterations" value="$(arg ceres_max_num_iterations)" type="int" />
         <param name="max_steps" value="$(arg max_steps)" type="int" />
         <param name="rho_frame_theta" value="$(arg rho_frame_theta)" type="double" />
         <param name="rho_frame_T" value="$(arg rho_frame_T)" type="double" />
+        <param name="rho_rot_mat" value="$(arg rho_rot_mat)" type="double" />
         <param name="eta_k" value="$(arg eta_k)" type="double" />
+        <param name="enable_rot_int" value="$(arg enable_rot_int)" type="bool" />
+        <param name="rot_init_enable_gravity_prior" value="$(arg rot_init_enable_gravity_prior)" type="bool" />
+        <param name="rot_init_enable_float32" value="$(arg rot_init_enable_float32)" type="bool" />
+        <param name="debug_rot_init_only" value="$(arg debug_rot_init_only)" type="bool" />
+        <param name="enable_linear_pose6d_solver" value="$(arg enable_linear_pose6d_solver)" type="bool" />
+        <param name="linear_pose6d_iterations" value="$(arg linear_pose6d_iterations)" type="int" />
     </node>
 </launch>

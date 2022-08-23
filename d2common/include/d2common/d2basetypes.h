@@ -10,6 +10,7 @@
 #define TD_SIZE 1
 #define INV_DEP_SIZE 1
 #define POS_SIZE 3
+#define ROTMAT_SIZE 9
 using namespace Eigen;
 
 namespace D2Common {

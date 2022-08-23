@@ -728,15 +728,12 @@ class PoseGraph():
 
     def show(self, title="Posegraph", ax=None, show_raw_edges=False, clear=True, index=0, close=True, 
             axis_len = -1, plot3d=True, show_edges=True, show_title=True, elev=45, azim=45, show_axis_labels=True,
-            color_override=None):
+            color=None, marker=None):
         poses, axes_x, axes_y, axes_z, kf_mc, edges_a, edges_b, edge_real, edge_color= self.serialize(index)
         if len(poses) > 1:
             _poses = np.concatenate(poses, axis=0)
-            print("Concat")
         else:
             _poses = np.array(poses[0])
-            print("No Concat")
-        print(type(_poses))
         range_x = np.max(_poses[:,0]) - np.min(_poses[:,0])
         range_y = np.max(_poses[:,1]) - np.min(_poses[:,1])
         range_z = np.max(_poses[:,2]) - np.min(_poses[:,2])
@@ -786,19 +783,20 @@ class PoseGraph():
             _axes_y = axes_y[i]
             _axes_z = axes_z[i]
             m, c = kf_mc[i]
+            if not clear:
+                c = None
+            color = color if color is not None else c
+            marker = marker if marker is not None else m
             if plot3d:
-                if not clear:
-                    c = None
-                ax.scatter(_poses[:,0], _poses[:,1], _poses[:,2], color=c,marker=m,label=f"{title} agent {i}")
+                ax.scatter(_poses[:,0], _poses[:,1], _poses[:,2], color=color,marker=marker,label=f"{title} agent {i}")
                 if axis_len > 0:
                     ax.quiver(_poses[:,0], _poses[:,1], _poses[:,2], _axes_x[:, 0]*axis_len, _axes_x[:, 1]*axis_len, _axes_x[:, 2]*axis_len, linewidths=-.5, arrow_length_ratio=0,  color="red")
                     ax.quiver(_poses[:,0], _poses[:,1], _poses[:,2], _axes_y[:, 0]*axis_len, _axes_y[:, 1]*axis_len, _axes_y[:, 2]*axis_len, linewidths=-.5, arrow_length_ratio=0, color="green")
                     ax.quiver(_poses[:,0], _poses[:,1], _poses[:,2], _axes_z[:, 0]*axis_len, _axes_z[:, 1]*axis_len, _axes_z[:, 2]*axis_len, linewidths=-.5, arrow_length_ratio=0, color="blue")
             else:
-                if color_override is not None:
-                    ax.scatter(_poses[:,0], _poses[:,1], color=color_override,marker=m,label=f"{title} agent {i}")
-                else:
-                    ax.scatter(_poses[:,0], _poses[:,1], color=c,marker=m,label=f"{title} agent {i}")
+                if not clear:
+                    c = None
+                ax.scatter(_poses[:,0], _poses[:,1], color=color,marker=marker,label=f"{title} agent {i}")
         
         if plot3d and show_edges:
             # print(edges_a, edges_b)

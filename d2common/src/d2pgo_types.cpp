@@ -8,6 +8,7 @@ DPGOData::DPGOData(const swarm_msgs::DPGOData & msg) {
     drone_id = msg.drone_id;
     target_id = msg.target_id;
     reference_frame_id = msg.reference_frame_id;
+    type = static_cast<DPGODataType>(msg.type);
     for (size_t i = 0; i < msg.frame_ids.size(); i ++ ) {
         frame_poses[msg.frame_ids[i]] = Swarm::Pose(msg.frame_poses[i]);
         frame_duals[msg.frame_ids[i]] = Map<const VectorXd>(msg.frame_duals[i].data.data(),
@@ -21,6 +22,7 @@ DPGOData::DPGOData(const DistributedPGOData_t & msg) {
     stamp = toROSTime(msg.timestamp).toSec();
     drone_id = msg.drone_id;
     target_id = msg.target_id;
+    type = static_cast<DPGODataType>(msg.type);
     reference_frame_id = msg.reference_frame_id;
     for (size_t i = 0; i < msg.frame_ids.size(); i ++ ) {
         frame_poses[msg.frame_ids[i]] = Swarm::Pose(msg.frame_poses[i]);
@@ -37,6 +39,7 @@ swarm_msgs::DPGOData DPGOData::toROS() const {
     msg.drone_id = drone_id;
     msg.target_id = target_id;
     msg.reference_frame_id = reference_frame_id;
+    msg.type = type;
     for (auto it: frame_poses) {
         auto i = it.first;
         auto pose = it.second;
@@ -65,6 +68,7 @@ DistributedPGOData_t DPGOData::toLCM() const {
     msg.drone_id = drone_id;
     msg.target_id = target_id;
     msg.reference_frame_id = reference_frame_id;
+    msg.type = type;
     for (auto it: frame_poses) {
         auto i = it.first;
         auto pose = it.second;
@@ -77,6 +81,8 @@ DistributedPGOData_t DPGOData::toLCM() const {
         msg.frame_duals.emplace_back(dual_vec);
     }
     msg.frame_num = frame_poses.size();
+    msg.frame_poses_num = frame_poses.size();
+    msg.frame_dual_num = frame_duals.size();
     msg.solver_token = solver_token;
     msg.iteration_count = iteration_count;
     return msg;
