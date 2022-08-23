@@ -130,7 +130,9 @@ bool D2PGO::solve_multi(bool force_solve) {
     }
     
     auto report = solver->solve();
-    state.syncFromState();
+    if (!config.perturb_mode) {
+        state.syncFromState();
+    }
     if (postsolve_callback != nullptr) {
         postsolve_callback();
     }
@@ -208,7 +210,7 @@ bool D2PGO::solve_single() {
 }
 
 bool D2PGO::isRotInitConvergence() const {
-    return solve_count > 20 || is_rot_init_convergence || !config.enable_rotation_initialization;
+    return solve_count > 50 || is_rot_init_convergence || !config.enable_rotation_initialization;
 }
 
 bool D2PGO::isMain() const {
@@ -421,6 +423,13 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
                 Swarm::Pose ego_pose = frame->initial_ego_pose;
                 auto delta_att = ego_pose.att_yaw_only().inverse() * ego_pose.att();
                 pose.att() = pose.att()*delta_att;
+            }
+            if (config.perturb_mode) {
+                auto pointer = state.getPerturbState(frame->frame_id);
+                Map<Vector3d> pos(pointer);
+                Map<Vector3d> perturb_theta(pointer+3);
+                Quaterniond q_perturb = Utility::quatfromRotationVector(perturb_theta);
+                pose = Swarm::Pose(pos, state.getAttitudeInit(frame->frame_id)*q_perturb);
             }
             trajs[drone_id].push(frame->stamp, pose, frame->frame_id);
         }

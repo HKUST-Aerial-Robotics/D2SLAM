@@ -102,5 +102,9 @@ public:
         }
         return _frame_pose_pertub_state.at(frame_id);
     }
+
+    int getSelfId() const {
+        return self_id;
+    }
 };
 }

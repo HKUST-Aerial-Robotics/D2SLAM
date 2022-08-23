@@ -68,11 +68,13 @@ void RotInit::setFixedFrameId(FrameIdType _fixed_frame_id) {
     }
 }
 
-void RotInit::solve() {
+void RotInit::solve(bool solve_6d) {
     if (enable_arock) {
         if (enable_float32) {
+            static_cast<RotationInitARockf*>(rot_int)->solve_6d = solve_6d;
             static_cast<RotationInitARockf*>(rot_int)->solve();
         } else {
+            static_cast<RotationInitARockd*>(rot_int)->solve_6d = solve_6d;
             static_cast<RotationInitARockd*>(rot_int)->solve();
         }
     } else {
