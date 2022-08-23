@@ -85,6 +85,9 @@ protected:
     TrackReport trackRemote(VisualImageDesc & frame, bool skip_whole_frame_match=false);
     void processKeyframe(VisualImageDescArray & frames);
     bool isKeyframe(const TrackReport & reports);
+    Vector3d extractPointVelocity(const LandmarkPerFrame & lpf) const;
+    std::pair<bool, LandmarkPerFrame> getPreviousLandmarkFrame(const LandmarkPerFrame & lpf) const;
+
     void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
     void draw(VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const;
     void draw(std::vector<VisualImageDesc> frames, bool is_keyframe, const TrackReport & report) const;

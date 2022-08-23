@@ -35,6 +35,7 @@ ProjectionTwoFrameOneCamFactor::ProjectionTwoFrameOneCamFactor(const Eigen::Vect
     b2 = a.cross(b1);
     tangent_base.block<1, 3>(0, 0) = b1.transpose();
     tangent_base.block<1, 3>(1, 0) = b2.transpose();
+    // printf("vel i %.4f %.4f %.4f  j %.4f %.4f %.4f\n", velocity_i(0), velocity_i(1), velocity_i(2), velocity_j(0), velocity_j(1), velocity_j(2));
 #endif
 };
 
