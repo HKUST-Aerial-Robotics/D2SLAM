@@ -27,8 +27,8 @@ estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trus
 estimate_td: 1                      # online estimate time offset between camera and imu
 td: -0.250                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 estimation_mode: 0
-double_counting_common_feature: 1
-#0:single; 1:solve all; 2: distributed; 3:server
+double_counting_common_feature: 1 #0:single; 1:solve all; 2: distributed; 3:server
+min_inv_dep: 0.01 #100 meter away.
 
 #optimization parameters
 max_solver_time: 0.08 # max solver itration time (ms), to guarantee real time
