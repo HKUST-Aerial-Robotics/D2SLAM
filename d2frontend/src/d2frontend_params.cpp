@@ -7,7 +7,7 @@
 #include <yaml-cpp/yaml.h>
 #include <camodocal/camera_models/CataCamera.h>
 #include <camodocal/camera_models/PinholeCamera.h>
-#include <d2frontend/fisheye_undistort.h>
+#include <d2common/fisheye_undistort.h>
 
 namespace D2FrontEnd {
     D2FrontendParams * params;

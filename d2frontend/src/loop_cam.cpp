@@ -7,7 +7,7 @@
 #include <chrono>
 #include <opencv2/core/eigen.hpp>
 #include <d2frontend/d2featuretracker.h>
-#include <d2frontend/fisheye_undistort.h>
+#include <d2common/fisheye_undistort.h>
 
 using namespace std::chrono;
 

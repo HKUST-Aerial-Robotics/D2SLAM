@@ -38,6 +38,9 @@ class Camera;
 typedef boost::shared_ptr< Camera > CameraPtr;
 }
 
+namespace D2Common {
+class FisheyeUndist;
+}
 namespace D2FrontEnd {
 enum CameraConfig{
     STEREO_PINHOLE = 0,
@@ -49,7 +52,6 @@ enum CameraConfig{
 struct LoopCamConfig;
 struct LoopDetectorConfig;
 struct D2FTConfig;
-class FisheyeUndist;
 
 struct D2FrontendParams {
     int JPG_QUALITY;
@@ -102,7 +104,7 @@ struct D2FrontendParams {
     std::vector<std::string> camera_config_paths;
     std::vector<camodocal::CameraPtr> camera_ptrs;
     std::vector<camodocal::CameraPtr> raw_camera_ptrs;
-    std::vector<FisheyeUndist*> undistortors;
+    std::vector<D2Common::FisheyeUndist*> undistortors;
 
     //Configs of submodules
     LoopCamConfig * loopcamconfig;

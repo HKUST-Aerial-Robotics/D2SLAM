@@ -67,8 +67,7 @@ if __name__ == '__main__':
                     comp_img = bridge.cv2_to_compressed_imgmsg(_img)
                     comp_img.header = msg.header
                     outbag.write(f"/arducam/image_{i}/compressed", comp_img, t)
-                    # if i == 0:
-                        # show_undist(_img, K, D, xi)
+                    cv.imwrite(f"/home/xuhao/output/quadvins-output/fisheye_{i}.jpg", _img)
                 if args.show:
                     for i in range(len(imgs)):
                         cv.imshow(f"{topic}-{i}", imgs[i])

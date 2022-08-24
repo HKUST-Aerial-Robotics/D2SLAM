@@ -1,4 +1,4 @@
-#include "d2frontend/fisheye_undistort.h"
+#include "d2common/fisheye_undistort.h"
 #include <camodocal/camera_models/CataCamera.h>
 #include <yaml-cpp/yaml.h>
 #include <boost/program_options.hpp>
@@ -8,6 +8,7 @@ std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(const std::string 
 }
 
 using namespace D2FrontEnd;
+using D2Common::FisheyeUndist;
 
 int main(int argc, char** argv) {
     namespace po = boost::program_options;
@@ -37,6 +38,7 @@ int main(int argc, char** argv) {
     //Initialize undistort
     int undistort_width = img.cols;
     int undistort_height = img.cols/2;
+    int pinhole2_height = img.cols*0.75;
     FisheyeUndist undistort(ret.first, 0, fov, true, FisheyeUndist::UndistortCylindrical, undistort_width, undistort_height);
     auto imgs = undistort.undist_all(img, true);
     cv::imshow("UndistortCylindrical", imgs[0]);
@@ -44,9 +46,14 @@ int main(int argc, char** argv) {
     cv::Mat img_cpu(img_cuda);
     cv::imshow("UndistortCylindrical_cuda", img_cpu);
 
-    FisheyeUndist undistort2(ret.first, 0, fov, true, FisheyeUndist::UndistortPinhole, undistort_width, undistort_height);
+    FisheyeUndist undistort5(ret.first, 0, fov, true, FisheyeUndist::UndistortPinhole5, undistort_width, undistort_height);
+    imgs = undistort5.undist_all(img, true);
+    cv::imshow("UndistortPinhole5", imgs[0]);
+
+    FisheyeUndist undistort2(ret.first, 0, fov, true, FisheyeUndist::UndistortPinhole2, undistort_width, pinhole2_height);
     imgs = undistort2.undist_all(img, true);
-    cv::imshow("UndistortPinhole", imgs[0]);
+    cv::hconcat(imgs[0], imgs[1], img);
+    cv::imshow("UndistortPinhole2", img);
 
     double err = 0;
     for (int i = 0; i< undistort_width; i ++ ) {
