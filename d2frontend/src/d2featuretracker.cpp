@@ -589,13 +589,14 @@ void D2FeatureTracker::draw(std::vector<VisualImageDesc> frames, bool is_keyfram
     }
 }
 
-std::vector<float> getFeatureHalfImg(const std::vector<cv::Point2f> & pts, const std::vector<float> & desc, bool require_left, int width, 
+std::vector<float> getFeatureHalfImg(const std::vector<cv::Point2f> & pts, const std::vector<float> & desc, bool require_left, 
         std::map<int, int> & tmp_to_idx) {
     std::vector<float> desc_half;
     desc_half.reserve(desc.size());
     int c = 0;
+    float move_cols = params->width_undistort *90.0/params->undistort_fov; //slightly lower than 0.5 cols when fov=200
     for (int i = 0; i < pts.size(); i++) {
-        if (require_left && pts[i].x < width/2 || !require_left && pts[i].x >= params->width/2) {
+        if (require_left && pts[i].x < params->width_undistort - move_cols || !require_left && pts[i].x >= move_cols) {
             tmp_to_idx[c] = i;
             //Copy from desc to desc_half
             std::copy(desc.begin() + i*FEATURE_DESC_SIZE, desc.begin() + (i+1)*FEATURE_DESC_SIZE, desc_half.begin() + c*FEATURE_DESC_SIZE);
@@ -632,8 +633,12 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             bfmatcher.match(desc_a, desc_b, _matches); //Query train result
         } else {
             std::map<int, int> tmp_to_idx_a, tmp_to_idx_b;
-            const auto desc_a_filtered = getFeatureHalfImg(pts_a, raw_desc_a, type==LEFT_RIGHT_IMG_MATCH, params->width, tmp_to_idx_a);
-            const auto desc_b_filtered = getFeatureHalfImg(pts_b, raw_desc_b, type==RIGHT_LEFT_IMG_MATCH, params->width, tmp_to_idx_b);
+            const auto desc_a_filtered = getFeatureHalfImg(pts_a, raw_desc_a, type==LEFT_RIGHT_IMG_MATCH, tmp_to_idx_a);
+            const auto desc_b_filtered = getFeatureHalfImg(pts_b, raw_desc_b, type==RIGHT_LEFT_IMG_MATCH, tmp_to_idx_b);
+            if (tmp_to_idx_a.size() == 0 || tmp_to_idx_b.size() == 0) {
+                printf("[D2FeatureTracker] No feature to match.\n");
+                return false;
+            }
             cv::BFMatcher bfmatcher(cv::NORM_L2, true);
             const cv::Mat desc_a(tmp_to_idx_a.size(), FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(desc_a_filtered.data()));
             const cv::Mat desc_b(tmp_to_idx_b.size(), FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(desc_b_filtered.data()));
@@ -644,21 +649,25 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             }
         }
     }
-    std::vector<cv::Point2f> up_2d, down_2d;
+    std::vector<cv::Point2f> matched_pts_a_normed, matched_pts_b_normed, matched_pts_a, matched_pts_b;
     for (auto match : _matches) {
         ids_a.push_back(match.queryIdx);
         ids_b.push_back(match.trainIdx);
-        up_2d.push_back(pts_a_normed[match.queryIdx]);
-        down_2d.push_back(pts_b_normed[match.trainIdx]);
+        matched_pts_a_normed.push_back(pts_a_normed[match.queryIdx]);
+        matched_pts_b_normed.push_back(pts_b_normed[match.trainIdx]);
+        matched_pts_a.push_back(pts_a[match.queryIdx]);
+        matched_pts_b.push_back(pts_b[match.trainIdx]);
     }
     if (params->ftconfig->check_homography && !enable_superglue) {
         std::vector<unsigned char> mask;
-            if (up_2d.size() < MIN_HOMOGRAPHY) {
-                return false;
-            }
-            cv::findHomography(up_2d, down_2d, cv::RANSAC, params->ftconfig->ransacReprojThreshold, mask);
-            reduceVector(ids_a, mask);
-            reduceVector(ids_b, mask);
+        if (matched_pts_a_normed.size() < MIN_HOMOGRAPHY) {
+            return false;
+        }
+        cv::findHomography(matched_pts_a, matched_pts_b, cv::RANSAC, params->ftconfig->ransacReprojThreshold, mask);
+        reduceVector(ids_a, mask);
+        reduceVector(ids_b, mask);
+        reduceVector(matched_pts_a, mask);
+        reduceVector(matched_pts_b, mask);
     }
     for (auto i = 0; i < ids_a.size(); i++) {
         if (ids_a[i] >= pts_a.size()) {
@@ -667,6 +676,26 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         }
         ids_b_to_a[ids_b[i]] = ids_a[i];
     }
+    
+    // //Plot matches
+    // std::vector<cv::KeyPoint> kps_a, kps_b;
+    // //Kps from points
+    // for (int i = 0; i < pts_a.size(); i++) {
+    //     kps_a.push_back(cv::KeyPoint(pts_a[i].x, pts_a[i].y, 1));
+    // }
+    // for (int i = 0; i < pts_b.size(); i++) {
+    //     kps_b.push_back(cv::KeyPoint(pts_b[i].x, pts_b[i].y, 1));
+    // }
+    // cv::Mat show;
+    // cv::drawMatches(img_desc_a.raw_image, kps_a, img_desc_b.raw_image, kps_b, _matches, show);
+    // cv::imshow("raw_matches", show);
+    // cv::hconcat(img_desc_a.raw_image, img_desc_b.raw_image, show);
+    // cv::cvtColor(show, show, cv::COLOR_GRAY2BGR);
+    // for (int i = 0; i < matched_pts_a.size(); i++) {
+    //     cv::line(show, matched_pts_a[i], matched_pts_b[i] + cv::Point2f(show.cols/2, 0), cv::Scalar(0, 255, 0), 1);
+    // }
+    // cv::imshow("filtered_matches", show);
+
     if (params->verbose || params->enable_perf_output)
         printf("[D2FeatureTracker::track] match local features %d:%d %.3f ms\n", pts_a.size(), pts_b.size(), tic.toc());
     if (ids_b.size() >= params->ftconfig->remote_min_match_num) {
