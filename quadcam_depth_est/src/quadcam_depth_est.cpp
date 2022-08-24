@@ -15,7 +15,7 @@ VirtualStereo::VirtualStereo(int _idx_a, int _idx_b,
         D2Common::FisheyeUndist* _undist_right,
         int _undist_id_l, 
         int _undist_id_r):
-    idx_a(idx_a), idx_b(idx_b), undist_left(_undist_left), undist_right(_undist_right),
+    idx_a(_idx_a), idx_b(_idx_b), undist_left(_undist_left), undist_right(_undist_right),
     undist_id_l(_undist_id_l), undist_id_r(_undist_id_r) { 
     Swarm::Pose vcam_rel_l = Swarm::Pose(undist_left->t[undist_id_l], Vector3d::Zero());
     Swarm::Pose vcam_rel_r = Swarm::Pose(undist_right->t[undist_id_r], Vector3d::Zero());
