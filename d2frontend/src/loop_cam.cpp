@@ -6,8 +6,6 @@
 #include <swarm_msgs/swarm_lcm_converter.hpp>
 #include <chrono>
 #include <opencv2/core/eigen.hpp>
-#include <camodocal/camera_models/Camera.h>
-#include <camodocal/camera_models/PinholeCamera.h>
 #include <d2frontend/d2featuretracker.h>
 #include <d2frontend/fisheye_undistort.h>
 
@@ -21,8 +19,8 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     self_id(config.self_id),
     _config(config)
 {
-    int img_width = config.enable_undistort_image ? config.width_undistort: config.width;
-    int img_height = config.enable_undistort_image ? config.height_undistort: config.height;
+    int img_width = config.enable_undistort_image ? params->width_undistort: params->width;
+    int img_height = config.enable_undistort_image ? params->height_undistort: params->height;
 
     if (config.cnn_use_onnx) {
         printf("[D2FrontEnd::LoopCam] Init CNNs using onnx\n");
@@ -39,32 +37,8 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
         netvlad_net = new MobileNetVLADTensorRT(config.netvlad_model, config.netvlad_width, config.netvlad_height); 
 #endif
     }
-
-    camodocal::CameraFactory cam_factory;
-    for (auto & cam_calib_path : config.camera_config_paths) {
-        ROS_INFO("[D2FrontEnd::LoopCam] Read camera from %s", cam_calib_path.c_str());
-        auto cam = cam_factory.generateCameraFromYamlFile(cam_calib_path);
-        if (cam) {
-            cams.push_back(cam);
-        } else {
-            ROS_ERROR("Failed to read camera from %s", cam_calib_path.c_str());
-        }
-    }
-    if (config.camera_ptrs.size() > 0) {
-        printf("[D2FrontEnd::LoopCam] Use camera ptrs: %d cameras\n", config.camera_ptrs.size());
-        cams = config.camera_ptrs;
-    }
-
-    if (config.enable_undistort_image) {
-        raw_cams = cams;
-        cams.clear();
-        for (auto cam: raw_cams) { 
-            auto ptr = new FisheyeUndist(cam, 0, config.undistort_fov, true, FisheyeUndist::UndistortCylindrical, 
-                config.width_undistort, config.height_undistort);
-            cams.push_back(ptr->cam_top);
-            undistortors.emplace_back(ptr);
-        }
-    }
+    undistortors = params->undistortors;
+    cams = params->camera_ptrs;
     printf("[D2FrontEnd::LoopCam] Deepnet ready\n");
     if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
         fsp.open(params->OUTPUT_PATH+"superpoint.csv", std::fstream::app);

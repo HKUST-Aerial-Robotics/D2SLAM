@@ -6,6 +6,8 @@
 #include <opencv2/core/eigen.hpp>
 #include <yaml-cpp/yaml.h>
 #include <camodocal/camera_models/CataCamera.h>
+#include <camodocal/camera_models/PinholeCamera.h>
+#include <d2frontend/fisheye_undistort.h>
 
 namespace D2FrontEnd {
     D2FrontendParams * params;
@@ -45,16 +47,11 @@ namespace D2FrontEnd {
         enable_perf_output = (int) fsSettings["enable_perf_output"];
 
         //Loopcam configs
-        loopcamconfig->width = (int) fsSettings["image_width"];
-        loopcamconfig->height = (int) fsSettings["image_height"];
         loopcamconfig->superpoint_max_num = (int) fsSettings["max_superpoint_cnt"];
         total_feature_num = (int) fsSettings["max_cnt"];
         loopcamconfig->DEPTH_FAR_THRES = fsSettings["depth_far_thres"];
         loopcamconfig->DEPTH_NEAR_THRES = fsSettings["depth_near_thres"];
         loopcamconfig->show = (int) fsSettings["show_feature_extraction"];
-        loopcamconfig->enable_undistort_image = (int) fsSettings["enable_undistort_image"];
-        loopcamconfig->width_undistort = (int) fsSettings["width_undistort"];
-        loopcamconfig->height_undistort = (int) fsSettings["height_undistort"];
         nh.param<double>("superpoint_thres", loopcamconfig->superpoint_thres, 0.012);
         nh.param<std::string>("pca_comp_path",loopcamconfig->pca_comp, "");
         nh.param<std::string>("pca_mean_path",loopcamconfig->pca_mean, "");
@@ -126,7 +123,54 @@ namespace D2FrontEnd {
             ROS_ERROR("[SWARM_LOOP] Camera configuration %d not implement yet.", camera_configuration);
             exit(-1);
         }
+        depth_topics.emplace_back((std::string) fsSettings["depth_topic"]);
+        is_comp_images = (int) fsSettings["is_compressed_images"];
+        generateCameraModels(fsSettings, configPath);
+    }
 
+    void D2FrontendParams::generateCameraModels(cv::FileStorage & fsSettings, std::string configPath) {
+        readCameraConfigs(fsSettings, configPath);
+        camodocal::CameraFactory cam_factory;
+        for (auto & cam_calib_path : camera_config_paths) {
+            ROS_INFO("[D2FrontEnd::LoopCam] Read camera from %s", cam_calib_path.c_str());
+            auto cam = cam_factory.generateCameraFromYamlFile(cam_calib_path);
+            if (cam) {
+                camera_ptrs.push_back(cam);
+            } else {
+                ROS_ERROR("Failed to read camera from %s", cam_calib_path.c_str());
+            }
+        }
+        if (enable_undistort_image) {
+            raw_camera_ptrs = camera_ptrs;
+            camera_ptrs.clear();
+            for (auto cam: raw_camera_ptrs) { 
+                auto ptr = new FisheyeUndist(cam, 0, undistort_fov, true, FisheyeUndist::UndistortCylindrical, 
+                    width_undistort, height_undistort);
+                auto cylind_cam = ptr->cam_top;
+                camera_ptrs.push_back(cylind_cam);
+                undistortors.emplace_back(ptr);
+                // focal_length = static_cast<camodocal::CylindricalCamera * >(cylind_cam.get())->getParameters().fx();
+            }
+        } else {
+            // auto cam = camera_ptrs[0];
+            // if (cam->modelType() == camodocal::Camera::MEI) {
+            //     focal_length = static_cast<camodocal::CataCamera* >(cam.get())->getParameters().gamma1();
+            // } else if (cam->modelType() == camodocal::Camera::PINHOLE) {
+            //     focal_length = static_cast<camodocal::PinholeCamera* >(cam.get())->getParameters().fx();
+            // }
+        }
+        printf("[D2FrontendParams] Focal length initialize to: %.1f\n", focal_length);
+    }
+
+
+    void D2FrontendParams::readCameraConfigs(cv::FileStorage & fsSettings, std::string configPath) {
+        enable_undistort_image = loopcamconfig->enable_undistort_image = (int) fsSettings["enable_undistort_image"];
+        width_undistort = (int) fsSettings["width_undistort"];
+        height_undistort = (int) fsSettings["height_undistort"];
+        undistort_fov = fsSettings["undistort_fov"];
+        width = (int) fsSettings["image_width"];
+        height = (int) fsSettings["image_height"];
+        
         std::string calib_file_path = fsSettings["calib_file_path"];
         if (calib_file_path != "") {
             calib_file_path = configPath + "/" + calib_file_path;
@@ -140,7 +184,7 @@ namespace D2FrontEnd {
                 image_topics.emplace_back(topic);
             }
         } else {
-            ROS_INFO("Camera calibration not found");
+            ROS_INFO("Read camera from config file");
             //Camera configurations from VINS config.
             int camera_num = fsSettings["num_of_cam"];
             for (auto i = 0; i < camera_num; i++) {
@@ -161,17 +205,13 @@ namespace D2FrontEnd {
                 Swarm::Pose pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
                 
                 image_topics.emplace_back(topic);
-                loopcamconfig->camera_config_paths.emplace_back(camera_calib_path);
+                camera_config_paths.emplace_back(camera_calib_path);
                 extrinsics.emplace_back(pose);
 
                 ROS_INFO("[SWARM_LOOP] Camera %d: topic: %s, calib: %s, T: %s", 
                     i, topic.c_str(), camera_calib_path.c_str(), pose.toStr().c_str());
             }
         }
-
-        depth_topics.emplace_back((std::string) fsSettings["depth_topic"]);
-        is_comp_images = (int) fsSettings["is_compressed_images"];
-
     }
 
     void D2FrontendParams::readCameraCalibrationfromFile(const std::string & path) {
@@ -181,7 +221,7 @@ namespace D2FrontEnd {
                 std::cout << camera_name << "\n";
                 const YAML::Node& value = kv.second;
                 auto ret = readCameraConfig(camera_name, value);
-                loopcamconfig->camera_ptrs.emplace_back(ret.first);
+                camera_ptrs.emplace_back(ret.first);
                 extrinsics.emplace_back(ret.second);
         }
     }

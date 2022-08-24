@@ -24,11 +24,6 @@ D2Estimator::D2Estimator(int drone_id):
 
 void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
     state.init(params->camera_extrinsics, params->td_initial);
-    ProjectionTwoFrameOneCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
-    ProjectionOneFrameTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
-    ProjectionTwoFrameTwoCamFactor::sqrt_info = params->focal_length / 1.5 * Matrix2d::Identity();
-    ProjectionTwoFrameOneCamDepthFactor::sqrt_info = params->focal_length / 1.5 * Matrix3d::Identity();
-    ProjectionTwoFrameOneCamDepthFactor::sqrt_info(2,2) = params->depth_sqrt_inf;
     visual.init(nh, this);
     printf("[D2Estimator::init] init done estimator on drone %d\n", self_id);
     for (auto cam_id : state.getAvailableCameraIds()) {

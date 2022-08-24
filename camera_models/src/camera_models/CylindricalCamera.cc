@@ -14,7 +14,7 @@ namespace camodocal
 {
 
 CylindricalCamera::Parameters::Parameters()
- : Camera::Parameters(PINHOLE)
+ : Camera::Parameters(CYLINRICALCAMERA)
  , m_fx(0.0)
  , m_fy(0.0)
  , m_cx(0.0)
@@ -27,7 +27,7 @@ CylindricalCamera::Parameters::Parameters(const std::string& cameraName,
                                       int w, int h,
                                       double fx, double fy,
                                       double cx, double cy)
- : Camera::Parameters(PINHOLE, cameraName, w, h)
+ : Camera::Parameters(CYLINRICALCAMERA, cameraName, w, h)
  , m_fx(fx)
  , m_fy(fy)
  , m_cx(cx)
@@ -105,7 +105,7 @@ CylindricalCamera::Parameters::readFromYamlFile(const std::string& filename)
         }
     }
 
-    m_modelType = PINHOLE;
+    m_modelType = CYLINRICALCAMERA;
     fs["camera_name"] >> m_cameraName;
     m_imageWidth = static_cast<int>(fs["image_width"]);
     m_imageHeight = static_cast<int>(fs["image_height"]);

@@ -36,16 +36,12 @@ struct LoopCamConfig
 {
     /* data */
     CameraConfig camera_configuration;
-    std::vector<std::string> camera_config_paths;
-    std::vector<camodocal::CameraPtr> camera_ptrs;
     std::string superpoint_model;
     std::string pca_comp;
     std::string pca_mean;
     double superpoint_thres;
     int superpoint_max_num;
     std::string netvlad_model;
-    int width;
-    int height; 
     int netvlad_width = 640;
     int netvlad_height = 480;
     int self_id = 0;
@@ -59,11 +55,7 @@ struct LoopCamConfig
     bool cnn_use_onnx = true;
     bool send_img;
     bool show = false;
-
     bool enable_undistort_image; //Undistort image before feature detection
-    double undistort_fov = 200;
-    int width_undistort = 800;
-    int height_undistort = 400;
 };
 
 class LoopCam {
@@ -100,7 +92,6 @@ public:
     void encodeImage(const cv::Mat & _img, VisualImageDesc & _img_desc);
     
     std::vector<camodocal::CameraPtr> cams;
-    std::vector<camodocal::CameraPtr> raw_cams;
 
     CameraConfig getCameraConfiguration() const {
         return camera_configuration;

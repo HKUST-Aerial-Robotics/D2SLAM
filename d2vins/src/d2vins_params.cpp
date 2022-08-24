@@ -4,6 +4,10 @@
 #include <opencv2/core/eigen.hpp>
 #include <d2common/solver/ConsensusSolver.hpp>
 #include <d2frontend/d2frontend_params.h>
+#include "factors/projectionTwoFrameOneCamDepthFactor.h"
+#include "factors/projectionTwoFrameOneCamFactor.h"
+#include "factors/projectionOneFrameTwoCamFactor.h"
+#include "factors/projectionTwoFrameTwoCamFactor.h"
 
 using namespace D2Common;
 
@@ -53,6 +57,8 @@ void D2VINSConfig::init(const std::string & config_file) {
     
     depth_sqrt_inf = fsSettings["depth_sqrt_inf"];
     IMUBuffer::Gravity = Vector3d(0., 0., fsSettings["g_norm"]);
+    focal_length = D2FrontEnd::params->focal_length;
+    printf("[D2VINS::D2VINSConfig] VINS use focal length %.2f\n", focal_length);
 
     //Outputs
     fsSettings["output_path"] >> output_folder;
@@ -124,6 +130,12 @@ void D2VINSConfig::init(const std::string & config_file) {
     consensus_config->sync_with_main = (int) fsSettings["consensus_sync_with_main"];
     consensus_sync_to_start = (int) fsSettings["consensus_sync_to_start"];
 
+    //Sqrt root information matrix
+    ProjectionTwoFrameOneCamFactor::sqrt_info = focal_length / 1.5 * Matrix2d::Identity();
+    ProjectionOneFrameTwoCamFactor::sqrt_info = focal_length / 1.5 * Matrix2d::Identity();
+    ProjectionTwoFrameTwoCamFactor::sqrt_info = focal_length / 1.5 * Matrix2d::Identity();
+    ProjectionTwoFrameOneCamDepthFactor::sqrt_info = focal_length / 1.5 * Matrix3d::Identity();
+    ProjectionTwoFrameOneCamDepthFactor::sqrt_info(2,2) = depth_sqrt_inf;
 }
 
 }

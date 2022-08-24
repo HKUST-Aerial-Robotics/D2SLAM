@@ -332,7 +332,7 @@ public:
         ROS_INFO("Generating Cylinder maps:");
         double cylinderFov = fov*DEG_TO_RAD;
         ROS_INFO("Build for camera %d", cam_id);
-        ROS_INFO("Center FOV: %f_center", cylinderFov*57.3);
+        ROS_INFO("cylinderFov: %f_center", cylinderFov*57.3);
 
         f_center = imgWidth/cylinderFov;
 
@@ -348,9 +348,9 @@ public:
         {
             Eigen::Vector2d temp;
             p_cam->spaceToPlane(testPoints[i], temp);
-            ROS_INFO("Test point %d : (%.2f,%.2f,%.2f) projected to (%.2f,%.2f)", i,
-                    testPoints[i][0], testPoints[i][1], testPoints[i][2],
-                    temp[0], temp[1]);
+            // ROS_INFO("Test point %d : (%.2f,%.2f,%.2f) projected to (%.2f,%.2f)", i,
+            //         testPoints[i][0], testPoints[i][1], testPoints[i][2],
+            //         temp[0], temp[1]);
         }
         
         t.resize(5);

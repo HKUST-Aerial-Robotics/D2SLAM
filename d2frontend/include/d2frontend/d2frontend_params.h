@@ -33,6 +33,11 @@
 #define FEATURE_DESC_SIZE 256
 #define ACCEPT_SP_MATCH_DISTANCE 0.7
 
+namespace camodocal {
+class Camera;
+typedef boost::shared_ptr< Camera > CameraPtr;
+}
+
 namespace D2FrontEnd {
 enum CameraConfig{
     STEREO_PINHOLE = 0,
@@ -44,6 +49,7 @@ enum CameraConfig{
 struct LoopCamConfig;
 struct LoopDetectorConfig;
 struct D2FTConfig;
+class FisheyeUndist;
 
 struct D2FrontendParams {
     int JPG_QUALITY;
@@ -83,12 +89,22 @@ struct D2FrontendParams {
     bool is_comp_images;
     std::vector<std::string> image_topics, depth_topics;
 
-    //Extrinsics
+    //Extrinsics and camera configs
+    double undistort_fov = 200;
+    int width_undistort = 800;
+    int height_undistort = 400;
+    bool enable_undistort_image; //Undistort image before feature detection
+    double focal_length = 460.0;
     std::vector<Swarm::Pose> extrinsics;
     std::vector<cv::Mat> cam_Ks;
     std::vector<cv::Mat> cam_Ds;
     std::vector<double> cam_xis;
+    std::vector<std::string> camera_config_paths;
+    std::vector<camodocal::CameraPtr> camera_ptrs;
+    std::vector<camodocal::CameraPtr> raw_camera_ptrs;
+    std::vector<FisheyeUndist*> undistortors;
 
+    //Configs of submodules
     LoopCamConfig * loopcamconfig;
     LoopDetectorConfig * loopdetectorconfig;
     D2FTConfig * ftconfig;
@@ -96,6 +112,8 @@ struct D2FrontendParams {
     D2FrontendParams(ros::NodeHandle &);
     D2FrontendParams() {}
     void readCameraCalibrationfromFile(const std::string & path);
+    void generateCameraModels(cv::FileStorage & fsSettings, std::string config_path);
+    void readCameraConfigs(cv::FileStorage & fsSettings, std::string config_path);
 
 };
 extern D2FrontendParams * params;

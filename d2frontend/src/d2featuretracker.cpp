@@ -729,7 +729,7 @@ std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat
     TicToc tic;
     std::vector<uchar> status;
     std::vector<cv::Point2f> cur_pts;
-    float move_cols = cur_img.cols*90.0/params->loopcamconfig->undistort_fov; //slightly lower than 0.5 cols when fov=200
+    float move_cols = cur_img.cols*90.0/params->undistort_fov; //slightly lower than 0.5 cols when fov=200
 
     if (prev_pts.size() == 0) {
         return std::vector<cv::Point2f>();

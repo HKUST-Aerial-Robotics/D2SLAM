@@ -93,7 +93,7 @@ protected:
                     printf("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
             }
             if (ret && D2FrontEnd::params->enable_network) {
-                printf("[D2VINS] Send image to network frame_id %ld: %s\n", viokf.frame_id, viokf.pose_drone.toStr().c_str());
+                // printf("[D2VINS] Send image to network frame_id %ld: %s\n", viokf.frame_id, viokf.pose_drone.toStr().c_str());
                 loop_net->broadcastVisualImageDescArray(viokf);
             }
             if (params->pub_visual_frame) {
