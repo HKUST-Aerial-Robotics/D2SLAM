@@ -20,10 +20,10 @@ int main(int argc, char** argv) {
         ("image_l,l", po::value<std::string>()->default_value(""), "path of test image l")
         ("image_r,r", po::value<std::string>()->default_value(""), "path of test image r")
         ("calib,c", po::value<std::string>()->default_value(""), "path of camera config")
-        ("name0", po::value<std::string>()->default_value("cam2"), "name of camera_left")
-        ("name1", po::value<std::string>()->default_value("cam3"), "name of camera_right")
-        ("idx0", po::value<int>()->default_value(0), "idx of camera_left")
-        ("idx1", po::value<int>()->default_value(1), "idx of camera_left")
+        ("name0", po::value<std::string>()->default_value("cam3"), "name of camera_left")
+        ("name1", po::value<std::string>()->default_value("cam2"), "name of camera_right")
+        ("idx0", po::value<int>()->default_value(1), "idx of camera_left")
+        ("idx1", po::value<int>()->default_value(0), "idx of camera_right")
         ("width,w", po::value<int>()->default_value(600), "width of camera")
         ("height,h", po::value<int>()->default_value(300), "height of camera")
         ("fov,f", po::value<double>()->default_value(190.0), "fov of camera");
@@ -82,11 +82,11 @@ int main(int argc, char** argv) {
 
     auto disp_cuda = virtual_stereo.estimateDisparityOCV(rect_l, rect_r);
     cv::Mat disp_show(disp_cuda);
-    // double min_val=0, max_val=0;
-    // cv::minMaxLoc(disp_show, &min_val, &max_val, NULL, NULL);
-    // printf("Disp max %f min %f\n", max_val, min_val);
-    // disp_show.convertTo(disp_show, CV_32F, 255.0/max_val);
-    // cv::minMaxLoc(disp_show, &min_val, &max_val, NULL, NULL);
+    double min_val=0, max_val=0;
+    cv::minMaxLoc(disp_show, &min_val, &max_val, NULL, NULL);
+    printf("Disp max %f min %f\n", max_val, min_val);
+    disp_show.convertTo(disp_show, CV_8U, 255.0/max_val);
+    cv::applyColorMap(disp_show, disp_show, cv::COLORMAP_RAINBOW);
     // printf("AFT Disp max %f min %f\n", max_val, min_val);
     cv::imshow("Disparity", disp_show);
 

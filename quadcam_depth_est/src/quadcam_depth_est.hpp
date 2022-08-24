@@ -19,16 +19,16 @@ struct QuadCamDepthEstConfig
 };
 
 struct VirtualStereoConfig {
-    int minDisparity = 0;
+    int minDisparity = 1;
     int numDisparities = 64;
     int blockSize = 8;
     int P1 = 8*9*9;
     int P2 = 32*9*9;
     int disp12MaxDiff = 1;
     int preFilterCap = 63;
-    int uniquenessRatio = 10;
+    int uniquenessRatio = 5;
     int speckleWindowSize = 100;
-    int speckleRange = 32;
+    int speckleRange = 2;
     int mode = 0;
 };
 
