@@ -4,7 +4,7 @@
     <arg name="manager"     default="swarm_manager"/>
     <arg name="send_img"     default="false"/>
     <arg name="send_whole_img_desc"     default="false"/>
-    <arg name="is_4dof"     default="true"/>
+    <arg name="is_4dof"     default="false"/>
     <arg name="self_id"     default="1"/>
     <arg name="vins"     default="false"/>
     <!-- <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_rtx3080_480x640_fp16.trt"/> -->

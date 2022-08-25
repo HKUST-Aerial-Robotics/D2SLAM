@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 add_compile_options(-Wno-deprecated-declarations -Wno-reorder  -Wno-format -Wno-sign-compare)
-
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy

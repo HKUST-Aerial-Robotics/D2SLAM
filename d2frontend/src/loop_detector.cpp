@@ -4,6 +4,11 @@
 #include <d2common/d2vinsframe.h>
 #include <swarm_msgs/relative_measurments.hpp>
 #include <d2frontend/CNN/superglue_onnx.h>
+#include <opengv/sac_problems/absolute_pose/AbsolutePoseSacProblem.hpp>
+#include <opengv/absolute_pose/methods.hpp>
+#include <opengv/absolute_pose/NoncentralAbsoluteAdapter.hpp>
+#include <opengv/sac/Ransac.hpp>
+#include <opengv/sac/Lmeds.hpp>
 
 using namespace std::chrono; 
 
@@ -312,7 +317,7 @@ bool LoopDetector::checkLoopOdometryConsistency(LoopEdge & loop_conn) const {
 //index2dirindex store the dir and the index of the point
 bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescArray & frame_array_a,
     const VisualImageDescArray & frame_array_b, int main_dir_a, int main_dir_b,
-    Point3fVector &lm_pos_a, Point2fVector &lm_norm_2d_b, std::vector<std::pair<int, int>> &index2dirindex_a,
+    std::vector<Vector3d> &lm_pos_a, std::vector<Vector3d> &lm_norm_3d_b, std::vector<int> &cam_indices, std::vector<std::pair<int, int>> &index2dirindex_a,
     std::vector<std::pair<int, int>> &index2dirindex_b) {
     std::vector<int> dirs_a;
     std::vector<int> dirs_b;
@@ -342,21 +347,19 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
     for (size_t i = 0; i < dirs_a.size(); i++) {
         int dir_a = dirs_a[i];
         int dir_b = dirs_b[i];
-        Point2fVector lm_norm_2d_a;
-        Point3fVector _lm_pos_a;
+        std::vector<Vector3d> _lm_norm_3d_b;
+        std::vector<Vector3d> _lm_pos_a;
         std::vector<int> _idx_a;
-        Point2fVector _lm_norm_2d_b;
         std::vector<int> _idx_b;
+        std::vector<int> _camera_indices;
 
         if (dir_a < frame_array_a.images.size() && dir_b < frame_array_b.images.size()) {
             bool succ = computeCorrespondFeatures(frame_array_a.images.at(dir_a),frame_array_b.images.at(dir_b),
-                _lm_pos_a, _idx_a, _lm_norm_2d_b, _idx_b);
-            ROS_INFO("[SWARM_LOOP] computeCorrespondFeatures on camera_index %d:%d gives %d common features", dir_b, dir_a, _lm_pos_a.size());
+                _lm_pos_a, _idx_a, _lm_norm_3d_b, _idx_b, _camera_indices);
+            // ROS_INFO("[SWARM_LOOP] computeCorrespondFeatures on camera_index %d:%d gives %d common features", dir_b, dir_a, _lm_pos_a.size());
             if (!succ) {
                 continue;
             }
-        } else {
-            ROS_INFO("[SWARM_LOOP] computeCorrespondFeatures on camera_index %d:%d failed: no such image");
         }
 
         if ( _lm_pos_a.size() >= _config.MIN_MATCH_PRE_DIR ) {
@@ -369,31 +372,36 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
         if (params->camera_configuration == STEREO_FISHEYE) {
             Eigen::Quaterniond dq_new = main_quat_new.inverse() * _extrinsic_a.att();
             Eigen::Quaterniond dq_old = main_quat_old.inverse() * _extrinsic_b.att();
-            for (size_t id = 0; id < _lm_norm_2d_b.size(); id++) {
-                auto pt = _lm_norm_2d_b[id];
+            for (size_t id = 0; id < _lm_norm_3d_b.size(); id++) {
+                auto pt = _lm_norm_3d_b[id];
                 index2dirindex_a.push_back(std::make_pair(dir_a, _idx_a[id]));
                 index2dirindex_b.push_back(std::make_pair(dir_b, _idx_b[id]));
-                _lm_norm_2d_b[i] = rotate_pt_norm2d(pt, dq_old);
+                _lm_norm_3d_b[i] = dq_old*pt;
             }
         } else {
-            for (size_t id = 0; id < _lm_norm_2d_b.size(); id++) {
+            for (size_t id = 0; id < _lm_norm_3d_b.size(); id++) {
                 index2dirindex_a.push_back(std::make_pair(dir_a, _idx_a[id]));
                 index2dirindex_b.push_back(std::make_pair(dir_b, _idx_b[id]));
             }
         }
         lm_pos_a.insert(lm_pos_a.end(), _lm_pos_a.begin(), _lm_pos_a.end());
-        lm_norm_2d_b.insert(lm_norm_2d_b.end(), _lm_norm_2d_b.begin(), _lm_norm_2d_b.end());
+        lm_norm_3d_b.insert(lm_norm_3d_b.end(), _lm_norm_3d_b.begin(), _lm_norm_3d_b.end());
+        cam_indices.insert(cam_indices.end(), _camera_indices.begin(), _camera_indices.end());
     }
 
-    if(lm_norm_2d_b.size() > 0 && matched_dir_count >= _config.MIN_DIRECTION_LOOP) {
+    if(lm_norm_3d_b.size() > _config.loop_inlier_feature_num && matched_dir_count >= _config.MIN_DIRECTION_LOOP) {
         return true;
     } else {
+        ROS_INFO("[LoopDetector::computeCorrImageArray@%d] Failed: features %d/%d dirs %d/%d ", 
+                self_id, lm_norm_3d_b.size(), _config.loop_inlier_feature_num,
+                matched_dir_count, _config.MIN_DIRECTION_LOOP);
         return false;
     }
 }
 
 bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, 
-        Point3fVector &lm_pos_a, std::vector<int> &idx_a, Point2fVector &lm_norm_2d_b, std::vector<int> &idx_b) {
+            std::vector<Vector3d> &lm_pos_a, std::vector<int> &idx_a, std::vector<Vector3d> &lm_norm_3d_b, 
+            std::vector<int> &idx_b, std::vector<int> &cam_indices) {
     std::vector<cv::DMatch> _matches;
     auto & _a_lms = img_desc_a.landmarks;
     auto & _b_lms = img_desc_b.landmarks;
@@ -430,17 +438,13 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
             continue;
         }
         Vector3d pt3d_norm_b = _b_lms[index_b].pt3d_norm;
-        if (fabs(pt3d_norm_b(2)) > 1e-1) {
-            Vector2d pt2d_norm_b = pt3d_norm_b.head(2)/pt3d_norm_b(2);
             lm_a_2d.push_back(_a_lms[index_a].pt2d);
             lm_b_2d.push_back(_b_lms[index_b].pt2d);
             idx_a.push_back(index_a);
             idx_b.push_back(index_b);
-            lm_pos_a.push_back(toCV(landmark_db.at(landmark_id).position));
-            lm_norm_2d_b.push_back(toCV(pt2d_norm_b));
-        } else {
-            // ROS_WARN("[SWARM_LOOP] landmark_id %d is near image plane, give up in current framework", landmark_id);
-        }
+            lm_pos_a.push_back(landmark_db.at(landmark_id).position);
+            lm_norm_3d_b.push_back(pt3d_norm_b);
+            cam_indices.push_back(img_desc_b.camera_index);
     }
 
     if (lm_b_2d.size() < 4) {
@@ -448,11 +452,11 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
     }
     if (_config.enable_homography_test && !_config.enable_superglue) {
         std::vector<unsigned char> mask;
-        cv::findHomography(lm_b_2d, lm_a_2d, cv::RANSAC, 3, mask);
+        cv::findHomography(lm_b_2d, lm_a_2d, cv::RANSAC, 3.0/params->focal_length, mask);
         reduceVector(idx_a, mask);
         reduceVector(idx_b, mask);
         reduceVector(lm_pos_a, mask);
-        reduceVector(lm_norm_2d_b, mask);
+        reduceVector(lm_norm_3d_b, mask);
     }
     return true;
 }
@@ -476,34 +480,36 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
         self_id, frame_array_b.frame_id, frame_array_b.drone_id, main_dir_b, frame_array_a.frame_id, frame_array_a.drone_id, main_dir_a,
         t_b, t_a, t_a - t_b, frame_array_b.spLandmarkNum(), frame_array_a.spLandmarkNum());
 
-    Point3fVector lm_pos_a, lm_pos_b;
-    Point2fVector lm_norm_2d_b;
+    std::vector<Vector3d> lm_pos_a;
+    std::vector<Vector3d> lm_norm_3d_b;
     std::vector<int> dirs_a;
     Swarm::Pose DP_old_to_new;
     std::vector<int> inliers;
-    std::vector<std::pair<int, int>> index2dirindex_b;
-    std::vector<std::pair<int, int>> index2dirindex_a;
+    std::vector<int> camera_indices;
+    std::vector<std::pair<int, int>> index2dirindex_a, index2dirindex_b;
     
     success = computeCorrespondFeaturesOnImageArray(frame_array_a, frame_array_b, 
-        main_dir_a, main_dir_b, lm_pos_a, lm_norm_2d_b, index2dirindex_a, index2dirindex_b);
+        main_dir_a, main_dir_b, lm_pos_a, lm_norm_3d_b, camera_indices, index2dirindex_a, index2dirindex_b);
     
     if(success) {
-        if (lm_pos_a.size() > _config.loop_inlier_feature_num) {
-            success = computeRelativePose( lm_pos_a, lm_norm_2d_b, frame_array_b.images[main_dir_b].extrinsic,
-                    frame_array_a.pose_drone, frame_array_b.pose_drone, DP_old_to_new, inliers, _config.is_4dof);
+        if (params->camera_configuration == FOURCORNER_FISHEYE) {
+            std::vector<Swarm::Pose> extrinsics;
+            for (auto & img: frame_array_b.images) {
+                extrinsics.push_back(img.extrinsic);
+            }
+            success = computeRelativePosePnPnonCentral(lm_pos_a, lm_norm_3d_b,
+                    extrinsics, camera_indices, frame_array_a.pose_drone, frame_array_b.pose_drone, DP_old_to_new, inliers, _config.is_4dof);
         } else {
-            ROS_INFO("[LoopDetector::computeLoop@%d]Too less common feature %ld, will give up", self_id, lm_pos_a.size());
-            success = false;
+            success = computeRelativePosePnP( lm_pos_a, lm_norm_3d_b, frame_array_b.images[main_dir_b].extrinsic,
+                    frame_array_a.pose_drone, frame_array_b.pose_drone, DP_old_to_new, inliers, _config.is_4dof);
         }
-    } 
-    else {
-        ROS_INFO("[LoopDetector::computeLoop@%d] computeCorrespondFeatures failed", self_id);
-        success = false;
-    }
+        if (!success) {
+            ROS_WARN("[LoopDetector::computeLoop@%d] Compute relative pose failed!", self_id);
+            return false;
+        }
 
-    if (success) {
+        //setup return loop
         ret.relative_pose = DP_old_to_new.toROS();
-
         ret.drone_id_a = frame_array_b.drone_id;
         ret.ts_a = ros::Time(frame_array_b.stamp);
 
@@ -570,20 +576,26 @@ void LoopDetector::drawMatched(const VisualImageDescArray & frame_array_a,
             }
         }
     } 
+    std::set<int> inlier_set(inliers.begin(), inliers.end());
 
-    for (auto inlier: inliers) {
-        int old_pt_id = index2dirindex_b[inlier].second;
-        int old_dir_id = index2dirindex_b[inlier].first;
+    for (int i = 0; i < index2dirindex_a.size(); i ++) {
+        int old_pt_id = index2dirindex_b[i].second;
+        int old_dir_id = index2dirindex_b[i].first;
 
-        int new_pt_id = index2dirindex_a[inlier].second;
-        int new_dir_id = index2dirindex_a[inlier].first;
+        int new_pt_id = index2dirindex_a[i].second;
+        int new_dir_id = index2dirindex_a[i].first;
         auto pt_old = frame_array_b.images[old_dir_id].landmarks[old_pt_id].pt2d;
         auto pt_new = frame_array_a.images[new_dir_id].landmarks[new_pt_id].pt2d;
         if (_matched_imgs[old_dir_id].empty()) {
             continue;
         }
         cv::Scalar color(rand() % 255, rand() % 255, rand() % 255);
-        cv::line(_matched_imgs[old_dir_id], pt_old, pt_new + cv::Point2f(0, imgs_b[old_dir_id].rows), color, 2);
+        int line_thickness = 2;
+        if (inlier_set.find(i) == inlier_set.end()) {
+            color = cv::Scalar(0, 0, 0);
+            line_thickness = 1;
+        }
+        cv::line(_matched_imgs[old_dir_id], pt_old, pt_new + cv::Point2f(0, imgs_b[old_dir_id].rows), color, line_thickness);
         cv::circle(_matched_imgs[old_dir_id], pt_old, 3, color, 1);
         cv::circle(_matched_imgs[new_dir_id], pt_new + cv::Point2f(0, imgs_b[old_dir_id].rows), 3, color, 1);
     }
@@ -599,22 +611,22 @@ void LoopDetector::drawMatched(const VisualImageDescArray & frame_array_a,
     double dt = (frame_array_a.stamp - frame_array_b.stamp);
     if (success) {
         auto ypr = DP_b_to_a.rpy()*180/M_PI;
-        sprintf(title, "MAP-BASED EDGE %d->%d dt %3.3fs inliers %d", 
+        sprintf(title, "Loop: %d->%d dt %3.3fs inliers %d", 
             frame_array_b.drone_id, frame_array_a.drone_id, dt, inliers.size());
-        cv::putText(show, title, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+        cv::putText(show, title, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
 
         sprintf(title, "%s", DP_b_to_a.toStr().c_str());
-        cv::putText(show, title, cv::Point2f(20, 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+        cv::putText(show, title, cv::Point2f(20, 60), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
         sprintf(title, "%d<->%d", frame_array_b.frame_id, frame_array_a.frame_id);
-        cv::putText(show, title, cv::Point2f(20, 70), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+        cv::putText(show, title, cv::Point2f(20, 90), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
         sprintf(title, "Ego A: %s", frame_array_a.pose_drone.toStr().c_str());
-        cv::putText(show, title, cv::Point2f(20, 90), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+        cv::putText(show, title, cv::Point2f(20, 120), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
         sprintf(title, "Ego B: %s", frame_array_b.pose_drone.toStr().c_str());
-        cv::putText(show, title, cv::Point2f(20, 110), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 1.5);
+        cv::putText(show, title, cv::Point2f(20, 150), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
 
     } else {
         sprintf(title, "FAILED LOOP %d->%d dt %3.3fs inliers %d", frame_array_b.drone_id, frame_array_a.drone_id, dt, inliers.size());
-        cv::putText(show, title, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1.5);
+        cv::putText(show, title, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
     }
 
     // cv::resize(show, show, cv::Size(), 2, 2);
@@ -692,7 +704,7 @@ double RPerror(const Swarm::Pose & p_drone_old_in_new, const Swarm::Pose & drone
     return RPerr;
 }
 
-int computeRelativePose(const Point3fVector lm_positions_a, const Point2fVector lm_2d_norm_b,
+int computeRelativePosePnP(const std::vector<Vector3d> lm_positions_a, const std::vector<Vector3d> lm_3d_norm_b,
         Swarm::Pose extrinsic_b, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a, std::vector<int> &inliers, bool is_4dof) {
         //Compute PNP
     // ROS_INFO("Matched features %ld", matched_2d_norm_old.size());
@@ -700,9 +712,20 @@ int computeRelativePose(const Point3fVector lm_positions_a, const Point2fVector 
     cv::Mat r, rvec, rvec2, t, t2, D, tmp_r;
 
     int iteratives = 100;
-
-    bool success = solvePnPRansac(lm_positions_a, lm_2d_norm_b, K, D, rvec, t, false,   
-        iteratives,  3, 0.99,  inliers);
+    Point3fVector pts3d;
+    Point2fVector pts2d;
+    for (int i = 0; i < lm_positions_a.size(); i++) {
+        auto z = lm_3d_norm_b[i].z();
+        if (z > 1e-1) {
+            pts3d.push_back(cv::Point3f(lm_positions_a[i].x(), lm_positions_a[i].y(), lm_positions_a[i].z()));
+            pts2d.push_back(cv::Point2f(lm_3d_norm_b[i].x()/z, lm_3d_norm_b[i].y()/z));
+        }
+    }
+    if (pts3d.size() < params->loopdetectorconfig->loop_inlier_feature_num) {
+        return false;
+    }
+    bool success = solvePnPRansac(pts3d, pts2d, K, D, rvec, t, false,   
+        iteratives,  5.0/params->focal_length, 0.99,  inliers);
     auto p_cam_old_in_new = PnPRestoCamPose(rvec, t);
     auto p_drone_old_in_new = p_cam_old_in_new*(extrinsic_b.toIsometry().inverse());
     if (!success) {
@@ -712,9 +735,61 @@ int computeRelativePose(const Point3fVector lm_positions_a, const Point2fVector 
     auto RPerr = RPerror(p_drone_old_in_new, drone_pose_b, drone_pose_a);
     success = pnp_result_verify(success, inliers.size(), RPerr, DP_b_to_a);
     ROS_INFO("[SWARM_LOOP@%d] DPose %s PnPRansac %d inlines %d/%d, dyaw %f dpos %f. Geometry Check %f",
-        params->self_id, DP_b_to_a.toStr().c_str(), success, inliers.size(), lm_2d_norm_b.size(), fabs(DP_b_to_a.yaw())*57.3, DP_b_to_a.pos().norm(), RPerr);
+        params->self_id, DP_b_to_a.toStr().c_str(), success, inliers.size(), pts2d.size(), fabs(DP_b_to_a.yaw())*57.3, DP_b_to_a.pos().norm(), RPerr);
     return success;
 }
 
+int computeRelativePosePnPnonCentral(const std::vector<Vector3d> lm_positions_a, const std::vector<Vector3d> lm_3d_norm_b,
+        std::vector<Swarm::Pose> cam_extrinsics, std::vector<int> camera_indices, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, 
+        Swarm::Pose & DP_b_to_a, std::vector<int> &inliers, bool is_4dof) {
+    opengv::bearingVectors_t bearings;
+    std::vector<int> camCorrespondences;
+    opengv::points_t points;
+    opengv::rotations_t camRotations;
+    opengv::translations_t camOffsets;
+    for (int i = 0; i < lm_positions_a.size(); i++) {
+        bearings.push_back(lm_3d_norm_b[i]);
+        camCorrespondences.push_back(camera_indices[i]);
+        points.push_back(lm_positions_a[i]);
+        // printf("Pt %d bearing %.2f %.2f %.2f pt3d %.2f %.2f %.2f camera idx %d\n", i, 
+        //         bearings.back().x(), bearings.back().y(), bearings.back().z(), 
+        //         points.back().x(), points.back().y(), points.back().z(), camCorrespondences.back());
+    }
+    for (int i = 0; i < cam_extrinsics.size(); i++) {
+        camRotations.push_back(cam_extrinsics[i].R());
+        camOffsets.push_back(cam_extrinsics[i].pos());
+    }
+
+    opengv::absolute_pose::NoncentralAbsoluteAdapter adapter(
+        bearings, camCorrespondences, points, camOffsets, camRotations);
+    //Create a AbsolutePoseSacProblem and Ransac
+    //The method is set to GP3P
+    opengv::sac::Ransac<
+        opengv::sac_problems::absolute_pose::AbsolutePoseSacProblem> ransac;
+    std::shared_ptr<opengv::sac_problems::absolute_pose::AbsolutePoseSacProblem> absposeproblem_ptr(new opengv::sac_problems::absolute_pose::AbsolutePoseSacProblem(
+        adapter, opengv::sac_problems::absolute_pose::AbsolutePoseSacProblem::GP3P));
+    ransac.sac_model_ = absposeproblem_ptr;
+    // ransac.threshold_ = 1.0 - cos(atan(sqrt(10.0)*0.5/460.0));
+    ransac.threshold_ = 3.0/params->focal_length;
+    ransac.max_iterations_ = 50;
+    D2Common::Utility::TicToc tic;
+    ransac.computeModel();
+    //Obtain relative pose results
+    inliers = ransac.inliers_;
+    auto best_transformation = ransac.model_coefficients_;
+    Matrix3d R = best_transformation.block<3, 3>(0, 0);
+    Vector3d t = best_transformation.block<3, 1>(0, 3);
+    Swarm::Pose p_drone_old_in_new(R, t);
+    DP_b_to_a =  Swarm::Pose::DeltaPose(p_drone_old_in_new, drone_pose_a, is_4dof);
+    //Verify the results
+    auto RPerr = RPerror(p_drone_old_in_new, drone_pose_b, drone_pose_a);
+    bool success = pnp_result_verify(true, inliers.size(), RPerr, DP_b_to_a);
+    
+    if (params->enable_perf_output) {
+    }
+    ROS_INFO("[SWARM_LOOP@%d] features %d/%d succ %d gPnPRansac time %.2fms RP: %s RPerr %f", params->self_id, inliers.size(), lm_3d_norm_b.size(), success,
+        tic.toc(), DP_b_to_a.toStr().c_str(), RPerr);
+    return success;
+}
 
 }

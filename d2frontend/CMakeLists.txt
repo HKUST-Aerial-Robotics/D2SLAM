@@ -30,7 +30,7 @@ find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(lcm REQUIRED)
 find_package(yaml-cpp REQUIRED)
-# find_package(Backward)
+find_package(opengv REQUIRED)
 set(TENSORRT_ROOT $ENV{HOME}/source/TensorRT-7.1.3.4)
 
 set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch")
@@ -66,6 +66,7 @@ catkin_package(
 include_directories(
   /usr/local/include/
   include
+  ${opengv_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${YAML_CPP_INCLUDE_DIRS}
@@ -173,8 +174,8 @@ target_link_libraries(libd2frontend
   faiss
   dw
   loop_cnn
+  opengv
 )
-
 
 target_link_libraries(${PROJECT_NAME}_nodelet
   ${catkin_LIBRARIES}

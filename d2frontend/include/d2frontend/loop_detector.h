@@ -62,15 +62,16 @@ protected:
     
     //Use 3D points from frame a.
     bool computeLoop(const VisualImageDescArray & frame_array_a, const VisualImageDescArray & frame_array_b,
-        int main_dir_a, int main_dir_b, LoopEdge & ret);
+            int main_dir_a, int main_dir_b, LoopEdge & ret);
 
     bool computeCorrespondFeatures(const VisualImageDesc & new_img_desc, const VisualImageDesc & old_img_desc, 
-        Point3fVector &lm_pos_a, std::vector<int> &idx_a, Point2fVector &lm_norm_2d_b, std::vector<int> &idx_b);
+            std::vector<Vector3d> &lm_pos_a, std::vector<int> &idx_a, std::vector<Vector3d> &lm_norm_3d_b, std::vector<int> &idx_b, 
+            std::vector<int> &cam_indices);
 
     bool computeCorrespondFeaturesOnImageArray(const VisualImageDescArray & frame_array_a,
-        const VisualImageDescArray & frame_array_b, int main_dir_a, int main_dir_b,
-        Point3fVector &lm_pos_a, Point2fVector &lm_norm_2d_b, std::vector<std::pair<int, int>> &index2dirindex_a,
-        std::vector<std::pair<int, int>> &index2dirindex_b);
+            const VisualImageDescArray & frame_array_b, int main_dir_a, int main_dir_b,
+            std::vector<Vector3d> &lm_pos_a, std::vector<Vector3d> &lm_norm_3d_b, std::vector<int> & cam_indices,
+            std::vector<std::pair<int, int>> &index2dirindex_a, std::vector<std::pair<int, int>> &index2dirindex_b);
 
     int addToDatabase(VisualImageDescArray & new_fisheye_desc);
     int addToDatabase(VisualImageDesc & new_img_desc);
@@ -102,8 +103,12 @@ public:
 
 };
     
-int computeRelativePose(const Point3fVector lm_positions_a, const Point2fVector lm_2d_norm_b,
+int computeRelativePosePnP(const std::vector<Vector3d> lm_positions_a, const std::vector<Vector3d> lm_3d_norm_b,
         Swarm::Pose extrinsic_b, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a,
+        std::vector<int> &inliers, bool is_4dof);
+int computeRelativePosePnPnonCentral(const std::vector<Vector3d> lm_positions_a, const std::vector<Vector3d> lm_3d_norm_b,
+        std::vector<Swarm::Pose> cam_extrinsics, std::vector<int> camera_indices, 
+        Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a,
         std::vector<int> &inliers, bool is_4dof);
 
 }

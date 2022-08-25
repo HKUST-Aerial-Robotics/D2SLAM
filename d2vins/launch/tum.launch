@@ -16,7 +16,7 @@
     <arg name="enable_pgo" default="false" />
     <arg name="rviz" default="false" />
     <arg name="verbose" default="false" />
-    <arg name="is_4dof" default="true" />
+    <arg name="is_4dof" default="false" />
     
     <node pkg="d2vins" type="d2vins_node" name="d2vins" output="$(arg output)" >
         <rosparam>
