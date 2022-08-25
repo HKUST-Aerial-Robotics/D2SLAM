@@ -12,6 +12,16 @@ using namespace D2FrontEnd;
 using namespace D2QuadCamDepthEst;
 using D2Common::FisheyeUndist;
 
+void drawGrid(cv::Mat & show, int num_rows = 50) {
+    for (int i = 0; i < num_rows; i ++ ) {
+        cv::Scalar c(0, 0, 0);
+        if (i % 5 == 0) {
+            c = cv::Scalar(0, 255, 0);
+        }
+        cv::line(show, cv::Point(i*show.cols/num_rows, 0), cv::Point(i*show.cols/num_rows, show.rows - 1), c, 1);
+    }
+}
+
 int main(int argc, char** argv) {
     namespace po = boost::program_options;
     po::options_description desc("Allowed options");
@@ -57,7 +67,9 @@ int main(int argc, char** argv) {
     FisheyeUndist undistort2_1(ret_right.first, 0, fov, true, FisheyeUndist::UndistortPinhole2, width, height);
     auto imgs_left = undistort2_0.undist_all(img_l, true);
     auto imgs_right = undistort2_1.undist_all(img_r, true);
-    cv::hconcat(imgs_left[idx0], imgs_right[idx1], show);
+    cv::vconcat(imgs_left[idx0], imgs_right[idx1], show);
+    drawGrid(show);
+    cv::namedWindow("RawStereoImgs", cv::WINDOW_NORMAL|cv::WINDOW_GUI_EXPANDED);
     cv::imshow("RawStereoImgs", show);
 
     VirtualStereo virtual_stereo(0, 1, ret_left.second, ret_right.second, 
@@ -67,15 +79,15 @@ int main(int argc, char** argv) {
     show.release();
     cv::hconcat(rect_l, rect_r, show);
     int num_rows = 10;
-    for (int i = 0; i < show.rows/num_rows; i ++ ) {
+    for (int i = 0; i < num_rows; i ++ ) {
         cv::line(show, cv::Point(0, i*show.rows/num_rows), cv::Point(show.cols - 1,i*show.rows/num_rows), cv::Scalar(0, 255, 0), 1);
     }
+    cv::namedWindow("Rectified Images", cv::WINDOW_NORMAL|cv::WINDOW_GUI_EXPANDED);
     cv::imshow("Rectified Images", show);
     cv::vconcat(rect_l, rect_r, show);
     //Draw vertical lines
-    for (int i = 0; i < show.cols/num_rows; i ++ ) {
-        cv::line(show, cv::Point(i*show.cols/num_rows, 0), cv::Point(i*show.cols/num_rows, show.rows - 1), cv::Scalar(0, 255, 0), 1);
-    }
+    drawGrid(show);
+    cv::namedWindow("Rectified Images2", cv::WINDOW_NORMAL|cv::WINDOW_GUI_EXPANDED);
     cv::imshow("Rectified Images2", show);
     cv::imwrite("rect_l.png", rect_l);
     cv::imwrite("rect_r.png", rect_r);
