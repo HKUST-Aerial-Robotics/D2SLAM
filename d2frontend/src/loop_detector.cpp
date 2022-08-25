@@ -430,7 +430,7 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
         int index_b = match.trainIdx;
         auto landmark_id = _a_lms[index_a].landmark_id;
         if (landmark_db.find(landmark_id) == landmark_db.end()) {
-            ROS_WARN("[SWARM_LOOP] landmark_id %d not found in landmark_db", landmark_id);
+            // ROS_WARN("[SWARM_LOOP] landmark_id %d not found in landmark_db", landmark_id);
             continue;
         }
         if (landmark_db.at(landmark_id).flag != LandmarkFlag::ESTIMATED) {
@@ -751,19 +751,15 @@ int computeRelativePosePnPnonCentral(const std::vector<Vector3d> lm_positions_a,
         bearings.push_back(lm_3d_norm_b[i]);
         camCorrespondences.push_back(camera_indices[i]);
         points.push_back(lm_positions_a[i]);
-        // printf("Pt %d bearing %.2f %.2f %.2f pt3d %.2f %.2f %.2f camera idx %d\n", i, 
-        //         bearings.back().x(), bearings.back().y(), bearings.back().z(), 
-        //         points.back().x(), points.back().y(), points.back().z(), camCorrespondences.back());
     }
     for (int i = 0; i < cam_extrinsics.size(); i++) {
         camRotations.push_back(cam_extrinsics[i].R());
         camOffsets.push_back(cam_extrinsics[i].pos());
     }
 
+    //Solve with GP3P + RANSAC
     opengv::absolute_pose::NoncentralAbsoluteAdapter adapter(
         bearings, camCorrespondences, points, camOffsets, camRotations);
-    //Create a AbsolutePoseSacProblem and Ransac
-    //The method is set to GP3P
     opengv::sac::Ransac<
         opengv::sac_problems::absolute_pose::AbsolutePoseSacProblem> ransac;
     std::shared_ptr<opengv::sac_problems::absolute_pose::AbsolutePoseSacProblem> absposeproblem_ptr(new opengv::sac_problems::absolute_pose::AbsolutePoseSacProblem(
@@ -779,16 +775,42 @@ int computeRelativePosePnPnonCentral(const std::vector<Vector3d> lm_positions_a,
     auto best_transformation = ransac.model_coefficients_;
     Matrix3d R = best_transformation.block<3, 3>(0, 0);
     Vector3d t = best_transformation.block<3, 1>(0, 3);
+    Swarm::Pose p_drone_old_in_new_init(R, t);
+    
+    //Filter by inliers and perform non-linear optimization to refine.
+    std::set <int>inlier_set(inliers.begin(), inliers.end());
+    bearings.clear();
+    camCorrespondences.clear();
+    points.clear();
+    for (int i = 0; i < lm_positions_a.size(); i++) {
+        if (inlier_set.find(i) == inlier_set.end()) {
+            continue;
+        }
+        bearings.push_back(lm_3d_norm_b[i]);
+        camCorrespondences.push_back(camera_indices[i]);
+        points.push_back(lm_positions_a[i]);
+    }
+    adapter.sett(t);
+    adapter.setR(R);
+    opengv::transformation_t nonlinear_transformation =
+        opengv::absolute_pose::optimize_nonlinear(adapter);
+    R = nonlinear_transformation.block<3, 3>(0, 0);
+    t = nonlinear_transformation.block<3, 1>(0, 3);
     Swarm::Pose p_drone_old_in_new(R, t);
+    auto DP_b_to_a_init =  Swarm::Pose::DeltaPose(p_drone_old_in_new_init, drone_pose_a, is_4dof);
     DP_b_to_a =  Swarm::Pose::DeltaPose(p_drone_old_in_new, drone_pose_a, is_4dof);
+
+    // std::cout << "Pdrone GP3P " << p_drone_old_in_new_init << " Refine " << p_drone_old_in_new << std::endl;
+    // std::cout << "DP GP3P " << DP_b_to_a_init << " Refine " << DP_b_to_a << std::endl;
+
     //Verify the results
     auto RPerr = RPerror(p_drone_old_in_new, drone_pose_b, drone_pose_a);
     bool success = pnp_result_verify(true, inliers.size(), RPerr, DP_b_to_a);
     
     if (params->enable_perf_output) {
+        ROS_INFO("[SWARM_LOOP@%d] features %d/%d succ %d gPnPRansac time %.2fms RP: %s RPerr %f", params->self_id, inliers.size(), lm_3d_norm_b.size(), success,
+                tic.toc(), DP_b_to_a.toStr().c_str(), RPerr);
     }
-    ROS_INFO("[SWARM_LOOP@%d] features %d/%d succ %d gPnPRansac time %.2fms RP: %s RPerr %f", params->self_id, inliers.size(), lm_3d_norm_b.size(), success,
-        tic.toc(), DP_b_to_a.toStr().c_str(), RPerr);
     return success;
 }
 
