@@ -21,12 +21,13 @@ void D2PGO::addFrame(D2BaseFrame frame) {
     state.addFrame(frame);
     // printf("[D2PGO@%d]add frame %ld ref %d ego_pose %s pose %s from drone %d\n", self_id, frame.frame_id, frame.reference_frame_id,
     //     frame.initial_ego_pose.toStr().c_str(), frame.odom.pose().toStr().c_str(), frame.drone_id);
-    updated = true;
     if (ego_motion_trajs.find(frame.drone_id) == ego_motion_trajs.end()) {
         Swarm::DroneTrajectory traj(frame.drone_id, true);
         ego_motion_trajs[frame.drone_id] = traj;
     }
     ego_motion_trajs[frame.drone_id].push(frame.stamp, frame.initial_ego_pose, frame.frame_id);
+    updated = true;
+    is_rot_init_convergence = false;
 }
 
 void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
@@ -66,6 +67,7 @@ void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
         }
     }
     updated = true;
+    is_rot_init_convergence = false;
 }
 
 void D2PGO::inputDPGOData(const DPGOData & data) {
@@ -147,9 +149,14 @@ bool D2PGO::solve_multi(bool force_solve) {
 
 bool D2PGO::solve_single() {
     const Guard lock(state_lock);
+    if (state.size(self_id) < config.min_solve_size || !updated) {
+        // printf("[D2PGO] Not enough frames to solve %d.\n", state.size(self_id));
+        return false;
+    }
+    used_loops.clear();
+
     solver = new CeresSolver(&state, config.ceres_options);
     // used_frames.clear();
-    used_loops.clear();
     //Use available loops for outlier rejection.
     std::vector<Swarm::LoopEdge> available_loops;
     for (const Swarm::LoopEdge & loop_info : all_loops) {
@@ -166,17 +173,16 @@ bool D2PGO::solve_single() {
     if (config.enable_ego_motion) {
         setupEgoMotionFactors(solver);
     }
-    if (!isRotInitConvergence()) {
-        if (config.enable_rotation_initialization || config.rot_init_config.enable_pose6d_solver) {
-            rotInitial(used_loops);
-            if (config.write_g2o) {
-                saveG2O();
-            }
-            //Simply return here, we do solve ceres in.
-            delete solver;
-            is_rot_init_convergence = true;
-            return solve_single();
+
+    if (config.enable_rotation_initialization && !isRotInitConvergence() || config.rot_init_config.enable_pose6d_solver) {
+        rotInitial(used_loops);
+        if (config.write_g2o) {
+            saveG2O();
         }
+        //Simply return here, we do solve ceres in.
+        delete solver;
+        is_rot_init_convergence = true;
+        return solve_single();
     }
 
     if (config.debug_rot_init_only || config.rot_init_config.enable_pose6d_solver) {

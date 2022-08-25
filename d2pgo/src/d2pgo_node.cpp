@@ -137,6 +137,17 @@ protected:
         config.arock_config.eta_k = fsSettings["pgo_eta_k"];
         config.pcm_rej.is_4dof = is_4dof;
         config.is_realtime = true;
+        if (config.mode == PGO_MODE_NON_DIST) {
+            config.perturb_mode = false;
+        } else {
+            config.perturb_mode = true;
+        }
+        int estimation_mode = (int) fsSettings["estimation_mode"];
+        if (estimation_mode == 0) {
+            multi = false;
+        } else {
+            multi = true;
+        }
     }
 public:
     D2PGONode(ros::NodeHandle & nh) {

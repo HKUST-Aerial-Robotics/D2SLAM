@@ -770,7 +770,7 @@ int computeRelativePosePnPnonCentral(const std::vector<Vector3d> lm_positions_a,
         adapter, opengv::sac_problems::absolute_pose::AbsolutePoseSacProblem::GP3P));
     ransac.sac_model_ = absposeproblem_ptr;
     // ransac.threshold_ = 1.0 - cos(atan(sqrt(10.0)*0.5/460.0));
-    ransac.threshold_ = 3.0/params->focal_length;
+    ransac.threshold_ = 1.0/params->focal_length;
     ransac.max_iterations_ = 50;
     D2Common::Utility::TicToc tic;
     ransac.computeModel();

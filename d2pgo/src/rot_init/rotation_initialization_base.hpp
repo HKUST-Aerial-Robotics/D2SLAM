@@ -141,7 +141,7 @@ protected:
     VecX solveLinear(int row_id, int cols, const std::vector<Tpl> & triplet_list, VecX & b) {
         SparseMatrix<T> A(row_id, cols);
         A.setFromTriplets(triplet_list.begin(), triplet_list.end());
-        printf("A rows%ld cols %ld b rows %d/%ld\n", A.rows(), A.cols(), row_id, b.rows());
+        // printf("A rows%ld cols %ld b rows %d/%ld\n", A.rows(), A.cols(), row_id, b.rows());
         auto At = A.transpose();
         SparseMatrix<T> H = At*A;
         if (b.rows() > row_id) {
@@ -395,13 +395,13 @@ public:
     }
     
     virtual void addLoops(const std::vector<Swarm::LoopEdge> & _loops) {
-        printf("[RotationInitialization::addLoops] Adding %ld loops\n", _loops.size());
+        // printf("[RotationInitialization::addLoops] Adding %ld loops\n", _loops.size());
         loops = _loops;
     }
 
     void setFixedFrameId(FrameIdType _fixed_frame_id) {
         fixed_frame_ids.insert(_fixed_frame_id);
-        printf("[RotationInitialization::setFixedFrameId] Fixed frame id: %ld now %ld fixed\n", _fixed_frame_id, fixed_frame_ids.size());
+        // printf("[RotationInitialization::setFixedFrameId] Fixed frame id: %ld now %ld fixed\n", _fixed_frame_id, fixed_frame_ids.size());
     }
 
     void solve() {
