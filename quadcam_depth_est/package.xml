@@ -27,6 +27,8 @@
   <build_depend>rospy</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
+  <build_export_depend>d2frontend</build_export_depend>
+  <build_depend>d2frontend</build_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
   <build_depend>camera_models</build_depend>

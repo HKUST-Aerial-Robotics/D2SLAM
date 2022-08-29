@@ -106,7 +106,7 @@ RUN   apt update && \
       wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip -O opencv.zip && \
       unzip opencv.zip && \
       rm opencv.zip && \
-      git clone https://github.com/opencv/opencv_contrib.git -b 4.6.0 && \
+      git clone https://github.com/opencv/opencv_contrib.git -b ${OPENCV_VERSION} && \
       cd opencv-${OPENCV_VERSION} && \
       mkdir build && cd build && \
       cmake .. \
@@ -131,6 +131,11 @@ cudafeatures2d,xfeatures2d,tracking,stereo,\
 aruco,videoio && \
       make -j $(USE_PROC) && \
       make install 
+
+#Install OpenGV
+RUN git clone https://github.com/laurentkneip/opengv && \
+      mkdir opengv/build && cd opengv/build && cmake .. && make && \
+      make install
 
 #Install Backward
 RUN wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp -O /usr/local/include/backward.hpp

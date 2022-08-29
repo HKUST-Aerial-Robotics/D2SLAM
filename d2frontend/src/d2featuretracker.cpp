@@ -1,7 +1,6 @@
 #include <d2frontend/d2featuretracker.h>
 #include <camodocal/camera_models/Camera.h>
 #include <d2frontend/CNN/superglue_onnx.h>
-#include <opencv2/ccalib/omnidir.hpp>
 
 #define MIN_HOMOGRAPHY 6
 #define PYR_LEVEL 3
@@ -524,7 +523,6 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
             report.ft_time, report.parallex_num, report.long_track_num, report.meanParallex()*100, _config.parallex_thres*100);
         cv::putText(img, buf, cv::Point2f(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
     }
-    // cv::omnidir::undistortImage(img, img, K, D, xi, RECTIFY_CYLINDRICAL);
     return img;
 }
 
