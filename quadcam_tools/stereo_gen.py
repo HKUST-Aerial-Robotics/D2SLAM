@@ -26,15 +26,15 @@ class StereoGen:
         return r_img_l, r_img_r
     
     def genDisparity(self, img_l, img_r):
-        if img_l.shape[2] == 3:
+        if len(img_l.shape) > 2 and img_l.shape[2] == 3:
             img_l = cv.cvtColor(img_l, cv.COLOR_BGR2GRAY)
-        if img_r.shape[2] == 3:
+        if len(img_r.shape) > 2 and img_r.shape[2] == 3:
             img_r = cv.cvtColor(img_r, cv.COLOR_BGR2GRAY)
         img_l, img_r = self.genRectStereo(img_l, img_r)
         blockSize = 11
         stereo = cv.StereoSGBM.create(minDisparity=0, numDisparities=128, 
             blockSize=blockSize, P1=8 * 3 * blockSize ** 2, P2=32 * 3 * blockSize ** 2, 
-            disp12MaxDiff=0, uniquenessRatio=10, speckleWindowSize=100, speckleRange=32)
+            disp12MaxDiff=2, uniquenessRatio=10, speckleWindowSize=100, speckleRange=32)
         disparity = stereo.compute(img_l, img_r)
         return disparity
 

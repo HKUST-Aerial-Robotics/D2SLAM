@@ -74,10 +74,7 @@ def drawVerticalLines(img, num_lines=10):
     #Cvt color if gray
     if len(img.shape) == 2:
         img = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
-        h, w = img.shape
-    else:
-        h, w, _ = img.shape
-
+    h, w, _ = img.shape
     for i in range(num_lines):
         cv.line(img, (int(w/num_lines*i), 0), (int(w/num_lines*i), h), (0, 255, 0), 1)
     return img
@@ -86,15 +83,12 @@ def drawHorizontalLines(img, num_lines=10):
     #Cvt color if gray
     if len(img.shape) == 2:
         img = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
-        h, w = img.shape
-    else:
-        h, w, _ = img.shape
-
+    h, w, _ = img.shape
     for i in range(num_lines):
         cv.line(img, (0, int(h/num_lines*i)), (w, int(h/num_lines*i)), (0, 255, 0), 1)
     return img
 
-def test_depth_gen(gen, imgs):
+def test_depth_gen(gen: StereoGen, imgs):
     cam_idx_a = gen.cam_idx_a
     cam_idx_b = gen.cam_idx_b
     idx_vcam_a = gen.idx_l
@@ -125,12 +119,18 @@ if __name__ == "__main__":
     parser.add_argument("-c","--config", type=str, default="", help="config file path")
     parser.add_argument("-s","--step", type=int, default=5, help="step of stereo pair")
     parser.add_argument("-v","--verbose", action='store_true', help="show image")
-    parser.add_argument("--calib-phom", action='store_true', help="calib-phom")
+    parser.add_argument("-p","--photometric", type=str, help="photometric calibration image")
     args = parser.parse_args()
     if args.config == "":
         stereo_gens = genDefaultConfig()
     else:
         stereo_gens = loadConfig(args.config)
+    #Read photometric
+    if args.photometric != "":
+        photometric = cv.imread(args.photometric, cv.IMREAD_GRAYSCALE)/255.0
+    else:
+        photometric = None
+
     #Read from bag
     bag = rosbag.Bag(args.input)
     num_imgs = bag.get_message_count("/arducam/image/compressed") + bag.get_message_count("/arducam/image")
@@ -149,8 +149,24 @@ if __name__ == "__main__":
                 else:
                     img = bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='passthrough')
                 imgs = split_image(img)
+                photometric_calibed = []
+                for img in imgs:
+                    cv.imshow("raw", img)
+                    #Apply inverse of photometric calibration
+                    if photometric is not None:
+                        #Convert to grayscale
+                        if len(img.shape) == 3:
+                            img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+                        cv.imshow("Gray", img)
+                        img = img.astype(float)/photometric
+                        img = np.clip(img, 0, 255).astype(np.uint8)
+                        photometric_calibed.append(img)
+                    else:
+                        photometric_calibed.append(img)
+                    cv.imshow("Photometic calibed", img)
+                    cv.waitKey(1)
                 for gen in stereo_gens[2:3]:
-                    test_depth_gen(gen, imgs)
+                    test_depth_gen(gen, photometric_calibed)
                 pbar.update(1)
                 c = cv.waitKey(0)
                 if c == ord('q'):

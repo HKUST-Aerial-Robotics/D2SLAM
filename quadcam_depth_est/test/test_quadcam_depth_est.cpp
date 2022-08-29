@@ -95,11 +95,8 @@ int main(int argc, char** argv) {
     auto disp_cuda = virtual_stereo.estimateDisparityOCV(rect_l, rect_r);
     cv::Mat disp_show(disp_cuda);
     double min_val=0, max_val=0;
-    cv::minMaxLoc(disp_show, &min_val, &max_val, NULL, NULL);
-    printf("Disp max %f min %f\n", max_val, min_val);
-    disp_show.convertTo(disp_show, CV_8U, 255.0/max_val);
-    cv::applyColorMap(disp_show, disp_show, cv::COLORMAP_RAINBOW);
-    // printf("AFT Disp max %f min %f\n", max_val, min_val);
+    cv::normalize(disp_show, disp_show, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+    cv::applyColorMap(disp_show, disp_show, cv::COLORMAP_JET);
     cv::imshow("Disparity", disp_show);
 
 
