@@ -7,17 +7,25 @@ class StereoGen:
         self.idx_r = idx_r
         self.cam_idx_a = cam_idx_a
         self.cam_idx_b = cam_idx_b
+        self.extrinsic = self.extrinsicL()
     
     def initRectify(self, K1, D1, K2, D2, size, R, T):
-        print("Init rectify")
         self.R1, self.R2, self.P1, self.P2, self.Q, _, _ = cv.stereoRectify(K1, D1, K2, D2, size, R, T)
         self.mapl0, self.mapl1 = cv.initUndistortRectifyMap(K1, D1, self.R1, self.P1, size, cv.CV_32FC1)
         self.mapr0, self.mapr1 = cv.initUndistortRectifyMap(K2, D2, self.R2, self.P2, size, cv.CV_32FC1)
+        print("Q", self.Q)
     
     def genStereo(self, img_l, img_r):
         img_l = self.undist_l.undist(img_l, self.idx_l)
         img_r = self.undist_r.undist(img_r, self.idx_r)
         return img_l, img_r
+
+    def rectifyL(self, img):
+        img = self.undist_l.undist(img, self.idx_l)
+        return cv.remap(img, self.mapl0, self.mapl1, cv.INTER_LINEAR)
+
+    def extrinsicL(self):
+        return self.undist_l.getPinholeCamExtrinsic(self.idx_l)
 
     def genRectStereo(self, img_l, img_r):
         s_img_l, s_img_r = self.genStereo(img_l, img_r)
@@ -25,18 +33,38 @@ class StereoGen:
         r_img_r = cv.remap(s_img_r, self.mapr0, self.mapr1, cv.INTER_LINEAR)
         return r_img_l, r_img_r
     
-    def genDisparity(self, img_l, img_r):
+    def genDisparity(self, img_l, img_r, max_disp=64, block_size=5):
         if len(img_l.shape) > 2 and img_l.shape[2] == 3:
             img_l = cv.cvtColor(img_l, cv.COLOR_BGR2GRAY)
         if len(img_r.shape) > 2 and img_r.shape[2] == 3:
             img_r = cv.cvtColor(img_r, cv.COLOR_BGR2GRAY)
         img_l, img_r = self.genRectStereo(img_l, img_r)
-        blockSize = 11
-        stereo = cv.StereoSGBM.create(minDisparity=0, numDisparities=128, 
-            blockSize=blockSize, P1=8 * 3 * blockSize ** 2, P2=32 * 3 * blockSize ** 2, 
-            disp12MaxDiff=2, uniquenessRatio=10, speckleWindowSize=100, speckleRange=32)
+        stereo = cv.StereoSGBM.create(minDisparity=0, numDisparities=max_disp, 
+            blockSize=block_size, P1=8 * 3 * block_size ** 2, P2=32 * 3 * block_size ** 2, 
+            disp12MaxDiff=2, uniquenessRatio=10, speckleWindowSize=100, speckleRange=2)
         disparity = stereo.compute(img_l, img_r)
         return disparity
+
+    def genPointCloud(self, img_l, img_r, min_z=0.5, max_z=3, img_raw=None):
+        disparity = self.genDisparity(img_l, img_r)
+        disparity_f = disparity.astype(np.float32) / 16.0
+        # _, disparity_f = cv.threshold(disparity_f, 0, 10000, cv.THRESH_TOZERO)
+        points = cv.reprojectImageTo3D(disparity_f, self.Q)
+        #Reshape point3d to array of points
+        points = points.reshape(-1, 3)
+        #Filter points by min and max z
+        mask = (points[:, 2] > min_z) & (points[:, 2] < max_z)
+        points = points[mask]
+        #Transform points by extrinsic
+        points = np.dot(points, self.extrinsic[:3, :3].T) + self.extrinsic[:3, 3]
+        if img_raw is not None:
+            # texture = cv.cvtColor(img_raw, cv.COLOR_BGR2RGB)
+            texture = img_raw
+        else:
+            texture = cv.cvtColor(img_l, cv.COLOR_GRAY2BGR)
+        texture = self.rectifyL(texture)
+        texture = texture.reshape(-1, 3)[mask]/255.0
+        return points, texture
 
     def calibPhotometric(self, img_l, img_r, blur_size=31):
         if img_l.shape[2] == 3:

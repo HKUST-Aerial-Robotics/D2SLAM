@@ -4,11 +4,15 @@ from transformations import *
 import numpy as np
 
 class FisheyeUndist:
-    def __init__(self, camera_matrix, dist_coeffs, xi, fov=190, width=1000, height=500):
+    def __init__(self, camera_matrix, dist_coeffs, xi, fov=190, width=1000, height=500, extrinsic=None):
         self.camera_matrix = camera_matrix
         self.dist_coeffs = dist_coeffs
         self.xi = xi
         self.generatePinhole2(fov, width, height)
+        if extrinsic is None:
+            self.extrinsic = np.eye(4)
+        else:
+            self.extrinsic = extrinsic
 
     def generateUndistMapPinhole(self, R, focal_length, width, height):
         # R: rotation matrix
@@ -26,13 +30,20 @@ class FisheyeUndist:
         mapxy = pts2d_raw.reshape((height, width, 2))
         #Map from imgPtsundist to pts2d_raw
         mapx, mapy = cv.convertMaps(mapxy, None, cv.CV_32FC1)
-        return mapx, mapy 
+        return mapx, mapy
+
+    def getPinholeCamExtrinsic(self, idx):
+        if idx == 0:
+            return self.extrinsic @ euler_matrix(0, -np.pi/4, 0, 'sxyz')
+        else:
+            return self.extrinsic @ euler_matrix(0, np.pi/4, 0, 'sxyz')
 
     def generatePinhole2(self, fov, width, height):
         pinhole_fov = np.deg2rad(fov - 90)
         focal_gen = width / 2 / np.tan(pinhole_fov / 2)
         R0 = euler_matrix(0, -np.pi/4, 0, 'sxyz')[0:3, 0:3]
         R1 = euler_matrix(0, np.pi/4, 0, 'sxyz')[0:3, 0:3]
+        self.focal_gen = focal_gen
         map1 = self.generateUndistMapPinhole(R0, focal_gen, width, height)
         map2 = self.generateUndistMapPinhole(R1, focal_gen, width, height)
         self.maps = [map1, map2]
