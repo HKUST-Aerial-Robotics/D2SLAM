@@ -26,6 +26,7 @@ class DepthGenerateNode:
         self.min_z = 0.3
         self.step = 5 #Generate cloud per 3 frames
         self.count = 0
+        self.enable_texture = False
 
     def callback(self, img_msg):
         if self.count % self.step != 0:
@@ -57,18 +58,22 @@ class DepthGenerateNode:
             else:
                 _pcl, _texture = gen.genPointCloud(photometric_calibed[gen.cam_idx_a], 
                         photometric_calibed[gen.cam_idx_b], img_raw=imgs[gen.cam_idx_a], 
-                        min_z=self.min_z, max_z=self.max_z)
+                        min_z=self.min_z, max_z=self.max_z, enable_texture=self.enable_texture)
             if pcl is None:
                 pcl = _pcl
                 texture = _texture
             else:
                 pcl = np.concatenate((pcl, _pcl), axis=0)
-                texture = np.concatenate((texture, _texture), axis=0)
+                if self.enable_texture:
+                    texture = np.concatenate((texture, _texture), axis=0)
         tcloud = (time.time() - s)
         header = img_msg.header
         header.frame_id = "world"
-        colored_pcl = np.c_[pcl, texture]
-        msg = pc2.create_cloud(header, FIELDS, colored_pcl)
+        if self.enable_texture:
+            colored_pcl = np.c_[pcl, texture]
+            msg = pc2.create_cloud(header, FIELDS, colored_pcl)
+        else:
+            msg = pc2.create_cloud_xyz32(header, pcl)
         self.pcl_pub.publish(msg)
         self.count += 1
         print(f"Total time {(time.time() - s0)*1000:.1f}ms cloud gen time: {tcloud*1000:.1f}ms")
@@ -82,12 +87,14 @@ if __name__ == "__main__":
     parser.add_argument("-c","--config", type=str, default="", help="config file path")
     parser.add_argument("-p","--photometric", type=str, help="photometric calibration image")
     parser.add_argument("-v","--verbose", action='store_true', help="show image")
+    parser.add_argument("-w","--width", type=int, default=300, help="width of pinhole")
+    parser.add_argument("--height", type=int, default=150, help="width of pinhole")
     args = parser.parse_args()
     stereo_paths = ["/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_1_0.yaml",
                 "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_2_1.yaml",
                 "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_3_2.yaml",
                 "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_0_3.yaml"]
-    node = DepthGenerateNode(args.config, stereo_paths, args.photometric)
+    node = DepthGenerateNode(args.config, stereo_paths, args.photometric, fov=args.fov, width=args.width, height=args.height)
     #Subscribe to image using ImageTransport
     sub_comp = rospy.Subscriber("/arducam/image/compressed", CompressedImage, node.callback)
     sub_raw = rospy.Subscriber("/arducam/image/raw", Image, node.callback)

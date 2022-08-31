@@ -9,7 +9,7 @@ def stereoPhotometicAlign(img_l, img_r):
     return img_l, img_r
 
 class StereoGen:
-    def __init__(self, undist_l:FisheyeUndist, undist_r:FisheyeUndist, cam_idx_a=0,  cam_idx_b=0, idx_l = 1, idx_r = 0, enable_hitnet=True):
+    def __init__(self, undist_l:FisheyeUndist, undist_r:FisheyeUndist, cam_idx_a=0,  cam_idx_b=0, idx_l = 1, idx_r = 0, hitnet_model=None):
         self.undist_l = undist_l
         self.undist_r = undist_r
         self.idx_l = idx_l
@@ -17,17 +17,9 @@ class StereoGen:
         self.cam_idx_a = cam_idx_a
         self.cam_idx_b = cam_idx_b
         self.extrinsic = self.extrinsicL()
-        self.enable_hitnet = enable_hitnet
-        if enable_hitnet:
-            self.loadHitnet()
-
-    def loadHitnet(self):
-        print("Loading hitnet...")
-        HITNET_PATH = '/home/xuhao/source/ONNX-HITNET-Stereo-Depth-estimation/'
-        sys.path.insert(0, HITNET_PATH)
-        from hitnet import HitNet, ModelType, CameraConfig
-        model_path = HITNET_PATH + "/models/eth3d/saved_model_240x320/model_float32.onnx"
-        self.hitnet = HitNet(model_path, ModelType.eth3d)
+        if hitnet_model is not None:
+            self.enable_hitnet = True
+            self.hitnet = hitnet_model
 
     def initRectify(self, K1, D1, K2, D2, size, R, T):
         self.R1, self.R2, self.P1, self.P2, self.Q, _, _ = cv.stereoRectify(K1, D1, K2, D2, size, R, T)
@@ -68,8 +60,8 @@ class StereoGen:
                 disp12MaxDiff=2, uniquenessRatio=10, speckleWindowSize=100, speckleRange=2)
             disparity = stereo.compute(img_l, img_r)
         return disparity
-        
-    def genPointCloud(self, img_l, img_r, min_z=0.3, max_z=10, img_raw=None):
+
+    def genPointCloud(self, img_l, img_r, min_z=0.3, max_z=10, img_raw=None, enable_texture=True):
         disparity = self.genDisparity(img_l, img_r)
         if not self.enable_hitnet:
             disparity = disparity.astype(np.float32) / 16.0
@@ -81,14 +73,17 @@ class StereoGen:
         points = points[mask]
         #Transform points by extrinsic
         points = np.dot(points, self.extrinsic[:3, :3].T) + self.extrinsic[:3, 3]
-        if img_raw is not None:
-            # texture = cv.cvtColor(img_raw, cv.COLOR_BGR2RGB)
-            texture = img_raw
+        if enable_texture:
+            if img_raw is not None:
+                # texture = cv.cvtColor(img_raw, cv.COLOR_BGR2RGB)
+                texture = img_raw
+            else:
+                texture = cv.cvtColor(img_l, cv.COLOR_GRAY2BGR)
+            texture = self.rectifyL(texture)
+            texture = texture.reshape(-1, 3)[mask]/255.0
+            return points, texture
         else:
-            texture = cv.cvtColor(img_l, cv.COLOR_GRAY2BGR)
-        texture = self.rectifyL(texture)
-        texture = texture.reshape(-1, 3)[mask]/255.0
-        return points, texture
+            return points, np.array([])
 
     def calibPhotometric(self, img_l, img_r, blur_size=31):
         if img_l.shape[2] == 3:
