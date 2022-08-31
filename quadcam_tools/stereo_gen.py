@@ -1,6 +1,15 @@
 from fisheye_undist import *
+import sys
+
+
+def stereoPhotometicAlign(img_l, img_r):
+    mean_l, mean_r = np.mean(img_l), np.mean(img_r)
+    img_r = img_r * mean_l / mean_r
+    img_r = np.clip(img_r, 0, 255).astype(np.uint8)
+    return img_l, img_r
+
 class StereoGen:
-    def __init__(self, undist_l:FisheyeUndist, undist_r:FisheyeUndist, cam_idx_a=0,  cam_idx_b=0, idx_l = 1, idx_r = 0):
+    def __init__(self, undist_l:FisheyeUndist, undist_r:FisheyeUndist, cam_idx_a=0,  cam_idx_b=0, idx_l = 1, idx_r = 0, enable_hitnet=True):
         self.undist_l = undist_l
         self.undist_r = undist_r
         self.idx_l = idx_l
@@ -8,7 +17,18 @@ class StereoGen:
         self.cam_idx_a = cam_idx_a
         self.cam_idx_b = cam_idx_b
         self.extrinsic = self.extrinsicL()
-    
+        self.enable_hitnet = enable_hitnet
+        if enable_hitnet:
+            self.loadHitnet()
+
+    def loadHitnet(self):
+        print("Loading hitnet...")
+        HITNET_PATH = '/home/xuhao/source/ONNX-HITNET-Stereo-Depth-estimation/'
+        sys.path.insert(0, HITNET_PATH)
+        from hitnet import HitNet, ModelType, CameraConfig
+        model_path = HITNET_PATH + "/models/eth3d/saved_model_240x320/model_float32.onnx"
+        self.hitnet = HitNet(model_path, ModelType.eth3d)
+
     def initRectify(self, K1, D1, K2, D2, size, R, T):
         self.R1, self.R2, self.P1, self.P2, self.Q, _, _ = cv.stereoRectify(K1, D1, K2, D2, size, R, T)
         self.mapl0, self.mapl1 = cv.initUndistortRectifyMap(K1, D1, self.R1, self.P1, size, cv.CV_32FC1)
@@ -26,6 +46,7 @@ class StereoGen:
 
     def extrinsicL(self):
         return self.undist_l.getPinholeCamExtrinsic(self.idx_l)
+    
 
     def genRectStereo(self, img_l, img_r):
         s_img_l, s_img_r = self.genStereo(img_l, img_r)
@@ -39,17 +60,20 @@ class StereoGen:
         if len(img_r.shape) > 2 and img_r.shape[2] == 3:
             img_r = cv.cvtColor(img_r, cv.COLOR_BGR2GRAY)
         img_l, img_r = self.genRectStereo(img_l, img_r)
-        stereo = cv.StereoSGBM.create(minDisparity=0, numDisparities=max_disp, 
-            blockSize=block_size, P1=8 * 3 * block_size ** 2, P2=32 * 3 * block_size ** 2, 
-            disp12MaxDiff=2, uniquenessRatio=10, speckleWindowSize=100, speckleRange=2)
-        disparity = stereo.compute(img_l, img_r)
+        if self.enable_hitnet:
+            disparity = self.hitnet(img_l, img_r)
+        else:
+            stereo = cv.StereoSGBM.create(minDisparity=0, numDisparities=max_disp, 
+                blockSize=block_size, P1=8 * 3 * block_size ** 2, P2=32 * 3 * block_size ** 2, 
+                disp12MaxDiff=2, uniquenessRatio=10, speckleWindowSize=100, speckleRange=2)
+            disparity = stereo.compute(img_l, img_r)
         return disparity
-
-    def genPointCloud(self, img_l, img_r, min_z=0.5, max_z=3, img_raw=None):
+        
+    def genPointCloud(self, img_l, img_r, min_z=0.3, max_z=10, img_raw=None):
         disparity = self.genDisparity(img_l, img_r)
-        disparity_f = disparity.astype(np.float32) / 16.0
-        # _, disparity_f = cv.threshold(disparity_f, 0, 10000, cv.THRESH_TOZERO)
-        points = cv.reprojectImageTo3D(disparity_f, self.Q)
+        if not self.enable_hitnet:
+            disparity = disparity.astype(np.float32) / 16.0
+        points = cv.reprojectImageTo3D(disparity, self.Q)
         #Reshape point3d to array of points
         points = points.reshape(-1, 3)
         #Filter points by min and max z

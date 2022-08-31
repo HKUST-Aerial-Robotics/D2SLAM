@@ -7,6 +7,7 @@ import rospy
 from sensor_msgs.msg import Image, CompressedImage
 from sensor_msgs.msg import PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
+import time
 
 bridge = CvBridge()
 FIELDS = [PointField('x', 0, PointField.FLOAT32, 1),
@@ -18,11 +19,19 @@ FIELDS = [PointField('x', 0, PointField.FLOAT32, 1),
 
 class DepthGenerateNode:
     def __init__(self, fisheye_configs, stereo_paths, photometric_path, fov=190, width=600, height=300):
-        self.gens = loadConfig(fisheye_configs, stereo_paths, fov=fov, width=width, height=height)
+        self.gens = loadConfig(fisheye_configs, stereo_paths, fov=fov, width=width, height=height, hitnet=True)
         self.photometric = cv.imread(photometric_path, cv.IMREAD_GRAYSCALE)/255.0
         self.pcl_pub = rospy.Publisher("/depth_estimation/point_cloud", PointCloud2, queue_size=1)
+        self.max_z = 100
+        self.min_z = 0.3
+        self.step = 5 #Generate cloud per 3 frames
+        self.count = 0
 
     def callback(self, img_msg):
+        if self.count % self.step != 0:
+            self.count += 1
+            return
+        s0 = time.time()
         if img_msg._type == "sensor_msgs/Image":
             img = bridge.imgmsg_to_cv2(img_msg, desired_encoding='passthrough')
         else:
@@ -41,19 +50,29 @@ class DepthGenerateNode:
             else:
                 photometric_calibed.append(img)
         pcl, texture = None, None
+        s = time.time()
         for gen in self.gens[1:]:
-            _pcl, _texture = test_depth_gen(gen, photometric_calibed, imgs, detailed=args.verbose)
+            if args.verbose:
+                _pcl, _texture = test_depth_gen(gen, photometric_calibed, imgs, detailed=args.verbose)
+            else:
+                _pcl, _texture = gen.genPointCloud(photometric_calibed[gen.cam_idx_a], 
+                        photometric_calibed[gen.cam_idx_b], img_raw=imgs[gen.cam_idx_a], 
+                        min_z=self.min_z, max_z=self.max_z)
             if pcl is None:
                 pcl = _pcl
                 texture = _texture
             else:
                 pcl = np.concatenate((pcl, _pcl), axis=0)
                 texture = np.concatenate((texture, _texture), axis=0)
+        tcloud = (time.time() - s)
         header = img_msg.header
         header.frame_id = "world"
         colored_pcl = np.c_[pcl, texture]
         msg = pc2.create_cloud(header, FIELDS, colored_pcl)
         self.pcl_pub.publish(msg)
+        self.count += 1
+        print(f"Total time {(time.time() - s0)*1000:.1f}ms cloud gen time: {tcloud*1000:.1f}ms")
+
 
 if __name__ == "__main__":
     rospy.init_node('depth_generate_node')

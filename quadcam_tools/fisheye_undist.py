@@ -51,12 +51,12 @@ class FisheyeUndist:
     def undistAll(self, img):
         imgs = []
         for map in self.maps:
-            _img = cv.remap(img, map[0], map[1], cv.INTER_LINEAR)
+            _img = cv.remap(img, map[0], map[1], cv.INTER_AREA)
             imgs.append(_img)
         return imgs
     
     def undist(self, img, idx):
-        return cv.remap(img, self.maps[idx][0], self.maps[idx][1], cv.INTER_LINEAR)
+        return cv.remap(img, self.maps[idx][0], self.maps[idx][1], cv.INTER_AREA)
 
 if __name__ == "__main__":
     # Test code

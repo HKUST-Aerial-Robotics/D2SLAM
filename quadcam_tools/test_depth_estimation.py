@@ -41,7 +41,7 @@ def initStereoFromConfig(config_file, stereo_gen):
         t = T[0:3,3]
         stereo_gen.initRectify(K0, D0, K1, D1, (size[0], size[1]), R, t)
 
-def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300):
+def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300, hitnet=False):
     print("Loading config from", config_file)
     import yaml
     undists = []
@@ -63,10 +63,10 @@ def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300):
             T = np.array(config[v]['T_cam_imu'])
             undist = FisheyeUndist(K, D, xi, fov=fov, width=width, height=height, extrinsic=T)
             undists.append(undist)
-    gens = [StereoGen(undists[1], undists[0], cam_idx_a=1,  cam_idx_b=0),
-            StereoGen(undists[2], undists[1], cam_idx_a=2,  cam_idx_b=1),
-            StereoGen(undists[3], undists[2], cam_idx_a=3,  cam_idx_b=2),
-            StereoGen(undists[0], undists[3], cam_idx_a=0,  cam_idx_b=3)]
+    gens = [StereoGen(undists[1], undists[0], cam_idx_a=1,  cam_idx_b=0, enable_hitnet=hitnet),
+            StereoGen(undists[2], undists[1], cam_idx_a=2,  cam_idx_b=1, enable_hitnet=hitnet),
+            StereoGen(undists[3], undists[2], cam_idx_a=3,  cam_idx_b=2, enable_hitnet=hitnet),
+            StereoGen(undists[0], undists[3], cam_idx_a=0,  cam_idx_b=3, enable_hitnet=hitnet)]
     for i in range(len(config_stereos)):
         initStereoFromConfig(config_stereos[i], gens[i])
     return gens
@@ -103,26 +103,22 @@ def test_depth_gen(gen: StereoGen, imgs_gray, imgs_raw, detailed=False):
     idx_vcam_a = gen.idx_l
     idx_vcam_b = gen.idx_r
     if detailed:
-        img_l, img_r = gen.genRectStereo(imgs_gray[cam_idx_a], imgs_gray[cam_idx_b])
-        cv.imwrite("/home/xuhao/output/rect_l.png", img_l)
-        cv.imwrite("/home/xuhao/output/rect_r.png", img_r)
-        img_show = cv.vconcat([img_l, img_r])
-        img_show = drawVerticalLines(img_show)
-        cv.imshow(f"stereoRect {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b}", img_show)
-
-        img_show = cv.hconcat([img_l, img_r])
-        img_show = drawHorizontalLines(img_show)
-        cv.imshow(f"stereoRect {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b} hor", img_show)
-
         disparity = gen.genDisparity(imgs_gray[cam_idx_a], imgs_gray[cam_idx_b])
         texture = gen.rectifyL(imgs_raw[cam_idx_a])
         #Visualize disparity
         disparity = cv.normalize(disparity, None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
         disparity = cv.applyColorMap(disparity, cv.COLORMAP_JET)
-        cv.hconcat([texture, disparity], disparity)
-        cv.imshow(f"disparity {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b}", disparity)
-        cv.imwrite("/home/xuhao/output/disp_cv.png", disparity)
-        cv.waitKey(1)
+
+        img_l, img_r = gen.genRectStereo(imgs_gray[cam_idx_a], imgs_gray[cam_idx_b])
+        img_l = cv.cvtColor(img_l, cv.COLOR_GRAY2BGR)
+        img_r = cv.cvtColor(img_r, cv.COLOR_GRAY2BGR)
+        cv.imwrite("/home/xuhao/output/rect_l.png", img_l)
+        cv.imwrite("/home/xuhao/output/rect_r.png", img_r)
+        img_show = cv.hconcat([img_l, img_r, disparity])
+        img_show = drawHorizontalLines(img_show)
+        cv.imshow(f"stereoRect {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b} hor", img_show)
+        cv.imshow(f"disp {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b}", disparity)
+        cv.waitKey(10)
     pcl, texture = gen.genPointCloud(imgs_gray[cam_idx_a], imgs_gray[cam_idx_b], img_raw=imgs_raw[cam_idx_a])
     return pcl, texture
 
@@ -155,10 +151,14 @@ if __name__ == "__main__":
     parser.add_argument("-v","--verbose", action='store_true', help="show image")
     parser.add_argument("-p","--photometric", type=str, help="photometric calibration image")
     args = parser.parse_args()
+    stereo_paths = ["/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_1_0.yaml",
+                "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_2_1.yaml",
+                "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_3_2.yaml",
+                "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_0_3.yaml"]
     if args.config == "":
         stereo_gens = genDefaultConfig()
     else:
-        stereo_gens = loadConfig(args.config, fov=args.fov)
+        stereo_gens = loadConfig(args.config, stereo_paths, fov=args.fov)
     #Read photometric
     if args.photometric != "":
         photometric = cv.imread(args.photometric, cv.IMREAD_GRAYSCALE)/255.0
@@ -191,7 +191,7 @@ if __name__ == "__main__":
                     cv.imshow("Photometic calibed", img)
                     cv.waitKey(1)
                 for gen in stereo_gens[2:3]:
-                    test_depth_gen(gen, photometric_calibed, imgs)
+                    test_depth_gen(gen, photometric_calibed, imgs, detailed=True)
                 pbar.update(1)
                 c = cv.waitKey(0)
                 if c == ord('q'):
