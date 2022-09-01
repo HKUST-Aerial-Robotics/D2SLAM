@@ -25,15 +25,19 @@ int main(int argc, char* argv[]) {
         ("focal,f", po::value<double>()->default_value(384), "image focal length")
         ("width,w", po::value<int>()->default_value(640), "image width")
         ("height,h", po::value<int>()->default_value(480), "image height")
+        ("tensorrt", po::value<bool>()->default_value(1), "use tensorrt")
         ("num-test,t", po::value<int>()->default_value(100), "num of tests");
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
+    // params->enable_perf_output = true;
 
     int width = vm["width"].as<int>();
     int height = vm["height"].as<int>();
     int num_test = vm["num-test"].as<int>();
     double focal = vm["focal"].as<double>();
+    bool use_tensorrt = vm["tensorrt"].as<bool>();
+    printf("width: %d, height: %d, num_test: %d, focal: %f, use_tensorrt: %d\n", width, height, num_test, focal, use_tensorrt);
 
     cv::Mat img0 = cv::imread(vm["limage"].as<std::string>());
     cv::Mat img1;
@@ -55,13 +59,13 @@ int main(int argc, char* argv[]) {
     cv::Mat show;
 
     SuperGlueOnnx sg_onnx(vm["superglue"].as<std::string>());
-    MobileNetVLADONNX netvlad_onnx(vm["netvlad"].as<std::string>(), 640, 480, true);
-    SuperPointONNX sp_onnx(vm["superpoint"].as<std::string>(), "", "", 640, 480, true);
+    MobileNetVLADONNX netvlad_onnx(vm["netvlad"].as<std::string>(), 640, 480, use_tensorrt);
+    SuperPointONNX sp_onnx(vm["superpoint"].as<std::string>(), "", "", 640, 480, 0.015, 200, use_tensorrt);
     std::cout << "Finish loading models" << std::endl;
 
     sp_onnx.inference(img_gray0, kps0, local_desc0, scores0);
     sp_onnx.inference(img_gray1, kps1, local_desc1, scores1);
-    std::cout << "Finish inference superpoint" << std::endl;
+    std::cout << "Finish inference superpoint features" << kps0.size() << ":" << kps1.size() << std::endl;
     auto global_desc0 = netvlad_onnx.inference(img_gray0);
     auto global_desc1 = netvlad_onnx.inference(img_gray1);
     for (size_t i = 0; i < kps0.size(); i ++) {

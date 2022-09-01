@@ -7,8 +7,8 @@
     <arg name="is_4dof"     default="true"/>
     <arg name="self_id"     default="1"/>
     <arg name="vins"     default="false"/>
-    <arg name="superpoint_model_path"     default="$(find d2frontend)/models/superpoint_v1_rtx3080_480x640_fp16.trt"/>
-    <arg name="netvlad_model_path"     default="$(find d2frontend)/models/mobilenetvlad_480x640_rtx3080_fp16.trt" />
+    <arg name="superpoint_model_path"     default="$(find d2frontend)/../models/superpoint_v1_rtx3080_480x640_fp16.trt"/>
+    <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/mobilenetvlad_480x640_rtx3080_fp16.trt" />
     <!-- <arg name="camera_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/left.yaml" /> -->
     <!-- <arg name="vins_config_path" default="/home/xuhao/data/ral2021/raw/drone3-RI/Configs/SwarmConfig1/realsense/realsense.yaml" /> -->
     <arg name="camera_config_path" default="/home/xuhao/data/realsense/left.yaml" />

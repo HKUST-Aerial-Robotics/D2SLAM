@@ -12,13 +12,13 @@ protected:
     std::array<int64_t, 4> input_shape_;
 public:
     const int descriptor_size = 4096;
-    MobileNetVLADONNX(std::string engine_path, int _width, int _height, bool _enable_perf = false) : 
-            ONNXInferenceGeneric(engine_path, "image:0", "descriptor:0", _width, _height),
+    MobileNetVLADONNX(std::string engine_path, int _width, int _height, bool use_tensorrt = true, bool use_fp16 = true, bool use_int8 = false): 
+            ONNXInferenceGeneric(engine_path, "image:0", "descriptor:0", _width, _height, use_tensorrt, use_fp16, use_int8),
             output_shape_{1, NETVLAD_DESC_SIZE},
             input_shape_{1, _height, _width, 1},
             results_{0}
     {
-        std::cout << "Trying to init MobileNetVLADONNX@" << engine_path << std::endl;
+        std::cout << "Trying to init MobileNetVLADONNX@" << engine_path << " tensorrt " << use_tensorrt << " fp16 " << use_fp16 << " int8 " << use_int8 << std::endl;
         input_image = new float[width*height];
         auto memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
         input_tensor_ = Ort::Value::CreateTensor<float>(memory_info,

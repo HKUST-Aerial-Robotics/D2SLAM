@@ -13,8 +13,8 @@ SuperPointONNX::SuperPointONNX(std::string engine_path,
     std::string _pca_mean,
     int _width, int _height, 
     float _thres, int _max_num, 
-    bool _enable_perf):
-        ONNXInferenceGeneric(engine_path, "image", "semi", _width, _height),
+    bool use_tensorrt, bool use_fp16, bool use_int8):
+        ONNXInferenceGeneric(engine_path, "image", "semi", _width, _height, use_tensorrt, use_fp16, use_int8),
         output_shape_semi_{1, _height, _width},
         output_shape_desc_{1, SP_DESC_RAW_LEN, _height/8, _width/8},
         input_shape_{1, 1, _height, _width},
