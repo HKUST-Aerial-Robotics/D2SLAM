@@ -14,6 +14,7 @@
 #include "opencv2/imgproc.hpp"
 #include "ros/ros.h"
 #include "sensor_msgs/Image.h"
+#include <opencv2/cudaarithm.hpp>
 
 namespace D2Common {
 
@@ -58,6 +59,8 @@ class FisheyeUndist {
     int sideImgHeight = 0;
 
     std::vector<Eigen::Quaterniond> t;
+    std::vector<cv::Mat> photometics;
+    std::vector<cv::cuda::GpuMat> photometics_gpu;
 
     FisheyeUndist(const std::string &camera_config_file, int _id, double _fov,
                   bool _enable_cuda = true, int imgWidth = 600)
@@ -88,7 +91,7 @@ class FisheyeUndist {
     FisheyeUndist(camodocal::CameraPtr cam, int _id, double _fov,
                   bool _enable_cuda = true,
                   UndistortType mode = UndistortPinhole5, int imgWidth = 600,
-                  int imgHeight = 200)
+                  int imgHeight = 200, cv::Mat photomertic=cv::Mat())
         : imgWidth(imgWidth),
           fov(_fov),
           cameraRotation(0, 0, 0),
@@ -118,28 +121,30 @@ class FisheyeUndist {
                 undistMapsGPUY.push_back(cv::cuda::GpuMat(maps[1]));
             }
         }
+        if (!photomertic.empty()) {
+            auto _photometics = undist_all(photomertic, true);
+            auto _photometics_gpu = undist_all_cuda(photomertic, true);
+            photometics = _photometics;
+            photometics_gpu = _photometics_gpu;
+        }
     }
 
-    cv::cuda::GpuMat undist_id_cuda(cv::Mat image, int _id) {
+    cv::cuda::GpuMat undist_id_cuda(cv::Mat image, int _id, bool calib_photometric=false) {
 #ifndef WITHOUT_CUDA
-        // 0 TOP or DOWN
-        // 1 left 2 front 3 right 4 back
-
         cv::cuda::GpuMat img_cuda(image);
-        cv::cuda::GpuMat output;
-        cv::cuda::remap(img_cuda, output, undistMapsGPUX[_id],
-                        undistMapsGPUY[_id], REMAP_FUNC);
-        return output;
+        return undist_id_cuda(img_cuda, _id, calib_photometric);
 #endif
     }
     
-    cv::cuda::GpuMat undist_id_cuda(cv::cuda::GpuMat img_cuda, int _id) {
+    cv::cuda::GpuMat undist_id_cuda(cv::cuda::GpuMat img_cuda, int _id, bool calib_photometric=false) {
 #ifndef WITHOUT_CUDA
-        // 0 TOP or DOWN
-        // 1 left 2 front 3 right 4 back
         cv::cuda::GpuMat output;
         cv::cuda::remap(img_cuda, output, undistMapsGPUX[_id],
                         undistMapsGPUY[_id], REMAP_FUNC);
+        if (photometics_gpu.size() > 0 && calib_photometric) {
+            output.convertTo(output, CV_32FC1);
+            cv::cuda::multiply(output, photometics_gpu[_id], output);
+        }
         return output;
 #endif
     }
@@ -169,6 +174,9 @@ class FisheyeUndist {
                 TicToc remap;
                 cv::cuda::remap(img_cuda, output, undistMapsGPUX[i],
                                 undistMapsGPUY[i], REMAP_FUNC);
+                if (photometics_gpu.size() > 0) {
+                    cv::cuda::multiply(output, photometics_gpu[i], output);
+                }
                 std::cout << "Remap cost " << remap.toc() << std::endl;
                 TicToc down;
                 output.download(tmp);
@@ -200,6 +208,9 @@ class FisheyeUndist {
             if (!has_mask || (has_mask && mask[i])) {
                 cv::cuda::remap(img_cuda, output, undistMapsGPUX[i],
                                 undistMapsGPUY[i], REMAP_FUNC);
+                if (photometics_gpu.size() > 0) {
+                    cv::cuda::multiply(output, photometics_gpu[i], output);
+                }
             }
             ret.push_back(output);
         }
@@ -221,17 +232,26 @@ class FisheyeUndist {
                 if (!disable[i]) {
                     cv::remap(image, ret[i], undistMaps[i].first,
                               undistMaps[i].second, REMAP_FUNC);
+                    if (photometics.size() > 0) {
+                        cv::multiply(ret[i], photometics[i], ret[i]);
+                    }
                 }
             }
             return ret;
         } else {
             cv::Mat gray;
-            cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+            if (image.channels() == 3)
+                cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+            else
+                gray = image;
 #pragma omp parallel for num_threads(5)
             for (unsigned int i = 0; i < undistMaps.size(); i++) {
                 if (!disable[i]) {
                     cv::remap(gray, ret[i], undistMaps[i].first,
                               undistMaps[i].second, REMAP_FUNC);
+                    if (photometics.size() > 0) {
+                        cv::multiply(ret[i], photometics[i], ret[i]);
+                    }
                 }
             }
             return ret;

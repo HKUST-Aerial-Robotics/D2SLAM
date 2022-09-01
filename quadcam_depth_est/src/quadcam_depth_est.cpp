@@ -46,9 +46,9 @@ void QuadCamDepthEst::loadCNN(YAML::Node & config) {
     height = config["height"].as<int>();
     if (enable_hitnet) {
         std::string hitnet_model_path;
-        bool hitnet_use_tensorrt = config["hitnet_use_tensorrt"].as<bool>();;
-        bool hitnet_int8 = config["hitnet_int8"].as<bool>();;
-        bool hitnet_fp16 = config["hitnet_fp16"].as<bool>();;
+        bool hitnet_use_tensorrt = config["hitnet_use_tensorrt"].as<bool>();
+        bool hitnet_int8 = config["hitnet_int8"].as<bool>();
+        bool hitnet_fp16 = config["hitnet_fp16"].as<bool>();
         nh.param<std::string>("hitnet_model_path", hitnet_model_path, "");
         hitnet = new HitnetONNX(hitnet_model_path, width, height,
             hitnet_use_tensorrt, hitnet_fp16, hitnet_int8);
@@ -64,12 +64,17 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
         image_count++;
         return;
     }
+    TicToc t;
     cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(left, sensor_msgs::image_encodings::BGR8);
     cv::Mat img = cv_ptr->image;
     std::vector<cv::Mat> imgs;
+    std::vector<cv::Mat> imgs_gray;
     const int num_imgs = 4;
     for (int i = 0; i < 4; i++) {
         imgs.emplace_back(img(cv::Rect(i * img.cols /num_imgs, 0, img.cols /num_imgs, img.rows)));
+        cv::Mat img_gray;
+        cv::cvtColor(imgs[i], img_gray, cv::COLOR_BGR2GRAY);
+        imgs_gray.emplace_back(img_gray);
     }
     pcl.header = left->header;
     pcl.header.frame_id = "imu";
@@ -77,7 +82,7 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
     pcl.points.clear();
     int size = 0;
     for (auto stereo: virtual_stereos) {
-        auto ret = stereo->estimatePointsViaRaw(imgs[stereo->cam_idx_a], imgs[stereo->cam_idx_b], show);
+        auto ret = stereo->estimatePointsViaRaw(imgs_gray[stereo->cam_idx_a], imgs_gray[stereo->cam_idx_b], imgs[stereo->cam_idx_a], show);
         add_pts_point_cloud(ret.first, ret.second, stereo->extrinsic, pcl, pixel_step, min_z, max_z);
     }
     if (show) {
@@ -86,10 +91,18 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
     }
     pub_pcl.publish(pcl);
     image_count++;
+    printf("[QuadCamDepthEst] count %d process time %.1fms", t.toc());
 }
 
 
 void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPath) {
+    std::string mask_file = configPath + "/" + config["lightness_mask"].as<std::string>();
+    cv::Mat lightness_mask = cv::imread(mask_file, cv::IMREAD_GRAYSCALE);
+    lightness_mask.convertTo(lightness_mask, CV_32FC1, 1.0/255.0);
+    cv::Mat photometric;
+    //inverse lightness mask to get photometric mask
+    cv::divide(0.7, lightness_mask, photometric);
+
     std::string calib_file_path = config["calib_file_path"].as<std::string>();
     double fov = config["fov"].as<double>();
     printf("[QuadCamDepthEst] Load camera config from %s\n", calib_file_path.c_str());
@@ -101,9 +114,10 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
         const YAML::Node& value = kv.second;
         auto ret = D2FrontEnd::readCameraConfig(camera_name, value);
         undistortors.push_back(new D2Common::FisheyeUndist(ret.first, 0, fov, true,
-            D2Common::FisheyeUndist::UndistortPinhole2, width, height));
+            D2Common::FisheyeUndist::UndistortPinhole2, width, height, photometric));
         raw_cam_extrinsics.emplace_back(ret.second);
     }
+
 
     for (const auto & kv: config["stereos"]) {
         auto node = kv.second;

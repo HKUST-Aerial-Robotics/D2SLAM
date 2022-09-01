@@ -68,7 +68,7 @@ class DepthGenerateNode:
                     texture = np.concatenate((texture, _texture), axis=0)
         tcloud = (time.time() - s)
         header = img_msg.header
-        header.frame_id = "world"
+        header.frame_id = "imu"
         if self.enable_texture:
             colored_pcl = np.c_[pcl, texture]
             msg = pc2.create_cloud(header, FIELDS, colored_pcl)

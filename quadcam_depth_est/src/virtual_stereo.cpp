@@ -27,7 +27,7 @@ VirtualStereo::VirtualStereo(int _cam_idx_a, int _cam_idx_b,
     cv::Mat K = (cv::Mat_<double>(3,3) << cam_param.fx(), 0, cam_param.cx(), 0, cam_param.fy(), cam_param.cy(), 0, 0, 1);
     cv::eigen2cv(baseline.R(), R);
     cv::eigen2cv(baseline.pos(), T);
-    cv::stereoRectify(K, cv::Mat(), K, cv::Mat(), img_size, R, T, R1, R2, T1, T2, Q);
+    cv::stereoRectify(K, cv::Mat(), K, cv::Mat(), img_size, R, T, R1, R2, T1, T2, Q, 1024, -1, cv::Size(), &roi_l, &roi_r);
     // std::cout << "R1" << std::endl << R1 << std::endl;
     // std::cout << "R2" << std::endl << R2 << std::endl;
     //Initial maps
@@ -39,21 +39,21 @@ VirtualStereo::VirtualStereo(int _cam_idx_a, int _cam_idx_b,
     cuda_rmap_2.upload(rmap_2);
 }
 
-std::pair<cv::Mat, cv::Mat> VirtualStereo::estimatePointsViaRaw(const cv::Mat & left, const cv::Mat & right, bool show) {
-    auto ret = estimateDisparityViaRaw(left, right, show);
+std::pair<cv::Mat, cv::Mat> VirtualStereo::estimatePointsViaRaw(const cv::Mat & left, const cv::Mat & right, const cv::Mat & left_color, bool show) {
+    auto ret = estimateDisparityViaRaw(left, right, left_color, show);
     cv::Mat points;
     cv::reprojectImageTo3D(ret.first, points, Q, 3);
     return std::make_pair(points, ret.second);
 }
 
 
-std::pair<cv::Mat, cv::Mat>VirtualStereo::estimateDisparityViaRaw(const cv::Mat & left, const cv::Mat & right, bool show) {
-    auto limg = undist_left->undist_id_cuda(left, undist_id_l);
-    auto rimg = undist_right->undist_id_cuda(right, undist_id_r);
-    if (!enable_texture) {
-        cv::cuda::cvtColor(limg, limg, cv::COLOR_BGR2GRAY);
+std::pair<cv::Mat, cv::Mat>VirtualStereo::estimateDisparityViaRaw(const cv::Mat & left, const cv::Mat & right, const cv::Mat & left_color, bool show) {
+    auto limg = undist_left->undist_id_cuda(left, undist_id_l, true);
+    auto rimg = undist_right->undist_id_cuda(right, undist_id_r, true);
+    cv::cuda::GpuMat lcolor_gpu;
+    if (enable_texture) {
+        lcolor_gpu = undist_left->undist_id_cuda(left_color, undist_id_l, false);
     }
-    cv::cuda::cvtColor(rimg, rimg, cv::COLOR_BGR2GRAY);
     cv::cuda::remap(limg, limg, cuda_lmap_1, cuda_lmap_2, cv::INTER_LINEAR);
     cv::cuda::remap(rimg, rimg, cuda_rmap_1, cuda_rmap_2, cv::INTER_LINEAR);
     cv::Mat limg_rect(limg), rimg_rect(rimg);
@@ -63,16 +63,24 @@ std::pair<cv::Mat, cv::Mat>VirtualStereo::estimateDisparityViaRaw(const cv::Mat 
         cv::Mat disp_show; //64 is max
         disp.convertTo(disp_show, CV_8U, 255.0/32.0);
         cv::applyColorMap(disp_show, disp_show, cv::COLORMAP_JET);
-        if (!enable_texture) {
-            cv::cvtColor(limg_rect, limg_rect, cv::COLOR_GRAY2BGR);
-        }
-        cv::hconcat(limg_rect, disp_show, show);
+        cv::rectangle(disp_show, roi_l, cv::Scalar(0, 0, 255), 2);
+        limg_rect.convertTo(limg_rect, CV_8U);
+        rimg_rect.convertTo(rimg_rect, CV_8U);
+        cv::rectangle(limg_rect, roi_l, cv::Scalar(0, 0, 255), 2);
+        cv::rectangle(rimg_rect, roi_r, cv::Scalar(0, 0, 255), 2);
+        cv::cvtColor(limg_rect, limg_rect, cv::COLOR_GRAY2BGR);
+        cv::cvtColor(rimg_rect, rimg_rect, cv::COLOR_GRAY2BGR);
+        cv::hconcat(limg_rect, rimg_rect, show);
+        cv::hconcat(show, disp_show, show);
         char buf[64];
         sprintf(buf, "VirtualStereo %d<->%d", cam_idx_a, cam_idx_b);
         cv::imshow(buf, show);
     }
     if (enable_texture) {
-        return std::make_pair(disp, limg_rect);
+        // cv::cuda::remap(lcolor_gpu, lcolor_gpu, cuda_lmap_1, cuda_lmap_2, cv::INTER_LINEAR);
+        lcolor_gpu.convertTo(lcolor_gpu, CV_8UC3);
+        cv::Mat lcolor_rect(lcolor_gpu);
+        return std::make_pair(disp(roi_l), lcolor_rect(roi_l));
     } else {
         return std::make_pair(disp, cv::Mat());
     }

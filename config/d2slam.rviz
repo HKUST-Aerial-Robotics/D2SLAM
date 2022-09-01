@@ -40,14 +40,12 @@ Panels:
         - /Global Options1
         - /VIOGroup1
         - /VIOGroup1/PointCloud1
-        - /VIOGroup1/MarginedCloud1
         - /VIOGroup1/MarginedCloud1/Autocompute Value Bounds1
         - /Odometry1/Shape1
         - /VINS-Odom1/Shape1
         - /GT1
         - /Remote1
-        - /PointCloud1
-        - /PointCloud1/Status1
+        - /DenseCloud1
       Splitter Ratio: 0.5
     Tree Height: 1072
 Preferences:
@@ -560,7 +558,7 @@ Visualization Manager:
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
-      Name: PointCloud
+      Name: DenseCloud
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
@@ -598,7 +596,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 16.57335662841797
+      Distance: 7.458303451538086
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -606,17 +604,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 2.819291353225708
-        Y: -4.351264476776123
+        X: -1.7683932781219482
+        Y: -0.19581890106201172
         Z: 2.5510787963867188e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8897967338562012
+      Pitch: 0.7147970199584961
       Target Frame: world
-      Yaw: 3.4588468074798584
+      Yaw: 3.0338423252105713
     Saved:
       - Class: rviz/XYOrbit
         Distance: 9.527398109436035
@@ -655,4 +653,4 @@ Window Geometry:
     collapsed: false
   Width: 2464
   X: 2627
-  Y: 339
+  Y: 191

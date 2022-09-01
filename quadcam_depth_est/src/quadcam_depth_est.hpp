@@ -29,7 +29,6 @@ class QuadCamDepthEst {
     image_transport::Subscriber image_sub;
     ros::Publisher pub_pcl;
     sensor_msgs::PointCloud pcl;
-
     void loadCNN(YAML::Node & config);
     void loadCameraConfig(YAML::Node & config, std::string configPath);
     void imageCallback(const sensor_msgs::ImageConstPtr & left);

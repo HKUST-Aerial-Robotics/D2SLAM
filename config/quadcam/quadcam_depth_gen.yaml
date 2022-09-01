@@ -6,11 +6,12 @@ enable_texture: true
 width: 320
 height: 240
 pixel_step: 1
-image_step: 1
-min_z: 0.1
-max_z: 5
+image_step: 2
+min_z: 0.3
+max_z: 3
 calib_file_path: "quad_cam_calib-camchain-imucam.yaml"
 fov: 180
+lightness_mask: "mask.png"
 stereos:
   # stereo1_0:
   #   cam_idx_l: 1

@@ -42,6 +42,8 @@ protected:
     cv::Size img_size;
     VirtualStereoConfig config;
     HitnetONNX* hitnet = nullptr;
+    cv::Rect roi_l;
+    cv::Rect roi_r;
     //Rectify the images from pinhole images.
 public:
     bool enable_texture = true;
@@ -51,8 +53,8 @@ public:
     std::vector<cv::cuda::GpuMat> rectifyImage(const cv::Mat & left, const cv::Mat & right);
     cv::Mat estimateDisparityOCV(const cv::Mat & left, const cv::Mat & right);
     cv::Mat estimateDisparity(const cv::Mat & left, const cv::Mat & right);
-    std::pair<cv::Mat, cv::Mat> estimateDisparityViaRaw(const cv::Mat & left, const cv::Mat & right, bool show = false);
-    std::pair<cv::Mat, cv::Mat> estimatePointsViaRaw(const cv::Mat & left, const cv::Mat & right, bool show = false);
+    std::pair<cv::Mat, cv::Mat> estimateDisparityViaRaw(const cv::Mat & left, const cv::Mat & right, const cv::Mat & left_color, bool show = false);
+    std::pair<cv::Mat, cv::Mat> estimatePointsViaRaw(const cv::Mat & left, const cv::Mat & right, const cv::Mat & left_color, bool show = false);
     VirtualStereo(int _idx_a, int _idx_b, 
             const Swarm::Pose & baseline, 
             D2Common::FisheyeUndist* _undist_left,
