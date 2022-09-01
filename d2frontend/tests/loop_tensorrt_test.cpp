@@ -1,6 +1,4 @@
-#include "d2frontend/CNN/superpoint_tensorrt.h"
 #include "d2frontend/d2frontend_params.h"
-#include "d2frontend/CNN/mobilenetvlad_tensorrt.h"
 #include "d2frontend/CNN/superpoint_onnx.h"
 #include "d2frontend/CNN/superglue_onnx.h"
 #include "d2frontend/CNN/mobilenetvlad_onnx.h"
@@ -55,7 +53,7 @@ int main(int argc, char* argv[]) {
     cv::cvtColor(img_gray0, img_gray0, cv::COLOR_BGR2GRAY);
     cv::cvtColor(img_gray1, img_gray1, cv::COLOR_BGR2GRAY);
     cv::Mat show;
-#ifdef USE_ONNX
+
     SuperGlueOnnx sg_onnx(vm["superglue"].as<std::string>());
     MobileNetVLADONNX netvlad_onnx(vm["netvlad"].as<std::string>(), 640, 480, true);
     SuperPointONNX sp_onnx(vm["superpoint"].as<std::string>(), "", "", 640, 480, true);
@@ -121,27 +119,4 @@ int main(int argc, char* argv[]) {
     // }
     cv::imshow("Matches", show);
     cv::waitKey(-1);
-#else
-#ifdef USE_TENSORRT
-    SuperPointTensorRT sp_trt(engine_path, "", "",  400, 208,0.012, true);
-    MobileNetVLADTensorRT netvlad_trt(engine_path2, 400, 208, true);
-    std::cout << "Load 2 Model success" << std::endl << " Loading image " << argv[3] << std::endl;
-
-    D2FrontEnd::TicToc tic;
-    for (unsigned int i = 0; i < 1000; i ++) {
-        sp_trt.inference(img_gray, kps, local_desc);
-    }
-    double dt = tic.toc();
-    
-    D2FrontEnd::TicToc tic2;
-    for (unsigned int i = 0; i < 1000; i ++) {
-        netvlad_trt.inference(img_gray);
-    }
-    std::cout << "\nSuperpoint 1000 takes" << dt << std::endl;
-    std::cout << "\nNetVLAD 1000 takes" << tic2.toc() << std::endl;
-    for(auto pt : kps) {
-        cv::circle(img, pt, 1, cv::Scalar(255, 0, 0), -1);
-    }
-#endif
-#endif
 }

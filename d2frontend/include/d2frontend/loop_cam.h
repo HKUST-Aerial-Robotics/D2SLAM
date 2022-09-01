@@ -5,8 +5,6 @@
 #include <functional>
 #include "d2frontend_params.h"
 #include "CNN/onnx_generic.h"
-#include "CNN/superpoint_tensorrt.h"
-#include "CNN/mobilenetvlad_tensorrt.h"
 #include "CNN/mobilenetvlad_onnx.h"
 #include "CNN/superpoint_onnx.h"
 #include <message_filters/subscriber.h>

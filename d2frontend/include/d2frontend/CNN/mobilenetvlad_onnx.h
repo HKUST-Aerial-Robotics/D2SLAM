@@ -38,7 +38,7 @@ public:
         if (_input.rows != height || _input.cols != width) {
             cv::resize(_input, _input, cv::Size(width, height));
         } 
-        _input.convertTo(_input, CV_32F);
+        _input.convertTo(_input, CV_32F); // DO NOT SCALING HERE
         doInference(_input.data, 1);
         if (params->enable_perf_output) {
             printf("MobileNetVLADONNX::inference() took %f ms\n", tic.toc());
