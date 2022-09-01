@@ -91,7 +91,7 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
     }
     pub_pcl.publish(pcl);
     image_count++;
-    printf("[QuadCamDepthEst] count %d process time %.1fms", t.toc());
+    printf("[QuadCamDepthEst] count %d process time %.1fms\n", image_count, t.toc());
 }
 
 
