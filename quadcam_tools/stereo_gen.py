@@ -20,7 +20,9 @@ class StereoGen:
         if hitnet_model is not None:
             self.enable_hitnet = True
             self.hitnet = hitnet_model
-
+        else:
+            self.enable_hitnet = False
+            
     def initRectify(self, K1, D1, K2, D2, size, R, T):
         self.R1, self.R2, self.P1, self.P2, self.Q, _, _ = cv.stereoRectify(K1, D1, K2, D2, size, R, T)
         self.mapl0, self.mapl1 = cv.initUndistortRectifyMap(K1, D1, self.R1, self.P1, size, cv.CV_32FC1)

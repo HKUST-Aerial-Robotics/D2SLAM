@@ -111,11 +111,14 @@ def drawPointCloud3d(pcl):
     myWindow.showWidget("Cloud Widget", cloud)
     myWindow.spin()
 
+count = 0
+
 def test_depth_gen(gen: StereoGen, imgs_gray, imgs_raw, detailed=False):
     cam_idx_a = gen.cam_idx_a
     cam_idx_b = gen.cam_idx_b
     idx_vcam_a = gen.idx_l
     idx_vcam_b = gen.idx_r
+    global count
     if detailed:
         disparity = gen.genDisparity(imgs_gray[cam_idx_a], imgs_gray[cam_idx_b])
         texture = gen.rectifyL(imgs_raw[cam_idx_a])
@@ -126,8 +129,9 @@ def test_depth_gen(gen: StereoGen, imgs_gray, imgs_raw, detailed=False):
         img_l, img_r = gen.genRectStereo(imgs_gray[cam_idx_a], imgs_gray[cam_idx_b])
         img_l = cv.cvtColor(img_l, cv.COLOR_GRAY2BGR)
         img_r = cv.cvtColor(img_r, cv.COLOR_GRAY2BGR)
-        cv.imwrite("/home/xuhao/output/rect_l.png", img_l)
-        cv.imwrite("/home/xuhao/output/rect_r.png", img_r)
+        cv.imwrite(f"/home/xuhao/output/stereo_calib/left_{count}.png", img_l)
+        cv.imwrite(f"/home/xuhao/output/stereo_calib/right_{count}.png", img_r)
+        count += 1
         img_show = cv.hconcat([img_l, img_r, disparity])
         img_show = drawHorizontalLines(img_show)
         cv.imshow(f"stereoRect {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b} hor", img_show)

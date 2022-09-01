@@ -3,6 +3,7 @@
 #include <yaml-cpp/yaml.h>
 #include <boost/program_options.hpp>
 #include "../src/quadcam_depth_est.hpp"
+#include "../src/hitnet_onnx.hpp"
 
 namespace D2FrontEnd {
 std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(const std::string & camera_name, const YAML::Node & config);
@@ -36,7 +37,8 @@ int main(int argc, char** argv) {
         ("idx1", po::value<int>()->default_value(0), "idx of camera_right")
         ("width,w", po::value<int>()->default_value(600), "width of camera")
         ("height,h", po::value<int>()->default_value(300), "height of camera")
-        ("fov,f", po::value<double>()->default_value(190.0), "fov of camera");
+        ("fov,f", po::value<double>()->default_value(190.0), "fov of camera")
+        ("engine,e", po::value<std::string>()->default_value(""), "engine of onnx");
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
@@ -50,6 +52,7 @@ int main(int argc, char** argv) {
     int idx1 = vm["idx1"].as<int>();
     int width = vm["width"].as<int>();
     int height = vm["height"].as<int>();
+    auto engine_path = vm["engine"].as<std::string>();
 
     cv::Mat img_l = cv::imread(image_path_l, cv::IMREAD_ANYCOLOR);
     cv::Mat img_r = cv::imread(image_path_r, cv::IMREAD_ANYCOLOR);
@@ -97,8 +100,20 @@ int main(int argc, char** argv) {
     double min_val=0, max_val=0;
     cv::normalize(disp_show, disp_show, 0, 255, cv::NORM_MINMAX, CV_8UC1);
     cv::applyColorMap(disp_show, disp_show, cv::COLORMAP_JET);
-    cv::imshow("Disparity", disp_show);
+    cv::imshow("DisparityOCV", disp_show);
 
-
+    if (engine_path != "") {
+        HitnetONNX hitnet_onnx(engine_path, 320, 240);
+        auto disp = hitnet_onnx.inference(rect_l, rect_r);
+        TicToc t;
+        for (int i = 0 ; i < 100; i ++) {
+            disp = hitnet_onnx.inference(rect_l, rect_r);
+        }
+        printf("Inference time: %.1fms\n", t.toc()/100);
+        double min_val=0, max_val=0;
+        cv::normalize(disp, disp, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+        cv::applyColorMap(disp, disp, cv::COLORMAP_JET);
+        cv::imshow("DisparityONNX", disp);
+    }
     cv::waitKey(0);
 }

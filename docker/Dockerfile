@@ -1,8 +1,8 @@
 # FROM nvidia/cuda:11.6.1-cudnn8-devel-ubuntu20.04
-FROM nvcr.io/nvidia/tensorrt:22.04-py3
+FROM nvcr.io/nvidia/tensorrt:22.08-py3
 ARG CERES_VERSION=2.1.0
 ARG CMAKE_VERSION=3.23.1
-ARG ONNX_VERSION=1.11.1
+ARG ONNX_VERSION=1.12.1
 ARG OPENCV_VERSION=4.6.0
 ENV SWARM_WS=/root/swarm_ws
 
@@ -67,8 +67,8 @@ RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       apt-get clean all
 
 #Install ONNXRuntime with CUDA
-RUN git clone --recursive https://github.com/Microsoft/onnxruntime && \
-      cd onnxruntime && \
+RUN   git clone --recursive https://github.com/Microsoft/onnxruntime
+RUN   cd onnxruntime && \
       git checkout tags/v${ONNX_VERSION} && \
       ./build.sh --config Release --build_shared_lib --parallel \
       --use_cuda --cudnn_home /usr/ --cuda_home /usr/local/cuda --skip_test \

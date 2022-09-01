@@ -29,6 +29,8 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
 )
 
+add_definitions("-D USE_ONNX")
+
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES quadcam_depth_est
@@ -40,6 +42,7 @@ include_directories(
 # include
 ${catkin_INCLUDE_DIRS}
 ${EIGEN3_INCLUDE_DIRS}
+${d2frontend_INCLUDE_DIRS}
 ${YAML_CPP_INCLUDE_DIRS}
 )
 
@@ -52,6 +55,7 @@ target_link_libraries(
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${d2frontend_LIBRARIES}
+  onnxruntime
 )
 
 add_executable(${PROJECT_NAME}_node src/quadcam_depth_est_node.cpp)
@@ -64,5 +68,6 @@ target_link_libraries(${PROJECT_NAME}_test
   ${YAML_CPP_LIBRARIES}
   ${d2frontend_LIBRARIES}
   ${TORCH_LIBRARIES}
+  onnxruntime
 )
 
