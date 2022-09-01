@@ -125,6 +125,7 @@ def test_depth_gen(gen: StereoGen, imgs_gray, imgs_raw, detailed=False):
         #Visualize disparity
         disparity = cv.normalize(disparity, None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
         disparity = cv.applyColorMap(disparity, cv.COLORMAP_JET)
+        cv.rectangle(disparity, gen.roi_l, (0, 0, 255), 2)
 
         img_l, img_r = gen.genRectStereo(imgs_gray[cam_idx_a], imgs_gray[cam_idx_b])
         img_l = cv.cvtColor(img_l, cv.COLOR_GRAY2BGR)
@@ -176,7 +177,7 @@ if __name__ == "__main__":
     if args.config == "":
         stereo_gens = genDefaultConfig()
     else:
-        stereo_gens = loadConfig(args.config, stereo_paths, fov=args.fov)
+        stereo_gens = loadConfig(args.config, stereo_paths, fov=args.fov, hitnet=True)
     #Read photometric
     if args.photometric != "":
         photometric = cv.imread(args.photometric, cv.IMREAD_GRAYSCALE)/255.0

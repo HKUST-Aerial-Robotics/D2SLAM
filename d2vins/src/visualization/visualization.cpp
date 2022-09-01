@@ -98,6 +98,8 @@ void D2Visualization::postSolve() {
         if (drone_id == params->self_id) {
             path_pub.publish(path);
             odom_pub.publish(odom_ros);
+            tf::Transform transform = odom.toTF();
+            br.sendTransform(tf::StampedTransform(transform, odom_ros.header.stamp, "world", "imu"));
             auto exts = state.localCameraExtrinsics();
             for (int i = 0; i < exts.size(); i ++) {
                 auto camera_pose = exts[i];

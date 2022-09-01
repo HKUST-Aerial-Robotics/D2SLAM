@@ -19,6 +19,7 @@ class D2Visualization {
     double display_alpha = 0.5;
     ros::NodeHandle * _nh = nullptr;
     std::map<int, std::ofstream> csv_output_files;
+    tf::TransformBroadcaster br;
 public:
     D2Visualization();
     void init(ros::NodeHandle & nh, D2Estimator * estimator);

@@ -24,7 +24,7 @@ class StereoGen:
             self.enable_hitnet = False
             
     def initRectify(self, K1, D1, K2, D2, size, R, T):
-        self.R1, self.R2, self.P1, self.P2, self.Q, _, _ = cv.stereoRectify(K1, D1, K2, D2, size, R, T)
+        self.R1, self.R2, self.P1, self.P2, self.Q, self.roi_l, self.roi_r = cv.stereoRectify(K1, D1, K2, D2, size, R, T)
         self.mapl0, self.mapl1 = cv.initUndistortRectifyMap(K1, D1, self.R1, self.P1, size, cv.CV_32FC1)
         self.mapr0, self.mapr1 = cv.initUndistortRectifyMap(K2, D2, self.R2, self.P2, size, cv.CV_32FC1)
         print("Q", self.Q)

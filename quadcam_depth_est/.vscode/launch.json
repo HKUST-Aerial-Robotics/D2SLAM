@@ -23,5 +23,21 @@
                 "ignoreFailures": true
             }
         ]
-    }]
+    },
+    {
+    "name": "(gdb) quadcam_depth_est_node",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "/home/xuhao/d2slam_ws/devel/lib/quadcam_depth_est/quadcam_depth_est_node",
+        "MIMode": "gdb",
+        "cwd": "${workspaceFolder}",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    }
+]
 }

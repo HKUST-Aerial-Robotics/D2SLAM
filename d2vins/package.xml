@@ -13,17 +13,20 @@
   <build_depend>roscpp</build_depend>
   <build_depend>rospy</build_depend>
   <build_depend>swarm_msgs</build_depend>
+  <build_depend>tf</build_depend>
   <build_depend>d2common</build_depend>
   <build_export_depend>d2frontend</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
   <build_export_depend>swarm_msgs</build_export_depend>
   <build_export_depend>d2common</build_export_depend>
+  <build_export_depend>tf</build_export_depend>
   <exec_depend>d2frontend</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>swarm_msgs</exec_depend>
   <exec_depend>d2common</exec_depend>
+  <exec_depend>tf</exec_depend>
 
   <export>
     <!-- Other tools can request additional information be placed here -->

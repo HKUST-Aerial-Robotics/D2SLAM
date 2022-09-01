@@ -75,8 +75,8 @@ int main(int argc, char** argv) {
     cv::namedWindow("RawStereoImgs", cv::WINDOW_NORMAL|cv::WINDOW_GUI_EXPANDED);
     cv::imshow("RawStereoImgs", show);
 
-    VirtualStereo virtual_stereo(0, 1, ret_left.second, ret_right.second, 
-        &undistort2_0, &undistort2_1, idx0, idx1);
+    VirtualStereo virtual_stereo(0, 1, Swarm::Pose(), 
+        &undistort2_0, &undistort2_1, idx0, idx1, nullptr);
     auto rect_imgs = virtual_stereo.rectifyImage(img_l, img_r);
     cv::Mat rect_l(rect_imgs[0]), rect_r(rect_imgs[1]);
     show.release();

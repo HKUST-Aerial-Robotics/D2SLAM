@@ -51,7 +51,7 @@ public:
         cv::vconcat(_input_left, _input_right, input);
         input.convertTo(input_image_mat, CV_32F, 1.0/255.0);
         doInference();
-        printf("HitnetONNX::inference() took %f ms\n", tic.toc());
+        // printf("HitnetONNX::inference() took %f ms\n", tic.toc());
         return cv::Mat(height, width, CV_32F, results_);
     }
 };

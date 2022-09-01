@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   swarm_msgs
   d2common
+  tf
 )
 find_package(d2frontend REQUIRED)
 find_package(d2common REQUIRED)
@@ -65,6 +66,7 @@ add_library(${PROJECT_NAME}_estimator
 
 target_link_libraries(${PROJECT_NAME}_estimator
   ${d2frontend_LIBRARIES}
+  ${catkin_LIBRARIES}
 )
 
 add_dependencies(${PROJECT_NAME}_MSCKF ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

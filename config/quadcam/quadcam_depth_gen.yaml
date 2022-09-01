@@ -1,0 +1,38 @@
+enable_hitnet: true
+hitnet_int8: false
+hitnet_fp16: true
+hitnet_use_tensorrt: true
+enable_texture: true
+width: 320
+height: 240
+pixel_step: 1
+image_step: 1
+min_z: 0.1
+max_z: 5
+calib_file_path: "quad_cam_calib-camchain-imucam.yaml"
+fov: 180
+stereos:
+  # stereo1_0:
+  #   cam_idx_l: 1
+  #   cam_idx_r: 0
+  #   idx_l: 1
+  #   idx_r: 0
+  #   stereo_config: "stereo_calib_1_0.yaml"
+  stereo2_1:
+    cam_idx_l: 2
+    cam_idx_r: 1
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "stereo_calib_2_1.yaml"
+  stereo3_2:
+    cam_idx_l: 3
+    cam_idx_r: 2
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "stereo_calib_3_2.yaml"
+  stereo0_3:
+    cam_idx_l: 0
+    cam_idx_r: 3
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "stereo_calib_0_3.yaml"
