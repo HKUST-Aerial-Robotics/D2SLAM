@@ -47,7 +47,7 @@ public:
             tensorrt_options.trt_max_partition_iterations = 10;
             tensorrt_options.trt_min_subgraph_size = 5;
             tensorrt_options.trt_int8_use_native_calibration_table = 1;
-            tensorrt_options.trt_dump_subgraphs = 1; 
+            tensorrt_options.trt_dump_subgraphs = 0; 
             session_options.AppendExecutionProvider_TensorRT(tensorrt_options);
             printf("ONNX will use TensorRT for inference INT8 %d FP16 %d cache path %s\n", enable_int8, enable_fp16, engine_folder);
         }
