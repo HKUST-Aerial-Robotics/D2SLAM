@@ -9,7 +9,7 @@ width: 320
 height: 240
 pixel_step: 2
 image_step: 2
-max_z: 100
+max_z: 3.1
 min_z: 0.3
 calib_file_path: "quad_cam_calib-camchain-imucam.yaml"
 fov: 180
@@ -21,21 +21,21 @@ stereos:
   #   idx_l: 1
   #   idx_r: 0
   #   stereo_config: "stereo_calib_1_0.yaml"
-  # stereo2_1:
-  #   cam_idx_l: 2
-  #   cam_idx_r: 1
-  #   idx_l: 1
-  #   idx_r: 0
-  #   stereo_config: "stereo_calib_2_1.yaml"
+  stereo2_1:
+    cam_idx_l: 2
+    cam_idx_r: 1
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "stereo_calib_2_1.yaml"
   stereo3_2:
     cam_idx_l: 3
     cam_idx_r: 2
     idx_l: 1
     idx_r: 0
     stereo_config: "stereo_calib_3_2.yaml"
-  # stereo0_3:
-  #   cam_idx_l: 0
-  #   cam_idx_r: 3
-  #   idx_l: 1
-  #   idx_r: 0
-  #   stereo_config: "stereo_calib_0_3.yaml"
+  stereo0_3:
+    cam_idx_l: 0
+    cam_idx_r: 3
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "stereo_calib_0_3.yaml"

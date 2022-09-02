@@ -68,7 +68,7 @@ std::pair<cv::Mat, cv::Mat>VirtualStereo::estimateDisparityViaRaw(const cv::Mat 
         cv::hconcat(show, disp_show, show);
         char buf[64];
         sprintf(buf, "VirtualStereo %d<->%d", cam_idx_a, cam_idx_b);
-        cv::resize(show, show, cv::Size(), 2, 2);
+        // cv::resize(show, show, cv::Size(), 2, 2);
         cv::imshow(buf, show);
     }
     if (enable_texture) {
