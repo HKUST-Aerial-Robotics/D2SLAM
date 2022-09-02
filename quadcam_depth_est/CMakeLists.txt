@@ -27,6 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
   camera_models
   message_filters
   image_transport
+  pcl_ros
 )
 
 add_definitions("-D USE_ONNX")

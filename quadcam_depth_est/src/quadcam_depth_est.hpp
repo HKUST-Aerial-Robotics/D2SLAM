@@ -5,10 +5,9 @@
 #include <ros/ros.h>
 #include <yaml-cpp/yaml.h>
 #include <image_transport/image_transport.h>
-#include <sensor_msgs/PointCloud.h>
+#include "pcl_utils.hpp"
 
 namespace D2QuadCamDepthEst {
-
 class QuadCamDepthEst {
     std::vector<Swarm::Pose> raw_cam_extrinsics;
     std::vector<Swarm::Pose> virtual_left_extrinsics;
@@ -28,7 +27,8 @@ class QuadCamDepthEst {
     image_transport::ImageTransport * it_;
     image_transport::Subscriber image_sub;
     ros::Publisher pub_pcl;
-    sensor_msgs::PointCloud pcl;
+    PointCloud * pcl = nullptr;
+    PointCloudRGB * pcl_color = nullptr;
     void loadCNN(YAML::Node & config);
     void loadCameraConfig(YAML::Node & config, std::string configPath);
     void imageCallback(const sensor_msgs::ImageConstPtr & left);

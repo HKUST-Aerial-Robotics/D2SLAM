@@ -2,6 +2,10 @@
 #include <d2common/fisheye_undistort.h>
 #include "hitnet_onnx.hpp"
 #include <image_transport/image_transport.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+
 
 namespace D2FrontEnd {
     std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(const std::string & camera_name, const YAML::Node & config);
@@ -9,14 +13,11 @@ namespace D2FrontEnd {
 
 namespace D2QuadCamDepthEst {
 
-void add_pts_point_cloud(const cv::Mat & pts3d, cv::Mat color, Swarm::Pose pose, 
-        sensor_msgs::PointCloud & pcl, int step, double min_z, double max_z);
-
 QuadCamDepthEst::QuadCamDepthEst(ros::NodeHandle & _nh): nh(_nh) {
     std::string quadcam_depth_config_file;
     nh.param<std::string>("quadcam_depth_config_file", quadcam_depth_config_file, "quadcam_depth_config.yaml");
     nh.param<bool>("show", show, false);
-    pub_pcl = nh.advertise<sensor_msgs::PointCloud>("/depth_estimation/point_cloud", 1);
+    pub_pcl = nh.advertise<sensor_msgs::PointCloud2>("/depth_estimation/point_cloud", 1);
     printf("[QuadCamDepthEst] readConfig from: %s\n", quadcam_depth_config_file.c_str());
     int pn = quadcam_depth_config_file.find_last_of('/');    
     std::string configPath = quadcam_depth_config_file.substr(0, pn);
@@ -32,10 +33,13 @@ QuadCamDepthEst::QuadCamDepthEst(ros::NodeHandle & _nh): nh(_nh) {
     image_transport::TransportHints hints(format, ros::TransportHints().tcpNoDelay(true));
     it_ = new image_transport::ImageTransport(nh);
     image_sub = it_->subscribe("/arducam/image", 1000, &QuadCamDepthEst::imageCallback, this, hints);
-    pcl.channels.resize(1);
-    pcl.channels[0].name = "rgb";
-    pcl.channels[0].values.reserve(virtual_stereos.size()*width*height);
-    pcl.points.reserve(virtual_stereos.size()*width*height);
+    if (enable_texture) {
+        pcl_color = new PointCloudRGB;
+        pcl_color->points.reserve(virtual_stereos.size()*width*height);
+    } else {
+        pcl = new PointCloud;
+        pcl->points.reserve(virtual_stereos.size()*width*height);
+    }
 }
 
 void QuadCamDepthEst::loadCNN(YAML::Node & config) {
@@ -76,20 +80,32 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
         cv::cvtColor(imgs[i], img_gray, cv::COLOR_BGR2GRAY);
         imgs_gray.emplace_back(img_gray);
     }
-    pcl.header = left->header;
-    pcl.header.frame_id = "imu";
-    pcl.channels[0].values.clear();
-    pcl.points.clear();
+    if (enable_texture) {
+        pcl_conversions::toPCL(left->header.stamp, pcl_color->header.stamp);
+        pcl_color->header.frame_id = "imu";
+        pcl_color->points.clear();
+    } else {
+        pcl_conversions::toPCL(left->header.stamp, pcl->header.stamp);
+        pcl->header.frame_id = "imu";
+        pcl->points.clear();
+    }
     int size = 0;
     for (auto stereo: virtual_stereos) {
         auto ret = stereo->estimatePointsViaRaw(imgs_gray[stereo->cam_idx_a], imgs_gray[stereo->cam_idx_b], imgs[stereo->cam_idx_a], show);
-        add_pts_point_cloud(ret.first, ret.second, stereo->extrinsic, pcl, pixel_step, min_z, max_z);
+        if (enable_texture) {
+            addPointsToPCL(ret.first, ret.second, stereo->extrinsic, *pcl_color, pixel_step, min_z, max_z);
+        } else {
+            addPointsToPCL(ret.first, ret.second, stereo->extrinsic, *pcl, pixel_step, min_z, max_z);
+        }
     }
     if (show) {
-        // cv::imshow("raw", img);
         cv::waitKey(1);
     }
-    pub_pcl.publish(pcl);
+    if (enable_texture) {
+        pub_pcl.publish(*pcl_color);
+    } else {
+        pub_pcl.publish(*pcl);
+    }
     image_count++;
     printf("[QuadCamDepthEst] count %d process time %.1fms\n", image_count, t.toc());
 }
@@ -147,43 +163,6 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
     }
 }
 
-
-void add_pts_point_cloud(const cv::Mat & pts3d, cv::Mat color, Swarm::Pose pose, 
-        sensor_msgs::PointCloud & pcl, int step, double min_z, double max_z) {
-    bool rgb_color = color.channels() == 3;
-    Matrix3f R = pose.R().template cast<float>();
-    Vector3f t = pose.pos().template cast<float>();
-    for(int v = 0; v < pts3d.rows; v += step) {
-        for(int u = 0; u < pts3d.cols; u += step) {
-            cv::Vec3f vec = pts3d.at<cv::Vec3f>(v, u);
-            Vector3f pts_i(vec[0], vec[1], vec[2]);
-            if (pts_i.z() < max_z && pts_i.z() > min_z) {
-                Vector3f w_pts_i = R * pts_i + t;
-                // Vector3d w_pts_i = pts_i;
-                geometry_msgs::Point32 p;
-                p.x = w_pts_i(0);
-                p.y = w_pts_i(1);
-                p.z = w_pts_i(2);
-                
-                pcl.points.push_back(p);
-
-                if (!color.empty()) {
-                    int32_t rgb_packed;
-                    if(rgb_color) {
-                        const cv::Vec3b& bgr = color.at<cv::Vec3b>(v, u);
-                        rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
-                    } else {
-                        const uchar& bgr = color.at<uchar>(v, u);
-                        rgb_packed = (bgr << 16) | (bgr << 8) | bgr;
-                    }
-
-                    pcl.channels[0].values.push_back(*(float*)(&rgb_packed));
-                    // pcl.channels[1].values.push_back(u);
-                    // pcl.channels[2].values.push_back(v);
-                }
-            }
-        }
-    }
-}   
+ 
 }
 
