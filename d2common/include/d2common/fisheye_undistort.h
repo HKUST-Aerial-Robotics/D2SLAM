@@ -15,6 +15,7 @@
 #include "ros/ros.h"
 #include "sensor_msgs/Image.h"
 #include <opencv2/cudaarithm.hpp>
+#include <opencv2/cudaimgproc.hpp>
 
 namespace D2Common {
 
@@ -60,7 +61,9 @@ class FisheyeUndist {
 
     std::vector<Eigen::Quaterniond> t;
     std::vector<cv::Mat> photometics;
+    std::vector<cv::Mat> photometics_bgr;
     std::vector<cv::cuda::GpuMat> photometics_gpu;
+    std::vector<cv::cuda::GpuMat> photometics_gpu_bgr;
 
     FisheyeUndist(const std::string &camera_config_file, int _id, double _fov,
                   bool _enable_cuda = true, int imgWidth = 600)
@@ -126,6 +129,17 @@ class FisheyeUndist {
             auto _photometics_gpu = undist_all_cuda(photomertic, true);
             photometics = _photometics;
             photometics_gpu = _photometics_gpu;
+            for (int i = 0; i < _photometics.size(); i++) {
+                cv::Mat bgr;
+                cv::cvtColor(_photometics[i], bgr, cv::COLOR_GRAY2BGR);
+                photometics_bgr.push_back(bgr);
+                cv::cuda::GpuMat bgr_gpu;
+                cv::cuda::cvtColor(_photometics_gpu[i], bgr_gpu,
+                                   cv::COLOR_GRAY2BGR);
+                photometics_gpu_bgr.push_back(bgr_gpu);
+            }
+        } else {
+            printf("no photometric calibration file found\n");
         }
     }
 
@@ -143,7 +157,11 @@ class FisheyeUndist {
                         undistMapsGPUY[_id], REMAP_FUNC);
         if (photometics_gpu.size() > 0 && calib_photometric) {
             output.convertTo(output, CV_32FC1);
-            cv::cuda::multiply(output, photometics_gpu[_id], output);
+            if (output.channels() == 3) {
+                cv::cuda::multiply(output, photometics_gpu_bgr[_id], output);
+            } else {
+                cv::cuda::multiply(output, photometics_gpu[_id], output);
+            }
         }
         return output;
 #endif
@@ -175,7 +193,12 @@ class FisheyeUndist {
                 cv::cuda::remap(img_cuda, output, undistMapsGPUX[i],
                                 undistMapsGPUY[i], REMAP_FUNC);
                 if (photometics_gpu.size() > 0) {
-                    cv::cuda::multiply(output, photometics_gpu[i], output);
+                    if (image.channels() == 3) {
+                        cv::cuda::multiply(output, photometics_gpu_bgr[i],
+                                           output);
+                    } else {
+                        cv::cuda::multiply(output, photometics_gpu[i], output);
+                    }
                 }
                 std::cout << "Remap cost " << remap.toc() << std::endl;
                 TicToc down;
@@ -209,7 +232,12 @@ class FisheyeUndist {
                 cv::cuda::remap(img_cuda, output, undistMapsGPUX[i],
                                 undistMapsGPUY[i], REMAP_FUNC);
                 if (photometics_gpu.size() > 0) {
-                    cv::cuda::multiply(output, photometics_gpu[i], output);
+                    if (image.channels() == 3) {
+                        cv::cuda::multiply(output, photometics_gpu_bgr[i],
+                                           output);
+                    } else {
+                        cv::cuda::multiply(output, photometics_gpu[i], output);
+                    }
                 }
             }
             ret.push_back(output);

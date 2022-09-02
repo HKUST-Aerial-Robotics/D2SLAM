@@ -1,6 +1,7 @@
 #include "quadcam_depth_est.hpp"
 #include <d2common/fisheye_undistort.h>
 #include "hitnet_onnx.hpp"
+#include "crestereo_onnx.hpp"
 #include <image_transport/image_transport.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
@@ -44,23 +45,31 @@ QuadCamDepthEst::QuadCamDepthEst(ros::NodeHandle & _nh): nh(_nh) {
 }
 
 void QuadCamDepthEst::loadCNN(YAML::Node & config) {
-    bool enable_hitnet;
+    bool enable_cnn;
     std::string quadcam_depth_config_file;
-    enable_hitnet = config["enable_hitnet"].as<bool>();
+    enable_cnn = config["enable_cnn"].as<bool>();
+    std::string cnn_type = config["cnn_type"].as<std::string>();
     width = config["width"].as<int>();
     height = config["height"].as<int>();
-    if (enable_hitnet) {
-        std::string hitnet_model_path;
-        bool hitnet_use_tensorrt = config["hitnet_use_tensorrt"].as<bool>();
-        bool hitnet_int8 = config["hitnet_int8"].as<bool>();
-        bool hitnet_fp16 = config["hitnet_fp16"].as<bool>();
-        nh.param<std::string>("hitnet_model_path", hitnet_model_path, "");
-        hitnet = new HitnetONNX(hitnet_model_path, width, height,
-            hitnet_use_tensorrt, hitnet_fp16, hitnet_int8);
-        printf("[QuadCamDepthEst] Load hitnet from %s tensorrt %d FP16 %d INT8 %d width %d height %d\n", hitnet_model_path.c_str(), 
-                hitnet_use_tensorrt, hitnet_fp16, hitnet_int8, width, height);
-    } else {
-        printf("[QuadCamDepthEst] Hitnet disabled. Use OpenCV SGBM\n");
+    if (enable_cnn) {
+        std::string cnn_model_path;
+        bool cnn_use_tensorrt = config["cnn_use_tensorrt"].as<bool>();
+        bool cnn_int8 = config["cnn_int8"].as<bool>();
+        bool cnn_fp16 = config["cnn_fp16"].as<bool>();
+        nh.param<std::string>("cnn_model_path", cnn_model_path, "");
+        if (cnn_type == "hitnet") {
+            hitnet = new HitnetONNX(cnn_model_path, width, height, cnn_use_tensorrt, cnn_fp16, cnn_int8);
+            cnn_rgb = false;
+        } 
+        if (cnn_type == "crestereo") {
+            crestereo = new CREStereoONNX(cnn_model_path, width, height, cnn_use_tensorrt, cnn_fp16, cnn_int8);
+            cnn_rgb = true;
+        }
+        printf("[QuadCamDepthEst] Load CNN from %s tensorrt %d FP16 %d INT8 %d width %d height %d\n", cnn_model_path.c_str(), 
+                cnn_use_tensorrt, cnn_fp16, cnn_int8, width, height);
+
+    }else {
+        printf("[QuadCamDepthEst] CNN disabled. Use OpenCV SGBM\n");
     }
 }
 
@@ -77,9 +86,11 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
     const int num_imgs = 4;
     for (int i = 0; i < 4; i++) {
         imgs.emplace_back(img(cv::Rect(i * img.cols /num_imgs, 0, img.cols /num_imgs, img.rows)));
-        cv::Mat img_gray;
-        cv::cvtColor(imgs[i], img_gray, cv::COLOR_BGR2GRAY);
-        imgs_gray.emplace_back(img_gray);
+        if (!cnn_rgb) {
+            cv::Mat img_gray;
+            cv::cvtColor(imgs[i], img_gray, cv::COLOR_BGR2GRAY);
+            imgs_gray.emplace_back(img_gray);
+        }
     }
     if (enable_texture) {
         pcl_conversions::toPCL(left->header.stamp, pcl_color->header.stamp);
@@ -92,7 +103,12 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
     }
     int size = 0;
     for (auto stereo: virtual_stereos) {
-        auto ret = stereo->estimatePointsViaRaw(imgs_gray[stereo->cam_idx_a], imgs_gray[stereo->cam_idx_b], imgs[stereo->cam_idx_a], show);
+        std::pair<cv::Mat, cv::Mat> ret;
+        if (cnn_rgb) {
+            ret = stereo->estimatePointsViaRaw(imgs[stereo->cam_idx_a], imgs[stereo->cam_idx_b], cv::Mat(), show);
+        } else {
+            ret = stereo->estimatePointsViaRaw(imgs_gray[stereo->cam_idx_a], imgs_gray[stereo->cam_idx_b], imgs[stereo->cam_idx_a], show);
+        }
         if (enable_texture) {
             addPointsToPCL(ret.first, ret.second, stereo->extrinsic, *pcl_color, pixel_step, min_z, max_z);
         } else {
@@ -113,12 +129,13 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
 
 
 void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPath) {
-    std::string mask_file = configPath + "/" + config["lightness_mask"].as<std::string>();
-    cv::Mat lightness_mask = cv::imread(mask_file, cv::IMREAD_GRAYSCALE);
-    lightness_mask.convertTo(lightness_mask, CV_32FC1, 1.0/255.0);
     cv::Mat photometric;
-    //inverse lightness mask to get photometric mask
-    cv::divide(1.0, lightness_mask, photometric);
+    if (config["lightness_mask"]) {
+        std::string mask_file = configPath + "/" + config["lightness_mask"].as<std::string>();
+        cv::Mat lightness_mask = cv::imread(mask_file, cv::IMREAD_GRAYSCALE);
+        lightness_mask.convertTo(lightness_mask, CV_32FC1, 1.0/255.0);
+        cv::divide(0.7, lightness_mask, photometric);
+    }
 
     std::string calib_file_path = config["calib_file_path"].as<std::string>();
     double fov = config["fov"].as<double>();
@@ -134,7 +151,6 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
             D2Common::FisheyeUndist::UndistortPinhole2, width, height, photometric));
         raw_cam_extrinsics.emplace_back(ret.second);
     }
-
 
     for (const auto & kv: config["stereos"]) {
         auto node = kv.second;
@@ -159,7 +175,7 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
         printf("[QuadCamDepthEst] Load stereo %s, stereo %d(%d):%d(%d) baseline: %s\n", 
             stereo_name.c_str(), cam_idx_l, idx_l, cam_idx_r, idx_r, baseline.toStr().c_str());
         auto stereo = new VirtualStereo(cam_idx_l, cam_idx_r, baseline, 
-            undistortors[cam_idx_l], undistortors[cam_idx_r], idx_l, idx_r, hitnet);
+            undistortors[cam_idx_l], undistortors[cam_idx_r], idx_l, idx_r, hitnet, crestereo);
         auto att = undistortors[cam_idx_l]->t[idx_l];
         stereo->extrinsic = raw_cam_extrinsics[cam_idx_l] * Swarm::Pose(att, Vector3d(0, 0, 0));
         stereo->enable_texture = enable_texture;

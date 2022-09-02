@@ -14,6 +14,8 @@ class QuadCamDepthEst {
     std::vector<VirtualStereo*> virtual_stereos;
     std::vector<D2Common::FisheyeUndist*> undistortors;
     HitnetONNX * hitnet = nullptr;
+    CREStereoONNX * crestereo = nullptr;
+    std::string cnn_type = "crestereo";
     int width = 320, height = 240;
     int pixel_step = 1;
     int image_step = 1;
@@ -22,6 +24,7 @@ class QuadCamDepthEst {
     int image_count = 0;
     double min_z = 0.1;
     double max_z = 10;
+    bool cnn_rgb = false;
 
     ros::NodeHandle nh;
     image_transport::ImageTransport * it_;

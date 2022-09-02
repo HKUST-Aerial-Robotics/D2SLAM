@@ -1,12 +1,13 @@
 <launch>
     <arg name="show" default="false" />
     <arg name="quadcam_depth_config_file"     default="$(find d2frontend)/../models/superpoint_v1.onnx"/>
-    <arg name="config" default="$(find d2vins)/../config/quadcam/quadcam_depth_gen.yaml" />
-    <arg name="hitnet_model" default="$(find d2vins)/../models/hitnet_eth3d_320x240.onnx" />
+    <arg name="config" default="$(find quadcam_depth_est)/../config/quadcam/quadcam_depth_gen.yaml" />
+    <!-- <arg name="cnn_model_path" default="$(find d2vins)/../models/hitnet_eth3d_320x240.onnx" /> -->
+    <arg name="cnn_model_path" default="$(find quadcam_depth_est)/../models/crestereo_combined_iter5_240x320.onnx" />
     <arg name="output" default="screen" />
     <node pkg="quadcam_depth_est" type="quadcam_depth_est_node" name="quadcam_depth_est" output="$(arg output)" >
         <param name="show" value="$(arg show)" type="bool" />
         <param name="quadcam_depth_config_file" value="$(arg config)" />
-        <param name="hitnet_model_path" value="$(arg hitnet_model)" />
+        <param name="cnn_model_path" value="$(arg cnn_model_path)" />
     </node>
 </launch>

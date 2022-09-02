@@ -72,6 +72,8 @@ class StereoGen:
         if not self.enable_hitnet:
             disparity = disparity.astype(np.float32) / 16.0
         points = cv.reprojectImageTo3D(disparity, self.Q)
+        #Crop by roi_l
+        points = points[self.roi_l[1]:self.roi_l[1]+self.roi_l[3], self.roi_l[0]:self.roi_l[0]+self.roi_l[2]]
         #Reshape point3d to array of points
         points = points.reshape(-1, 3)
         #Filter points by min and max z
@@ -86,6 +88,7 @@ class StereoGen:
             else:
                 texture = cv.cvtColor(img_l, cv.COLOR_GRAY2BGR)
             texture = self.rectifyL(texture)
+            texture = texture[self.roi_l[1]:self.roi_l[1]+self.roi_l[3], self.roi_l[0]:self.roi_l[0]+self.roi_l[2]]
             texture = texture.reshape(-1, 3)[mask]/255.0
             return points, texture
         else:

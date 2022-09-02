@@ -66,7 +66,7 @@ if __name__ == "__main__":
     if args.config == "":
         stereo_gens = genDefaultConfig()
     else:
-        stereo_gens = loadConfig(args.config, fov=args.fov, width=args.width, height=args.height)
+        stereo_gens, _ = loadConfig(args.config, fov=args.fov, width=args.width, height=args.height)
     if args.output != "":
         output_bag = rosbag.Bag(args.output, mode="w")
     else:
@@ -96,7 +96,7 @@ if __name__ == "__main__":
                 else:
                     img = bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='passthrough')
                 imgs = split_image(img)
-                calibed = calib_photometric_imgs(imgs, photometric)
+                calibed = calib_photometric_imgs(imgs, photometric, is_rgb=False)
                 for gen in stereo_gens:
                     cam_idx_a = gen.cam_idx_a
                     cam_idx_b = gen.cam_idx_b
@@ -126,5 +126,5 @@ if __name__ == "__main__":
         idx_vcam_a = gen.idx_l
         idx_vcam_b = gen.idx_r
         topic_l, topic_r = f"/cam_{cam_idx_a}_{idx_vcam_a}/compressed", f"/cam_{cam_idx_b}_{idx_vcam_b}/compressed"
-        kablirCalibratePinhole(topic_l, topic_r, args.output, f"stereo_calib_{cam_idx_a}_{cam_idx_b}", verbose = args.verbose, 
+        kablirCalibratePinhole(topic_l, topic_r, args.output, f"stereo_calib_{cam_idx_a}_{cam_idx_b}_{args.height}_{args.width}", verbose = args.verbose, 
                 init_focal_length = stereo_gens[0].undist_l.focal_gen)

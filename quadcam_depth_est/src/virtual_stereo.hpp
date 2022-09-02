@@ -11,9 +11,10 @@ class FisheyeUndist;
 
 namespace D2QuadCamDepthEst {
 class HitnetONNX;
+class CREStereoONNX;
 
 struct VirtualStereoConfig {
-    bool use_hitnet = true;
+    bool use_cnn = true;
     int minDisparity = 1;
     int numDisparities = 64;
     int blockSize = 9;
@@ -42,6 +43,7 @@ protected:
     cv::Size img_size;
     VirtualStereoConfig config;
     HitnetONNX* hitnet = nullptr;
+    CREStereoONNX * crestereo = nullptr;
     cv::Rect roi_l;
     cv::Rect roi_r;
     //Rectify the images from pinhole images.
@@ -60,7 +62,7 @@ public:
             D2Common::FisheyeUndist* _undist_left,
             D2Common::FisheyeUndist* _undist_right,
             int _undist_id_l, 
-            int _undist_id_r, HitnetONNX* _hitnet);
+            int _undist_id_r, HitnetONNX* _hitnet, CREStereoONNX * _crestereo);
     void initRecitfy(const Swarm::Pose & baseline, cv::Mat K0, cv::Mat D0, cv::Mat K1, cv::Mat D1);
 };
 }

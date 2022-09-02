@@ -50,11 +50,21 @@ def loadHitnet():
     print("Loading hitnet...")
     HITNET_PATH = '/home/xuhao/source/ONNX-HITNET-Stereo-Depth-estimation/'
     sys.path.insert(0, HITNET_PATH)
-    from hitnet import HitNet, ModelType, CameraConfig
+    from hitnet import HitNet, ModelType
     model_path = HITNET_PATH + "/models/eth3d/saved_model_240x320/model_float32.onnx"
     return HitNet(model_path, ModelType.eth3d), False
-    # model_path = HITNET_PATH + "/models/middlebury_d400/saved_model_240x320/model_float32.onnx"
-    # return HitNet(model_path, ModelType.middlebury), True
+
+def loadCRENet():
+    print("Loading hitnet...")
+    CRENETPath = '/home/xuhao/source/ONNX-CREStereo-Depth-Estimation'
+    sys.path.insert(0, CRENETPath)
+    from crestereo import CREStereo
+    iters = 5            # Lower iterations are faster, but will lower detail. 
+    shape = (240, 320)   # Input resolution. 
+    version = "combined" # The combined version does 2 passes, one to get an initial estimation and a second one to refine it.
+    model_path = CRENETPath+f'/models/crestereo_{version}_iter{iters}_{shape[0]}x{shape[1]}.onnx'
+    depth_estimator = CREStereo(model_path)
+    return depth_estimator, True
 
 def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300, hitnet=False):
     print("Loading config from", config_file)
@@ -78,7 +88,7 @@ def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300, h
             T = np.array(config[v]['T_cam_imu'])
             undist = FisheyeUndist(K, D, xi, fov=fov, width=width, height=height, extrinsic=T)
             undists.append(undist)
-    hitnet_model, is_rgb = loadHitnet() if hitnet else None
+    hitnet_model, is_rgb = loadCRENet() if hitnet else (None, False)
     gens = [StereoGen(undists[1], undists[0], cam_idx_a=1,  cam_idx_b=0, hitnet_model=hitnet_model, is_rgb=is_rgb),
             StereoGen(undists[2], undists[1], cam_idx_a=2,  cam_idx_b=1, hitnet_model=hitnet_model, is_rgb=is_rgb),
             StereoGen(undists[3], undists[2], cam_idx_a=3,  cam_idx_b=2, hitnet_model=hitnet_model, is_rgb=is_rgb),
@@ -125,17 +135,19 @@ def test_depth_gen(gen: StereoGen, imgs_calib, imgs_raw, detailed=False, save_rg
         disparity = gen.genDisparity(imgs_calib[cam_idx_a], imgs_calib[cam_idx_b])
         texture = gen.rectifyL(imgs_raw[cam_idx_a])
         #Visualize disparity
-        # disparity = cv.normalize(disparity, None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
-        disparity = (disparity * 255.0/32.0).astype(np.uint8)
+        disparity = cv.normalize(disparity, None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
+        # disparity = (disparity * 255.0/32.0).astype(np.uint8)
         disparity = cv.applyColorMap(disparity, cv.COLORMAP_JET)
         cv.rectangle(disparity, gen.roi_l, (0, 0, 255), 2)
+
+        img_l, img_r = gen.genRectStereo(imgs_raw[cam_idx_a], imgs_raw[cam_idx_b])
+        cv.imwrite(f"/home/xuhao/output/stereo_calib/left_{count}.png", img_l)
+        cv.imwrite(f"/home/xuhao/output/stereo_calib/right_{count}.png", img_r)
 
         img_l, img_r = gen.genRectStereo(imgs_calib[cam_idx_a], imgs_calib[cam_idx_b])
         cv.imwrite(f"/home/xuhao/output/stereo_calib/gray_left_{count}.png", img_l)
         cv.imwrite(f"/home/xuhao/output/stereo_calib/gray_right_{count}.png", img_r)
-        img_l, img_r = gen.genRectStereo(imgs_calib[cam_idx_a], imgs_calib[cam_idx_b])
-        cv.imwrite(f"/home/xuhao/output/stereo_calib/left_{count}.png", img_l)
-        cv.imwrite(f"/home/xuhao/output/stereo_calib/right_{count}.png", img_r)
+
         
         count += 1
         if len(img_l.shape) == 2:
@@ -145,14 +157,14 @@ def test_depth_gen(gen: StereoGen, imgs_calib, imgs_raw, detailed=False, save_rg
         img_show = cv.hconcat([img_l, img_r, disparity])
         img_show = drawHorizontalLines(img_show)
         cv.imshow(f"stereoRect {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b} hor", img_show)
-        cv.imshow(f"disp {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b}", disparity)
+        # cv.imshow(f"disp {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b}", disparity)
         cv.waitKey(10)
     pcl, texture = gen.genPointCloud(imgs_calib[cam_idx_a], imgs_calib[cam_idx_b], img_raw=imgs_raw[cam_idx_a])
     return pcl, texture
 
 def calib_photometric(img, photometric, is_rgb=True):
     if not is_rgb:
-        ret = img
+        ret = img.copy()
         if len(img.shape) == 3:
             ret = cv.cvtColor(ret, cv.COLOR_BGR2GRAY)
         ret = ret.astype(float)/photometric
@@ -160,7 +172,7 @@ def calib_photometric(img, photometric, is_rgb=True):
         #Divide by photometric per channel
         ret = img.copy().astype(float)
         for i in range(img.shape[2]):
-            ret[:,:,i] = ret[:,:,i]/photometric*0.5
+            ret[:,:,i] = ret[:,:,i]/photometric*0.7
     ret = np.clip(ret, 0, 255).astype(np.uint8)
     return ret
 
@@ -182,7 +194,7 @@ if __name__ == "__main__":
     parser.add_argument("-c","--config", type=str, default="", help="config file path")
     parser.add_argument("-s","--step", type=int, default=5, help="step of stereo pair")
     parser.add_argument("-v","--verbose", action='store_true', help="show image")
-    parser.add_argument("-p","--photometric", type=str, help="photometric calibration image")
+    parser.add_argument("-p","--photometric", type=str, default="", help="photometric calibration image")
     parser.add_argument("-w","--width", type=int, default=320, help="width of stereo pair")
     parser.add_argument("--height", type=int, default=240, help="width of stereo pair")
 
@@ -193,7 +205,6 @@ if __name__ == "__main__":
                 "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_0_3.yaml"]
     if args.config == "":
         stereo_gens = genDefaultConfig()
-        is_rgb = False
     else:
         stereo_gens, is_rgb = loadConfig(args.config, stereo_paths, fov=args.fov, hitnet=True, width=args.width, height=args.height)
     #Read photometric
@@ -220,13 +231,17 @@ if __name__ == "__main__":
                 else:
                     img = bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='passthrough')
                 imgs = split_image(img)
-                photometric_calibed = []
-                photometric_calibed = calib_photometric_imgs(imgs, photometric, is_rgb)
+                if photometric is not None:
+                    photometric_calibed = calib_photometric_imgs(imgs, photometric, is_rgb)
+                    if not is_rgb:
+                        imgs = calib_photometric_imgs(imgs, photometric, True)
+                else:
+                    photometric_calibed = imgs
                 cv.imshow("raw", imgs[2])
                 #Apply inverse of photometric calibration
                 cv.imshow("Photometic calibed", photometric_calibed[2])
                 cv.waitKey(1)
-                for gen in stereo_gens[2:3]:
+                for gen in stereo_gens:
                     test_depth_gen(gen, photometric_calibed, imgs, detailed=True)
                 pbar.update(1)
                 c = cv.waitKey(0)

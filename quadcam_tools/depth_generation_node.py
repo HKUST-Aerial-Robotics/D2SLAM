@@ -26,7 +26,7 @@ class DepthGenerateNode:
         self.min_z = 0.3
         self.step = 5 #Generate cloud per 3 frames
         self.count = 0
-        self.enable_texture = False
+        self.enable_texture = True
 
     def callback(self, img_msg):
         if self.count % self.step != 0:
@@ -46,7 +46,8 @@ class DepthGenerateNode:
                 #Convert to grayscale
                 if len(img.shape) == 3 and not self.is_rgb:
                     img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-                calibed = calib_photometric(img, photometric, self.is_rgb)
+                # calibed = calib_photometric(img, photometric, self.is_rgb)
+                calibed= img
                 photometric_calibed.append(calibed)
             else:
                 photometric_calibed.append(img)
