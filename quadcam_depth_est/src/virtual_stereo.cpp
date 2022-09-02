@@ -17,33 +17,32 @@ VirtualStereo::VirtualStereo(int _cam_idx_a, int _cam_idx_b,
         HitnetONNX* _hitnet):
     cam_idx_a(_cam_idx_a), cam_idx_b(_cam_idx_b), undist_left(_undist_left), undist_right(_undist_right),
     undist_id_l(_undist_id_l), undist_id_r(_undist_id_r), hitnet(_hitnet) { 
-
-    //Initialize rectified poses.
-    // printf("[VirtualStereo] idx: %d<->%d, P_l_to_r: %s pose_left: %s, pose_right: %s \n", cam_idx_a, cam_idx_b, p_l_to_r.toStr().c_str(), 
-    //         pose_left.toStr().c_str(), pose_right.toStr().c_str());
-    //Undistortors have same pinhole2 camera parameters
     auto cam_param = static_cast<const camodocal::PinholeCamera*>(undist_left->cam_side.get())->getParameters();
     img_size = cv::Size(cam_param.imageWidth(), cam_param.imageHeight());
     cv::Mat K = (cv::Mat_<double>(3,3) << cam_param.fx(), 0, cam_param.cx(), 0, cam_param.fy(), cam_param.cy(), 0, 0, 1);
+    initRecitfy(baseline, K, cv::Mat(), K, cv::Mat());
+}
+
+void VirtualStereo::initRecitfy(const Swarm::Pose & baseline, cv::Mat K0, cv::Mat D0, cv::Mat K1, cv::Mat D1) {
     cv::eigen2cv(baseline.R(), R);
     cv::eigen2cv(baseline.pos(), T);
-    cv::stereoRectify(K, cv::Mat(), K, cv::Mat(), img_size, R, T, R1, R2, T1, T2, Q, 1024, -1, cv::Size(), &roi_l, &roi_r);
-    // std::cout << "R1" << std::endl << R1 << std::endl;
-    // std::cout << "R2" << std::endl << R2 << std::endl;
-    //Initial maps
-    initUndistortRectifyMap(K, cv::Mat(), R1, T1, img_size, CV_32FC1, lmap_1, lmap_2);
-    initUndistortRectifyMap(K, cv::Mat(), R2, T2, img_size, CV_32FC1, rmap_1, rmap_2);
+    cv::stereoRectify(K0, D0, K1, D1, img_size, R, T, R1, R2, T1, T2, Q, 1024, -1, cv::Size(), &roi_l, &roi_r);
+    initUndistortRectifyMap(K0, D0, R1, T1, img_size, CV_32FC1, lmap_1, lmap_2);
+    initUndistortRectifyMap(K1, D1, R2, T2, img_size, CV_32FC1, rmap_1, rmap_2);
     cuda_lmap_1.upload(lmap_1);
     cuda_lmap_2.upload(lmap_2);
     cuda_rmap_1.upload(rmap_1);
     cuda_rmap_2.upload(rmap_2);
+
 }
 
 std::pair<cv::Mat, cv::Mat> VirtualStereo::estimatePointsViaRaw(const cv::Mat & left, const cv::Mat & right, const cv::Mat & left_color, bool show) {
     auto ret = estimateDisparityViaRaw(left, right, left_color, show);
     cv::Mat points;
     cv::reprojectImageTo3D(ret.first, points, Q, 3);
-    return std::make_pair(points, ret.second);
+    printf("cam %d<->%d Q:\n", cam_idx_a, cam_idx_b);
+    std::cout << Q << std::endl;
+    return std::make_pair(points(roi_l), ret.second(roi_l));
 }
 
 
@@ -80,7 +79,7 @@ std::pair<cv::Mat, cv::Mat>VirtualStereo::estimateDisparityViaRaw(const cv::Mat 
         // cv::cuda::remap(lcolor_gpu, lcolor_gpu, cuda_lmap_1, cuda_lmap_2, cv::INTER_LINEAR);
         lcolor_gpu.convertTo(lcolor_gpu, CV_8UC3);
         cv::Mat lcolor_rect(lcolor_gpu);
-        return std::make_pair(disp(roi_l), lcolor_rect(roi_l));
+        return std::make_pair(disp, lcolor_rect);
     } else {
         return std::make_pair(disp, cv::Mat());
     }

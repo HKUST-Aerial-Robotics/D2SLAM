@@ -61,5 +61,6 @@ public:
             D2Common::FisheyeUndist* _undist_right,
             int _undist_id_l, 
             int _undist_id_r, HitnetONNX* _hitnet);
+    void initRecitfy(const Swarm::Pose & baseline, cv::Mat K0, cv::Mat D0, cv::Mat K1, cv::Mat D1);
 };
 }

@@ -12,6 +12,7 @@ namespace D2FrontEnd {
 };
 
 namespace D2QuadCamDepthEst {
+std::pair<cv::Mat, cv::Mat> intrinsicsFromNode(const YAML::Node & node);
 
 QuadCamDepthEst::QuadCamDepthEst(ros::NodeHandle & _nh): nh(_nh) {
     std::string quadcam_depth_config_file;
@@ -117,7 +118,7 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
     lightness_mask.convertTo(lightness_mask, CV_32FC1, 1.0/255.0);
     cv::Mat photometric;
     //inverse lightness mask to get photometric mask
-    cv::divide(0.7, lightness_mask, photometric);
+    cv::divide(1.0, lightness_mask, photometric);
 
     std::string calib_file_path = config["calib_file_path"].as<std::string>();
     double fov = config["fov"].as<double>();
@@ -152,6 +153,9 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
             }
         }
         baseline = Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
+        auto KD0 = intrinsicsFromNode(stereo_calib["cam0"]);
+        auto KD1 = intrinsicsFromNode(stereo_calib["cam1"]);
+
         printf("[QuadCamDepthEst] Load stereo %s, stereo %d(%d):%d(%d) baseline: %s\n", 
             stereo_name.c_str(), cam_idx_l, idx_l, cam_idx_r, idx_r, baseline.toStr().c_str());
         auto stereo = new VirtualStereo(cam_idx_l, cam_idx_r, baseline, 
@@ -159,10 +163,25 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
         auto att = undistortors[cam_idx_l]->t[idx_l];
         stereo->extrinsic = raw_cam_extrinsics[cam_idx_l] * Swarm::Pose(att, Vector3d(0, 0, 0));
         stereo->enable_texture = enable_texture;
+        stereo->initRecitfy(baseline, KD0.first, KD0.second, KD1.first, KD1.second);
         virtual_stereos.emplace_back(stereo);
     }
 }
 
+std::pair<cv::Mat, cv::Mat> intrinsicsFromNode(const YAML::Node & node) {
+    cv::Mat K = cv::Mat::eye(3, 3, CV_64FC1);
+    K.at<double>(0, 0) = node["intrinsics"][0].as<double>();
+    K.at<double>(1, 1) = node["intrinsics"][1].as<double>();
+    K.at<double>(0, 2) = node["intrinsics"][2].as<double>();
+    K.at<double>(1, 2) = node["intrinsics"][3].as<double>();
+
+    cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);
+    D.at<double>(0, 0) = node["distortion_coeffs"][0].as<double>();
+    D.at<double>(1, 0) = node["distortion_coeffs"][1].as<double>();
+    D.at<double>(2, 0) = node["distortion_coeffs"][2].as<double>();
+    D.at<double>(3, 0) = node["distortion_coeffs"][3].as<double>();
+    return std::make_pair(K, D);
+}
  
 }
 

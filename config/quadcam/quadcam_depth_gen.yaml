@@ -5,10 +5,10 @@ hitnet_use_tensorrt: true
 enable_texture: true
 width: 320
 height: 240
-pixel_step: 1
+pixel_step: 2
 image_step: 2
+max_z: 100
 min_z: 0.3
-max_z: 3
 calib_file_path: "quad_cam_calib-camchain-imucam.yaml"
 fov: 180
 lightness_mask: "mask.png"

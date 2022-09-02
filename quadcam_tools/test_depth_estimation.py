@@ -38,7 +38,7 @@ def initStereoFromConfig(config_file, stereo_gen, force_width=None):
             K0 *= force_width/size[0]
             K1 *= force_width/size[0]
             size = (force_width, int(force_width*size[1]/size[0]))
-            print("Force width to", force_width, "K0", K0, "K1", K1)
+            print("Force width to", force_width, "\nK0\n", K0, "\nK1\n", K1)
         D0 = np.array(config["cam0"]['distortion_coeffs'], dtype=np.float)
         D1 = np.array(config["cam1"]['distortion_coeffs'], dtype=np.float)
         T = np.array(config["cam1"]["T_cn_cnm1"])
@@ -52,7 +52,9 @@ def loadHitnet():
     sys.path.insert(0, HITNET_PATH)
     from hitnet import HitNet, ModelType, CameraConfig
     model_path = HITNET_PATH + "/models/eth3d/saved_model_240x320/model_float32.onnx"
-    return HitNet(model_path, ModelType.eth3d)
+    return HitNet(model_path, ModelType.eth3d), False
+    # model_path = HITNET_PATH + "/models/middlebury_d400/saved_model_240x320/model_float32.onnx"
+    # return HitNet(model_path, ModelType.middlebury), True
 
 def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300, hitnet=False):
     print("Loading config from", config_file)
@@ -76,14 +78,14 @@ def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300, h
             T = np.array(config[v]['T_cam_imu'])
             undist = FisheyeUndist(K, D, xi, fov=fov, width=width, height=height, extrinsic=T)
             undists.append(undist)
-    hitnet_model = loadHitnet() if hitnet else None
-    gens = [StereoGen(undists[1], undists[0], cam_idx_a=1,  cam_idx_b=0, hitnet_model=hitnet_model),
-            StereoGen(undists[2], undists[1], cam_idx_a=2,  cam_idx_b=1, hitnet_model=hitnet_model),
-            StereoGen(undists[3], undists[2], cam_idx_a=3,  cam_idx_b=2, hitnet_model=hitnet_model),
-            StereoGen(undists[0], undists[3], cam_idx_a=0,  cam_idx_b=3, hitnet_model=hitnet_model)]
+    hitnet_model, is_rgb = loadHitnet() if hitnet else None
+    gens = [StereoGen(undists[1], undists[0], cam_idx_a=1,  cam_idx_b=0, hitnet_model=hitnet_model, is_rgb=is_rgb),
+            StereoGen(undists[2], undists[1], cam_idx_a=2,  cam_idx_b=1, hitnet_model=hitnet_model, is_rgb=is_rgb),
+            StereoGen(undists[3], undists[2], cam_idx_a=3,  cam_idx_b=2, hitnet_model=hitnet_model, is_rgb=is_rgb),
+            StereoGen(undists[0], undists[3], cam_idx_a=0,  cam_idx_b=3, hitnet_model=hitnet_model, is_rgb=is_rgb)]
     for i in range(len(config_stereos)):
         initStereoFromConfig(config_stereos[i], gens[i], force_width=width)
-    return gens
+    return gens, is_rgb
 
 def drawVerticalLines(img, num_lines=10):
     #Cvt color if gray
@@ -113,49 +115,61 @@ def drawPointCloud3d(pcl):
 
 count = 0
 
-def test_depth_gen(gen: StereoGen, imgs_gray, imgs_raw, detailed=False):
+def test_depth_gen(gen: StereoGen, imgs_calib, imgs_raw, detailed=False, save_rgb=True):
     cam_idx_a = gen.cam_idx_a
     cam_idx_b = gen.cam_idx_b
     idx_vcam_a = gen.idx_l
     idx_vcam_b = gen.idx_r
     global count
     if detailed:
-        disparity = gen.genDisparity(imgs_gray[cam_idx_a], imgs_gray[cam_idx_b])
+        disparity = gen.genDisparity(imgs_calib[cam_idx_a], imgs_calib[cam_idx_b])
         texture = gen.rectifyL(imgs_raw[cam_idx_a])
         #Visualize disparity
-        disparity = cv.normalize(disparity, None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
+        # disparity = cv.normalize(disparity, None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
+        disparity = (disparity * 255.0/32.0).astype(np.uint8)
         disparity = cv.applyColorMap(disparity, cv.COLORMAP_JET)
         cv.rectangle(disparity, gen.roi_l, (0, 0, 255), 2)
 
-        img_l, img_r = gen.genRectStereo(imgs_gray[cam_idx_a], imgs_gray[cam_idx_b])
-        img_l = cv.cvtColor(img_l, cv.COLOR_GRAY2BGR)
-        img_r = cv.cvtColor(img_r, cv.COLOR_GRAY2BGR)
+        img_l, img_r = gen.genRectStereo(imgs_calib[cam_idx_a], imgs_calib[cam_idx_b])
+        cv.imwrite(f"/home/xuhao/output/stereo_calib/gray_left_{count}.png", img_l)
+        cv.imwrite(f"/home/xuhao/output/stereo_calib/gray_right_{count}.png", img_r)
+        img_l, img_r = gen.genRectStereo(imgs_calib[cam_idx_a], imgs_calib[cam_idx_b])
         cv.imwrite(f"/home/xuhao/output/stereo_calib/left_{count}.png", img_l)
         cv.imwrite(f"/home/xuhao/output/stereo_calib/right_{count}.png", img_r)
+        
         count += 1
+        if len(img_l.shape) == 2:
+            img_l = cv.cvtColor(img_l, cv.COLOR_GRAY2BGR)
+        if len(img_r.shape) == 2:
+            img_r = cv.cvtColor(img_r, cv.COLOR_GRAY2BGR)
         img_show = cv.hconcat([img_l, img_r, disparity])
         img_show = drawHorizontalLines(img_show)
         cv.imshow(f"stereoRect {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b} hor", img_show)
         cv.imshow(f"disp {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b}", disparity)
         cv.waitKey(10)
-    pcl, texture = gen.genPointCloud(imgs_gray[cam_idx_a], imgs_gray[cam_idx_b], img_raw=imgs_raw[cam_idx_a])
+    pcl, texture = gen.genPointCloud(imgs_calib[cam_idx_a], imgs_calib[cam_idx_b], img_raw=imgs_raw[cam_idx_a])
     return pcl, texture
 
-def calib_photometric(img, photometric):
-    if len(img.shape) == 3:
-        img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    img = img.astype(float)/photometric
-    img = np.clip(img, 0, 255).astype(np.uint8)
-    return img
+def calib_photometric(img, photometric, is_rgb=True):
+    if not is_rgb:
+        ret = img
+        if len(img.shape) == 3:
+            ret = cv.cvtColor(ret, cv.COLOR_BGR2GRAY)
+        ret = ret.astype(float)/photometric
+    else:
+        #Divide by photometric per channel
+        ret = img.copy().astype(float)
+        for i in range(img.shape[2]):
+            ret[:,:,i] = ret[:,:,i]/photometric*0.5
+    ret = np.clip(ret, 0, 255).astype(np.uint8)
+    return ret
 
-def calib_photometric_imgs(imgs, photometric):
+def calib_photometric_imgs(imgs, photometric, is_rgb=True):
     photometric_calibed = []
     if photometric is not None:
         #Convert to grayscale
         for img in imgs:
-            if len(img.shape) == 3:
-                img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-            calibed = calib_photometric(img, photometric)
+            calibed = calib_photometric(img, photometric, is_rgb=is_rgb)
             photometric_calibed.append(calibed)
     else:
         photometric_calibed = imgs
@@ -169,6 +183,9 @@ if __name__ == "__main__":
     parser.add_argument("-s","--step", type=int, default=5, help="step of stereo pair")
     parser.add_argument("-v","--verbose", action='store_true', help="show image")
     parser.add_argument("-p","--photometric", type=str, help="photometric calibration image")
+    parser.add_argument("-w","--width", type=int, default=320, help="width of stereo pair")
+    parser.add_argument("--height", type=int, default=240, help="width of stereo pair")
+
     args = parser.parse_args()
     stereo_paths = ["/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_1_0.yaml",
                 "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_2_1.yaml",
@@ -176,8 +193,9 @@ if __name__ == "__main__":
                 "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_0_3.yaml"]
     if args.config == "":
         stereo_gens = genDefaultConfig()
+        is_rgb = False
     else:
-        stereo_gens = loadConfig(args.config, stereo_paths, fov=args.fov, hitnet=True)
+        stereo_gens, is_rgb = loadConfig(args.config, stereo_paths, fov=args.fov, hitnet=True, width=args.width, height=args.height)
     #Read photometric
     if args.photometric != "":
         photometric = cv.imread(args.photometric, cv.IMREAD_GRAYSCALE)/255.0
@@ -203,12 +221,11 @@ if __name__ == "__main__":
                     img = bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='passthrough')
                 imgs = split_image(img)
                 photometric_calibed = []
-                for img in imgs:
-                    cv.imshow("raw", img)
-                    #Apply inverse of photometric calibration
-                    photometric_calibed = calib_photometric_imgs(imgs, photometric)
-                    cv.imshow("Photometic calibed", img)
-                    cv.waitKey(1)
+                photometric_calibed = calib_photometric_imgs(imgs, photometric, is_rgb)
+                cv.imshow("raw", imgs[2])
+                #Apply inverse of photometric calibration
+                cv.imshow("Photometic calibed", photometric_calibed[2])
+                cv.waitKey(1)
                 for gen in stereo_gens[2:3]:
                     test_depth_gen(gen, photometric_calibed, imgs, detailed=True)
                 pbar.update(1)

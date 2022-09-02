@@ -66,7 +66,7 @@ if __name__ == "__main__":
     if args.config == "":
         stereo_gens = genDefaultConfig()
     else:
-        stereo_gens = loadConfig(args.config, fov=args.fov)
+        stereo_gens = loadConfig(args.config, fov=args.fov, width=args.width, height=args.height)
     if args.output != "":
         output_bag = rosbag.Bag(args.output, mode="w")
     else:

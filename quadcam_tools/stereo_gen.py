@@ -9,7 +9,8 @@ def stereoPhotometicAlign(img_l, img_r):
     return img_l, img_r
 
 class StereoGen:
-    def __init__(self, undist_l:FisheyeUndist, undist_r:FisheyeUndist, cam_idx_a=0,  cam_idx_b=0, idx_l = 1, idx_r = 0, hitnet_model=None):
+    def __init__(self, undist_l:FisheyeUndist, undist_r:FisheyeUndist, cam_idx_a=0,  cam_idx_b=0, 
+            idx_l = 1, idx_r = 0, hitnet_model=None, is_rgb=False):
         self.undist_l = undist_l
         self.undist_r = undist_r
         self.idx_l = idx_l
@@ -22,12 +23,12 @@ class StereoGen:
             self.hitnet = hitnet_model
         else:
             self.enable_hitnet = False
+        self.is_rgb = is_rgb
             
     def initRectify(self, K1, D1, K2, D2, size, R, T):
         self.R1, self.R2, self.P1, self.P2, self.Q, self.roi_l, self.roi_r = cv.stereoRectify(K1, D1, K2, D2, size, R, T)
         self.mapl0, self.mapl1 = cv.initUndistortRectifyMap(K1, D1, self.R1, self.P1, size, cv.CV_32FC1)
         self.mapr0, self.mapr1 = cv.initUndistortRectifyMap(K2, D2, self.R2, self.P2, size, cv.CV_32FC1)
-        print("Q", self.Q)
     
     def genStereo(self, img_l, img_r):
         img_l = self.undist_l.undist(img_l, self.idx_l)
@@ -49,10 +50,11 @@ class StereoGen:
         return r_img_l, r_img_r
     
     def genDisparity(self, img_l, img_r, max_disp=64, block_size=5):
-        if len(img_l.shape) > 2 and img_l.shape[2] == 3:
-            img_l = cv.cvtColor(img_l, cv.COLOR_BGR2GRAY)
-        if len(img_r.shape) > 2 and img_r.shape[2] == 3:
-            img_r = cv.cvtColor(img_r, cv.COLOR_BGR2GRAY)
+        if not self.is_rgb:
+            if len(img_l.shape) > 2 and img_l.shape[2] == 3:
+                img_l = cv.cvtColor(img_l, cv.COLOR_BGR2GRAY)
+            if len(img_r.shape) > 2 and img_r.shape[2] == 3:
+                img_r = cv.cvtColor(img_r, cv.COLOR_BGR2GRAY)
         img_l, img_r = self.genRectStereo(img_l, img_r)
         if self.enable_hitnet:
             disparity = self.hitnet(img_l, img_r)
@@ -61,6 +63,8 @@ class StereoGen:
                 blockSize=block_size, P1=8 * 3 * block_size ** 2, P2=32 * 3 * block_size ** 2, 
                 disp12MaxDiff=2, uniquenessRatio=10, speckleWindowSize=100, speckleRange=2)
             disparity = stereo.compute(img_l, img_r)
+        stereo_img = cv.hconcat([img_l, img_r])
+        cv.imshow("stereo", stereo_img)
         return disparity
 
     def genPointCloud(self, img_l, img_r, min_z=0.3, max_z=10, img_raw=None, enable_texture=True):

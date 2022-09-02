@@ -19,9 +19,9 @@ FIELDS = [PointField('x', 0, PointField.FLOAT32, 1),
 
 class DepthGenerateNode:
     def __init__(self, fisheye_configs, stereo_paths, photometric_path, fov=190, width=600, height=300):
-        self.gens = loadConfig(fisheye_configs, stereo_paths, fov=fov, width=width, height=height, hitnet=True)
+        self.gens, self.is_rgb = loadConfig(fisheye_configs, stereo_paths, fov=fov, width=width, height=height, hitnet=True)
         self.photometric = cv.imread(photometric_path, cv.IMREAD_GRAYSCALE)/255.0
-        self.pcl_pub = rospy.Publisher("/depth_estimation/point_cloud", PointCloud2, queue_size=1)
+        self.pcl_pub = rospy.Publisher("/depth_estimation/point_cloud_py", PointCloud2, queue_size=1)
         self.max_z = 100
         self.min_z = 0.3
         self.step = 5 #Generate cloud per 3 frames
@@ -44,9 +44,9 @@ class DepthGenerateNode:
             #Apply inverse of photometric calibration
             if photometric is not None:
                 #Convert to grayscale
-                if len(img.shape) == 3:
+                if len(img.shape) == 3 and not self.is_rgb:
                     img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-                calibed = calib_photometric(img, photometric)
+                calibed = calib_photometric(img, photometric, self.is_rgb)
                 photometric_calibed.append(calibed)
             else:
                 photometric_calibed.append(img)
@@ -56,9 +56,14 @@ class DepthGenerateNode:
             if args.verbose:
                 _pcl, _texture = test_depth_gen(gen, photometric_calibed, imgs, detailed=args.verbose)
             else:
-                _pcl, _texture = gen.genPointCloud(photometric_calibed[gen.cam_idx_a], 
-                        photometric_calibed[gen.cam_idx_b], img_raw=imgs[gen.cam_idx_a], 
-                        min_z=self.min_z, max_z=self.max_z, enable_texture=self.enable_texture)
+                if gen.is_rgb:
+                    _pcl, _texture = gen.genPointCloud(photometric_calibed[gen.cam_idx_a], 
+                            imgs[gen.cam_idx_b], img_raw=imgs[gen.cam_idx_a], 
+                            min_z=self.min_z, max_z=self.max_z, enable_texture=self.enable_texture)
+                else:
+                    _pcl, _texture = gen.genPointCloud(photometric_calibed[gen.cam_idx_a], 
+                            photometric_calibed[gen.cam_idx_b], img_raw=imgs[gen.cam_idx_a], 
+                            min_z=self.min_z, max_z=self.max_z, enable_texture=self.enable_texture)
             if pcl is None:
                 pcl = _pcl
                 texture = _texture
