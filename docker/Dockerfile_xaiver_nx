@@ -61,6 +61,15 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
       cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
       make -j$(USE_PROC) install
 
+#Replace CMAKE
+RUN   rm /usr/bin/cmake && \
+      wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-aarch64.sh \
+      -q -O /tmp/cmake-install.sh \
+      && chmod u+x /tmp/cmake-install.sh \
+      && /tmp/cmake-install.sh --skip-license --prefix=/usr/ \
+      && rm /tmp/cmake-install.sh \
+      && cmake --version
+
 #Install Faiss
 RUN   git clone https://github.com/facebookresearch/faiss.git && \
       cd faiss && \
@@ -76,3 +85,7 @@ RUN git clone https://github.com/laurentkneip/opengv && \
 
 #Install Backward
 RUN wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp -O /usr/local/include/backward.hpp
+
+#Install ONNXRUNTIME
+RUN wget https://nvidia.box.com/shared/static/pmsqsiaw4pg9qrbeckcbymho6c01jj4z.whl -O onnxruntime_gpu-1.11.0-cp36-cp36m-linux_aarch64.whl && \
+      pip3 install onnxruntime_gpu-1.11.0-cp36-cp36m-linux_aarch64.whl
