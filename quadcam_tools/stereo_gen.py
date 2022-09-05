@@ -1,5 +1,6 @@
 from fisheye_undist import *
 import sys
+import time 
 
 
 def stereoPhotometicAlign(img_l, img_r):
@@ -57,7 +58,10 @@ class StereoGen:
                 img_r = cv.cvtColor(img_r, cv.COLOR_BGR2GRAY)
         img_l, img_r = self.genRectStereo(img_l, img_r)
         if self.enable_hitnet:
+            s = time.time()
             disparity = self.hitnet(img_l, img_r)
+            dt = time.time() - s
+            print(f"CNN Inference time {dt*1000:.1f}ms")
         else:
             stereo = cv.StereoSGBM.create(minDisparity=0, numDisparities=max_disp, 
                 blockSize=block_size, P1=8 * 3 * block_size ** 2, P2=32 * 3 * block_size ** 2, 

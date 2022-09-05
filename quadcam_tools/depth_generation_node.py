@@ -46,8 +46,8 @@ class DepthGenerateNode:
                 #Convert to grayscale
                 if len(img.shape) == 3 and not self.is_rgb:
                     img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-                # calibed = calib_photometric(img, photometric, self.is_rgb)
-                calibed= img
+                calibed = calib_photometric(img, photometric, self.is_rgb)
+                # calibed= img
                 photometric_calibed.append(calibed)
             else:
                 photometric_calibed.append(img)
@@ -89,20 +89,20 @@ if __name__ == "__main__":
     rospy.init_node('depth_generate_node')
     #Register node
     parser = argparse.ArgumentParser(description='Fisheye undist')
-    parser.add_argument("-f","--fov", type=float, default=190, help="hoizon fov of fisheye")
-    parser.add_argument("-c","--config", type=str, default="", help="config file path")
-    parser.add_argument("-p","--photometric", type=str, help="photometric calibration image")
+    parser.add_argument("-f","--fov", type=float, default=180, help="hoizon fov of fisheye")
+    parser.add_argument("-c","--config", type=str, default="/home/dji/d2slam_ws/src/D2SLAM/config/quadcam/quad_cam_calib-camchain-imucam.yaml", help="config file path")
+    parser.add_argument("-p","--photometric", type=str, help="photometric calibration image", default="/home/dji/d2slam_ws/src/D2SLAM/config/quadcam/mask.png")
     parser.add_argument("-v","--verbose", action='store_true', help="show image")
-    parser.add_argument("-w","--width", type=int, default=300, help="width of pinhole")
-    parser.add_argument("--height", type=int, default=150, help="width of pinhole")
+    parser.add_argument("-w","--width", type=int, default=320, help="width of pinhole")
+    parser.add_argument("--height", type=int, default=240, help="width of pinhole")
     args = parser.parse_args()
-    stereo_paths = ["/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_1_0.yaml",
-                "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_2_1.yaml",
-                "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_3_2.yaml",
-                "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_0_3.yaml"]
+    stereo_paths = ["/home/dji/d2slam_ws/src/D2SLAM/config/quadcam/stereo_calib_1_0.yaml",
+                "/home/dji/d2slam_ws/src/D2SLAM/config/quadcam/stereo_calib_2_1.yaml",
+                "/home/dji/d2slam_ws/src/D2SLAM/config/quadcam/stereo_calib_3_2.yaml",
+                "/home/dji/d2slam_ws/src/D2SLAM/config/quadcam/stereo_calib_0_3.yaml"]
     node = DepthGenerateNode(args.config, stereo_paths, args.photometric, fov=args.fov, width=args.width, height=args.height)
     #Subscribe to image using ImageTransport
     sub_comp = rospy.Subscriber("/arducam/image/compressed", CompressedImage, node.callback)
-    sub_raw = rospy.Subscriber("/arducam/image/raw", Image, node.callback)
+    # sub_raw = rospy.Subscriber("/arducam/image", Image, node.callback)
     print("depth_generate_node started")
     rospy.spin()

@@ -9,6 +9,9 @@ import rosbag
 import tqdm
 from cv_bridge import CvBridge
 from quad_cam_split import split_image
+from pathlib import Path
+
+home = str(Path.home())
 
 def genDefaultConfig():
     K = np.array([[1162.5434300524314, 0, 660.6393183718625],
@@ -57,6 +60,7 @@ def loadHitnet():
 def loadCRENet():
     print("Loading hitnet...")
     CRENETPath = '/home/xuhao/source/ONNX-CREStereo-Depth-Estimation'
+    CRENETPath = '/home/dji/source/ONNX-CREStereo-Depth-Estimation'
     sys.path.insert(0, CRENETPath)
     from crestereo import CREStereo
     iters = 5            # Lower iterations are faster, but will lower detail. 
@@ -139,14 +143,16 @@ def test_depth_gen(gen: StereoGen, imgs_calib, imgs_raw, detailed=False, save_rg
         # disparity = (disparity * 255.0/32.0).astype(np.uint8)
         disparity = cv.applyColorMap(disparity, cv.COLORMAP_JET)
         cv.rectangle(disparity, gen.roi_l, (0, 0, 255), 2)
+        if count == 0:
+            Path(home+"/output/stereo_calib/").mkdir(parents=True, exist_ok=True)
 
         img_l, img_r = gen.genRectStereo(imgs_raw[cam_idx_a], imgs_raw[cam_idx_b])
-        cv.imwrite(f"/home/xuhao/output/stereo_calib/left_{count}.png", img_l)
-        cv.imwrite(f"/home/xuhao/output/stereo_calib/right_{count}.png", img_r)
+        cv.imwrite(home+f"/output/stereo_calib/left_{count}.png", img_l)
+        cv.imwrite(home+f"/output/stereo_calib/right_{count}.png", img_r)
 
         img_l, img_r = gen.genRectStereo(imgs_calib[cam_idx_a], imgs_calib[cam_idx_b])
-        cv.imwrite(f"/home/xuhao/output/stereo_calib/gray_left_{count}.png", img_l)
-        cv.imwrite(f"/home/xuhao/output/stereo_calib/gray_right_{count}.png", img_r)
+        cv.imwrite(home+f"/output/stereo_calib/gray_left_{count}.png", img_l)
+        cv.imwrite(home+f"/output/stereo_calib/gray_right_{count}.png", img_r)
 
         
         count += 1
