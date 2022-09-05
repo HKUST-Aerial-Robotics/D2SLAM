@@ -3,13 +3,13 @@ FROM nvcr.io/nvidia/l4t-ml:r32.7.1-py3
 ARG CERES_VERSION=2.1.0
 ARG CMAKE_VERSION=3.23.1
 ARG ONNX_VERSION=1.12.1
-ARG OPENCV_VERSION=4.6.0
 ENV SWARM_WS=/root/swarm_ws
-ARG CERES_VERSION=2.1.0
 ARG CMAKE_VERSION=3.23.1
 ARG ONNX_VERSION=1.12.1
 ARG OPENCV_VERSION=4.6.0
 ARG ROS_VERSION=melodic
+#Modified if use PC
+ARG USE_PROC=4
 ENV SWARM_WS=/root/swarm_ws
 
 #Some basic dependencies
@@ -28,9 +28,6 @@ RUN apt install libopencv-dev -y -o Dpkg::Options::="--force-overwrite"
 RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` main" > /etc/apt/sources.list.d/ros-latest.list' && \
       curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - && \
       apt-get update && \
-      if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; \
-      else export USE_PROC=$(($(nproc)/2)) ; fi && \
-      apt-get update && \
       DEBIAN_FRONTEND=noninteractive apt-get install -y  --no-install-recommends \
       ros-${ROS_VERSION}-ros-base \
       ros-${ROS_VERSION}-nav-msgs \
@@ -38,7 +35,7 @@ RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` ma
       ros-${ROS_VERSION}-cv-bridge \
       ros-${ROS_VERSION}-rviz \
       ros-${ROS_VERSION}-image-transport-plugins \
-      ros-noetic-pcl-ros \
+      ros-${ROS_VERSION}-pcl-ros \
       build-essential \
       libdw-dev \
       ros-${ROS_VERSION}-catkin \
@@ -63,7 +60,7 @@ RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       cd ceres-solver && \
       mkdir build && cd build && \
       cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF -DCUDA=OFF .. && \
-      make -j$(USE_PROC) install && \
+      make -j${USE_PROC} install && \
       rm -rf ../../ceres-solver && \
       apt-get clean all
 
@@ -73,7 +70,7 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
       git checkout tags/v1.4.0 && \
       mkdir build && cd build && \
       cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
-      make -j$(USE_PROC) install
+      make -j${USE_PROC} install
 
 #Install Faiss
 RUN   git clone https://github.com/facebookresearch/faiss.git && \
@@ -85,16 +82,17 @@ RUN   git clone https://github.com/facebookresearch/faiss.git && \
 
 #Install OpenGV
 RUN git clone https://github.com/laurentkneip/opengv && \
-      mkdir opengv/build && cd opengv/build && cmake .. && make -j$(USE_PROC) && \
+      mkdir opengv/build && cd opengv/build && cmake .. && make -j${USE_PROC} && \
       make install
 
 #Install Backward
 RUN wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp -O /usr/local/include/backward.hpp
 
 #Install ONNXRuntime with CUDA
-RUN   git clone --recursive https://github.com/Microsoft/onnxruntime
+RUN   git clone --recursive https://github.com/Microsoft/onnxruntime && \
+      cd onnxruntime && \
+      git checkout tags/v${ONNX_VERSION}
 RUN   cd onnxruntime && \
-      git checkout tags/v${ONNX_VERSION} && \
       ./build.sh --config Release --build_shared_lib --parallel \
       --use_cuda --cudnn_home /usr/ --cuda_home /usr/local/cuda --skip_test \
       --use_tensorrt --tensorrt_home /usr/ &&\
