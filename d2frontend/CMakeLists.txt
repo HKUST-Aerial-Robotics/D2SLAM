@@ -31,12 +31,29 @@ find_package(lcm REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(opengv REQUIRED)
 
-set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch")
-find_package(Torch REQUIRED)
+set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch" CACHE STRING "Path of libtorch")
+set(TORCH_INSTALL_PREFIX "$ENV{HOME}/source/libtorch" CACHE STRING "Path of libtorch")
+#Find torch Optional
+find_package(Torch)
+if (NOT Torch_FOUND)
+  message("PyTorch not found")
+  set(TORCH_INCLUDE_DIRS "$ENV{HOME}/source/libtorch/" CACHE STRING "Path of torch install path")
+  set(TORCH_INCLUDE_DIRS
+    ${TORCH_INSTALL_PREFIX}/include
+    ${TORCH_INSTALL_PREFIX}/include/torch/csrc/api/include)
+  set(TORCH_LIBRARIES
+    ${TORCH_INSTALL_PREFIX}/lib/libtorch.so
+    ${TORCH_INSTALL_PREFIX}/lib/libtorch.so
+    ${TORCH_INSTALL_PREFIX}/lib/libtorch_cpu.so)
+endif()
 find_package(Boost REQUIRED COMPONENTS program_options)
 include_directories(${TORCH_INCLUDE_DIRS})
 
 add_definitions("-D USE_ONNX")
+set(ONNXRUNTIME_LIB_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/lib/" CACHE STRING "Path of ONNXRUNTIME_LIB_DIR")
+set(ONNXRUNTIME_INC_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/include/" CACHE STRING "Path of ONNXRUNTIME_INC_DIR")
+
+link_directories(${ONNXRUNTIME_LIB_DIR})
 link_directories("/usr/local/lib/")
 
 catkin_package(
@@ -55,6 +72,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${YAML_CPP_INCLUDE_DIRS}
+  ${ONNXRUNTIME_INC_DIR}
 )
 
 add_library(libd2frontend
@@ -99,7 +117,10 @@ set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 14)
 
 
 #Use tensorrt and onnx
-target_link_libraries(loop_cnn opencv_dnn onnxruntime)
+target_link_libraries(loop_cnn opencv_dnn 
+  onnxruntime
+  ${TORCH_LIBRARIES}
+)
 
 add_executable(loop_tensorrt_test
   tests/loop_tensorrt_test.cpp

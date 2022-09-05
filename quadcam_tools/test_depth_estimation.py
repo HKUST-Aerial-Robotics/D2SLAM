@@ -239,7 +239,9 @@ if __name__ == "__main__":
                 imgs = split_image(img)
                 if photometric is not None:
                     photometric_calibed = calib_photometric_imgs(imgs, photometric, is_rgb)
-                    if not is_rgb:
+                    if is_rgb:
+                        imgs = photometric_calibed
+                    else:
                         imgs = calib_photometric_imgs(imgs, photometric, True)
                 else:
                     photometric_calibed = imgs

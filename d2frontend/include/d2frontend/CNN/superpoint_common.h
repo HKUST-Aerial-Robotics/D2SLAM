@@ -1,5 +1,4 @@
 #pragma once
-#include <torch/csrc/autograd/variable.h>
 #include <ATen/ATen.h>
 #include <torch/csrc/api/include/torch/types.h>
 #include <opencv2/opencv.hpp>
