@@ -5,6 +5,7 @@ ARG CMAKE_VERSION=3.23.1
 ARG ONNX_VERSION=1.12.1
 ARG OPENCV_VERSION=4.6.0
 ENV SWARM_WS=/root/swarm_ws
+ARG ROS_VERSION=noetic
 
 #Some basic dependencies
 RUN  apt-get -y update && \
@@ -27,19 +28,21 @@ RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` ma
       apt-get update && \
       if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; \
       else export USE_PROC=$(($(nproc)/2)) ; fi && \
-      apt-get update && apt-get install -y \
-      ros-noetic-ros-base \
-      ros-noetic-nav-msgs \
-      ros-noetic-sensor-msgs \
-      ros-noetic-cv-bridge \
-      ros-noetic-rviz \
+      apt-get update && \
+      DEBIAN_FRONTEND=noninteractive  apt-get install -y \
+      ros-${ROS_VERSION}-ros-base \
+      ros-${ROS_VERSION}-nav-msgs \
+      ros-${ROS_VERSION}-sensor-msgs \
+      ros-${ROS_VERSION}-cv-bridge \
+      ros-${ROS_VERSION}-rviz \
+      ros-${ROS_VERSION}-pcl-ros \
       python3-rosdep \
       python3-rosinstall \
       python3-rosinstall-generator \
       python3-wstool \
       build-essential \
       python3-rosdep \
-      ros-noetic-catkin \
+      ros-${ROS_VERSION}-catkin \
       net-tools \
       python3-catkin-tools \
       htop \
@@ -49,7 +52,7 @@ RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` ma
       rosdep update
 
 #Replace CMAKE
-RUN   rm /usr/local/bin/cmake && \
+RUN   rm /usr/bin/cmake && \
       wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh \
       -q -O /tmp/cmake-install.sh \
       && chmod u+x /tmp/cmake-install.sh \
@@ -66,16 +69,12 @@ RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       rm -rf ../../ceres-solver && \
       apt-get clean all
 
-#Install ONNXRuntime with CUDA
-RUN   git clone --recursive https://github.com/Microsoft/onnxruntime
-RUN   cd onnxruntime && \
-      git checkout tags/v${ONNX_VERSION} && \
-      ./build.sh --config Release --build_shared_lib --parallel \
-      --use_cuda --cudnn_home /usr/ --cuda_home /usr/local/cuda --skip_test \
-      --use_tensorrt --tensorrt_home /usr/ &&\
-      cd build/Linux/Release && \
-      make install && \
-      rm -rf ../../../onnxruntime
+RUN   wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz && \
+      tar -zxvf onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz && \
+      cp -r onnxruntime-linux-x64-gpu-${ONNX_VERSION}/include/* /usr/local/include/ && \
+      cp -r onnxruntime-linux-x64-gpu-${ONNX_VERSION}/lib/* /usr/local/lib/ && \
+      rm -rf onnxruntime-linux-x64-gpu-${ONNX_VERSION} && \
+      rm onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz
 
 #Install Libtorch (CUDA)
 RUN   wget https://download.pytorch.org/libtorch/nightly/cpu/libtorch-cxx11-abi-shared-with-deps-latest.zip && \
@@ -145,8 +144,11 @@ RUN mkdir -p ${SWARM_WS}/src/ && \
       cd ${SWARM_WS}/src/ && \
       git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM && \
       git clone https://github.com/HKUST-Swarm/sync_bag_player.git && \
-      git clone https://github.com/ros-perception/vision_opencv.git -b noetic
-COPY ./ ${SWARM_WS}/src/
+      git clone https://github.com/ros-perception/vision_opencv.git -b ${ROS_VERSION}
+COPY ./ ${SWARM_WS}/src/D2SLAM
 WORKDIR $SWARM_WS
-RUN   source "/opt/ros/noetic/setup.bash" && \
+RUN   source "/opt/ros/${ROS_VERSION}/setup.bash" && \
+      catkin config -DCMAKE_BUILD_TYPE=Release \
+            --cmake-args -DONNXRUNTIME_LIB_DIR=/usr/local/lib \
+            -DONNXRUNTIME_INC_DIR=/usr/local/include && \
       catkin build

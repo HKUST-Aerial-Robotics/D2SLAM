@@ -9,11 +9,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 add_compile_options(-Wno-deprecated-declarations -Wno-reorder  -Wno-format -Wno-sign-compare)
 
 find_package(catkin REQUIRED)
+SET("OpenCV_DIR"  "/usr/local/share/OpenCV/")
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
-set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch")
-find_package(Torch REQUIRED)
+
 find_package(d2frontend REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -30,6 +30,9 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
 )
 
+set(ONNXRUNTIME_LIB_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/lib/" CACHE STRING "Path of ONNXRUNTIME_LIB_DIR")
+set(ONNXRUNTIME_INC_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/include/" CACHE STRING "Path of ONNXRUNTIME_INC_DIR")
+
 add_definitions("-D USE_ONNX")
 
 catkin_package(
@@ -39,12 +42,15 @@ catkin_package(
 #  DEPENDS system_lib
 )
 
+link_directories(${ONNXRUNTIME_LIB_DIR})
+
 include_directories(
 # include
 ${catkin_INCLUDE_DIRS}
 ${EIGEN3_INCLUDE_DIRS}
 ${d2frontend_INCLUDE_DIRS}
 ${YAML_CPP_INCLUDE_DIRS}
+${ONNXRUNTIME_INC_DIR}
 )
 
 ## Declare a C++ library
@@ -69,9 +75,8 @@ target_link_libraries(${PROJECT_NAME}_node
 target_link_libraries(${PROJECT_NAME}_test
   ${catkin_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
-  ${d2frontend_LIBRARIES}
-  ${TORCH_LIBRARIES}
   ${PROJECT_NAME}
+  ${d2frontend_LIBRARIES}
   onnxruntime
 )
 

@@ -1,8 +1,7 @@
 #pragma once
 #include "CNN_generic.h"
 #ifdef USE_ONNX
-#include <onnxruntime/core/session/onnxruntime_cxx_api.h>
-#include <onnxruntime/core/providers/tensorrt/tensorrt_provider_options.h>
+#include <onnxruntime_cxx_api.h>
 namespace D2FrontEnd {
 class ONNXInferenceGeneric: public CNNInferenceGeneric {
 protected:

@@ -1,3 +1,4 @@
+#Ubuntu 18.04/Jetpack 4.6.1/ROS Melodic
 FROM nvcr.io/nvidia/l4t-ml:r32.7.1-py3
 ARG CERES_VERSION=2.1.0
 ARG CMAKE_VERSION=3.23.1
@@ -29,21 +30,34 @@ RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` ma
       apt-get update && \
       if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; \
       else export USE_PROC=$(($(nproc)/2)) ; fi && \
-      apt-get update && apt-get install -y  --no-install-recommends \
+      apt-get update && \
+      DEBIAN_FRONTEND=noninteractive apt-get install -y  --no-install-recommends \
       ros-${ROS_VERSION}-ros-base \
       ros-${ROS_VERSION}-nav-msgs \
       ros-${ROS_VERSION}-sensor-msgs \
       ros-${ROS_VERSION}-cv-bridge \
       ros-${ROS_VERSION}-rviz \
       ros-${ROS_VERSION}-image-transport-plugins \
+      ros-noetic-pcl-ros \
       build-essential \
+      libdw-dev \
       ros-${ROS_VERSION}-catkin \
       net-tools \
       htop \
       xterm \
       gdb \
-      python-rosdep python-rosinstall python-rosinstall-generator python-wstool build-essential
-RUN rosdep init && rosdep update
+      python-catkin-tools python-rosdep python-rosinstall python-rosinstall-generator python-wstool build-essential && \
+      rosdep init && rosdep update
+
+
+#Replace CMAKE
+RUN   rm /usr/bin/cmake && \
+      wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-aarch64.sh \
+      -q -O /tmp/cmake-install.sh \
+      && chmod u+x /tmp/cmake-install.sh \
+      && /tmp/cmake-install.sh --skip-license --prefix=/usr/ \
+      && rm /tmp/cmake-install.sh \
+      && cmake --version
 
 RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       cd ceres-solver && \
@@ -61,15 +75,6 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
       cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
       make -j$(USE_PROC) install
 
-#Replace CMAKE
-RUN   rm /usr/bin/cmake && \
-      wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-aarch64.sh \
-      -q -O /tmp/cmake-install.sh \
-      && chmod u+x /tmp/cmake-install.sh \
-      && /tmp/cmake-install.sh --skip-license --prefix=/usr/ \
-      && rm /tmp/cmake-install.sh \
-      && cmake --version
-
 #Install Faiss
 RUN   git clone https://github.com/facebookresearch/faiss.git && \
       cd faiss && \
@@ -80,12 +85,36 @@ RUN   git clone https://github.com/facebookresearch/faiss.git && \
 
 #Install OpenGV
 RUN git clone https://github.com/laurentkneip/opengv && \
-      mkdir opengv/build && cd opengv/build && cmake .. && make && \
+      mkdir opengv/build && cd opengv/build && cmake .. && make -j$(USE_PROC) && \
       make install
 
 #Install Backward
 RUN wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp -O /usr/local/include/backward.hpp
 
-#Install ONNXRUNTIME
-RUN wget https://nvidia.box.com/shared/static/pmsqsiaw4pg9qrbeckcbymho6c01jj4z.whl -O onnxruntime_gpu-1.11.0-cp36-cp36m-linux_aarch64.whl && \
-      pip3 install onnxruntime_gpu-1.11.0-cp36-cp36m-linux_aarch64.whl
+#Install ONNXRuntime with CUDA
+RUN   git clone --recursive https://github.com/Microsoft/onnxruntime
+RUN   cd onnxruntime && \
+      git checkout tags/v${ONNX_VERSION} && \
+      ./build.sh --config Release --build_shared_lib --parallel \
+      --use_cuda --cudnn_home /usr/ --cuda_home /usr/local/cuda --skip_test \
+      --use_tensorrt --tensorrt_home /usr/ &&\
+      cd build/Linux/Release && \
+      make install && \
+      rm -rf ../../../onnxruntime
+
+#Build D2SLAM
+RUN mkdir -p ${SWARM_WS}/src/ && \
+      cd ${SWARM_WS}/src/ && \
+      git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM && \
+      git clone https://github.com/HKUST-Swarm/sync_bag_player.git && \
+      git clone https://github.com/ros-perception/vision_opencv.git -b ${ROS_VERSION}
+COPY ./ ${SWARM_WS}/src/D2SLAM
+WORKDIR ${SWARM_WS}
+RUN   export PATH=/usr/local/cuda/bin:$PATH && \
+      export CUDA_HOME=/usr/local/cuda && \
+      . /opt/ros/${ROS_VERSION}/setup.sh && \
+      catkin config -DCMAKE_BUILD_TYPE=Release \
+            --cmake-args -DONNXRUNTIME_LIB_DIR=/usr/local/lib/python3.6/dist-packages/onnxruntime/capi \
+            -DONNXRUNTIME_INC_DIR=/onnxruntime/include \
+            -DTORCH_INSTALL_PREFIX=/usr/local/lib/python3.6/dist-packages/torch/ && \
+      catkin build
