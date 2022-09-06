@@ -19,3 +19,4 @@ models/*.pb
 models/*.trt
 models/*.engine
 models/*.profile
+model.zip
