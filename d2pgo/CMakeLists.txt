@@ -11,14 +11,14 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   d2common
-  d2frontend
-  d2vins
   roscpp
   swarm_msgs
 )
 
 find_package(Eigen3 REQUIRED)
 find_package(Ceres REQUIRED)
+SET("OpenCV_DIR"  "/usr/local/share/OpenCV/")
+find_package(OpenCV REQUIRED)
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -33,6 +33,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${CERES_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -53,6 +54,7 @@ add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EX
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${CERES_LIBRARIES}
+  ${OpenCV_LIBRARIES}
 )
 
 add_executable(${PROJECT_NAME}_node src/d2pgo_node.cpp)
@@ -60,6 +62,7 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
+  ${OpenCV_LIBRARIES}
   dw
 )
 
@@ -71,6 +74,7 @@ add_dependencies(${PROJECT_NAME}_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 target_link_libraries(${PROJECT_NAME}_test
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
+  ${OpenCV_LIBRARIES}
   dw
 )
 
@@ -81,6 +85,7 @@ add_dependencies(test_pgo ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_
 target_link_libraries(test_pgo
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
+  ${OpenCV_LIBRARIES}
   dw
 )
 

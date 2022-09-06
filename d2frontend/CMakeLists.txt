@@ -43,7 +43,6 @@ if (NOT Torch_FOUND)
     ${TORCH_INSTALL_PREFIX}/include/torch/csrc/api/include)
   set(TORCH_LIBRARIES
     ${TORCH_INSTALL_PREFIX}/lib/libtorch.so
-    ${TORCH_INSTALL_PREFIX}/lib/libtorch.so
     ${TORCH_INSTALL_PREFIX}/lib/libtorch_cpu.so)
 endif()
 find_package(Boost REQUIRED COMPONENTS program_options)
@@ -201,15 +200,4 @@ target_link_libraries(${PROJECT_NAME}_spy
   lcm
   dw
   libd2frontend
-)
-
-install(TARGETS libd2frontend
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
-)
-
-install(
-  DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )

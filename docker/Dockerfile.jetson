@@ -16,5 +16,5 @@ RUN   export PATH=/usr/local/cuda/bin:$PATH && \
       catkin config -DCMAKE_BUILD_TYPE=Release \
             --cmake-args -DONNXRUNTIME_LIB_DIR=/usr/local/lib/ \
             -DONNXRUNTIME_INC_DIR=/usr/local/include/onnxruntime/core/session/ \
-            -DTORCH_INSTALL_PREFIX=/usr/local/lib/python3.8/dist-packages/torch/ && \
+            -DTorch_DIR=/usr/local/lib/python3.8/dist-packages/torch/share/cmake/Torch && \
       catkin build

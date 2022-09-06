@@ -147,5 +147,5 @@ RUN   cd onnxruntime && \
       rm -rf ../../../onnxruntime
 
 #Install Pytorch
-RUN   apt install python3-pip -y && \
+RUN   apt install python3-pip libopenblas-dev -y && \
       pip install --no-cache https://developer.download.nvidia.com/compute/redist/jp/v50/pytorch/torch-1.12.0a0+84d1cb9.nv22.4-cp38-cp38-linux_aarch64.whl

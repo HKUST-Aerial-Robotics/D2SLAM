@@ -50,18 +50,12 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>d2common</build_depend>
-  <build_depend>d2frontend</build_depend>
-  <build_depend>d2vins</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>swarm_msgs</build_depend>
   <build_export_depend>d2common</build_export_depend>
-  <build_export_depend>d2frontend</build_export_depend>
-  <build_export_depend>d2vins</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>swarm_msgs</build_export_depend>
   <exec_depend>d2common</exec_depend>
-  <exec_depend>d2frontend</exec_depend>
-  <exec_depend>d2vins</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>swarm_msgs</exec_depend>
 
