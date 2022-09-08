@@ -55,6 +55,7 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, const SlidingWindow_
     ImageDescriptorHeader_t & img_desc_header = img_des.header;
     img_desc_header.sld_win_status = sld_status;
     img_desc_header.feature_num = feature_num;
+    img_desc_header.timestamp_sent = toLCMTime(ros::Time::now());
 
     byte_sent += img_desc_header.getEncodedSize();
     lcm.publish("VIOKF_HEADER", &img_desc_header);
@@ -91,6 +92,7 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, const SlidingWindow_
                         // printf("[LoopNet] BD LMPack LM size %d(%dx%d) superpoint_dims %d lm.landmark_descriptor_int8 %d\n", lm_pack->getEncodedSize(), 
                         //     lm_pack->landmarks.size(), lm_pack->landmarks[0].getEncodedSize(), params->superpoint_dims, lm_pack->landmark_descriptor_int8.size());
                     }
+                    // lm_pack->timestamp_sent = toLCMTime(ros::Time::now());
                     lcm.publish("VIOKF_LANDMARKS", lm_pack);
                     delete lm_pack;
                     if (i != img_des.landmark_num - 1) {
@@ -257,8 +259,9 @@ void LoopNet::onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
     }
 
     if (params->print_network_status) {
-        printf("[LoopNet]ImageDescriptorHeader %ldc%ld from D%d msg_id %ld: feature num %d gdesc %d:%d\n", msg->frame_id, msg->camera_index, msg->drone_id, 
-            msg->msg_id, msg->feature_num, msg->image_desc_size_int8, msg->image_desc_size);
+        double delay = (ros::Time::now() - toROSTime(msg->timestamp_sent)).toSec();
+        printf("[LoopNet]ImageDescriptorHeader %ldc%ld from D%d delay %.1fms msg_id %ld: feature num %d gdesc %d:%d\n", msg->frame_id, msg->camera_index, msg->drone_id, 
+            delay*1000.0, msg->msg_id, msg->feature_num, msg->image_desc_size_int8, msg->image_desc_size);
     }
     updateRecvImgDescTs(msg->msg_id, true);
 
