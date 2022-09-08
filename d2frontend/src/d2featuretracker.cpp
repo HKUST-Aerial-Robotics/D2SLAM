@@ -376,7 +376,6 @@ bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
     int prev_num = current_keyframes.size() > 0 ? current_keyframes.back().landmarkNum(): 0;
     if (report.meanParallex() > 0.5) {
         printf("[D2FeatureTracker] unexcepted mean parallex %f\n", report.meanParallex());
-        exit(0);
     }
     if (keyframe_count < _config.min_keyframe_num || 
         report.long_track_num < _config.long_track_thres ||

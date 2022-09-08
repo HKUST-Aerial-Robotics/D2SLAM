@@ -119,11 +119,6 @@ bool D2PGO::solve_multi(bool force_solve) {
         if (config.write_g2o) {
             saveG2O();
         }
-    }
-
-    if (config.debug_rot_init_only || 
-            config.rot_init_config.enable_pose6d_solver ||
-            config.enable_rotation_initialization  && !isRotInitConvergence()) {
         //When use pose6d in rot init, we do not solve ceres.
         solve_count ++;
         updated = false;
@@ -174,18 +169,17 @@ bool D2PGO::solve_single() {
         setupEgoMotionFactors(solver);
     }
 
-    if (config.enable_rotation_initialization && !isRotInitConvergence() || config.rot_init_config.enable_pose6d_solver) {
+    if (config.enable_rotation_initialization && !isRotInitConvergence()) {
         rotInitial(used_loops);
         if (config.write_g2o) {
             saveG2O();
         }
         //Simply return here, we do solve ceres in.
         delete solver;
-        is_rot_init_convergence = true;
         return solve_single();
     }
 
-    if (config.debug_rot_init_only || config.rot_init_config.enable_pose6d_solver) {
+    if (config.debug_rot_init_only) {
         //When use pose6d in rot init, we do not solve ceres.
         solve_count ++;
         updated = false;
@@ -235,7 +229,11 @@ void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge> & good_loops) {
         printf("[D2PGO@%d]rotInitial: set first frame fixed\n", self_id);
         rot_init->setFixedFrameId(state.headId(self_id));
     }
-    rot_init->solve();
+    SolverReport report = rot_init->solve();
+    if (config.mode != PGO_MODE_NON_DIST || report.state_changes < config.rot_init_state_eps) {
+        is_rot_init_convergence = true;
+        printf("[D2PGO@%d]rotInitial: rot init convergence: %.1f%%\n", self_id, report.state_changes*100);
+    }
 }
 
 void D2PGO::saveG2O() {

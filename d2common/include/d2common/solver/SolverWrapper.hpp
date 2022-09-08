@@ -14,6 +14,7 @@ struct SolverReport {
     double total_time = 0;
     double initial_cost = 0;
     double final_cost = 0;
+    double state_changes = 0;
     bool succ = true;
     std::string message = "";
     ceres::Solver::Summary summary;
@@ -25,6 +26,11 @@ struct SolverReport {
         message += other.message;
         summary = other.summary;
     }
+
+    double costChanges() {
+        return (initial_cost - final_cost)/ initial_cost;
+    }
+
 };
 
 class SolverWrapper {

@@ -7,6 +7,7 @@
 namespace D2PGO {
 using D2Common::Utility::skewSymVec3;
 using D2Common::Utility::recoverRotationSVD;
+using D2Common::Utility::TicToc;
 
 template <typename Derived, typename T>
 inline void fillInTripet(int i0, int j0, const MatrixBase<Derived> & M, std::vector<Eigen::Triplet<T>> & triplets) {
@@ -169,8 +170,8 @@ protected:
         return X;
     }
 
-    void solveLinearRot() {
-        D2Common::Utility::TicToc tic;
+    double solveLinearRot() {
+        TicToc tic;
         VecX b(loops.size()*ROTMAT_SIZE + pose_priors.size()*ROTMAT_SIZE);
         if (config.enable_gravity_prior) {
             b.resize(loops.size()*ROTMAT_SIZE + pose_priors.size()*ROTMAT_SIZE + eff_frame_num*POS_SIZE);
@@ -194,14 +195,16 @@ protected:
             }
         }
         double dt_setup = tic.toc();
-        D2Common::Utility::TicToc tic_solve;
+        TicToc tic_solve;
         auto X = solveLinear(row_id, 9*eff_frame_num, triplet_list, b);
         double dt_solve = tic_solve.toc();
-        D2Common::Utility::TicToc tic2;
-        recoverRotationLLT(X);
-        printf("[RotInit%d] RotInit %.2fms setup %.2fms LLT %.2fms Recover %.2fms Poses %ld EffPoses %d Loops %ld Priors %ld F32: %d g_prior: %d\n", self_id,
-            tic.toc(), dt_setup, dt_solve, tic2.toc(), frame_id_to_idx.size(), eff_frame_num, loops.size(), pose_priors.size(),
+        TicToc tic2;
+        auto state_changes = recoverRotationLLT(X);
+        printf("[RotInit%d] RotInit %.2fms setup %.2fms LLT %.2fms Recover %.2fms state_changes %.1f%% Poses %ld EffPoses %d Loops %ld Priors %ld F32: %d g_prior: %d\n", self_id,
+            tic.toc(), dt_setup, dt_solve, tic2.toc(), state_changes*100,
+            frame_id_to_idx.size(), eff_frame_num, loops.size(), pose_priors.size(),
             typeid(T) == typeid(float), config.enable_gravity_prior);
+        return state_changes;
     }
 
     int setupPose6dProblembyLoop(int row_id, const Swarm::LoopEdge & loop, std::vector<Tpl> & triplet_list, VecX & b, bool finetune_rot = true) {
@@ -314,7 +317,7 @@ protected:
     }
 
     void solveLinearPose6d() {
-        D2Common::Utility::TicToc tic;
+        TicToc tic;
         VecX b(loops.size()*(ROTMAT_SIZE+3) + pose_priors.size()*(ROTMAT_SIZE+3));
         std::vector<Eigen::Triplet<T>> triplet_list;
         b.setZero();
@@ -327,7 +330,7 @@ protected:
         }
         double dt_setup = tic.toc();
         tic.tic();
-        D2Common::Utility::TicToc tic_solve;
+        TicToc tic_solve;
         auto X = solveLinear(row_id, POSE_EFF_SIZE*eff_frame_num, triplet_list, b);
         double dt_solve = tic_solve.toc();
         //Recover poses from X
@@ -337,7 +340,9 @@ protected:
             typeid(T) == typeid(float));
     }
 
-    void recoverRotationLLT(const VecX & X) {
+    double recoverRotationLLT(const VecX & X) {
+        double state_changes_sum = 0;
+        int count = 0;
         for (auto it : frame_id_to_idx) {
             auto frame_id = it.first;
             auto idx = getFrameIdx(frame_id);
@@ -355,8 +360,13 @@ protected:
             state->setAttitudeInit(frame_id, q);
             pose.to_vector(state->getPoseState(frame_id));
             Map<Matrix<double, 3, 3, RowMajor>> R_state(state->getRotState(frame_id));
-            R_state = M.template cast<double>(); //Not essential to be rotation matrix. For ARock.
+            auto Md = M.template cast<double>();
+            double changes = (R_state-Md).norm()/R_state.norm();
+            state_changes_sum += changes;
+            count ++;
+            R_state = Md; //Not essential to be rotation matrix. For ARock.
         }
+        return state_changes_sum/count;
     }
 
     void recoverPose6dfromLinear(const VecX & X, bool finetune_rot = true) {
@@ -404,8 +414,10 @@ public:
         // printf("[RotationInitialization::setFixedFrameId] Fixed frame id: %ld now %ld fixed\n", _fixed_frame_id, fixed_frame_ids.size());
     }
 
-    void solve() {
+    SolverReport solve() {
         //Chordal relaxation algorithm.
+        SolverReport report;
+        TicToc tic;
         for (auto loop : loops) {
             auto frame_id_a = loop.keyframe_id_a;
             auto frame_id_b = loop.keyframe_id_b;
@@ -414,16 +426,20 @@ public:
         }
         updateFrameIdx();
         setPriorFactorsbyFixedParam();
-        solveLinearRot();
+        report.state_changes = solveLinearRot();
+        report.total_time = tic.toc();
+        report.total_iterations = 1;
+        return report;   
+    }
 
-        //solve6DPose
-        if (config.enable_pose6d_solver) {
-            pose_priors.clear(); 
-            setPriorFactorsbyFixedParam();
-            for (int i = 0; i < config.pose6d_iterations; i ++) {
-                solveLinearPose6d();
-            }
+    SolverReport solveLinear6D() {
+        SolverReport report;
+        pose_priors.clear(); 
+        setPriorFactorsbyFixedParam();
+        for (int i = 0; i < config.pose6d_iterations; i ++) {
+            solveLinearPose6d();
         }
+        return report;
     }
 
     void reset() {

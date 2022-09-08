@@ -452,7 +452,7 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
     }
     if (_config.enable_homography_test && !_config.enable_superglue) {
         std::vector<unsigned char> mask;
-        cv::findHomography(lm_b_2d, lm_a_2d, cv::RANSAC, 3.0/params->focal_length, mask);
+        cv::findHomography(lm_b_2d, lm_a_2d, cv::RANSAC, 10.0/params->focal_length, mask);
         reduceVector(idx_a, mask);
         reduceVector(idx_b, mask);
         reduceVector(lm_pos_a, mask);

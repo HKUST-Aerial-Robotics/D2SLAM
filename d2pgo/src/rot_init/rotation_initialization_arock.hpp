@@ -18,7 +18,7 @@ protected:
         if (solve_6d) {
             RotationInitialization<T>::solveLinearPose6d();
         } else {
-            RotationInitialization<T>::solveLinearRot();
+            report.state_changes = RotationInitialization<T>::solveLinearRot();
         }
         report.total_time = tic.toc()/1000;
         report.total_iterations = 1;
@@ -151,7 +151,7 @@ public:
         broadcastDataCallback(_broadcastDataCallback) {
     }
 
-    void solve() {
+    SolverReport solve() {
         RotationInitialization<T>::pose_priors.clear();
         for (auto loop : RotationInitialization<T>::loops) {
             auto frame_id_a = loop.keyframe_id_a;
@@ -160,7 +160,7 @@ public:
             addFrameId(frame_id_b);
         }
         RotationInitialization<T>::updateFrameIdx();
-        solve_arock();
+        return solve_arock();
     }
 
     void reset() {
@@ -173,7 +173,7 @@ public:
     }
 
     void inputDPGOData(const DPGOData & data) {
-        printf("[ARockPGO@%d]input DPGOData from %d\n", self_id, data.drone_id);
+        // printf("[ARockPGO@%d]input DPGOData from %d\n", self_id, data.drone_id);
         std::lock_guard<std::recursive_mutex> lock(pgo_data_mutex);
         pgo_data.push_back(data);
     }

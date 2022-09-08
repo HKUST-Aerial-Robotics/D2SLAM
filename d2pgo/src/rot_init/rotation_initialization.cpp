@@ -68,18 +68,18 @@ void RotInit::setFixedFrameId(FrameIdType _fixed_frame_id) {
     }
 }
 
-void RotInit::solve() {
+SolverReport RotInit::solve() {
     if (enable_arock) {
         if (enable_float32) {
-            static_cast<RotationInitARockf*>(rot_int)->solve();
+            return static_cast<RotationInitARockf*>(rot_int)->solve();
         } else {
-            static_cast<RotationInitARockd*>(rot_int)->solve();
+            return static_cast<RotationInitARockd*>(rot_int)->solve();
         }
     } else {
         if (enable_float32) {
-            static_cast<RotationInitializationf*>(rot_int)->solve();
+            return static_cast<RotationInitializationf*>(rot_int)->solve();
         } else {
-            static_cast<RotationInitializationd*>(rot_int)->solve();
+            return static_cast<RotationInitializationd*>(rot_int)->solve();
         }
     }
 }
