@@ -4,7 +4,6 @@
 #include <cv_bridge/cv_bridge.h>
 #include <swarm_msgs/LoopEdge.h>
 #include <d2frontend/d2frontend_params.h>
-#include <d2frontend/loop_cam.h>
 #include <functional>
 #include <swarm_msgs/Pose.h>
 #include <faiss/IndexFlat.h>
@@ -13,7 +12,23 @@
 using namespace swarm_msgs;
 #define REMOTE_MAGIN_NUMBER 1000000
 
+namespace D2Common{
+    class VisualImageDescArray;
+    class VisualImageDesc;
+    struct LandmarkPerId;
+    struct VINSFrame;
+}
+
 namespace D2FrontEnd {
+
+using D2Common::LandmarkIdType;
+using D2Common::LandmarkPerId;
+using D2Common::VisualImageDesc;
+using D2Common::VisualImageDescArray;
+using D2Common::VINSFrame;
+using D2Common::Point2fVector;
+
+class LoopCam;
 
 struct LoopDetectorConfig {
     int MATCH_INDEX_DIST;

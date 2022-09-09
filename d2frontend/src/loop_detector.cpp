@@ -1,7 +1,7 @@
 #include <d2frontend/loop_detector.h>
 #include <chrono> 
-#include <d2frontend/utils.h>
 #include <d2common/d2vinsframe.h>
+#include <d2frontend/loop_cam.h>
 #include <swarm_msgs/relative_measurments.hpp>
 #include <d2frontend/CNN/superglue_onnx.h>
 #include <opengv/sac_problems/absolute_pose/AbsolutePoseSacProblem.hpp>
@@ -11,6 +11,7 @@
 #include <opengv/sac/Lmeds.hpp>
 
 using namespace std::chrono; 
+using namespace D2Common;
 
 #define USE_FUNDMENTAL
 #define MAX_LOOP_ID 100000000

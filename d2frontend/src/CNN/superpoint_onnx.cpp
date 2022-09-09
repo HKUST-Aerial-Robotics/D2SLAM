@@ -6,7 +6,6 @@
 #include "d2common/utils.hpp"
 using D2Common::Utility::TicToc;
 
-#ifdef USE_ONNX
 namespace D2FrontEnd {
 SuperPointONNX::SuperPointONNX(std::string engine_path, 
     std::string _pca_comp,
@@ -89,4 +88,3 @@ void SuperPointONNX::inference(const cv::Mat & input, std::vector<cv::Point2f> &
     }
 }
 }
-#endif

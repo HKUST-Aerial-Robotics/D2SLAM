@@ -1,6 +1,6 @@
 #include "onnx_generic.h"
 #include <Eigen/Dense>
-#ifdef USE_ONNX
+
 namespace D2FrontEnd {
 class SuperPointONNX: public ONNXInferenceGeneric {
     Eigen::MatrixXf pca_comp_T;
@@ -24,4 +24,3 @@ public:
     void doInference(const unsigned char* input, const uint32_t batchSize) override;
 };
 }
-#endif

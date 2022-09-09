@@ -39,8 +39,6 @@ struct LoopCamConfig
     double superpoint_thres;
     int superpoint_max_num;
     std::string netvlad_model;
-    int netvlad_width = 640;
-    int netvlad_height = 480;
     int self_id = 0;
     bool OUTPUT_RAW_SUPERPOINT_DESC;
     bool right_cam_as_main = false;
@@ -66,17 +64,9 @@ class LoopCam {
     CameraConfig camera_configuration;
     std::fstream fsp;
     std::vector<FisheyeUndist*> undistortors;
-#ifdef USE_TENSORRT
-    SuperPointTensorRT * superpoint_net = nullptr;
-    MobileNetVLADTensorRT * netvlad_net = nullptr;
-#endif
-#ifdef USE_ONNX
     MobileNetVLADONNX * netvlad_onnx = nullptr;
     SuperPointONNX * superpoint_onnx = nullptr;
-#endif
 public:
-
-
     // LoopDetector * loop_detector = nullptr;
     LoopCam(LoopCamConfig config, ros::NodeHandle & nh);
     

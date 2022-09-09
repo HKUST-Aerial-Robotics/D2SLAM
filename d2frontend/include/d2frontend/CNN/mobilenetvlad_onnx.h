@@ -2,7 +2,6 @@
 #include "../utils.h"
 #include "d2common/utils.hpp"
 
-#ifdef USE_ONNX
 namespace D2FrontEnd {
 using D2Common::Utility::TicToc;
 class MobileNetVLADONNX: public ONNXInferenceGeneric {
@@ -47,4 +46,3 @@ public:
     }
 };
 }
-#endif

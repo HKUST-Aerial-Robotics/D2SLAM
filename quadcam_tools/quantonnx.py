@@ -58,32 +58,29 @@ if __name__ == "__main__":
     print(f"Num samples: {len(image_names)} for calib")
     stride = 100
 
-    # width = 320
-    # height = 240
-    # model_fp32 = "../models/superpoint_v1.onnx"
-    # augmented_model_path = "../models/superpoint_v1_augmented_model.onnx"
-    # print(f"Quantization for TensorRT of superpoint {width}x{height}...")
-    # calibrator = create_calibrator(model_fp32, [], augmented_model_path=augmented_model_path, 
-    #         calibrate_method = CalibrationMethod.Entropy)
-    # calibrator.set_execution_providers(["CUDAExecutionProvider"])      
-    # input_name = "image"
-    # pbar = tqdm.tqdm(total=len(image_names), colour="green")
-    # for i in range(0, len(image_names), stride):
-    #     dr = ImageDataReader(image_names[i:i+stride], width=width, height=height, 
-    #             input_name=input_name, data_bchw=True, multiplier=255.0)
-    #     calibrator.collect_data(dr)
-    #     pbar.update(stride)
-    # write_calibration_table(calibrator.compute_range())
-    # os.rename("calibration.flatbuffers", "superpoint_calibration.flatbuffers")
-    # os.rename("calibration.cache", "superpoint_calibration.cache")
-    # os.rename("calibration.json", "superpoint_calibration.json")
+    width = 400
+    height = 200
+    model_fp32 = "../models/superpoint_v1_dyn_size.onnx"
+    augmented_model_path = f"../models/superpoint_v1_{width}x{height}_augmented_model.onnx"
+    print(f"Quantization for TensorRT of superpoint {width}x{height}...")
+    calibrator = create_calibrator(model_fp32, [], augmented_model_path=augmented_model_path, 
+            calibrate_method = CalibrationMethod.Entropy)
+    calibrator.set_execution_providers(["CUDAExecutionProvider"])      
+    input_name = "image"
+    pbar = tqdm.tqdm(total=len(image_names), colour="green")
+    for i in range(0, len(image_names), stride):
+        dr = ImageDataReader(image_names[i:i+stride], width=width, height=height, 
+                input_name=input_name, data_bchw=True, multiplier=255.0)
+        calibrator.collect_data(dr)
+        pbar.update(stride)
+    write_calibration_table(calibrator.compute_range())
+    os.rename("calibration.flatbuffers", "superpoint_calibration.flatbuffers")
+    os.rename("calibration.cache", "superpoint_calibration.cache")
+    os.rename("calibration.json", "superpoint_calibration.json")
 
-
-    width = 640
-    height = 480
     print(f"Quantization for TensorRT of MobileNetVLAD {width}x{height}...")
-    model_fp32 = "../models/mobilenetvlad_240x320.onnx"
-    augmented_model_path = "../models/mobilenetvlad_240x320_augmented_model.onnx"
+    model_fp32 = "../models/mobilenetvlad_dyn_size.onnx"
+    augmented_model_path = f"../models/mobilenetvlad_{width}x{height}_augmented_model.onnx"
     calibrator = create_calibrator(model_fp32, [], augmented_model_path=augmented_model_path, 
             calibrate_method = CalibrationMethod.Entropy)
     calibrator.set_execution_providers(["CUDAExecutionProvider"])      

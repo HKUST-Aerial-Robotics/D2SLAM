@@ -24,18 +24,9 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
 
     if (config.cnn_use_onnx) {
         printf("[D2FrontEnd::LoopCam] Init CNNs using onnx\n");
-#ifdef USE_ONNX
-        netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, config.netvlad_width, config.netvlad_height);
+        netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, img_width, img_height);
         superpoint_onnx = new SuperPointONNX(config.superpoint_model, config.pca_comp, 
             config.pca_mean, img_width, img_height, config.superpoint_thres, config.superpoint_max_num); 
-#endif
-    }else {
-        printf("[D2FrontEnd::LoopCam] Try to init CNNs using TensorRT\n");
-#ifdef USE_TENSORRT
-        superpoint_net = new SuperPointTensorRT(config.superpoint_model, config.pca_comp, 
-            config.pca_mean, img_width, img_height, config.superpoint_thres, config.superpoint_max_num); 
-        netvlad_net = new MobileNetVLADTensorRT(config.netvlad_model, config.netvlad_width, config.netvlad_height); 
-#endif
     }
     undistortors = params->undistortors;
     cams = params->camera_ptrs;
@@ -528,25 +519,13 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         //We only inference when superpoint max num > 0
         //otherwise, d2vins only uses LK optical flow feature.
         if (_config.cnn_use_onnx) {
-#ifdef USE_ONNX
             superpoint_onnx->inference(img, landmarks_2d, vframe.landmark_descriptor, vframe.landmark_scores);
-#endif
-        } else {
-#ifdef USE_TENSORRT
-            superpoint_net->inference(img, landmarks_2d, vframe.landmark_descriptor);
-#endif
         }
     }
 
     if (!superpoint_mode) {
         if (_config.cnn_use_onnx) {
-#ifdef USE_ONNX
             vframe.image_desc = netvlad_onnx->inference(img);
-#endif
-        } else {
-#ifdef USE_TENSORRT
-            vframe.image_desc = netvlad_net->inference(img);
-#endif
         }
     }
 

@@ -20,3 +20,5 @@ models/*.trt
 models/*.engine
 models/*.profile
 model.zip
+*.engine
+*.profile
