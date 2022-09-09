@@ -74,9 +74,9 @@ if __name__ == "__main__":
         calibrator.collect_data(dr)
         pbar.update(stride)
     write_calibration_table(calibrator.compute_range())
-    os.rename("calibration.flatbuffers", "superpoint_calibration.flatbuffers")
-    os.rename("calibration.cache", "superpoint_calibration.cache")
-    os.rename("calibration.json", "superpoint_calibration.json")
+    os.rename("calibration.flatbuffers", "../models/superpoint_calibration.flatbuffers")
+    os.rename("calibration.cache", "../models/superpoint_calibration.cache")
+    os.rename("calibration.json", "../models/superpoint_calibration.json")
 
     print(f"Quantization for TensorRT of MobileNetVLAD {width}x{height}...")
     model_fp32 = "../models/mobilenetvlad_dyn_size.onnx"
@@ -91,7 +91,7 @@ if __name__ == "__main__":
         calibrator.collect_data(dr)
         pbar.update(stride)
     write_calibration_table(calibrator.compute_range())
-    os.rename("calibration.flatbuffers", "mobilenetvlad_calibration.flatbuffers")
-    os.rename("calibration.cache", "mobilenetvlad_calibration.cache")
-    os.rename("calibration.json", "mobilenetvlad_calibration.json")
+    os.rename("calibration.flatbuffers", "../models/mobilenetvlad_calibration.flatbuffers")
+    os.rename("calibration.cache", "../models/mobilenetvlad_calibration.cache")
+    os.rename("calibration.json", "../models/mobilenetvlad_calibration.json")
     
