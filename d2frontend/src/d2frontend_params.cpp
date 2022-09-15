@@ -120,7 +120,7 @@ namespace D2FrontEnd {
         } else if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE)  {
             loopdetectorconfig->MAX_DIRS = 4;
         } else {
-            ROS_ERROR("[SWARM_LOOP] Camera configuration %d not implement yet.", camera_configuration);
+            ROS_ERROR("[D2Frontend] Camera configuration %d not implement yet.", camera_configuration);
             exit(-1);
         }
         depth_topics.emplace_back((std::string) fsSettings["depth_topic"]);
@@ -132,20 +132,31 @@ namespace D2FrontEnd {
         readCameraConfigs(fsSettings, configPath);
         camodocal::CameraFactory cam_factory;
         for (auto & cam_calib_path : camera_config_paths) {
-            ROS_INFO("[D2FrontEnd::LoopCam] Read camera from %s", cam_calib_path.c_str());
+            ROS_INFO("[D2Frontend] Read camera from %s", cam_calib_path.c_str());
             auto cam = cam_factory.generateCameraFromYamlFile(cam_calib_path);
             if (cam) {
                 camera_ptrs.push_back(cam);
             } else {
-                ROS_ERROR("Failed to read camera from %s", cam_calib_path.c_str());
+                ROS_ERROR("[D2Frontend]Failed to read camera from %s", cam_calib_path.c_str());
             }
+        }
+        std::string photometric_calib_file = fsSettings["photometric_calib"];
+        cv::Mat photometric;
+        if ( photometric_calib_file != "") {
+            double avg_photometric = fsSettings["avg_photometric"];
+            photometric = cv::imread(configPath + "/" + photometric_calib_file, cv::IMREAD_GRAYSCALE);
+            photometric.convertTo(photometric, CV_32FC1, 1.0/255.0);
+            cv::divide(avg_photometric, photometric, photometric);
+            printf("[D2Frontend] Read photometric calibration from: %s\n", photometric_calib_file.c_str());
+        } else {
+            printf("[D2Frontend] No photometric calibration file provided.\n");
         }
         if (enable_undistort_image) {
             raw_camera_ptrs = camera_ptrs;
             camera_ptrs.clear();
             for (auto cam: raw_camera_ptrs) { 
                 auto ptr = new FisheyeUndist(cam, 0, undistort_fov, true, FisheyeUndist::UndistortCylindrical, 
-                    width_undistort, height_undistort);
+                    width_undistort, height_undistort, photometric);
                 auto cylind_cam = ptr->cam_top;
                 camera_ptrs.push_back(cylind_cam);
                 undistortors.emplace_back(ptr);
@@ -159,7 +170,7 @@ namespace D2FrontEnd {
             //     focal_length = static_cast<camodocal::PinholeCamera* >(cam.get())->getParameters().fx();
             // }
         }
-        printf("[D2FrontendParams] Focal length initialize to: %.1f\n", focal_length);
+        printf("[D2Frontend] Focal length initialize to: %.1f\n", focal_length);
     }
 
 

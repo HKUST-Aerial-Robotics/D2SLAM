@@ -106,6 +106,7 @@ struct D2FrontendParams {
     std::vector<camodocal::CameraPtr> raw_camera_ptrs;
     std::vector<D2Common::FisheyeUndist*> undistortors;
 
+    bool show_raw_image = true;
     //Configs of submodules
     LoopCamConfig * loopcamconfig;
     LoopDetectorConfig * loopdetectorconfig;

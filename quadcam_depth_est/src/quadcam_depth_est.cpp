@@ -130,11 +130,11 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
 
 void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPath) {
     cv::Mat photometric;
-    if (config["lightness_mask"]) {
-        std::string mask_file = configPath + "/" + config["lightness_mask"].as<std::string>();
-        cv::Mat lightness_mask = cv::imread(mask_file, cv::IMREAD_GRAYSCALE);
-        lightness_mask.convertTo(lightness_mask, CV_32FC1, 1.0/255.0);
-        cv::divide(0.7, lightness_mask, photometric);
+    if (config["photometric_calib"]) {
+        std::string mask_file = configPath + "/" + config["photometric_calib"].as<std::string>();
+        cv::Mat photometric_calib = cv::imread(mask_file, cv::IMREAD_GRAYSCALE);
+        photometric_calib.convertTo(photometric_calib, CV_32FC1, 1.0/255.0);
+        cv::divide(0.7, photometric_calib, photometric);
     }
 
     std::string calib_file_path = config["calib_file_path"].as<std::string>();

@@ -156,11 +156,15 @@ class FisheyeUndist {
         cv::cuda::remap(img_cuda, output, undistMapsGPUX[_id],
                         undistMapsGPUY[_id], REMAP_FUNC);
         if (photometics_gpu.size() > 0 && calib_photometric) {
-            output.convertTo(output, CV_32FC1);
             if (output.channels() == 3) {
+                output.convertTo(output, CV_32FC3);
                 cv::cuda::multiply(output, photometics_gpu_bgr[_id], output);
+                output.convertTo(output, CV_8UC3);
             } else {
+                output.convertTo(output, CV_32FC1);
                 cv::cuda::multiply(output, photometics_gpu[_id], output);
+                // cv::cuda::threshold(output, output, 255, 255, cv::THRESH_TRUNC);
+                output.convertTo(output, CV_8U);
             }
         }
         return output;
@@ -455,10 +459,9 @@ class FisheyeUndist {
                                  Eigen::Vector3d rotation,
                                  const unsigned &imgWidth,
                                  const unsigned &imgHeight, const double &fov) {
-        ROS_INFO("Generating Cylinder maps:");
         double cylinderFov = fov * DEG_TO_RAD;
-        ROS_INFO("Build for camera %d", cam_id);
-        ROS_INFO("cylinderFov: %.1f", cylinderFov * 57.3);
+        // ROS_INFO("Build for camera %d", cam_id);
+        printf("[FisheyeUndist] Generating Cylinder maps, fov %.1f deg\n", cylinderFov * 57.3);
 
         f_center = imgWidth / cylinderFov;
 
@@ -569,10 +572,6 @@ class FisheyeUndist {
             for (unsigned int y = 0; y < imgHeight; y++) {
                 Eigen::Vector3d objPoint;
                 p_vcam->liftProjective(Eigen::Vector2d(x, y), objPoint);
-                if (x == 0 && y == 0) {
-                    ROS_INFO("LiftProjective (%d,%d) to (%f,%f,%f)", x, y,
-                             objPoint[0], objPoint[1], objPoint[2]);
-                }
                 Eigen::Vector2d imgPoint;
                 p_cam->spaceToPlane(objPoint, imgPoint);
 

@@ -218,7 +218,7 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vc
     }
     cv::Mat undist = msg.left_images[vcam_id];
     if (_config.enable_undistort_image) {
-        undist = cv::Mat(undistortors[vcam_id]->undist_id_cuda(undist, 0));
+        undist = cv::Mat(undistortors[vcam_id]->undist_id_cuda(undist, 0, true));
     }
     VisualImageDesc vframe = extractorImgDescDeepnet(msg.stamp, undist, msg.left_camera_indices[vcam_id], msg.left_camera_ids[vcam_id], false);
 

@@ -458,8 +458,11 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
     char buf[64] = {0};
     int stereo_num = 0;
     for (size_t j = 0; j < cur_pts.size(); j++) {
-        cv::Scalar color = cv::Scalar(0, 255, 255);
-        cv::circle(img, cur_pts[j], 1, color, 2);
+        cv::Scalar color = cv::Scalar(0, 140, 255);
+        if (frame.landmarks[j].type == SuperPointLandmark) {
+            color = cv::Scalar(255, 0, 0); //Superpoint blue
+        }
+        cv::circle(img, cur_pts[j], 2, color, 2);
         auto _id = frame.landmarks[j].landmark_id;
         if (!lmanager->hasLandmark(_id)) {
             continue;
@@ -474,12 +477,12 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
             auto & pts2d = lmanager->at(_id).track;
             if (pts2d.size() == 0) 
                 continue;
-            if (!is_keyframe || pts2d.size() < 2 || is_right) {
+            if (is_right) {
                 prev = pts2d.back().pt2d;
                 prev_found = true;
             } else {
-                for (int  index = pts2d.size()-2; index >= 0; index--) {
-                    if (pts2d[index].camera_id == frame.camera_id) {
+                for (int  index = pts2d.size()-1; index >= 0; index--) {
+                    if (pts2d[index].camera_id == frame.camera_id && pts2d[index].frame_id != frame.frame_id) {
                         prev = lmanager->at(_id).track[index].pt2d;
                         prev_found = true;
                         break;
@@ -504,24 +507,24 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
         }
     }
     cv::Scalar color = cv::Scalar(255, 0, 0);
-    if (is_keyframe) {
-        color = cv::Scalar(0, 0, 255);
-    }
-    if (is_right) {
-        sprintf(buf, "Stereo points: %d", stereo_num);
-        cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
-    } else if (is_remote) {
-        sprintf(buf, "Drone %d<->%d Matched points: %d", params->self_id, frame.drone_id, report.remote_matched_num);
-        cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
-    }
-    else {
-        sprintf(buf, "KF/FRAME %d/%d @CAM %d ISKF: %d", keyframe_count, frame_count, 
-            frame.camera_index, is_keyframe);
-        cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
-        sprintf(buf, "TRACK %.1fms NUM %d LONG %d Parallex %.1f\%/%.1f",
-            report.ft_time, report.parallex_num, report.long_track_num, report.meanParallex()*100, _config.parallex_thres*100);
-        cv::putText(img, buf, cv::Point2f(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
-    }
+    // if (is_keyframe) {
+    //     color = cv::Scalar(0, 0, 255);
+    // }
+    // if (is_right) {
+    //     sprintf(buf, "Stereo points: %d", stereo_num);
+    //     cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+    // } else if (is_remote) {
+    //     sprintf(buf, "Drone %d<->%d Matched points: %d", params->self_id, frame.drone_id, report.remote_matched_num);
+    //     cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+    // }
+    // else {
+    //     sprintf(buf, "KF/FRAME %d/%d @CAM %d ISKF: %d", keyframe_count, frame_count, 
+    //         frame.camera_index, is_keyframe);
+    //     cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+    //     sprintf(buf, "TRACK %.1fms NUM %d LONG %d Parallex %.1f\%/%.1f",
+    //         report.ft_time, report.parallex_num, report.long_track_num, report.meanParallex()*100, _config.parallex_thres*100);
+    //     cv::putText(img, buf, cv::Point2f(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+    // }
     return img;
 }
 
@@ -572,9 +575,9 @@ void D2FeatureTracker::draw(std::vector<VisualImageDesc> frames, bool is_keyfram
     cv::Mat img_r = drawToImage(frames[2], is_keyframe, report);
     cv::hconcat(img, img_r, img);
     cv::Mat img1 = drawToImage(frames[1], is_keyframe, report);
-    cv::Mat img1_r = drawToImage(frames[3], is_keyframe, report, true);
+    cv::Mat img1_r = drawToImage(frames[3], is_keyframe, report);
     cv::hconcat(img1, img1_r, img1);
-    cv::vconcat(img, img1, img);
+    cv::hconcat(img, img1, img);
     
     char buf[64] = {0};
     sprintf(buf, "featureTracker @ Drone %d", params->self_id);

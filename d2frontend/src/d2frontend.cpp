@@ -83,6 +83,10 @@ void D2Frontend::monoImageCallback(const sensor_msgs::ImageConstPtr & image) {
             cv::cvtColor(imgs.back(), imgs.back(), cv::COLOR_BGR2GRAY);
         }
     }
+    if (params->show_raw_image) {
+        cv::namedWindow("raw_image", cv::WINDOW_NORMAL | cv::WINDOW_GUI_EXPANDED);
+        cv::imshow("RawImage", img);
+    }
     StereoFrame sframe(image->header.stamp, imgs, params->extrinsics, params->self_id);
     processStereoframe(sframe);
 }

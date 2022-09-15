@@ -1,28 +1,29 @@
 {
-  "configurations": [
-    {
-      "browse": {
-        "databaseFilename": "${default}",
-        "limitSymbolsToIncludedHeaders": false
-      },
-      "includePath": [
-        "/opt/ros/noetic/include/**",
-        "/home/xuhao/d2slam_ws/devel/include/**",
-        "/home/xuhao/d2slam_ws/src/D2SLAM/camera_models/include/**",
-        "/home/xuhao/d2slam_ws/src/vision_opencv/cv_bridge/include/**",
-        "/home/xuhao/d2slam_ws/src/D2SLAM/d2common/include/**",
-        "/home/xuhao/d2slam_ws/src/D2SLAM/d2frontend/include/**",
-        "/home/xuhao/d2slam_ws/src/vision_opencv/image_geometry/include/**",
-        "/home/xuhao/d2slam_ws/src/swarm_msgs/swarm_msgs/include/**",
-        "/home/xuhao/d2slam_ws/src/swarm_msgs/swarmcomm_msgs/include/**",
-        "/usr/include/**"
-      ],
-      "name": "ROS",
-      "intelliSenseMode": "gcc-x64",
-      "compilerPath": "/usr/bin/gcc",
-      "cStandard": "gnu11",
-      "cppStandard": "c++14"
-    }
-  ],
-  "version": 4
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "${default}",
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "includePath": [
+                "/opt/ros/noetic/include/**",
+                "/home/xuhao/d2slam_ws/devel/include/**",
+                "/home/xuhao/d2slam_ws/src/D2SLAM/camera_models/include/**",
+                "/home/xuhao/d2slam_ws/src/vision_opencv/cv_bridge/include/**",
+                "/home/xuhao/d2slam_ws/src/D2SLAM/d2common/include/**",
+                "/home/xuhao/d2slam_ws/src/D2SLAM/d2frontend/include/**",
+                "/home/xuhao/d2slam_ws/src/vision_opencv/image_geometry/include/**",
+                "/home/xuhao/d2slam_ws/src/swarm_msgs/swarm_msgs/include/**",
+                "/home/xuhao/d2slam_ws/src/swarm_msgs/swarmcomm_msgs/include/**",
+                "/usr/include/**"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "c++14",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
 }
