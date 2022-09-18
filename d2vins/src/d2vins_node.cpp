@@ -46,14 +46,13 @@ protected:
 
     void processRemoteImage(VisualImageDescArray & frame_desc) override {
         {
-            if (params->estimation_mode != D2VINSConfig::SINGLE_DRONE_MODE) {
+            if (params->estimation_mode != D2VINSConfig::SINGLE_DRONE_MODE &&
+                    !frame_desc.is_lazy_frame && frame_desc.matched_frame < 0) {
                 Guard guard(esti_lock);
                 estimator->inputRemoteImage(frame_desc);
             }
         }
-        if (D2FrontEnd::params->enable_loop) {
-            loop_detector->processImageArray(frame_desc);
-        }
+        D2Frontend::processRemoteImage(frame_desc);
         if (params->pub_visual_frame) {
             visual_array_pub.publish(frame_desc.toROS());
         }

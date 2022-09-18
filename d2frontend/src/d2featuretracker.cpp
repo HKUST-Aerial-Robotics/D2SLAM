@@ -69,6 +69,10 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
 
 bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     const Guard lock(track_lock);
+    if (frames.is_lazy_frame || frames.matched_frame >= 0) {
+        printf("[D2FeatureTracker::trackRemoteFrames] lazy frame or matched frame, skip\n");
+        return false;
+    }
     bool matched = false;
     frame_count ++;
     TrackReport report;

@@ -91,6 +91,7 @@ struct VisualImageDesc {
     std::vector<float> landmark_descriptor;
     std::vector<float> landmark_scores;
     bool prevent_adding_db = false;
+    bool is_lazy_frame = false; //if true no features casue it's a lazy frame send from remote
 
     std::vector<uint8_t> image; //Buffer to store compressed image.
     int image_width = 0;
@@ -164,22 +165,28 @@ struct VisualImageDesc {
         return img_desc;
     }
 
-    ImageDescriptor_t toLCM() const {
+    ImageDescriptor_t toLCM(bool send_features=true) const {
         ImageDescriptor_t img_desc;
         img_desc.timestamp = toLCMTime(ros::Time(stamp));
         img_desc.drone_id = drone_id;
         img_desc.frame_id = frame_id;
-        img_desc.landmark_descriptor = landmark_descriptor;
-        img_desc.landmark_descriptor_size = landmark_descriptor.size();
-
+        
         img_desc.pose_drone = pose_drone.toLCM();
         img_desc.camera_extrinsic = extrinsic.toLCM();
-        img_desc.landmark_num = landmarks.size();
-        img_desc.landmark_scores_size = landmark_scores.size();
-        img_desc.landmark_scores = landmark_scores;
-
-        for (auto landmark: landmarks) {
-            img_desc.landmarks.emplace_back(landmark.toLCM());
+        if (send_features) {
+            img_desc.landmark_descriptor = landmark_descriptor;
+            img_desc.landmark_descriptor_size = landmark_descriptor.size();
+            img_desc.landmark_num = landmarks.size();
+            img_desc.landmark_scores_size = landmark_scores.size();
+            img_desc.landmark_scores = landmark_scores;
+            for (auto landmark: landmarks) {
+                img_desc.landmarks.emplace_back(landmark.toLCM());
+            }
+        } else {
+            img_desc.landmark_num = 0;
+            img_desc.landmark_descriptor_size = 0;
+            img_desc.landmark_scores_size = 0;
+            img_desc.is_lazy_frame = true;
         }
         img_desc.image_desc = image_desc;
         img_desc.image_desc_size = image_desc.size();
@@ -198,10 +205,9 @@ struct VisualImageDesc {
     }
 
     VisualImageDesc(const swarm_msgs::ImageDescriptor & desc):
-        extrinsic(desc.camera_extrinsic),
-        pose_drone(desc.pose_drone),
-        frame_id(desc.frame_id)
-    {
+            extrinsic(desc.camera_extrinsic),
+            pose_drone(desc.pose_drone),
+            frame_id(desc.frame_id) {
         stamp = desc.header.stamp.toSec();
         drone_id = desc.drone_id;
         landmark_descriptor = desc.landmark_descriptor;
@@ -218,10 +224,9 @@ struct VisualImageDesc {
     }
 
     VisualImageDesc(const ImageDescriptor_t & desc):
-        extrinsic(desc.camera_extrinsic),
-        pose_drone(desc.pose_drone),
-        frame_id(desc.frame_id)
-    {
+            extrinsic(desc.camera_extrinsic),
+            pose_drone(desc.pose_drone),
+            frame_id(desc.frame_id) {
         stamp = toROSTime(desc.timestamp).toSec();
         drone_id = desc.drone_id;
         landmark_descriptor = desc.landmark_descriptor;
@@ -232,6 +237,7 @@ struct VisualImageDesc {
         prevent_adding_db = desc.prevent_adding_db;
         camera_index = desc.camera_index;
         camera_id = desc.camera_id;
+        is_lazy_frame = desc.is_lazy_frame;
         for (auto landmark: desc.landmarks) {
             landmarks.emplace_back(landmark);
         }
@@ -249,6 +255,9 @@ struct VisualImageDescArray {
     Swarm::Pose pose_drone;
     bool prevent_adding_db;
     bool is_keyframe = false;
+    bool is_lazy_frame = false;
+    int matched_frame = -1; //If non-negative, this is the target id that this frame is matched to. It's for lazy frame only.
+    int matched_drone = -1; //If non-negative, this is the target id that this frame is matched to. It's for lazy frame only.
     IMUBuffer imu_buf;
     Vector3d Ba;
     Vector3d Bg;
@@ -298,15 +307,18 @@ struct VisualImageDescArray {
     }
 
     VisualImageDescArray(const ImageArrayDescriptor_t & img_desc):
-        frame_id(img_desc.frame_id),
-        prevent_adding_db(img_desc.prevent_adding_db),
-        drone_id(img_desc.drone_id),
-        reference_frame_id(img_desc.reference_frame_id),
-        is_keyframe(img_desc.is_keyframe),
-        Ba(img_desc.Ba.x, img_desc.Ba.y, img_desc.Ba.z),
-        Bg(img_desc.Bg.x, img_desc.Bg.y, img_desc.Bg.z),
-        sld_win_status(img_desc.sld_win_status.frame_ids)
-    {
+            frame_id(img_desc.frame_id),
+            prevent_adding_db(img_desc.prevent_adding_db),
+            drone_id(img_desc.drone_id),
+            reference_frame_id(img_desc.reference_frame_id),
+            is_keyframe(img_desc.is_keyframe),
+            Ba(img_desc.Ba.x, img_desc.Ba.y, img_desc.Ba.z),
+            Bg(img_desc.Bg.x, img_desc.Bg.y, img_desc.Bg.z),
+            sld_win_status(img_desc.sld_win_status.frame_ids),
+            is_lazy_frame(img_desc.is_lazy_frame),
+            matched_frame(img_desc.matched_frame),
+            matched_drone(img_desc.matched_drone)
+        {
         stamp = toROSTime(img_desc.timestamp).toSec();
         pose_drone = Swarm::Pose(img_desc.pose_drone);
         for (auto & _img: img_desc.images) {
@@ -334,7 +346,7 @@ struct VisualImageDescArray {
         return ret;
     }
 
-    ImageArrayDescriptor_t toLCM() const {
+    ImageArrayDescriptor_t toLCM(bool send_features=true) const {
         ImageArrayDescriptor_t ret;
         ret.msg_id = frame_id;
         ret.frame_id = frame_id;
@@ -345,7 +357,10 @@ struct VisualImageDescArray {
         ret.pose_drone = pose_drone.toLCM();
         ret.is_keyframe = is_keyframe;
         for (auto & _img: images) {
-            ret.images.emplace_back(_img.toLCM());
+            ret.images.emplace_back(_img.toLCM(send_features));
+            ret.images.back().matched_frame = matched_frame;
+            ret.images.back().matched_drone = matched_drone;
+            ret.images.back().is_lazy_frame = is_lazy_frame;
         }
         ret.image_num = images.size();
         ret.imu_buf_size = imu_buf.size();
@@ -360,9 +375,13 @@ struct VisualImageDescArray {
         ret.sld_win_status.drone_id = ret.drone_id;
         ret.sld_win_status.frame_ids = sld_win_status;
         ret.reference_frame_id = reference_frame_id;
+        ret.is_lazy_frame = is_lazy_frame;
+        ret.matched_frame = matched_frame;
+        ret.matched_drone = matched_drone;
         for (unsigned int i = 0; i < imu_buf.size(); i ++) {
             ret.imu_buf.emplace_back(imu_buf[i].toLCM());
         }
+        ret.is_lazy_frame = !send_features;
         return ret;
     }
 };

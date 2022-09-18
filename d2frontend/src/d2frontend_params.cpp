@@ -57,6 +57,9 @@ namespace D2FrontEnd {
         nh.param<std::string>("pca_mean_path",loopcamconfig->pca_mean, "");
         nh.param<std::string>("superpoint_model_path", loopcamconfig->superpoint_model, "");
         nh.param<std::string>("netvlad_model_path", loopcamconfig->netvlad_model, "");
+        nh.param<bool>("cnn_enable_tensorrt", loopcamconfig->cnn_enable_tensorrt, false);
+        nh.param<bool>("cnn_enable_tensorrt_int8", loopcamconfig->cnn_enable_tensorrt_int8, false);
+
         nh.param<bool>("lower_cam_as_main", loopcamconfig->right_cam_as_main, false);
         nh.param<double>("triangle_thres", loopcamconfig->TRIANGLE_THRES, 0.006);
         nh.param<bool>("output_raw_superpoint_desc", loopcamconfig->OUTPUT_RAW_SUPERPOINT_DESC, false);
@@ -110,6 +113,8 @@ namespace D2FrontEnd {
         nh.param<bool>("send_all_features", SEND_ALL_FEATURES, false);
         nh.param<double>("recv_msg_duration", recv_msg_duration, 0.5);
         nh.param<bool>("enable_network", enable_network, true);
+        lazy_broadcast_keyframe = (int) fsSettings["lazy_broadcast_keyframe"];
+        printf("[D2Frontend] Using lazy broadcast keyframe: %d", lazy_broadcast_keyframe);
 
         if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
             loopdetectorconfig->MAX_DIRS = 1;

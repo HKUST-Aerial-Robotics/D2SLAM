@@ -11,6 +11,7 @@
 #include <functional>
 #include <set>
 #include <mutex>
+#include <thread>
 
 using namespace swarm_msgs;
 using namespace D2Common;
@@ -31,10 +32,6 @@ class LoopNet {
     void onLoopConnectionRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
                 const LoopEdge_t* msg);
-
-    void onImgDescRecevied(const lcm::ReceiveBuffer* rbuf,
-                const std::string& chan, 
-                const ImageDescriptor_t* msg);
 
     void onImgArrayRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
@@ -77,8 +74,8 @@ public:
     }
 
     void broadcastLoopConnection(swarm_msgs::LoopEdge & loop_conn);
-    void broadcastVisualImageDescArray(VisualImageDescArray & image_array);
-    void broadcastImgDesc(ImageDescriptor_t & img_des);
+    void broadcastVisualImageDescArray(VisualImageDescArray & image_array, bool force_features=false);
+    void broadcastImgDesc(ImageDescriptor_t & img_des, bool send_feature = true);
 
     void scanRecvPackets();
 

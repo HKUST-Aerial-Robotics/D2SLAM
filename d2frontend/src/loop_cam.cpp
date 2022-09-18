@@ -24,9 +24,11 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
 
     if (config.cnn_use_onnx) {
         printf("[D2FrontEnd::LoopCam] Init CNNs using onnx\n");
-        netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, img_width, img_height);
+        netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, img_width, img_height, config.cnn_enable_tensorrt, 
+            config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8);
         superpoint_onnx = new SuperPointONNX(config.superpoint_model, config.pca_comp, 
-            config.pca_mean, img_width, img_height, config.superpoint_thres, config.superpoint_max_num); 
+            config.pca_mean, img_width, img_height, config.superpoint_thres, config.superpoint_max_num, 
+            config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8); 
     }
     undistortors = params->undistortors;
     cams = params->camera_ptrs;

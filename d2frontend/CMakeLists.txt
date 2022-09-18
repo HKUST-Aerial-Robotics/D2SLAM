@@ -43,6 +43,7 @@ if (NOT Torch_FOUND)
     ${TORCH_INSTALL_PREFIX}/include/torch/csrc/api/include)
   set(TORCH_LIBRARIES
     ${TORCH_INSTALL_PREFIX}/lib/libtorch.so
+    ${TORCH_INSTALL_PREFIX}/lib/libc10.so
     ${TORCH_INSTALL_PREFIX}/lib/libtorch_cpu.so)
 endif()
 find_package(Boost REQUIRED COMPONENTS program_options)

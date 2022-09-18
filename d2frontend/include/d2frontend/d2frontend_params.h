@@ -87,6 +87,7 @@ struct D2FrontendParams {
     bool enable_network = true;
     bool verbose = false;
     bool print_network_status = false;
+    bool lazy_broadcast_keyframe = true;
 
     bool is_comp_images;
     std::vector<std::string> image_topics, depth_topics;

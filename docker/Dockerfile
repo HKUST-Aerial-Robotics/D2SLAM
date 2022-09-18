@@ -36,6 +36,7 @@ RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` ma
       ros-${ROS_VERSION}-cv-bridge \
       ros-${ROS_VERSION}-rviz \
       ros-${ROS_VERSION}-pcl-ros \
+      ros-${ROS_VERSION}-image-transport-plugins \
       python3-rosdep \
       python3-rosinstall \
       python3-rosinstall-generator \
@@ -137,10 +138,10 @@ RUN git clone https://github.com/laurentkneip/opengv && \
       make install
 
 #Install Backward
-RUN wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp -O /usr/local/include/backward.hpp
+RUN   wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp -O /usr/local/include/backward.hpp
 
 #Build D2SLAM
-RUN mkdir -p ${SWARM_WS}/src/ && \
+RUN   mkdir -p ${SWARM_WS}/src/ && \
       cd ${SWARM_WS}/src/ && \
       git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM && \
       git clone https://github.com/HKUST-Swarm/sync_bag_player.git && \

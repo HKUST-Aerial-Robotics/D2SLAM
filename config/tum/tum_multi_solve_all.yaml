@@ -6,8 +6,6 @@ is_fisheye: 0
 imu_topic: "/imu0"
 image0_topic: "/cam0/image_raw"
 image1_topic: "/cam1/image_raw"
-compressed_image0_topic: "/cam0/image_raw/compressed"
-compressed_image1_topic: "/cam1/image_raw/compressed"
 is_compressed_images: 1
 imu_freq: 200
 image_freq: 20

@@ -21,6 +21,7 @@ namespace D2Common{
 
 namespace D2FrontEnd {
 
+using D2Common::FrameIdType;
 using D2Common::LandmarkIdType;
 using D2Common::LandmarkPerId;
 using D2Common::VisualImageDesc;
@@ -61,10 +62,11 @@ class LoopDetector {
 protected:
     faiss::IndexFlatIP local_index;
     faiss::IndexFlatIP remote_index;
-
+    Swarm::DroneTrajectory ego_motion_traj;
     std::map<int, int64_t> index_to_frame_id;
     std::map<int, int> imgid2dir;
     std::map<int, std::map<int, int>> inter_drone_loop_count;
+    std::set<int> all_nodes;
 
     std::map<int64_t, VisualImageDescArray> keyframe_database;
     std::mutex keyframe_database_mutex;
@@ -94,17 +96,13 @@ protected:
     int queryFrameIndexFromDatabase(const VisualImageDesc & new_img_desc, double & similarity);
     int queryIndexFromDatabase(const VisualImageDesc & new_img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & similarity);
 
-
-    std::set<int> all_nodes;
-
     bool checkLoopOdometryConsistency(LoopEdge & loop_conn) const;
-    Swarm::DroneTrajectory ego_motion_traj;
-
     void drawMatched(const VisualImageDescArray & fisheye_desc_a, const VisualImageDescArray & fisheye_desc_b,
             int main_dir_a, int main_dir_b, bool success, std::vector<int> inliers, Swarm::Pose DP_b_to_a,
             std::vector<std::pair<int, int>> index2dirindex_a, std::vector<std::pair<int, int>> index2dirindex_b);
 public:
     std::function<void(LoopEdge &)> on_loop_cb;
+    std::function<void(VisualImageDescArray&)> broadcast_keyframe_cb;
     int self_id = -1;
     LoopDetector(int self_id, const LoopDetectorConfig & config);
     void processImageArray(VisualImageDescArray & img_des);
@@ -113,6 +111,7 @@ public:
     cv::Mat decode_image(const VisualImageDesc & _img_desc);
     void updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPerId> & vins_landmark_db);
     void updatebySldWin(const std::vector<VINSFrame*> sld_win);
+    bool hasFrame(FrameIdType frame_id);
 
     int databaseSize() const;
 

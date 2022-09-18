@@ -50,6 +50,9 @@ struct LoopCamConfig
     bool cnn_use_onnx = true;
     bool send_img;
     bool show = false;
+    bool cnn_enable_tensorrt = false;
+    bool cnn_enable_tensorrt_int8 = false;
+    bool cnn_enable_tensorrt_fp16 = true;
     bool enable_undistort_image; //Undistort image before feature detection
 };
 
