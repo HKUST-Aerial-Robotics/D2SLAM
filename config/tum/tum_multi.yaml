@@ -91,7 +91,7 @@ tri_max_err: 1000000.0
 #Marginalization
 enable_marginalization: 1
 margin_sparse_solver: 1
-always_fixed_first_pose: 1
+always_fixed_first_pose: 0
 remove_base_when_margin_remote: 2
 #  When set to 2, will use the all relevant measurements of the removing frames to compute the prior,
 # and the baseFrame (where!=removeID) will not be removed. This may lead to double counting of this baseFrame measurement: but it's stable.

@@ -120,11 +120,11 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, bool skip_who
         const Map<VectorXf> vlad_desc(current_keyframe.images[frame.camera_index].image_desc.data(), NETVLAD_DESC_SIZE);
         double netvlad_similar = vlad_desc.dot(vlad_desc_remote);
         if (netvlad_similar < params->vlad_threshold) {
-            printf("[D2FeatureTracker::trackRemote] Remote image does not match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
+            // printf("[D2FeatureTracker::trackRemote@%d] Remote image does not match current image %.2f/%.2f\n", params->self_id, netvlad_similar, params->vlad_threshold);
             return report;
         } else {
-            if (params->verbose)
-                printf("[D2FeatureTracker::trackRemote] Remote image match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
+            // if (params->verbose)
+                // printf("[D2FeatureTracker::trackRemote] Remote image match current image %.2f/%.2f\n", params->self_id, netvlad_similar, params->vlad_threshold);
         }
     }
 

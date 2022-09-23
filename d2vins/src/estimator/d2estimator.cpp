@@ -149,10 +149,6 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     frame.odom.stamp = _frame.stamp;
     frame.reference_frame_id = state.getReferenceFrameId();
     auto frame_ret = state.addFrame(_frame, frame);
-    //If first frame we need to add a prior here
-    if (state.size(self_id) == 1) {
-        //Add a prior for first frame here
-    }
 
     //Assign IMU and initialization to VisualImageDescArray for broadcasting.
     _frame.imu_buf = _imu;

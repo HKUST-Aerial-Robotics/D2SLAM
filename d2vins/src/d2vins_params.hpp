@@ -21,6 +21,8 @@ struct D2VINSConfig {
     double acc_w = 0.002;
     double gyr_w = 0.0004;
     double focal_length = 460.0;
+    double initial_pos_sqrt_info = 1000.0;
+    double initial_yaw_sqrt_info = 10000.0;
 
     //Sensor frequency
     double IMU_FREQ = 400.0;

@@ -21,16 +21,18 @@ protected:
     std::map<CamIdType, int> camera_drone;
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
 
+    Marginalizer * marginalizer = nullptr;
+    PriorFactor * prior_factor = nullptr;
+    bool marginalized_self_first = false;
+
     std::vector<LandmarkPerId> popFrame(int index);
     std::vector<LandmarkPerId> removeFrameById(FrameIdType frame_id, bool remove_base=false); 
         //If remove base, will remove the relevant landmarks' base frame.
         //This is for marginal the keyframes that not is baseframe of all landmarks (in multi-drone)
     void outlierRejection();
     void updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs);
-    Marginalizer * marginalizer = nullptr;
-    PriorFactor * prior_factor = nullptr;
-    bool marginalized_self_first = false;
-
+    void createPriorFactor4FirstFrame(VINSFrame * frame);
+    
 public:
     state_type td = 0.0;
     D2EstimatorState(int _self_id);

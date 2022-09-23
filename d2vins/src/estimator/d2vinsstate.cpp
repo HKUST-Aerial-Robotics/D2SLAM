@@ -426,7 +426,29 @@ VINSFrame * D2EstimatorState::addFrame(const VisualImageDescArray & images, cons
                 self_id, images.frame_id, _frame.drone_id, frame->reference_frame_id, frame->is_keyframe, 
                 images.images.size(), sld_wins[self_id].size());
     }
+    //If first frame we need to add a prior here
+    if (size(images.drone_id) == 1 && 
+                (images.drone_id == self_id|| params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || 
+                params->estimation_mode == D2VINSConfig::SERVER_MODE)) {
+        //Add a prior for first frame here
+        createPriorFactor4FirstFrame(frame);
+    }
     return frame;
+}
+
+void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame * frame) {
+    //Prior is in form of A \delta x = b
+    //A is a 6x6 matrix, A = diag([a_p, a_p, a_p, 0, 0, a_yaw])
+    //b is zero vector
+    printf("\033[0;32m[D2VINS::D2Estimator] Add prior for first frame\033[0m\n");
+    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(POSE_EFF_SIZE, POSE_EFF_SIZE);
+    A.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * params->initial_pos_sqrt_info;
+    A(5, 5) = params->initial_yaw_sqrt_info;
+    VectorXd b = VectorXd::Zero(POSE_EFF_SIZE);
+    auto param_info = createFramePose(this, frame->frame_id);
+    param_info.index = 0;
+    std::vector<ParamInfo> params{param_info};
+    prior_factor = new PriorFactor(params, A, b);
 }
 
 void D2EstimatorState::syncFromState() {
