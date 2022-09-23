@@ -110,11 +110,13 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
     cv::Mat D, rvec, t;
     cv::Mat K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0);
     D2FrontEnd::PnPInitialFromCamPose(initial_pose*image.extrinsic, rvec, t);
-    // bool success = cv::solvePnP(pts3d, pts2d, K, D, rvec, t, true);
-    bool success = cv::solvePnPRansac(pts3d, pts2d, K, D, rvec, t, true, params->pnp_iteratives,  3, 0.99,  inliers);
+    bool success = cv::solvePnP(pts3d, pts2d, K, D, rvec, t, true);
+    // bool success = cv::solvePnPRansac(pts3d, pts2d, K, D, rvec, t, true, params->pnp_iteratives, 3.0/params->focal_length, 0.99,  inliers);
+    // success = success && inliers.rows > params->pnp_min_inliers;
     auto pose_cam = D2FrontEnd::PnPRestoCamPose(rvec, t);
     auto pose_imu = pose_cam*image.extrinsic.inverse();
-    printf("[D2VINS::D2Estimator@%d] PnP initial %s final %s points %d\n", self_id, pose_cam.toStr().c_str(), pose_imu.toStr().c_str(), pts3d.size());
+    printf("[D2VINS::D2Estimator@%d] PnP succ %d initial %s final %s inliers %d points %d\n", success, self_id, initial_pose.toStr().c_str(), 
+            pose_imu.toStr().c_str(), inliers.rows, pts3d.size());
     return std::make_pair(success, pose_imu);
 }
 

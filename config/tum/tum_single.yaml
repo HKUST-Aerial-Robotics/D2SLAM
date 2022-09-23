@@ -70,7 +70,7 @@ min_depth_to_fuse: 0.3
 vlad_threshold: 0.5
 
 #Initialization
-init_method: 0 #0 IMU, 1 PnP
+init_method: 1 #0 IMU, 1 PnP
 depth_estimate_baseline: 0.03
 
 #sliding window

@@ -52,11 +52,13 @@ SolverReport ConsensusSolver::solve() {
             problem->AddResidualBlock(residual_info->cost_function, residual_info->loss_function,
                 residual_info->paramsPointerList(state));
         }
+        Utility::TicToc tic_sync;
         if (config.sync_with_main) {
             waitForSync(); 
         } else {
             receiveAll();
         }
+        // printf("ConsensusSolver wait for sync time: %.1fms step %d/%d", tic_sync.toc(), i, config.max_steps);
         updateGlobal();
         updateTilde();
         setStateProperties();

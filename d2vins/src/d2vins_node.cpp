@@ -131,10 +131,10 @@ protected:
         imu_sub = nh.subscribe(params->imu_topic, 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
         estimator_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::timerCallback, this);
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-            // solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
-            th_timer = std::thread([&] {
-                myHighResolutionTimerThread();
-            });
+            solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
+            // th_timer = std::thread([&] {
+            //     myHighResolutionTimerThread();
+            // });
         }
         th = std::thread([&] {
             ROS_INFO("Starting d2vins_net lcm.");

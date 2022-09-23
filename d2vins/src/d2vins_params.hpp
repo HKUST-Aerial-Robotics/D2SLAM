@@ -40,7 +40,7 @@ struct D2VINSConfig {
         INIT_POSE_IMU,
         INIT_POSE_PNP
     };
-    int pnp_min_inliers = 8;
+    int pnp_min_inliers = 20;
     int pnp_iteratives = 100;
     int init_imu_num = 10;
     InitialMethod init_method = INIT_POSE_PNP;
