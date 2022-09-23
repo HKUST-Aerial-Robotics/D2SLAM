@@ -414,10 +414,10 @@ VINSFrame * D2EstimatorState::addFrame(const VisualImageDescArray & images, cons
     }
     if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && _frame.drone_id != self_id) {
         //In this mode, the estimate state is always ego-motion and the bias is not been estimated on remote
-        _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
+        _frame.odom.pose().to_vector(_frame_pose_state.at(frame->frame_id));
     } else {
         _frame_spd_Bias_state[frame->frame_id] = new state_type[FRAME_SPDBIAS_SIZE];
-        frame->toVector(_frame_pose_state[frame->frame_id], _frame_spd_Bias_state[frame->frame_id]);
+        frame->toVector(_frame_pose_state.at(frame->frame_id), _frame_spd_Bias_state.at(frame->frame_id));
     }
 
     lmanager.addKeyframe(images, td);
@@ -477,12 +477,17 @@ void D2EstimatorState::repropagateIMU() {
 }
 
 void D2EstimatorState::moveAllPoses(int new_ref_frame_id, const Swarm::Pose & delta_pose) {
+    const Guard lock(state_lock);
     reference_frame_id = new_ref_frame_id;
     for (auto it: frame_db) {
         auto frame_id = it.first;
         auto frame = static_cast<VINSFrame*>(it.second);
         frame->moveByPose(new_ref_frame_id, delta_pose);
-        frame->toVector(_frame_pose_state.at(frame_id), _frame_spd_Bias_state.at(frame_id));
+        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
+            frame->odom.pose().to_vector(_frame_pose_state.at(frame_id));
+        } else {
+            frame->toVector(_frame_pose_state.at(frame_id), _frame_spd_Bias_state.at(frame_id));
+        }
     }
     lmanager.moveByPose(delta_pose);
     if (prior_factor != nullptr) {

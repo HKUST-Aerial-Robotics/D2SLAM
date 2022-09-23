@@ -20,7 +20,7 @@ void LoopNet::setupNetwork(std::string _lcm_uri) {
 void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array, bool force_features) {
     bool need_send_features = force_features || !params->lazy_broadcast_keyframe; //TODO: need to consider for D2VINS.
     ImageArrayDescriptor_t fisheye_desc = image_array.toLCM(need_send_features);
-    printf("[LoopNet@%d] broadcast image array: %ld size %d\n", params->self_id, fisheye_desc.frame_id, fisheye_desc.getEncodedSize());
+    // printf("[LoopNet@%d] broadcast image array: %ld size %d\n", params->self_id, fisheye_desc.frame_id, fisheye_desc.getEncodedSize());
     std::cout << std::endl;
     if (send_whole_img_desc) {
         sent_message.insert(fisheye_desc.msg_id);

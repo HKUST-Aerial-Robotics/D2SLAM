@@ -123,7 +123,7 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, bool skip_who
             printf("[D2FeatureTracker::trackRemote] Remote image does not match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
             return report;
         } else {
-            // if (params->verbose)
+            if (params->verbose)
                 printf("[D2FeatureTracker::trackRemote] Remote image match current image %.2f/%.2f\n", netvlad_similar, params->vlad_threshold);
         }
     }
