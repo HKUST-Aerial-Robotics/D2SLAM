@@ -95,6 +95,7 @@ remove_base_when_margin_remote: 2
 # and the baseFrame (where!=removeID) will not be removed. This may lead to double counting of this baseFrame measurement: but it's stable.
 #  When set to 1, will remove the baseframe's measurements of those measurements which is not base on current frame.
 #  set to 0 those measurements (which on a landmark's baseFrame is not been removed) will be ignore.
+margin_enable_fej: 0
 
 #feature tracker parameters
 max_cnt: 150            # max feature number in feature tracking

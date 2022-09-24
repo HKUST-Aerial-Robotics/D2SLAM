@@ -98,6 +98,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     margin_sparse_solver = (int)fsSettings["margin_sparse_solver"];
     enable_marginalization = (int)fsSettings["enable_marginalization"];
     remove_base_when_margin_remote = (int)fsSettings["remove_base_when_margin_remote"];
+    margin_enable_fej = (int)fsSettings["margin_enable_fej"];
     
     camera_extrinsics = D2FrontEnd::params->extrinsics;
 

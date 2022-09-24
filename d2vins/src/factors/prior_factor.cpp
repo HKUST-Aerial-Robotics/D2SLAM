@@ -177,6 +177,9 @@ void PriorFactor::replacetoPrevLinearizedPoints(std::vector<ParamInfo> & params)
             //Copy the linearized point
             info.data_copied = keep_params_map.at(info.pointer).data_copied;
             count += 1;
+            // printf("Id %d type %d, cur_state:\n", info.id, info.type);
+            // std::cout << Map<VectorXd>(info.pointer, info.size).transpose() << std::endl;
+            // std::cout << "linearized point:\n" << info.data_copied.transpose() << std::endl;
         }
     }
     // printf("Marginalization FEJ state num %d\n", count);
