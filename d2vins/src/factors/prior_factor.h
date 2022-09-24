@@ -3,6 +3,7 @@
 #include <Eigen/Eigen>
 #include <d2common/d2basetypes.h>
 #include <swarm_msgs/Pose.h>
+#include <map>
 
 using namespace D2Common;
 namespace D2Common {
@@ -17,6 +18,7 @@ std::pair<MatrixXd, VectorXd> toJacRes(const MatrixXd & A, const VectorXd & b);
 
 class PriorFactor : public ceres::CostFunction {
     std::vector<ParamInfo> keep_params_list;
+    std::map<state_type*, ParamInfo> keep_params_map;
     int keep_param_blk_num = 0;
     Eigen::MatrixXd linearized_jac;
     Eigen::VectorXd linearized_res;
@@ -41,8 +43,7 @@ public:
         keep_param_blk_num(factor.keep_param_blk_num),
         linearized_jac(factor.linearized_jac),
         linearized_res(factor.linearized_res),
-        keep_eff_param_dim(factor.keep_eff_param_dim)
-    {
+        keep_eff_param_dim(factor.keep_eff_param_dim) {
         initDims(keep_params_list);
     }
 
@@ -53,6 +54,7 @@ public:
     int getEffParamsDim() const;
     bool hasNan() const;
     void moveByPose(const Swarm::Pose & delta_pose);
+    void replacetoPrevLinearizedPoints(std::vector<ParamInfo> & params);
 };
 
 }

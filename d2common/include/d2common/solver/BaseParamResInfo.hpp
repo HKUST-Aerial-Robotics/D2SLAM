@@ -58,6 +58,7 @@ public:
     VectorXd residuals;
     ResidualInfo(ResidualType type) : residual_type(type) {} 
     virtual void Evaluate(D2State * state);
+    virtual void Evaluate(const std::vector<ParamInfo> & param_infos, bool use_copied=false);
     virtual bool relavant(const std::set<FrameIdType> & frame_id) const = 0;
     virtual std::vector<ParamInfo> paramsList(D2State * state) const = 0;
     virtual std::vector<state_type*> paramsPointerList(D2State * state) const {

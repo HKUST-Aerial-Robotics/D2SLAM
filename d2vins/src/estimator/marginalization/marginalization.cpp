@@ -21,10 +21,25 @@ VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_pa
     std::vector<Eigen::Triplet<state_type>> triplet_list;
     VectorXd residual_vec(eff_residual_size);
     for (auto info : residual_info_list) {
-        info->Evaluate(state);
+        if (params->margin_enable_fej) {
+            //In this case, we need to evaluate the residual with the FEJ state
+            auto params = info->paramsList(state);
+            if (last_prior!=nullptr) {
+                last_prior->replacetoPrevLinearizedPoints(params);
+            }
+            info->Evaluate(params, true);
+        } else {
+            info->Evaluate(state);
+        }
         auto params = info->paramsList(state);
         auto residual_size = info->residualSize();
         residual_vec.segment(cul_res_size, residual_size) = info->residuals;
+        if (std::isnan(info->residuals.maxCoeff()) || std::isnan(info->residuals.minCoeff())) {
+            printf("\033[0;31m[D2VINS::Marginalizer] Residual type %d residuals is nan:\033[0m\n", 
+                info->residual_type);
+            std::cout << info->residuals.transpose() << std::endl;
+            continue;
+        }
         for (auto param_blk_i = 0; param_blk_i < params.size(); param_blk_i ++) {
             auto & J_blk = info->jacobians[param_blk_i];
             //Place this J to row: cul_res_size, col: param_indices
@@ -36,13 +51,9 @@ VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_pa
                 printf("\033[0;31m[D2VINS::Marginalizer] Residual type %d param_blk %d jacobians is nan\033[0m:\n",
                     info->residual_type, param_blk_i);
                 std::cout << J_blk << std::endl;
+                continue;
             }
-            if (std::isnan(info->residuals.maxCoeff()) || std::isnan(info->residuals.minCoeff())) {
-                printf("\033[0;31m[D2VINS::Marginalizer] Residual type %d param_blk %d residuals is nan\033[0m\n", 
-                    info->residual_type, param_blk_i);
-                std::cout << info->residuals.transpose() << std::endl;
-            }
-
+            
             for (auto i = 0; i < residual_size; i ++) {
                 for (auto j = 0; j < blk_eff_param_size; j ++) {
                     //We only copy the eff param part, that is: on tangent space.
@@ -164,6 +175,9 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
         printf("[D2VINS::Marginalizer::marginalize] JtJ cost %.1fms\n", tt.toc());
     }
     std::vector<ParamInfo> keep_params_list(params_list.begin(), params_list.begin() + keep_block_size);
+    if (params->margin_enable_fej && last_prior!=nullptr) {
+        last_prior->replacetoPrevLinearizedPoints(keep_params_list);
+    }
     //Compute the schur complement, by sparse LLT.
     PriorFactor * prior = nullptr;
     if (params->margin_sparse_solver) {

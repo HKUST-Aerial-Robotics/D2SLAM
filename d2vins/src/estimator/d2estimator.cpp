@@ -408,7 +408,7 @@ void D2Estimator::resetMarginalizer() {
     if (marginalizer!=nullptr) {
         delete marginalizer;
     }
-    marginalizer = new Marginalizer(&state);
+    marginalizer = new Marginalizer(&state, state.getPrior());
     state.setMarginalizer(marginalizer);
 }
 

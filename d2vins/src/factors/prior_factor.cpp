@@ -120,6 +120,7 @@ void PriorFactor::initDims(const std::vector<ParamInfo> & _keep_params_list) {
     mutable_parameter_block_sizes()->clear();
     for (auto it : keep_params_list) {
         mutable_parameter_block_sizes()->push_back(it.size);
+        keep_params_map[it.pointer] = it;
     }
     set_num_residuals(keep_eff_param_dim);
 }
@@ -167,5 +168,19 @@ std::pair<MatrixXd, VectorXd> toJacRes(const MatrixXd & A_, const VectorXd & b) 
 std::pair<MatrixXd, VectorXd> toJacRes(const SparseMat & A, const VectorXd & b) {
     return toJacRes(A.toDense(), b);
 }
+
+void PriorFactor::replacetoPrevLinearizedPoints(std::vector<ParamInfo> & params) {
+    std::vector<ParamInfo> new_params;
+    int count = 0;
+    for (ParamInfo & info : params) {
+        if (keep_params_map.count(info.pointer) > 0) {
+            //Copy the linearized point
+            info.data_copied = keep_params_map.at(info.pointer).data_copied;
+            count += 1;
+        }
+    }
+    // printf("Marginalization FEJ state num %d\n", count);
+}
+
 
 }

@@ -20,6 +20,7 @@ protected:
     std::vector<CamIdType> local_camera_ids;
     std::map<CamIdType, int> camera_drone;
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
+    std::map<FrameIdType, VectorXd> linear_point;
 
     Marginalizer * marginalizer = nullptr;
     PriorFactor * prior_factor = nullptr;
