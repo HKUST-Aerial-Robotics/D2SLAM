@@ -52,7 +52,7 @@ min_inv_dep: 0.1 #10 meter away.
 max_solver_time: 0.04 # max solver itration time (ms), to guarantee real time
 max_num_iterations: 8   # max solver itrations, to guarantee real time
 consensus_max_steps: 4
-timout_wait_sync: 100
+timout_wait_sync: 50
 rho_landmark: 1.0
 rho_frame_T: 100
 rho_frame_theta: 100
@@ -90,7 +90,7 @@ tri_max_err: 1000000.0
 
 #Marginalization
 enable_marginalization: 1
-margin_sparse_solver: 1
+margin_sparse_solver: 0
 always_fixed_first_pose: 0
 remove_base_when_margin_remote: 2
 #  When set to 2, will use the all relevant measurements of the removing frames to compute the prior,

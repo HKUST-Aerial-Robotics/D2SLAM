@@ -93,7 +93,7 @@ void D2VINSConsensusSolver::waitForSync() {
         auto ret = receiver->retrive(solver_token, iteration_count);
         sync_datas.insert(sync_datas.end(), ret.begin(), ret.end());
         usleep(100);
-        if (ret.size() == state->availableDrones().size() - 1) {
+        if (sync_datas.size() == state->availableDrones().size() - 1) {
             break;
         }
     }

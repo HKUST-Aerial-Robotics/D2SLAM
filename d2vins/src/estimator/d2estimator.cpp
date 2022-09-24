@@ -358,6 +358,10 @@ bool D2Estimator::isMain() const {
 }
 
 void D2Estimator::onDistributedVinsData(const DistributedVinsData & dist_data) {
+    if (params->verbose) {
+        printf("[D2Estimator::onDistributedVinsData@%d] drone %d solver_id %d iteration %d \n", self_id,
+                dist_data.drone_id, dist_data.solver_token, dist_data.iteration_count);
+    }
     sync_data_receiver->add(dist_data);
 }
 

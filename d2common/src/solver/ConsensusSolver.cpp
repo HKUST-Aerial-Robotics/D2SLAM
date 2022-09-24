@@ -34,6 +34,7 @@ void ConsensusSolver::addParam(const ParamInfo & param_info) {
 SolverReport ConsensusSolver::solve() {
     SolverReport report;
     Utility::TicToc tic;
+    iteration_count = 0;
     for (int i = 0; i < config.max_steps; i++) {
         //If sync mode.
         broadcastData();
