@@ -27,7 +27,7 @@ struct D2FTConfig {
     bool enable_superglue_local = false;
     bool enable_superglue_remote = false;
     bool enable_knn_match = true;
-    double knn_match_ratio = 0.75;
+    double knn_match_ratio = 0.8;
     std::string output_folder = "/root/output/";
     std::string superglue_model_path;
 };
@@ -65,11 +65,7 @@ class SuperGlueOnnx;
 
 class D2FeatureTracker {
 public:
-    enum TrackLRType {
-        WHOLE_IMG_MATCH = 0,
-        LEFT_RIGHT_IMG_MATCH,
-        RIGHT_LEFT_IMG_MATCH
-    };
+
 protected:
     D2FTConfig _config;
     std::vector<VisualImageDescArray> current_keyframes;
@@ -111,10 +107,5 @@ public:
     std::vector<camodocal::CameraPtr> cams;
 };
 
-
-void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts);
-std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
-                        std::vector<LandmarkIdType> & ids, D2FeatureTracker::TrackLRType type=D2FeatureTracker::WHOLE_IMG_MATCH);
-std::vector<cv::DMatch> matchKNN(const cv::Mat & desc_a, const cv::Mat & desc_b, double knn_match_ratio=0.8);
 
 } 

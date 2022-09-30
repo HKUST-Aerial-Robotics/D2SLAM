@@ -9,6 +9,7 @@
 #include <opengv/absolute_pose/NoncentralAbsoluteAdapter.hpp>
 #include <opengv/sac/Ransac.hpp>
 #include <opengv/sac/Lmeds.hpp>
+#include <d2frontend/utils.h>
 
 using namespace std::chrono; 
 using namespace D2Common;
@@ -438,8 +439,13 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
         memcpy(descriptors_a.data, img_desc_a.landmark_descriptor.data(), img_desc_a.landmark_descriptor.size()*sizeof(float));
         cv::Mat descriptors_b( img_desc_b.spLandmarkNum(), params->superpoint_dims, CV_32F);
         memcpy(descriptors_b.data, img_desc_b.landmark_descriptor.data(), img_desc_b.landmark_descriptor.size()*sizeof(float));
-        cv::BFMatcher bfmatcher(cv::NORM_L2, true);
-        bfmatcher.match(descriptors_a, descriptors_b, _matches);
+        if (_config.enable_knn_match) {
+            _matches = matchKNN(descriptors_a, descriptors_b, _config.knn_match_ratio);
+        } else {
+            cv::BFMatcher bfmatcher(cv::NORM_L2, true);
+            bfmatcher.match(descriptors_a, descriptors_b, _matches);
+        }
+        
     }
     Point2fVector lm_b_2d, lm_a_2d;
     for (auto match : _matches) {
@@ -469,7 +475,7 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
     }
     if (_config.enable_homography_test && !_config.enable_superglue) {
         std::vector<unsigned char> mask;
-        cv::findHomography(lm_b_2d, lm_a_2d, cv::RANSAC, 10.0/params->focal_length, mask);
+        cv::findHomography(lm_b_2d, lm_a_2d, cv::RANSAC, 10.0, mask);
         reduceVector(idx_a, mask);
         reduceVector(idx_b, mask);
         reduceVector(lm_pos_a, mask);

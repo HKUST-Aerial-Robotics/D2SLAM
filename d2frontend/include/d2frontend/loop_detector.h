@@ -51,6 +51,8 @@ struct LoopDetectorConfig {
     bool enable_superglue = false;
     double accept_loop_max_yaw = 15;
     double accept_loop_max_pos = 1.5;
+    bool enable_knn_match = true;
+    double knn_match_ratio = 0.8;
     std::string superglue_model_path;
 };
 
