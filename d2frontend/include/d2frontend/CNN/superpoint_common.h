@@ -5,7 +5,6 @@
 #include <Eigen/Eigen>
 
 #define SP_DESC_RAW_LEN 256
-// #define USE_PCA
 
 namespace D2FrontEnd {
 void getKeyPoints(const cv::Mat & prob, float threshold, std::vector<cv::Point2f> &keypoints, std::vector<float>& scores, int width, int height, int max_num);

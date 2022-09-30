@@ -109,6 +109,8 @@ loop_inlier_feature_num: 50
 
 #CNN
 cnn_use_onnx: 1
+enable_pca_superpoint: 1
+superpoint_pca_dims: 64
 
 # #Measurement parameters       The more accurate parameters you provide, the better performance
 # acc_n: 0.0028         # accelerometer measurement noise standard deviation. #0.2   0.04
@@ -134,5 +136,5 @@ pgo_solver_time: 0.5
 output_path: "/root/output/"
 debug_print_sldwin: 0
 debug_print_states: 0
-enable_perf_output: 0
+enable_perf_output: 1
 debug_write_margin_matrix: 0

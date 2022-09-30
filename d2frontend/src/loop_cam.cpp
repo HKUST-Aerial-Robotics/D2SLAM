@@ -123,8 +123,8 @@ void matchLocalFeatures(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point
         std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
         std::vector<int> & ids_up, std::vector<int> & ids_down) {
     // printf("matchLocalFeatures %ld %ld: ", pts_up.size(), pts_down.size());
-    const cv::Mat desc_up( _desc_up.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_up.data());
-    const cv::Mat desc_down( _desc_down.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, _desc_down.data());
+    const cv::Mat desc_up( _desc_up.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, _desc_up.data());
+    const cv::Mat desc_down( _desc_down.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, _desc_down.data());
 
     cv::BFMatcher bfmatcher(cv::NORM_L2, true);
 
@@ -551,8 +551,8 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         lm.color = extractColor(img, pt_up);
         vframe.landmarks.emplace_back(lm);
         if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
-            for (int j = 0; j < FEATURE_DESC_SIZE; j ++) {
-                fsp << vframe.landmark_descriptor[i*FEATURE_DESC_SIZE + j] << " ";
+            for (int j = 0; j < params->superpoint_dims; j ++) {
+                fsp << vframe.landmark_descriptor[i*params->superpoint_dims + j] << " ";
             }
             fsp << std::endl;
         }

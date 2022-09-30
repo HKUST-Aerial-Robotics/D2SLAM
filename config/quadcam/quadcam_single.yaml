@@ -95,6 +95,8 @@ enable_superglue_remote: 0
 
 #CNN
 cnn_use_onnx: 1
+enable_pca_superpoint: 1
+superpoint_pca_dims: 64
 
 acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2   0.04
 gyr_n: 0.05         # gyroscope measurement noise standard deviation.     #0.05  0.004

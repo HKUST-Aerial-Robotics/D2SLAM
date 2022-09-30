@@ -26,6 +26,8 @@ struct D2FTConfig {
     bool double_counting_common_feature = false;
     bool enable_superglue_local = false;
     bool enable_superglue_remote = false;
+    bool enable_knn_match = true;
+    double knn_match_ratio = 0.75;
     std::string output_folder = "/root/output/";
     std::string superglue_model_path;
 };
@@ -113,5 +115,6 @@ public:
 void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts);
 std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
                         std::vector<LandmarkIdType> & ids, D2FeatureTracker::TrackLRType type=D2FeatureTracker::WHOLE_IMG_MATCH);
+std::vector<cv::DMatch> matchKNN(const cv::Mat & desc_a, const cv::Mat & desc_b, double knn_match_ratio=0.8);
 
 } 

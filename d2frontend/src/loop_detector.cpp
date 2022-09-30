@@ -432,11 +432,11 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
         auto & scores1 = img_desc_b.landmark_scores;
         _matches = superglue->inference(kpts_a, kpts_b, desc0, desc1, scores0, scores1);
     } else{ 
-        assert(img_desc_a.spLandmarkNum() * FEATURE_DESC_SIZE == img_desc_a.landmark_descriptor.size() && "Desciptor size of new img desc must equal to to landmarks*256!!!");
-        assert(img_desc_b.spLandmarkNum() * FEATURE_DESC_SIZE == img_desc_b.landmark_descriptor.size() && "Desciptor size of old img desc must equal to to landmarks*256!!!");
-        cv::Mat descriptors_a( img_desc_a.spLandmarkNum(), FEATURE_DESC_SIZE, CV_32F);
+        assert(img_desc_a.spLandmarkNum() * params->superpoint_dims == img_desc_a.landmark_descriptor.size() && "Desciptor size of new img desc must equal to to landmarks*256!!!");
+        assert(img_desc_b.spLandmarkNum() * params->superpoint_dims == img_desc_b.landmark_descriptor.size() && "Desciptor size of old img desc must equal to to landmarks*256!!!");
+        cv::Mat descriptors_a( img_desc_a.spLandmarkNum(), params->superpoint_dims, CV_32F);
         memcpy(descriptors_a.data, img_desc_a.landmark_descriptor.data(), img_desc_a.landmark_descriptor.size()*sizeof(float));
-        cv::Mat descriptors_b( img_desc_b.spLandmarkNum(), FEATURE_DESC_SIZE, CV_32F);
+        cv::Mat descriptors_b( img_desc_b.spLandmarkNum(), params->superpoint_dims, CV_32F);
         memcpy(descriptors_b.data, img_desc_b.landmark_descriptor.data(), img_desc_b.landmark_descriptor.size()*sizeof(float));
         cv::BFMatcher bfmatcher(cv::NORM_L2, true);
         bfmatcher.match(descriptors_a, descriptors_b, _matches);

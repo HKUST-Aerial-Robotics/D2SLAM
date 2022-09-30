@@ -66,13 +66,12 @@ void computeDescriptors(const torch::Tensor & mProb, const torch::Tensor & mDesc
     desc = desc.transpose(0, 1).contiguous();
     desc = desc.to(torch::kCPU);
     Eigen::Map<Eigen::Matrix<float,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor>> _desc(desc.data<float>(), desc.size(0), desc.size(1));
-#ifdef USE_PCA
-    Eigen::Matrix<float,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> _desc_new = (_desc.rowwise() - pca_mean) *pca_comp_T;
-    local_descriptors = std::vector<float>(_desc_new.data(), _desc_new.data()+_desc_new.cols()*_desc_new.rows());
-#else
-    local_descriptors = std::vector<float>(_desc.data(), _desc.data()+_desc.cols()*_desc.rows());
-#endif
-
+    if (pca_comp_T.size() > 0) {
+        Eigen::Matrix<float,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> _desc_new = (_desc.rowwise() - pca_mean) *pca_comp_T;
+        local_descriptors = std::vector<float>(_desc_new.data(), _desc_new.data()+_desc_new.cols()*_desc_new.rows());
+    } else {
+        local_descriptors = std::vector<float>(_desc.data(), _desc.data()+_desc.cols()*_desc.rows());
+    }
     if (params->enable_perf_output) {
         std::cout << " computeDescriptors full " << tic.toc() << std::endl;
     }

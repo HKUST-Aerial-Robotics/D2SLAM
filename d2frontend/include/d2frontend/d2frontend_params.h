@@ -30,7 +30,6 @@
 #define RPERR_THRES 10*DEG2RAD
 
 
-#define FEATURE_DESC_SIZE 256
 #define ACCEPT_SP_MATCH_DISTANCE 0.7
 
 namespace camodocal {
@@ -65,6 +64,8 @@ struct D2FrontendParams {
     double feature_min_dist = 20;
     int total_feature_num = 150;
     double vlad_threshold = 0.3;
+    size_t superpoint_dims = 256;
+    bool enable_pca_superpoint = false;
 
     double min_movement_keyframe = 0.3;
     int self_id = 0;

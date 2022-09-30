@@ -603,7 +603,7 @@ std::vector<float> getFeatureHalfImg(const std::vector<cv::Point2f> & pts, const
         if (require_left && pts[i].x < params->width_undistort - move_cols || !require_left && pts[i].x >= move_cols) {
             tmp_to_idx[c] = i;
             //Copy from desc to desc_half
-            std::copy(desc.begin() + i*FEATURE_DESC_SIZE, desc.begin() + (i+1)*FEATURE_DESC_SIZE, desc_half.begin() + c*FEATURE_DESC_SIZE);
+            std::copy(desc.begin() + i*params->superpoint_dims, desc.begin() + (i+1)*params->superpoint_dims, desc_half.begin() + c*params->superpoint_dims);
             c += 1;
         }
     }
@@ -631,10 +631,14 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         _matches = superglue->inference(pts_a, pts_b, raw_desc_a, raw_desc_b, scores0, scores1);
     } else {
         if (type == WHOLE_IMG_MATCH) {
-            const cv::Mat desc_a(raw_desc_a.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(raw_desc_a.data()));
-            const cv::Mat desc_b(raw_desc_b.size()/FEATURE_DESC_SIZE, FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(raw_desc_b.data()));
-            cv::BFMatcher bfmatcher(cv::NORM_L2, true);
-            bfmatcher.match(desc_a, desc_b, _matches); //Query train result
+            const cv::Mat desc_a(raw_desc_a.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, const_cast<float *>(raw_desc_a.data()));
+            const cv::Mat desc_b(raw_desc_b.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, const_cast<float *>(raw_desc_b.data()));
+            if (_config.enable_knn_match) {
+                _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio);
+            } else {
+                cv::BFMatcher bfmatcher(cv::NORM_L2, true);
+                bfmatcher.match(desc_a, desc_b, _matches); //Query train result
+            }
         } else {
             std::map<int, int> tmp_to_idx_a, tmp_to_idx_b;
             const auto desc_a_filtered = getFeatureHalfImg(pts_a, raw_desc_a, type==LEFT_RIGHT_IMG_MATCH, tmp_to_idx_a);
@@ -644,9 +648,14 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
                 return false;
             }
             cv::BFMatcher bfmatcher(cv::NORM_L2, true);
-            const cv::Mat desc_a(tmp_to_idx_a.size(), FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(desc_a_filtered.data()));
-            const cv::Mat desc_b(tmp_to_idx_b.size(), FEATURE_DESC_SIZE, CV_32F, const_cast<float *>(desc_b_filtered.data()));
-            bfmatcher.match(desc_a, desc_b, _matches); //Query train result
+            const cv::Mat desc_a(tmp_to_idx_a.size(), params->superpoint_dims, CV_32F, const_cast<float *>(desc_a_filtered.data()));
+            const cv::Mat desc_b(tmp_to_idx_b.size(), params->superpoint_dims, CV_32F, const_cast<float *>(desc_b_filtered.data()));
+            if (_config.enable_knn_match) {
+                _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio);
+            } else {
+                cv::BFMatcher bfmatcher(cv::NORM_L2, true);
+                bfmatcher.match(desc_a, desc_b, _matches);
+            }
             for (auto & match : _matches) {
                 match.queryIdx = tmp_to_idx_a[match.queryIdx];
                 match.trainIdx = tmp_to_idx_b[match.trainIdx];
@@ -701,7 +710,8 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     // cv::imshow("filtered_matches", show);
 
     if (params->verbose || params->enable_perf_output)
-        printf("[D2FeatureTracker::track] match local features %d:%d %.3f ms\n", pts_a.size(), pts_b.size(), tic.toc());
+        printf("[D2FeatureTracker::track] match features %d:%d %.3f ms enable_knn %d check_homography %d sp_dims %d\n", pts_a.size(), pts_b.size(), tic.toc(), 
+                params->ftconfig->enable_knn_match, params->ftconfig->check_homography, params->superpoint_dims);
     if (ids_b.size() >= params->ftconfig->remote_min_match_num) {
         return true;
     }
@@ -753,6 +763,24 @@ bool inBorder(const cv::Point2f &pt, cv::Size shape)
     int img_y = cvRound(pt.y);
     return BORDER_SIZE <= img_x && img_x < shape.width - BORDER_SIZE && BORDER_SIZE <= img_y && img_y < shape.height - BORDER_SIZE;
 }
+
+std::vector<cv::DMatch> matchKNN(const cv::Mat & desc_a, const cv::Mat & desc_b, double knn_match_ratio) {
+    //Match descriptors with OpenCV knnMatch
+    std::vector<std::vector<cv::DMatch>> matches;
+    cv::BFMatcher bfmatcher(cv::NORM_L2);
+    bfmatcher.knnMatch(desc_a, desc_b, matches, 2);
+    std::vector<cv::DMatch> good_matches;
+    for (auto & match : matches) {
+        if (match.size() < 2) {
+            continue;
+        }
+        if (match[0].distance < knn_match_ratio * match[1].distance) {
+            good_matches.push_back(match[0]);
+        }
+    }
+    return good_matches;
+}
+
 
 std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
         std::vector<LandmarkIdType> & ids, D2FeatureTracker::TrackLRType type) {

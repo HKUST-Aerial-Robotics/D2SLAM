@@ -74,9 +74,9 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, bool need_send_featu
             if (img_des.landmarks[i].flag > 0 || params->SEND_ALL_FEATURES) {
                 LandmarkDescriptor_t lm; 
                 lm.landmark = img_des.landmarks[i];
-                lm.desc_len = FEATURE_DESC_SIZE;
-                lm.landmark_descriptor = std::vector<float>(img_des.landmark_descriptor.data() + i *FEATURE_DESC_SIZE, 
-                    img_des.landmark_descriptor.data() + (i+1)*FEATURE_DESC_SIZE);
+                lm.desc_len = params->superpoint_dims;
+                lm.landmark_descriptor = std::vector<float>(img_des.landmark_descriptor.data() + i *params->superpoint_dims, 
+                    img_des.landmark_descriptor.data() + (i+1)*params->superpoint_dims);
                 int64_t msg_id = rand() + img_des.timestamp.nsec;
                 sent_message.insert(img_des.msg_id);
 
@@ -129,7 +129,7 @@ void LoopNet::onLandmarkRecevied(const lcm::ReceiveBuffer* rbuf,
     tmp.landmarks.emplace_back(msg->landmark);
     tmp.landmark_descriptor.insert(tmp.landmark_descriptor.end(),
         msg->landmark_descriptor.begin(),
-        msg->landmark_descriptor.begin()+FEATURE_DESC_SIZE
+        msg->landmark_descriptor.begin()+params->superpoint_dims
     );
     tmp.landmark_descriptor_size = tmp.landmark_descriptor.size();
     recv_lock.unlock();

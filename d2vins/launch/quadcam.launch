@@ -50,9 +50,9 @@
             enable_network: true
             ransacReprojThreshold: 5.0
         </rosparam>
-        <param name="pca_comp_path" value="$(find d2frontend)/models/components_.csv" type="string" />
+        <param name="pca_comp_path" value="$(find d2frontend)/../models/components_.csv" type="string" />
+        <param name="pca_mean_path" value="$(find d2frontend)/../models/mean_.csv" type="string" />
         <param name="output_path" value="$(arg output_path)" type="string" />
-        <param name="pca_mean_path" value="$(find d2frontend)/models/mean_.csv" type="string" />
         <param name="superpoint_model_path" value="$(arg superpoint_model_path)" type="string" />
         <param name="netvlad_model_path" value="$(arg netvlad_model_path)" type="string" />
         <param name="superglue_model_path" value="$(arg superglue_model_path)" type="string" />

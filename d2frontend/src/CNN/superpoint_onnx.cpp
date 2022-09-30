@@ -33,11 +33,13 @@ SuperPointONNX::SuperPointONNX(std::string engine_path,
     //desc
     output_tensors_.emplace_back(Ort::Value::CreateTensor<float>(memory_info,
         results_desc_, SP_DESC_RAW_LEN*height/8*width/8, output_shape_desc_.data(), output_shape_desc_.size()));
-
-#ifdef USE_PCA
-    pca_comp_T = load_csv_mat_eigen(_pca_comp).transpose();
-    pca_mean = load_csv_vec_eigen(_pca_mean).transpose();
-#endif
+    if (params->enable_pca_superpoint) {
+        pca_comp_T = load_csv_mat_eigen(_pca_comp).transpose();
+        pca_mean = load_csv_vec_eigen(_pca_mean).transpose();
+    } else {
+        pca_comp_T.resize(0, 0);
+        pca_mean.resize(0);
+    }
 }
 
 void SuperPointONNX::doInference(const unsigned char* input, const uint32_t batchSize) {
@@ -63,9 +65,7 @@ void SuperPointONNX::inference(const cv::Mat & input, std::vector<cv::Point2f> &
     } 
     _input.convertTo(_input, CV_32F, 1/255.0);
     ((CNNInferenceGeneric*) this)->doInference(_input);
-    if (params->enable_perf_output) {
-        std::cout << "Inference Time " << tic.toc();
-    }
+    double inference_time = tic.toc();
 
     TicToc tic1;
     auto options = torch::TensorOptions().dtype(torch::kFloat32);
@@ -73,18 +73,15 @@ void SuperPointONNX::inference(const cv::Mat & input, std::vector<cv::Point2f> &
     auto mProb = at::from_blob(results_semi_, {1, 1, height, width}, options);
     auto mDesc = at::from_blob(results_desc_, {1, SP_DESC_RAW_LEN, height/8, width/8}, options);
     cv::Mat Prob(height, width, CV_32F, results_semi_);
-    if (params->enable_perf_output) {
-        std::cout << " from_blob " << tic1.toc();
-    }
+    double copy_time = tic1.toc();
 
     TicToc tic2;
     getKeyPoints(Prob, thres, keypoints, scores, width, height, max_num);
-    if (params->enable_perf_output) {
-        std::cout << " getKeyPoints " << tic2.toc();
-    }
+    double nms_time = tic2.toc();
     computeDescriptors(mProb, mDesc, keypoints, local_descriptors, width, height, pca_comp_T, pca_mean);
+    double desc_time = tic2.toc();
     if (params->enable_perf_output) {
-        std::cout << " getKeyPoints+computeDescriptors " << tic2.toc() << "inference all" << tic.toc() << "features" << keypoints.size() << "desc size" << local_descriptors.size() << std::endl;
+        printf("[SuperPointONNX] inference time: %f ms, copy time: %f ms, nms time: %f ms, desc time: %f ms\n");
     }
 }
 }

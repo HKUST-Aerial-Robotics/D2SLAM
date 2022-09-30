@@ -113,6 +113,8 @@ remote_min_match_num: 40
 
 #CNN
 cnn_use_onnx: 1
+enable_pca_superpoint: 1
+superpoint_pca_dims: 64
 
 # #Measurement parameters       The more accurate parameters you provide, the better performance
 # acc_n: 0.0028         # accelerometer measurement noise standard deviation. #0.2   0.04
