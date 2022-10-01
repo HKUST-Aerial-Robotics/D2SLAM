@@ -1,14 +1,19 @@
 #pragma once
 
 #include "d2frontend_params.h"
-#include "loop_cam.h"
 #include "d2landmark_manager.h"
 #include <unordered_map>
 #include <mutex>
+#include <d2common/d2frontend_types.h>
 
 using namespace Eigen;
 
 namespace D2FrontEnd {
+using D2Common::VisualImageDescArray;
+using D2Common::VisualImageDesc;
+using D2Common::LandmarkIdType;
+using D2Common::FrameIdType;
+
 struct D2FTConfig {
     bool show_feature_id = true;
     int long_track_thres = 20;
@@ -75,12 +80,15 @@ protected:
     bool inited = false;
     std::map<int, LKImageInfo> prev_lk_info; //frame.camera_index->image
     std::pair<bool, LandmarkPerFrame> createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id = -1);
+    std::recursive_mutex track_lock;
+    std::recursive_mutex keyframe_lock;
 
     TrackReport trackLK(VisualImageDesc & frame);
     TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk=true, TrackLRType type=WHOLE_IMG_MATCH);
     TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame, TrackLRType type=WHOLE_IMG_MATCH);
     TrackReport track(VisualImageDesc & frame);
-    TrackReport trackRemote(VisualImageDesc & frame, bool skip_whole_frame_match=false);
+    TrackReport trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame);
+    bool getmatchedPrevKeyframe(const VisualImageDescArray & frame_a, VisualImageDescArray& prev, int & dir_a, int & dir_b);
     void processKeyframe(VisualImageDescArray & frames);
     bool isKeyframe(const TrackReport & reports);
     Vector3d extractPointVelocity(const LandmarkPerFrame & lpf) const;
@@ -95,7 +103,6 @@ protected:
     std::unordered_map<LandmarkIdType, LandmarkIdType> remote_to_local; // Remote landmark id to local;
     std::unordered_map<LandmarkIdType, std::unordered_map<int, LandmarkIdType>> local_to_remote; // local landmark id to remote drone and id;
     typedef std::lock_guard<std::recursive_mutex> Guard;
-    std::recursive_mutex track_lock;
     SuperGlueOnnx * superglue = nullptr;
     bool matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, std::vector<int> & ids_down_to_up, 
             bool enable_superglue=true, TrackLRType type=WHOLE_IMG_MATCH);
@@ -103,6 +110,7 @@ public:
     D2FeatureTracker(D2FTConfig config);
     bool trackLocalFrames(VisualImageDescArray & frames);
     bool trackRemoteFrames(VisualImageDescArray & frames);
+    void updatebySldWin(const std::vector<VINSFrame*> sld_win);
     
     std::vector<camodocal::CameraPtr> cams;
 };

@@ -8,6 +8,7 @@
 #include <mutex>
 #include <queue>
 #include <chrono>
+#include <d2frontend/d2featuretracker.h>
 
 using namespace std::chrono;
 #define BACKWARD_HAS_DW 1
@@ -62,7 +63,9 @@ protected:
         Guard guard(esti_lock);
         estimator->solveinDistributedMode();
         loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
-        loop_detector->updatebySldWin(estimator->getSelfSldWin());
+        auto sld_win = estimator->getSelfSldWin();
+        loop_detector->updatebySldWin(sld_win);
+        feature_tracker->updatebySldWin(sld_win);
     }
 
     void timerCallback(const ros::TimerEvent & event) {
@@ -87,7 +90,9 @@ protected:
                     addToLoopQueue(viokf);
                 }
                 loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
-                loop_detector->updatebySldWin(estimator->getSelfSldWin());
+                auto sld_win = estimator->getSelfSldWin();
+                loop_detector->updatebySldWin(sld_win);
+                feature_tracker->updatebySldWin(sld_win);
                 if (params->verbose || params->enable_perf_output)
                     printf("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
             }

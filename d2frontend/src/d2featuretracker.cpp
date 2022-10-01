@@ -1,8 +1,12 @@
 #include <d2frontend/d2featuretracker.h>
 #include <camodocal/camera_models/Camera.h>
 #include <d2frontend/CNN/superglue_onnx.h>
+#include <d2common/d2vinsframe.h>
+#include <d2frontend/utils.h>
+#include <d2frontend/loop_cam.h>
 
 #define MIN_HOMOGRAPHY 6
+using D2Common::Utility::TicToc;
 
 namespace D2FrontEnd {
 D2FeatureTracker::D2FeatureTracker(D2FTConfig config):
@@ -10,6 +14,25 @@ D2FeatureTracker::D2FeatureTracker(D2FTConfig config):
     lmanager = new LandmarkManager;
     if (config.enable_superglue_local || config.enable_superglue_remote) {
         superglue = new SuperGlueOnnx(config.superglue_model_path);
+    }
+}
+
+void D2FeatureTracker::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
+    //update by sliding window
+    const Guard lock(keyframe_lock);
+    if (current_keyframes.size() <= 1 || sld_win.size() == 0)
+        return;
+    std::set<FrameIdType> sld_win_ids;
+    for (auto & frame: sld_win) {
+        sld_win_ids.insert(frame->frame_id);
+    }
+    //Remove the keyframe not in the sliding window except the last one
+    for (auto it = current_keyframes.begin(); it != current_keyframes.end();) {
+        if (sld_win_ids.find(it->frame_id) == sld_win_ids.end() && it->frame_id != current_keyframes.back().frame_id) {
+            it = current_keyframes.erase(it);
+        } else {
+            it++;
+        }
     }
 }
 
@@ -65,6 +88,39 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     return iskeyframe;
 }
 
+bool D2FeatureTracker::getmatchedPrevKeyframe(const VisualImageDescArray & frame_a, VisualImageDescArray& prev, int & dir_a, int & dir_b) {
+    const Guard lock(keyframe_lock);
+    if (current_keyframes.size() == 0) {
+        return false;
+    }
+    if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+        //Reverse seach in current keyframes
+        for (int i = current_keyframes.size() - 1; i >= 0; i--) {
+            const auto & last = current_keyframes[i];
+            if (frame_a.images[0].image_desc.size() < NETVLAD_DESC_SIZE) {
+                printf("[D2FeatureTracker::trackRemote] Warn: no vaild frame.image_desc.size() frame_id %ld ", frame_a.frame_id);
+                return false;
+            }
+            const Map<const VectorXf> vlad_desc_remote(frame_a.images[0].image_desc.data(), NETVLAD_DESC_SIZE);
+            const Map<const VectorXf> vlad_desc(last.images[0].image_desc.data(), NETVLAD_DESC_SIZE);
+            double netvlad_similar = vlad_desc.dot(vlad_desc_remote);
+            if (netvlad_similar < params->vlad_threshold) {
+                // if (params->verbose)
+                //     printf("[D2FeatureTracker::trackRemote@%d] Remote image does not match current image %.2f/%.2f\n", params->self_id, netvlad_similar, params->vlad_threshold);
+            } else {
+                if (params->verbose)
+                    printf("[D2FeatureTracker::trackRemote@%d] Remote image match image %d(%ld) %.2f/%.2f\n", params->self_id,
+                            i, last.frame_id, netvlad_similar, params->vlad_threshold);
+                prev = last;
+                dir_a = 0;
+                dir_b = 0;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     const Guard lock(track_lock);
     if (frames.is_lazy_frame || frames.matched_frame >= 0) {
@@ -76,14 +132,18 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     TrackReport report;
     TicToc tic;
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
-        report.compose(trackRemote(frames.images[0]));
-        if (report.remote_matched_num > 0) {
-            report.compose(trackRemote(frames.images[1], true));
+        int dir_cur = 0, dir_prev = 0;
+        VisualImageDescArray prev;
+        bool succ = getmatchedPrevKeyframe(frames, prev, dir_cur, dir_prev);
+        if (!succ) {
+            return false;
+        }
+        report.compose(trackRemote(frames.images[0], prev.images[0]));
+        if (report.remote_matched_num > 0 && params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
+            report.compose(trackRemote(frames.images[1], prev.images[1]));
         }
     } else {
-        for (auto & frame : frames.images) {
-            report.compose(trackRemote(frame));
-        }
+        //For quadcam
     }
     if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
@@ -102,44 +162,27 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     }
 }
 
-TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, bool skip_whole_frame_match) {
+TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame) {
     TrackReport report;
     if (current_keyframes.size() == 0) {
         printf("[D2FeatureTracker::trackRemote] waiting for initialization.\n");
         return report;
     }
-    auto & current_keyframe = current_keyframes.back();
-    if (!skip_whole_frame_match) {
-        if (frame.image_desc.size() < NETVLAD_DESC_SIZE) {
-            printf("[D2FeatureTracker::trackRemote] Warn: no vaild frame.image_desc.size() frame_id %ld ", frame.frame_id);
-            return report;
-        }
-        const Map<VectorXf> vlad_desc_remote(frame.image_desc.data(), NETVLAD_DESC_SIZE);
-        const Map<VectorXf> vlad_desc(current_keyframe.images[frame.camera_index].image_desc.data(), NETVLAD_DESC_SIZE);
-        double netvlad_similar = vlad_desc.dot(vlad_desc_remote);
-        if (netvlad_similar < params->vlad_threshold) {
-            // printf("[D2FeatureTracker::trackRemote@%d] Remote image does not match current image %.2f/%.2f\n", params->self_id, netvlad_similar, params->vlad_threshold);
-            return report;
-        } else {
-            // if (params->verbose)
-                // printf("[D2FeatureTracker::trackRemote] Remote image match current image %.2f/%.2f\n", params->self_id, netvlad_similar, params->vlad_threshold);
-        }
-    }
 
-    if (current_keyframe.images.size() > 0 && current_keyframe.frame_id != frame.frame_id) {
+
+    if (prev_frame.frame_id != frame.frame_id) {
         //Then current keyframe has been assigned, feature tracker by LK.
-        auto & previous = current_keyframe.images[frame.camera_index];
         std::vector<int> ids_b_to_a;
-        bool success = matchLocalFeatures(previous, frame, ids_b_to_a, _config.enable_superglue_remote);
+        bool success = matchLocalFeatures(prev_frame, frame, ids_b_to_a, _config.enable_superglue_remote);
         if (!success) {
             return report;
         }
         for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
             if (ids_b_to_a[i] >= 0) {
-                assert(ids_b_to_a[i] < previous.landmarkNum() && "too large");
+                assert(ids_b_to_a[i] < prev_frame.landmarkNum() && "too large");
                 auto local_index = ids_b_to_a[i];
                 auto &remote_lm = frame.landmarks[i];
-                auto &local_lm = previous.landmarks[local_index];
+                auto &local_lm = prev_frame.landmarks[local_index];
                 if (remote_lm.landmark_id >= 0 && local_lm.landmark_id>=0) {
                     if (local_to_remote.find(local_lm.landmark_id) == local_to_remote.end()) {
                         local_to_remote[local_lm.landmark_id] = std::unordered_map<int, LandmarkIdType>();

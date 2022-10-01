@@ -48,6 +48,13 @@ enum CameraConfig{
     FOURCORNER_FISHEYE = 3
 };
 
+
+enum TrackLRType {
+    WHOLE_IMG_MATCH = 0,
+    LEFT_RIGHT_IMG_MATCH,
+    RIGHT_LEFT_IMG_MATCH
+};
+
 struct LoopCamConfig;
 struct LoopDetectorConfig;
 struct D2FTConfig;

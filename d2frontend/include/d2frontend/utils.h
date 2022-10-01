@@ -6,6 +6,7 @@
 #include <swarm_msgs/Pose.h>
 #include <chrono>
 #include <d2common/d2basetypes.h>
+#include <d2frontend/d2frontend_params.h>
 
 namespace D2FrontEnd {
 using D2Common::LandmarkIdType;
@@ -34,11 +35,6 @@ Swarm::Pose PnPRestoCamPose(cv::Mat rvec, cv::Mat tvec);
 cv::Vec3b extractColor(const cv::Mat &img, cv::Point2f p);
 cv::Point2f rotate_pt_norm2d(cv::Point2f pt, Eigen::Quaterniond q);
 
-enum TrackLRType {
-    WHOLE_IMG_MATCH = 0,
-    LEFT_RIGHT_IMG_MATCH,
-    RIGHT_LEFT_IMG_MATCH
-};
 
 void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts);
 std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
