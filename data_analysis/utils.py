@@ -162,3 +162,30 @@ def short_loop_id(id):
     if id < 1e7:
         return f"D{id}"
     return f"L{id //10000 + id%10000}"
+
+def find_common_times(times_a, times_b, dt=0.005):
+    from sklearn.neighbors import NearestNeighbors
+    # times_a_near = NearestNeighbors(n_neighbors=1, algorithm='auto').fit(times_a.reshape(-1, 1))
+    times_b_near = NearestNeighbors(n_neighbors=1, algorithm='auto').fit(times_b.reshape(-1, 1))
+    distances, indices = times_b_near.kneighbors(times_a.reshape(-1, 1))
+    mask = distances.reshape(-1) < dt
+    times_a = times_a[mask]
+    # distances, indices = times_a_near.kneighbors(times_b.reshape(-1, 1))
+    # mask = distances.reshape(-1) < dt
+    # times_b = times_b[mask]
+    # plt.plot(times_a, marker="+", linestyle="None")
+    # plt.plot(times_b, marker=".", linestyle="None")
+    return times_a
+
+def align_paths(paths, paths_gt):
+    # align the first pose in each path to paths_gt
+    for i in paths:
+        path = paths[i]
+        path_gt = paths_gt[i]
+        dpos = path_gt.pos[0,:] - path.pos[0, :]
+        dyaw = wrap_pi(path_gt.ypr[0, 0] - path.ypr[0, 0])
+        path.pos = yaw_rotate_vec(-path.ypr[0, 0], path.pos) + dpos
+        path.ypr = path.ypr + np.array([dyaw, 0, 0])
+        path.ypr[:, 0] = wrap_pi(path.ypr[:, 0])
+        path.interp()
+    return paths

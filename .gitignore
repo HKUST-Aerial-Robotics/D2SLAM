@@ -23,3 +23,4 @@ model.zip
 *.engine
 *.profile
 models/
+data_analysis/.ipynb_checkpoints/

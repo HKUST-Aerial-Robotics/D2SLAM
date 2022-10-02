@@ -20,8 +20,10 @@ class Trajectory:
 
     def interp(self):
         self.pos_func = interp1d(self.t, self.pos, axis=0,bounds_error=False,fill_value="extrapolate")
+        self.ypr[:,0] = np.unwrap(self.ypr[:,0])
         self.ypr_func = interp1d(self.t, self.ypr, axis=0,bounds_error=False,fill_value="extrapolate")
-    
+        self.ypr[:,0] = wrap_pi(self.ypr[:,0])
+
     def length(self, t=10000000):
         mask = self.t < t
         dp = np.diff(self.pos[mask], axis=0)
@@ -29,19 +31,21 @@ class Trajectory:
         return length
     
     def resample_ypr(self, t):
-        return self.ypr_func(t)
+        ypr = self.ypr_func(t)
+        ypr[:,0] = wrap_pi(ypr[:,0])
+        return ypr
     
     def resample_pos(self, t):
         return self.pos_func(t)
 
-def read_path_from_csv(path, t0=None):
-    arr = np.loadtxt(path)
+def read_path_from_csv(path, t0=None, delimiter=None):
+    arr = np.loadtxt(path, delimiter=delimiter)
     t = arr[:, 0]
     if t0 is None:
         t0 = t[0]
     t = t - t0
     pos = arr[:, 1:4]
-    quat = arr[:, 4:]
+    quat = arr[:, 4:8]
     return Trajectory(t, pos, quat), t0
 
 def read_paths(folder, nodes, prefix="d2vins", t0=None):
@@ -135,36 +139,23 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
 
         t_ = poses_fused[i].t
         if poses_gt is not None:
-            pos_gt =  poses_gt[i].resample_pos(poses_fused[i].t)
-            ypr_gt = poses_gt[i].resample_ypr(poses_fused[i].t)
-            yaw_gt =  ypr_gt[:, 0]
-            pitch_gt = ypr_gt[:, 1]
-            roll_gt =  ypr_gt[:, 2]
-            ax1.plot(t_, pos_gt[:,0], label=f"Ground Truth ${i}$")
+            ax1.plot(poses_gt[i].t, poses_gt[i].pos[:,0], label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
+            ax2.plot(poses_gt[i].t, poses_gt[i].pos[:,1], label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
+            ax3.plot(poses_gt[i].t, poses_gt[i].pos[:,2], label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
         ax1.plot(poses_fused[i].t, poses_fused[i].pos[:,0], label=f"D2VINS {_id}")
-        if poses_pgo is not None:
-            ax1.plot(poses_pgo[i].t, poses_pgo[i].pos[:,0], '.', label=f"PGO Traj{i}")
-        ax1.tick_params( axis='x', which='both', bottom=False, top=False, labelbottom=False) 
-        ax1.set_ylabel("x")
-
-        if poses_gt is not None:
-            ax2.plot(t_, pos_gt[:,1], label=f"Ground Truth ${i}$")
         ax2.plot(poses_fused[i].t, poses_fused[i].pos[:,1], label=f"D2VINS {_id}")
-        if poses_pgo is not None:
-            ax2.plot(poses_pgo[i].t, poses_pgo[i].pos[:,1], '.', label=f"PGO Traj{i}")
-        ax2.tick_params( axis='x', which='both', bottom=False, top=False, labelbottom=False) 
-        ax2.set_ylabel("y")
-
-        if poses_gt is not None:
-            ax3.plot(t_, pos_gt[:,2], label=f"Ground Truth ${i}$")
         ax3.plot(poses_fused[i].t, poses_fused[i].pos[:,2], label=f"D2VINS {_id}")
         if poses_pgo is not None:
+            ax1.plot(poses_pgo[i].t, poses_pgo[i].pos[:,0], '.', label=f"PGO Traj{i}")
+            ax2.plot(poses_pgo[i].t, poses_pgo[i].pos[:,1], '.', label=f"PGO Traj{i}")
             ax3.plot(poses_pgo[i].t, poses_pgo[i].pos[:,2], '.', label=f"PGO Traj{i}")
+            
+        ax1.tick_params( axis='x', which='both', bottom=False, top=False, labelbottom=False) 
+        ax1.set_ylabel("x")
+        ax2.tick_params( axis='x', which='both', bottom=False, top=False, labelbottom=False) 
+        ax2.set_ylabel("y")
         ax3.set_ylabel("z")
         ax3.set_xlabel("t")
-
-        # ax1.legend()
-        # ax2.legend()
         ax3.legend()
         ax1.grid()
         ax2.grid()
@@ -175,45 +166,33 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
         ax1, ax2, ax3 = fig.subplots(3, 1)
 
         if poses_gt is not None:
-            ax1.plot(t_, yaw_gt*57.3, label=f"Ground Truth ${i}$")
-        ax1.plot(poses_fused[i].t, poses_fused[i].ypr[:,0]*57.3, label=f"D2VINS {_id}")
+            ax1.plot(poses_gt[i].t, poses_gt[i].ypr[:,0]*57.3, label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
+            ax2.plot(poses_gt[i].t, poses_gt[i].ypr[:,1]*57.3, label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
+            ax3.plot(poses_gt[i].t, poses_gt[i].ypr[:,2]*57.3, label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
         if poses_pgo is not None:
             ax1.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,0]*57.3, '.', label=f"PGO {_id}")
+            ax2.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,1]*57.3, '.', label=f"PGO {_id}")
+            ax3.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,2]*57.3, '.', label=f"EstKF {_id}")
+
+        ax1.plot(poses_fused[i].t, poses_fused[i].ypr[:,0]*57.3, label=f"D2VINS {_id}")
+        ax2.plot(poses_fused[i].t, poses_fused[i].ypr[:,1]*57.3, label=f"D2VINS {_id}")
+        ax3.plot(poses_fused[i].t, poses_fused[i].ypr[:,2]*57.3, label=f"D2VINS {_id}")
 
         ax1.set_ylabel("Yaw (deg)")
         ax1.set_xlabel("t")
         ax1.legend()
         ax1.grid()
-        
-        if poses_gt is not None:
-            ax2.plot(t_, pitch_gt*57.3, label=f"Ground Truth ${i}$")
-        ax2.plot(poses_fused[i].t, poses_fused[i].ypr[:,1]*57.3, label=f"D2VINS {_id}")
-        if poses_pgo is not None:
-            ax2.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,1]*57.3, '.', label=f"PGO {_id}")
-
         ax2.set_ylabel("Pitch (deg)")
         ax2.set_xlabel("t")
         ax2.legend()
         ax2.grid()
-
-        if poses_gt is not None:
-            ax3.plot(t_, roll_gt*57.3, label=f"Ground Truth ${i}$")
-        ax3.plot(poses_fused[i].t, poses_fused[i].ypr[:,2]*57.3, label=f"D2VINS {_id}")
-        if poses_pgo is not None:
-            ax3.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,2]*57.3, '.', label=f"EstKF {_id}")
         ax3.set_xlabel("t")
+        ax2.set_ylabel("Roll (deg)")
         ax3.legend()
         ax3.grid()
         plt.savefig(output_path+f"est_by_t{i}_attitude.png")
 
 def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=None,outlier_thres=100, outlier_yaw_thres=10, dte=1000000, show=True, figsize=(6, 6), verbose=True):
-    ts = poses_gt[main_id].t
-    ts = ts[ts<dte]
-    if poses_vo is not None:
-        posa_vo =  poses_vo[main_id].resample_pos(ts)
-        yawa_vo = poses_vo[main_id].resample_ypr(ts)[:,0]
-    posa_fused = poses_fused[main_id].resample_pos(ts)
-    yawa_fused = poses_fused[main_id].resample_ypr(ts)[:,0]
     if verbose:
         if poses_vo is not None:
             pass
@@ -227,6 +206,16 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
     num = 0
 
     for target_id in target_ids:
+        ts = find_common_times(poses_gt[main_id].t, poses_gt[target_id].t) #We need to find the common time period of these two
+        ts = find_common_times(ts, poses_fused[main_id].t, dt=0.2)
+        ts = find_common_times(ts, poses_fused[target_id].t, dt=0.2)
+        ts = ts[ts<dte]
+        if poses_vo is not None:
+            posa_vo =  poses_vo[main_id].resample_pos(ts)
+            yawa_vo = poses_vo[main_id].resample_ypr(ts)[:,0]
+        posa_fused = poses_fused[main_id].resample_pos(ts)
+        yawa_fused = poses_fused[main_id].resample_ypr(ts)[:,0]
+        
         if poses_vo is not None:
             posb_vo =  poses_vo[target_id].resample_pos(ts)
             yawb_vo = poses_vo[target_id].resample_ypr(ts)[:, 0]
@@ -348,7 +337,7 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
                 
             fig = plt.figure("Fused Relative Error", figsize=figsize)
             fig.suptitle(f"Fused Relative Error {main_id}->{target_ids}")
-            ax1, ax2, ax3 = fig.subplots(3, 1)
+            ax1, ax2, ax3, ax4 = fig.subplots(4, 1)
 
             ax1.plot(ts[mask], dp_gt[mask,0] - dp_fused[mask,0], label="$E_{xfused}^" + str(target_id) + f"$ RMSE:{rmse_x:3.3f}")
             ax2.plot(ts[mask], dp_gt[mask,1] - dp_fused[mask,1], label="$E_{yfused}^" + str(target_id) + f"$ RMSE:{rmse_y:3.3f}")
@@ -378,10 +367,7 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
 
     ate_fused_sum = 0
     rmse_fused_ang_sum = 0
-    if poses_vo is not None:
-        pass
-    else:
-        output_table = [["Drone", "Traj. Len.", "ATE Pos", "ATE Att", "Cov/m: x", "y", "z", "PGO:ATE Pos ", "ATE Att"]]
+    output_table = [["Drone", "Traj. Len.", "ATE Pos", "ATE Att", "Cov/m: x", "y", "z", "PGO:ATE Pos ", "ATE Att"]]
 
     ate_pos_sum = 0
     ate_ang_sum = 0
@@ -458,11 +444,11 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
             rmse_vo_x = RMSE(pos_vo[:,0] , pos_gt_vo[:,0])
             rmse_vo_y = RMSE(pos_vo[:,1] , pos_gt_vo[:,1])
             rmse_vo_z = RMSE(pos_vo[:,2] , pos_gt_vo[:,2])
-            vo_cov_per_meter, vo_yaw_cov_per_meter = odometry_covariance_per_meter(pos_vo, ypr_vo[:,0], pos_gt_vo, ypr_gt_vo[:,0], show=False)
             ate_vo = ATE_POS(pos_vo, pos_gt_vo)
-            rmse_yaw_vo = RMSE(wrap_pi(ypr_vo[:,0]-ypr_gt_vo[:,0]), 0)
-            rmse_pitch_vo = RMSE(wrap_pi(ypr_vo[:,1]-ypr_gt_vo[:,1]), 0)
-            rmse_roll_vo = RMSE(wrap_pi(ypr_vo[:,2]-ypr_gt_vo[:,2]), 0)
+            # vo_cov_per_meter, vo_yaw_cov_per_meter = odometry_covariance_per_meter(pos_vo, ypr_vo[:,0], pos_gt_vo, ypr_gt_vo[:,0], show=False)
+            # rmse_yaw_vo = RMSE(wrap_pi(ypr_vo[:,0]-ypr_gt_vo[:,0]), 0)
+            # rmse_pitch_vo = RMSE(wrap_pi(ypr_vo[:,1]-ypr_gt_vo[:,1]), 0)
+            # rmse_roll_vo = RMSE(wrap_pi(ypr_vo[:,2]-ypr_gt_vo[:,2]), 0)
             rmse_angular_vo = RMSE(angular_error_ypr_array(ypr_vo, ypr_gt_vo), 0)
 
             ate_vo_sum += ate_vo
