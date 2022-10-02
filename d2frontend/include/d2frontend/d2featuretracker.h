@@ -88,7 +88,7 @@ protected:
     TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame, TrackLRType type=WHOLE_IMG_MATCH);
     TrackReport track(VisualImageDesc & frame);
     TrackReport trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame);
-    bool getmatchedPrevKeyframe(const VisualImageDescArray & frame_a, VisualImageDescArray& prev, int & dir_a, int & dir_b);
+    bool getMatchedPrevKeyframe(const VisualImageDescArray & frame_a, VisualImageDescArray& prev, int & dir_a, int & dir_b);
     void processKeyframe(VisualImageDescArray & frames);
     bool isKeyframe(const TrackReport & reports);
     Vector3d extractPointVelocity(const LandmarkPerFrame & lpf) const;

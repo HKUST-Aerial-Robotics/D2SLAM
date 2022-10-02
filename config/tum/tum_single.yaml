@@ -136,5 +136,5 @@ pgo_solver_time: 0.5
 output_path: "/root/output/"
 debug_print_sldwin: 0
 debug_print_states: 0
-enable_perf_output: 1
+enable_perf_output: 0
 debug_write_margin_matrix: 0

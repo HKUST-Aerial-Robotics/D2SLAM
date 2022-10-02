@@ -566,4 +566,41 @@ const std::vector<VINSFrame*> & D2EstimatorState::getSldWin(int drone_id) const 
     return sld_wins.at(self_id);
 }
 
+void D2EstimatorState::solveGyroscopeBias() {
+    Matrix3d A;
+    Vector3d b;
+    Vector3d delta_bg;
+    A.setZero();
+    b.setZero();
+    auto & sld_win = sld_wins[self_id];
+    for (int i = 0; i < sld_win.size() - 1; i ++ ) {
+        auto frame_i = sld_win[i];
+        auto frame_j = sld_win[i + 1];
+        MatrixXd tmp_A(3, 3);
+        tmp_A.setZero();
+        VectorXd tmp_b(3);
+        tmp_b.setZero();
+        Eigen::Quaterniond q_ij(frame_i->R().transpose() * frame_j->R());
+        tmp_A = frame_j->pre_integrations->jacobian.template block<3, 3>(O_R, O_BG);
+        tmp_b = 2 * (frame_j->pre_integrations->delta_q.inverse() * q_ij).vec();
+        A += tmp_A.transpose() * tmp_A;
+        b += tmp_A.transpose() * tmp_b;
+    }
+    delta_bg = A.ldlt().solve(b);
+    printf("[D2EstimatorState] gyroscope bias initial calibration: ");
+    std::cout << delta_bg.transpose() << std::endl;
+
+    for (int i = 0; i < sld_win.size() - 1; i++) {
+        auto frame_i = sld_win[i];
+        auto frame_id = frame_i->frame_id;
+        frame_i->Bg += delta_bg;
+        frame_i->toVector(_frame_pose_state[frame_id], _frame_spd_Bias_state[frame_id]);
+    }
+
+    for (int i = 0; i < sld_win.size() - 1; i++) {
+        auto frame_i = sld_win[i];
+        frame_i->pre_integrations->repropagate(frame_i->Ba, frame_i->Bg);
+    }
+}
+
 }

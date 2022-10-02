@@ -51,7 +51,7 @@ def read_paths(folder, nodes, prefix="d2vins", t0=None):
     return ret, t0
 
 def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="/home/xuhao/output/", id_map = None, figsize=(6, 6), plot_each=True):
-    fig = plt.figure("Traj2", figsize=figsize)
+    fig = plt.figure("plot3d", figsize=figsize)
     ax = fig.add_subplot(111, projection='3d')
     ax = fig.gca(projection='3d')
     if id_map is None:
@@ -61,17 +61,17 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
 
     for i in nodes:
         if poses_gt is not None:
-            ax.plot(poses_gt[i].pos[:,0], poses_gt[i].pos[:,1],poses_gt[i].pos[:,2], label=f"Traj{i}")
+            ax.plot(poses_gt[i].pos[:,0], poses_gt[i].pos[:,1],poses_gt[i].pos[:,2], label=f"GT {i}")
         if poses_pgo is not None:
             ax.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1],poses_pgo[i].pos[:,2], label=f"PGO {i}")
-        ax.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1],poses_fused[i].pos[:,2], label=f"D2VINS {id_map[i]}")
+        ax.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1],poses_fused[i].pos[:,2], label=f"$D^2$VINS {id_map[i]}")
     
     ax.set_xlabel('$X$')
     ax.set_ylabel('$Y$')
     ax.set_zlabel('$Z$')
     
     plt.legend()
-    plt.savefig(output_path+"Traj2.pdf")
+    plt.savefig(output_path+"plot3d.png")
 
     #Plot Fused Vs GT 3D
     fig = plt.figure("FusedVsGT3D")
@@ -224,6 +224,7 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
     
     avg_rmse_vo = 0
     avg_rmse_vo_yaw = 0.0
+    num = 0
 
     for target_id in target_ids:
         if poses_vo is not None:
@@ -264,8 +265,9 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
             rmse_y = RMSE(dp_gt[mask,1] , dp_fused[mask,1])
             rmse_z = RMSE(dp_gt[mask,2] , dp_fused[mask,2])
             rmse_pos = ATE_POS(dp_gt[mask], dp_fused[mask])
-            avg_rmse += ATE_POS(dp_gt[mask], dp_fused[mask])
+            avg_rmse += rmse_pos
             avg_rmse_yaw += rmse_yaw
+            num += 1
 
             if verbose:
                 if poses_vo is not None:
@@ -360,7 +362,8 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
             ax2.grid()
             ax3.grid()
             plt.tight_layout()
-
+    output_table.append([
+        "Avg:", f"", f"{avg_rmse/num:3.3f}", f"{avg_rmse_yaw/num*180/pi:3.2f}°", "", ""])
     if show:
         plt.show()
     if verbose:
@@ -378,8 +381,12 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
     if poses_vo is not None:
         pass
     else:
-        output_table = [["Drone", "Traj. Len", "ATE Pos", "ATE Att", "Cov/m: x", "y", "z", "PGO:ATE Pos ", "ATE Att"]]
+        output_table = [["Drone", "Traj. Len.", "ATE Pos", "ATE Att", "Cov/m: x", "y", "z", "PGO:ATE Pos ", "ATE Att"]]
 
+    ate_pos_sum = 0
+    ate_ang_sum = 0
+    length_sum = 0
+    num = 0
     for i in nodes:
         t_ = poses_gt[i].t
         mask = t_<dte
@@ -463,14 +470,14 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
 
             if verbose:
                 pass
-                # print(f"{ate_fused:3.3f}\t{rmse_angular_fused*180/pi:3.3f}°\t{rmse_yaw_fused*180/pi:3.3f}°\t{rmse_pitch_fused*180/pi:3.3f}°\t{rmse_roll_fused*180/pi:3.3f}°\t{rmse_x:3.3f},{rmse_y:3.3f},{rmse_z:3.3f}\t{fused_cov_x:.1e},{fused_cov_y:.1e},{fused_cov_z:.1e}\t{fused_yaw_cov_per_meter:.1e}rad/m\t\t{ate_path:3.3f}\t{rmse_angular_path*180/pi:3.3f}°\t|\t",end="")
-                # print(f"{ate_vo:3.3f}\t{rmse_angular_vo*180/pi:3.3f}°\t{rmse_yaw_vo*180/pi:3.3f}°\t{rmse_pitch_vo*180/pi:3.3f}°\t{rmse_roll_vo*180/pi:3.3f}°\t{rmse_vo_x:3.3f},{rmse_vo_y:3.3f},{rmse_vo_z:3.3f}\t{vo_cov_per_meter[0][0]:.1e},{vo_cov_per_meter[1][1]:.1e},{vo_cov_per_meter[2][2]:.1e}\t{vo_yaw_cov_per_meter:.1e}rad")
-        else:
-            # print(f"{i}by{main_id}",end="\t")
-            # print(f"{ate_fused:3.3f}\t{rmse_angular_fused*180/pi:3.3f}°\t{rmse_yaw_fused*180/pi:3.3f}°\t{rmse_pitch_fused*180/pi:3.3f}°\t{rmse_roll_fused*180/pi:3.3f}°\t{rmse_x:3.3f},{rmse_y:3.3f},{rmse_z:3.3f}\t{fused_cov_x:.1e},{fused_cov_y:.1e},{fused_cov_z:.1e}\t{fused_yaw_cov_per_meter:.1e}rad/m\t\t{ate_path:3.3f}\t{rmse_angular_path*180/pi:3.3f}°\t|\t",end="")
-            output_table.append([
-                f"{i}by{main_id}",f"{poses_fused[i].length(dte):.1f}m", f"{ate_fused:3.3f}", f"{rmse_angular_fused*180/pi:3.3f}", f"{fused_cov_x:.1e}",f"{fused_cov_y:.1e}",f"{fused_cov_z:.1e}",f"{ate_path:3.3f}",f"{rmse_angular_path*180/pi:3.3f}°"
-            ])
+        traj_len = poses_fused[i].length(dte)
+        ate_pos_sum += ate_fused
+        ate_ang_sum += rmse_angular_fused
+        length_sum += traj_len
+        num += 1
+        output_table.append([
+            f"{i}by{main_id}",f"{traj_len:.1f}m", f"{ate_fused:3.3f}", f"{rmse_angular_fused*180/pi:3.3f}", f"{fused_cov_x:.1e}",f"{fused_cov_y:.1e}",f"{fused_cov_z:.1e}",f"{ate_path:3.3f}",f"{rmse_angular_path*180/pi:3.3f}°"
+        ])
 
         if show:
             fig = plt.figure(f"Fused Absolute Error Pos {i}")
@@ -547,6 +554,9 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
             ax1.grid()
             ax2.grid()
             ax3.grid()
+
+    output_table.append([
+        f"Avg.",f"{length_sum/num:.1f}", f"{ate_fused_sum/num:3.3f}", f"{ate_ang_sum/num*180/pi:3.2f}", f"",f"",f"",f"",f""])
     if verbose:
         import tabulate
         return tabulate.tabulate(output_table, tablefmt='html')

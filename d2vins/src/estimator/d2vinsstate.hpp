@@ -33,7 +33,7 @@ protected:
     void outlierRejection();
     void updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs);
     void createPriorFactor4FirstFrame(VINSFrame * frame);
-    
+    void solveGyroscopeBias();
 public:
     state_type td = 0.0;
     D2EstimatorState(int _self_id);

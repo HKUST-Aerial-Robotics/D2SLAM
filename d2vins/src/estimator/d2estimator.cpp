@@ -622,6 +622,32 @@ void D2Estimator::setupLandmarkFactors() {
     if (params->verbose) {
         printf("[D2VINS::setupLandmarkFactors] %d landmarks\n", lms.size());
     }
+    //We first count keyframe_measurements
+    for (auto lm : lms) {
+        LandmarkPerFrame firstObs = lm.track[0];
+        keyframe_measurements[firstObs.frame_id] ++;
+        for (auto i = 1; i < lm.track.size(); i++) {
+            auto lm_per_frame = lm.track[i];
+            keyframe_measurements[lm_per_frame.frame_id] ++;
+        }
+    }
+    //Check the measurements number of each keyframe
+    std::set<FrameIdType> ignore_frames;
+    for (auto it : keyframe_measurements) {
+        auto frame_id = it.first;
+        if (it.second < params->min_measurements_per_keyframe) {
+            auto frame = state.getFramebyId(frame_id);
+            if (frame->drone_id != self_id && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+                ignore_frames.insert(frame_id);
+                printf("\033[0;31m[D2VINS::D2Estimator@%d] frame_id %ld has only %d measurement, will be skip.\033[0m\n", 
+                        self_id, frame_id, it.second);
+            } else {
+                printf("\033[0;31m[D2VINS::D2Estimator@%d] frame_id %ld has only %d measurements\033[0m\n", 
+                    self_id, frame_id, it.second);
+            }
+        }
+    }
+
     for (auto lm : lms) {
         auto lm_id = lm.landmark_id;
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
@@ -634,9 +660,11 @@ void D2Estimator::setupLandmarkFactors() {
             }
         }
         LandmarkPerFrame firstObs = lm.track[0];
+        if (ignore_frames.find(firstObs.frame_id) != ignore_frames.end()) {
+            continue;
+        }
         auto base_camera_id = firstObs.camera_id;
         auto mea0 = firstObs.measurement();
-        keyframe_measurements[firstObs.frame_id] ++;
         state.getLandmarkbyId(lm_id).solver_flag = LandmarkSolverFlag::SOLVED;
         if (firstObs.depth_mea && params->fuse_dep && 
                 firstObs.depth < params->max_depth_to_fuse &&
@@ -650,6 +678,9 @@ void D2Estimator::setupLandmarkFactors() {
         }
         for (auto i = 1; i < lm.track.size(); i++) {
             auto lm_per_frame = lm.track[i];
+            if (ignore_frames.find(lm_per_frame.frame_id) != ignore_frames.end()) {
+                continue;
+            }
             auto mea1 = lm_per_frame.measurement();
             ResidualInfo * info = nullptr;
             if (lm_per_frame.camera_id == base_camera_id) {
@@ -673,7 +704,6 @@ void D2Estimator::setupLandmarkFactors() {
                 info = LandmarkTwoFrameOneCamResInfo::create(f_td, loss_function,
                     firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, enable_depth_mea);
                 residual_count++;
-                keyframe_measurements[lm_per_frame.frame_id] ++;
             } else {
                 if (lm_per_frame.frame_id == firstObs.frame_id) {
                     auto f_td = new ProjectionOneFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
@@ -694,24 +724,8 @@ void D2Estimator::setupLandmarkFactors() {
                 marginalizer->addResidualInfo(info);
                 used_landmarks.insert(lm_id);
             }
-            keyframe_measurements[lm_per_frame.frame_id] ++;
             if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
                 solver->getProblem().SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
-            }
-        }
-    }
-    //Check the measurements number of each keyframe
-    for (auto it : keyframe_measurements) {
-        auto frame_id = it.first;
-        if (it.second < params->min_measurements_per_keyframe) {
-            printf("\033[0;31m[D2VINS::D2Estimator] frame_id %ld has only %d measurements\033[0m\n Related landmarks:\n", 
-                frame_id, it.second);
-            std::vector<LandmarkPerId> related_landmarks = state.getRelatedLandmarks(frame_id);
-            if (params->verbose) {
-                for (auto lm : related_landmarks) {
-                    printf("Landmark %ld tracks %ld flag %d\n", lm.landmark_id, lm.track.size(), lm.flag);
-                }
-                printf("====================");
             }
         }
     }
