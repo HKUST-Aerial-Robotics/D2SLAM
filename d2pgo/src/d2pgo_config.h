@@ -49,7 +49,7 @@ struct D2PGOConfig {
     bool debug_rot_init_only = false;
     bool pgo_use_autodiff = true;
     bool perturb_mode = true;
-    int rot_init_state_eps = 1e-2;
+    double rot_init_state_eps = 1e-2;
     SwarmLocalOutlierRejectionParams pcm_rej;
     RotInitConfig rot_init_config;
 };

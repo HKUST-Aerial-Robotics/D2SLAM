@@ -20,7 +20,7 @@ public:
     void addLoops(const std::vector<Swarm::LoopEdge> & good_loops);
     void setFixedFrameId(FrameIdType _fixed_frame_id);
     void inputDPGOData(const DPGOData & data);
-    SolverReport solve();
+    SolverReport solve(bool solve_6d=false);
     void reset();
 };
 }

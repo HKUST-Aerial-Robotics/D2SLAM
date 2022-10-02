@@ -10,7 +10,6 @@ protected:
     std::recursive_mutex pgo_data_mutex;
     std::vector<DPGOData> pgo_data;
     std::function<void(const DPGOData &)> broadcastDataCallback;
-    bool solve_6d = false;
 
     virtual SolverReport solveLocalStep() override {
         SolverReport report;
@@ -90,12 +89,12 @@ protected:
             data.target_id = it.first;
             data.reference_frame_id = state->getReferenceFrameId();
             data.type = DPGO_ROT_MAT_DUAL;
-            printf("[RotInit%d] broadcast data to %d: size %ld\n", self_id, it.first, it.second.size());
+            // printf("[RotInit%d] broadcast data to %d: size %ld\n", self_id, it.first, it.second.size());
             for (auto it2: it.second) {
                 auto ptr = it2.first;
                 auto & dual_state = it2.second;
                 ParamInfo param = all_estimating_params.at(ptr);
-                data.frame_poses[param.id] = Swarm::Pose(); // No pose here
+                data.frame_poses[param.id] = state->getFramebyId(param.id)->odom.pose();
                 data.frame_duals[param.id] = dual_state;
             }
             if (broadcastDataCallback)
@@ -111,6 +110,7 @@ protected:
             auto & dual = it.second;
             if (state->hasFrame(frame_id)) {
                 auto * ptr = state->getRotState(frame_id);
+                auto frame = state->getFramebyId(frame_id);
                 if (all_estimating_params.find(ptr) != all_estimating_params.end()) {
                     if (data.target_id == self_id || !hasDualState(ptr, drone_id)) {
                         updated = true;
@@ -126,29 +126,28 @@ protected:
                         dual_states_remote[drone_id][ptr] = dual;
                         if (create)
                             dual_states_local[drone_id][ptr] = dual;
-                        // printf("[ARockRotInit@%d]dual remote for frame_id %ld drone_id %d:\n", 
-                        //         self_id, frame_id, drone_id);
-                        // std::cout << dual.transpose() << std::endl;
-                        // printf("[ARockRotInit@%d]dual local: \n ", self_id);
-                        // std::cout << dual_states_local[drone_id][ptr].transpose() << std::endl;
-                        // VectorXd avg = (dual_states_local[drone_id][ptr] + dual)/2;
-                        // printf("[ARockRotInit@%d]avg dual: \n ", self_id);
-                        // std::cout << avg.transpose() << std::endl;
-                        // printf("[ARockRotInit@%d]state     : \n", 
-                        //         self_id);
-                        // std::cout << Map<VectorXd>(ptr, 9).transpose() << "\n" << std::endl;
+                        if (frame->drone_id == drone_id) {
+                            //Use this to update the pose.
+                            // printf("[ARockPGO@%d]update pose of %d from drone %d\n", self_id, frame_id, drone_id);
+                            auto pose = data.frame_poses.at(frame_id);
+                            frame->odom.pose() = pose;
+                            RotationInitialization<T>::state->setAttitudeInit(frame_id, pose.att());
+                            pose.to_vector(state->getPoseState(frame_id));
+                        }
                     }
                 }
             }
         }
     }
 public:
+    bool solve_6d = false;
     RotationInitARock(PGOState * state, RotInitConfig rot_config, 
             ARockSolverConfig arock_config, 
             std::function<void(const DPGOData &)> _broadcastDataCallback): 
         RotationInitialization<T>(state, rot_config), 
         ARockBase(static_cast<D2State*>(state), arock_config),
         broadcastDataCallback(_broadcastDataCallback) {
+            RotationInitialization<T>::is_multi = true;
     }
 
     SolverReport solve() {

@@ -36,6 +36,7 @@ protected:
     bool is_fixed_frame_set = false;
     int self_id;
     int eff_frame_num = 0;
+    bool is_multi = false;
 
     virtual void addFrameId(FrameIdType _frame_id) {
         all_frames.insert(_frame_id);
@@ -354,17 +355,19 @@ protected:
             auto & pose = frame->odom.pose();
             Map<const Matrix<T, 3, 3, RowMajor>> M(X.data() + idx*ROTMAT_SIZE);
             //Note in X the rotation is stored in row major order.
-            auto R = recoverRotationSVD(Mat3(M));
-            auto q = Quaternion<T>(R).template cast<double>();
-            pose.att() = q;
-            state->setAttitudeInit(frame_id, q);
-            pose.to_vector(state->getPoseState(frame_id));
             Map<Matrix<double, 3, 3, RowMajor>> R_state(state->getRotState(frame_id));
             auto Md = M.template cast<double>();
             double changes = (R_state-Md).norm()/R_state.norm();
             state_changes_sum += changes;
             count ++;
-            R_state = Md; //Not essential to be rotation matrix. For ARock.
+            R_state = M.template cast<double>(); //Not essential to be rotation matrix. For ARock.
+            if (!(is_multi && frame->drone_id != state->getSelfId())) {
+                auto R = recoverRotationSVD(Mat3(M));
+                auto q = Quaternion<T>(R).template cast<double>();
+                pose.att() = q;
+                state->setAttitudeInit(frame_id, q);
+                pose.to_vector(state->getPoseState(frame_id));
+            }
         }
         return state_changes_sum/count;
     }

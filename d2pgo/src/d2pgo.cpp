@@ -125,9 +125,14 @@ bool D2PGO::solve_multi(bool force_solve) {
         usleep(50000); //In this case we sleep 50ms to let the other drones to initialize rotation 
         return true;
     }
+    if (config.debug_rot_init_only) {
+        return true;
+    }
     
     auto report = solver->solve();
-    state.syncFromState();
+    if (!config.perturb_mode) {
+        state.syncFromState();
+    }
     if (postsolve_callback != nullptr) {
         postsolve_callback();
     }
@@ -230,7 +235,7 @@ void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge> & good_loops) {
         rot_init->setFixedFrameId(state.headId(self_id));
     }
     SolverReport report = rot_init->solve();
-    if (config.mode != PGO_MODE_NON_DIST || report.state_changes < config.rot_init_state_eps) {
+    if (config.mode == PGO_MODE_NON_DIST || (report.state_changes < config.rot_init_state_eps && solve_count > 10)) {
         is_rot_init_convergence = true;
         printf("[D2PGO@%d]rotInitial: rot init convergence: %.1f%%\n", self_id, report.state_changes*100);
     }
@@ -425,6 +430,13 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
                 Swarm::Pose ego_pose = frame->initial_ego_pose;
                 auto delta_att = ego_pose.att_yaw_only().inverse() * ego_pose.att();
                 pose.att() = pose.att()*delta_att;
+            }
+            if (config.perturb_mode) {
+                auto pointer = state.getPerturbState(frame->frame_id);
+                Map<Vector3d> pos(pointer);
+                Map<Vector3d> perturb_theta(pointer+3);
+                Quaterniond q_perturb = Utility::quatfromRotationVector(perturb_theta);
+                pose = Swarm::Pose(pos, state.getAttitudeInit(frame->frame_id)*q_perturb);
             }
             trajs[drone_id].push(frame->stamp, pose, frame->frame_id);
         }
