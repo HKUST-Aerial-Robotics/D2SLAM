@@ -37,7 +37,6 @@ SolverReport ConsensusSolver::solve() {
     iteration_count = 0;
     for (int i = 0; i < config.max_steps; i++) {
         //If sync mode.
-        broadcastData();
         if (problem != nullptr) {
             delete problem;
         }
@@ -54,13 +53,7 @@ SolverReport ConsensusSolver::solve() {
                 residual_info->paramsPointerList(state));
         }
         Utility::TicToc tic_sync;
-        if (config.sync_with_main) {
-            waitForSync(); 
-        } else {
-            receiveAll();
-        }
         // printf("ConsensusSolver wait for sync time: %.1fms step %d/%d", tic_sync.toc(), i, config.max_steps);
-        updateGlobal();
         updateTilde();
         setStateProperties();
         ceres::Solver::Summary summary;
@@ -68,6 +61,13 @@ SolverReport ConsensusSolver::solve() {
         report.total_iterations += summary.num_successful_steps + summary.num_unsuccessful_steps;
         report.final_cost = summary.final_cost;
         iteration_count++;
+        broadcastData();
+        if (config.sync_with_main) {
+            waitForSync(); 
+        } else {
+            receiveAll();
+        }
+        updateGlobal();
     }
     report.total_time = tic.toc()/1000;
     broadcastData();
