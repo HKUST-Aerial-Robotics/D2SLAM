@@ -8,6 +8,7 @@ namespace D2Common {
 void ARockBase::reset() {
     dual_states_local.clear();
     dual_states_remote.clear();
+    all_estimating_params.clear();
 }
 
 void ARockBase::addParam(const ParamInfo & param_info) {
@@ -53,6 +54,7 @@ void ARockBase::updateDualStates() {
                     ROS_WARN("Normed angle: %f", dual_state_local(3));
                 }
             } else {
+                // printf("[ARockSolver@%d] type %d frame_id %d\n", self_id, param_info.type, param_info.id);
                 //Is a vector.
                 VectorXd dual_state_remote = dual_states_remote.at(remote_drone_id).at(state_pointer);
                 // printf("\nFrame %d \n", param_info.id);
@@ -62,6 +64,7 @@ void ARockBase::updateDualStates() {
                 // std::cout << "avg_state: \n" << avg_state.transpose() << std::endl;
                 Map<VectorXd> cur_est_state(state_pointer, param_info.size);
                 VectorXd delta = (avg_state - cur_est_state)*config.eta_k;
+                // std::cout << "cur_est_state: \n" << cur_est_state.transpose() << std::endl;
                 // std::cout << "delta: \n" << delta.transpose() << std::endl;
                 dual_state_local -= delta;
             }
@@ -103,6 +106,7 @@ void ARockBase::createDualState(const ParamInfo & param_info, int drone_id, bool
         dual_states_remote[drone_id] = std::map<state_type*, VectorXd>();
         dual_states_local[drone_id] = std::map<state_type*, VectorXd>();
     }
+    // printf("[ARockSolver%d] Creating dual state for param %ld, size %d\n", self_id, param_info.id, param_info.size);
     if (init_to_zero) {
         dual_states_remote[drone_id][param_info.pointer] = VectorXd::Zero(param_info.size);
         dual_states_local[drone_id][param_info.pointer] = VectorXd::Zero(param_info.size);

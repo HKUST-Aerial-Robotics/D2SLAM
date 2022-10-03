@@ -7,7 +7,8 @@
 namespace D2Common {
 enum DPGODataType {
     DPGO_POSE_DUAL = 0,
-    DPGO_ROT_MAT_DUAL
+    DPGO_ROT_MAT_DUAL,
+    DPGO_DELTA_POSE_DUAL
 };
 
 class DPGOData {
