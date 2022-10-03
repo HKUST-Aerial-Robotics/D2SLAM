@@ -20,7 +20,7 @@ class D2PGONode {
     ros::Publisher path_pub;
     ros::Publisher dpgo_data_pub;
     ros::Publisher drone_traj_pub;
-    bool write_to_file = false;
+    bool write_to_file = true;
     bool multi = false;
     int write_to_file_step = 5;
     int pub_count = 0;
@@ -115,6 +115,7 @@ protected:
         fsSettings["output_path"] >> output_folder;
         config.write_g2o = (int) fsSettings["write_g2o"];
         fsSettings["g2o_output_path"] >> config.g2o_output_path;
+        write_to_file = (int) fsSettings["write_pgo_to_file"];
         config.g2o_output_path = output_folder + "/" + config.g2o_output_path;
         config.mode = static_cast<PGO_MODE>((int) fsSettings["pgo_mode"]);
         nh.param<int>("self_id", config.self_id, -1);
@@ -137,6 +138,7 @@ protected:
         config.arock_config.eta_k = fsSettings["pgo_eta_k"];
         config.pcm_rej.is_4dof = is_4dof;
         config.is_realtime = true;
+        config.enable_rotation_initialization = false;
         if (config.mode == PGO_MODE_NON_DIST) {
             config.perturb_mode = false;
         } else {

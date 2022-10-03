@@ -43,8 +43,7 @@ Panels:
         - /VINS-Odom1/Shape1
         - /GT1
         - /Remote1
-        - /Remote1/Path31
-        - /Remote1/Path41
+        - /PGOPath31
       Splitter Ratio: 0.5
     Tree Height: 735
 Preferences:
@@ -645,6 +644,30 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 85; 0; 255
+      Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Billboards
+      Line Width: 0.05000000074505806
+      Name: PGOPath3
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Queue Size: 10
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
+      Topic: /d2pgo/pgo_path_3
+      Unreliable: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 211; 215; 207
@@ -671,7 +694,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 11.4617919921875
+      Distance: 27.057641983032227
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -679,17 +702,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -2.5679149627685547
-        Y: -0.4881134033203125
+        X: 3.301443576812744
+        Y: 4.822225093841553
         Z: 2.2359041395247914e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7897979021072388
+      Pitch: 1.019797682762146
       Target Frame: imu
-      Yaw: 1.5364104509353638
+      Yaw: 1.4514145851135254
     Saved:
       - Class: rviz/XYOrbit
         Distance: 9.527398109436035
@@ -728,4 +751,4 @@ Window Geometry:
     collapsed: false
   Width: 1468
   X: 1796
-  Y: 56
+  Y: 54

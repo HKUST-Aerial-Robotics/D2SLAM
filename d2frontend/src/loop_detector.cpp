@@ -316,7 +316,7 @@ bool LoopDetector::checkLoopOdometryConsistency(LoopEdge & loop_conn) const {
     }
 
     Swarm::LoopEdge edge(loop_conn);
-    auto odom = ego_motion_traj.get_relative_pose_by_ts(edge.ts_a, edge.ts_b);
+    auto odom = ego_motion_traj.get_relative_pose_by_appro_ts(edge.ts_a, edge.ts_b);
     Eigen::Matrix6d cov_vec = odom.second + edge.getCovariance();
     auto dp = Swarm::Pose::DeltaPose(edge.relative_pose, odom.first);
     auto md = Swarm::computeSquaredMahalanobisDistance(dp.log_map(), cov_vec);

@@ -114,7 +114,7 @@ void ARockBase::createDualState(const ParamInfo & param_info, int drone_id, bool
 }
 
 SolverReport ARockBase::solve_arock() {
-    ROS_INFO("ARockBase::solve");
+    // ROS_INFO("ARockBase::solve");
     SolverReport report;
     Utility::TicToc tic;
     int iter_cnt = 0;
@@ -144,7 +144,7 @@ SolverReport ARockBase::solve_arock() {
         report.compose(_report);
         float changes = (_report.initial_cost-_report.final_cost)/_report.initial_cost;
         if (iter_cnt == 0) {
-            report.initial_cost = report.initial_cost;
+            report.initial_cost = _report.initial_cost;
         }
         if (config.verbose)
             printf("[ARock@%d] substeps: %d/%d total_iterations: %d initial_cost: %.2e final_cost: %.2e changes: %02.2f%% time: %.2fms steps: %d\n", 
@@ -191,18 +191,15 @@ void ARockSolver::resetResiduals() {
 }
 
 void ARockSolver::prepareSolverInIter(bool final_iter) {
-    if (problem != nullptr) {
-        delete problem;
-    }
+    // if (problem != nullptr) {
+    //     delete problem;
+    // }
     ceres::Problem::Options problem_options;
     if (!final_iter) {
         problem_options.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
         problem_options.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
         problem_options.local_parameterization_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
         problem_options.manifold_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-    } else {
-        if (config.verbose)
-            printf("[ARockSolver::solve:%d] last iteration\n", self_id);
     }
     problem = new ceres::Problem(problem_options);
     for (auto residual_info : residuals) {

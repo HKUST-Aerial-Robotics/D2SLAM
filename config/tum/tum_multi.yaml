@@ -139,6 +139,7 @@ pgo_rho_frame_theta: 0.25
 pgo_eta_k: 0.1
 write_g2o: 1
 g2o_output_path: "output.g2o"
+write_pgo_to_file: 1
 
 #outputs
 output_path: "/root/output/"

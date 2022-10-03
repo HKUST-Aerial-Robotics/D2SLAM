@@ -45,7 +45,7 @@ public:
             pose_pertub.setZero();
             pose_pertub.segment<3>(0) = _frame.T();
 
-            initial_attitude[frame->drone_id] = _frame.odom.att();
+            initial_attitude[frame->frame_id] = _frame.odom.att();
         }
         if (drone_frames.find(_frame.drone_id) == drone_frames.end()) {
             drone_frames[_frame.drone_id] = std::vector<D2BaseFrame*>();

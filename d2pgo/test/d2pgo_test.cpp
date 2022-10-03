@@ -4,29 +4,31 @@
 #include <thread>
 #include <std_msgs/Int32.h>
 #include <nav_msgs/Path.h>
+#include <swarm_msgs/DPGOSignal.h>
 // #include <visualization_msgs/Markers.h>
 
 using namespace D2PGO;
 
-#define BACKWARD_HAS_DW 1
-#include <backward.hpp>
-namespace backward
-{
-    backward::SignalHandling sh;
-}
+// #define BACKWARD_HAS_DW 1
+// #include <backward.hpp>
+// namespace backward
+// {
+//     backward::SignalHandling sh;
+// }
 
 class D2PGOTester {
     D2PGO::D2PGO * pgo = nullptr;
     std::string g2o_path;
     std::string solver_type;
-    ros::Publisher dpgo_data_pub;
-    ros::Subscriber dpgo_data_sub;
+    ros::Publisher dpgo_data_pub, dpgo_signal_pub;
+    ros::Subscriber dpgo_data_sub, dpgo_signal_sub;
     bool is_4dof;
     std::thread th;
     std::string output_path;
     ros::NodeHandle & _nh;
     bool multi = false;
     int max_steps = 100;
+    int drone_num = 1;
 
     std::map<int, ros::Publisher> path_pubs;
     std::vector<Swarm::LoopEdge> edges;
@@ -35,7 +37,9 @@ public:
     int self_id;
     void initSubandPub(ros::NodeHandle & nh) {
         dpgo_data_pub = nh.advertise<swarm_msgs::DPGOData>("/dpgo/pgo_data", 100);
+        dpgo_signal_pub = nh.advertise<swarm_msgs::DPGOSignal>("/dpgo/pgo_signal", 100);
         dpgo_data_sub = nh.subscribe("/dpgo/pgo_data", 100, &D2PGOTester::processDPGOData, this, ros::TransportHints().tcpNoDelay());
+        dpgo_signal_sub = nh.subscribe("/dpgo/pgo_signal", 100, &D2PGOTester::processDPGOSignal, this, ros::TransportHints().tcpNoDelay());
     }
 
     D2PGOTester(ros::NodeHandle & nh):
@@ -86,6 +90,7 @@ public:
         nh.param<bool>("enable_linear_pose6d_solver", config.rot_init_config.enable_pose6d_solver, false);
         nh.param<int>("linear_pose6d_iterations", config.rot_init_config.pose6d_iterations, 10);
         nh.param<bool>("debug_rot_init_only", config.debug_rot_init_only, true);
+        nh.param<int>("drone_num", drone_num, 1);
         config.rot_init_config.self_id = self_id;
         if (solver_type == "ceres") {
             config.mode = PGO_MODE_NON_DIST;
@@ -94,6 +99,11 @@ public:
         }
 
         pgo = new D2PGO::D2PGO(config);
+        std::set<int> agent_ids;
+        for (int i = 0; i < drone_num; i++) {
+            agent_ids.insert(i);
+        }
+        pgo->setAvailableRobots(agent_ids);
         for (auto & kv : keyframeid_agent_pose) {
             pgo->addFrame(kv.second);
         }
@@ -104,6 +114,16 @@ public:
         pgo->bd_data_callback = [&] (const DPGOData & data) {
             // ROS_INFO("[D2PGO@%d] publish sync", self_id);
             dpgo_data_pub.publish(data.toROS());
+        };
+
+        pgo->bd_signal_callback = [&] (const std::string & signal) {
+            // ROS_INFO("[D2PGO@%d] publish signal %s", self_id, signal.c_str());
+            swarm_msgs::DPGOSignal msg;
+            msg.header.stamp = ros::Time::now();
+            msg.signal = signal;
+            msg.drone_id = self_id;
+            msg.target_id = -1;
+            dpgo_signal_pub.publish(msg);
         };
 
         pgo->postsolve_callback = [&] (void) {
@@ -119,6 +139,13 @@ public:
         if (data.drone_id != self_id) {
             // ROS_INFO("[D2PGONode@%d] processDPGOData from drone %d", self_id, data.drone_id);
             pgo->inputDPGOData(DPGOData(data));
+        }
+    }
+
+    void processDPGOSignal(const swarm_msgs::DPGOSignal & msg) {
+        if (msg.drone_id != self_id) {
+            ROS_INFO("[D2PGONode@%d] processDPGOSignal from drone %d: %s", self_id, msg.drone_id, msg.signal.c_str());
+            pgo->inputDPGOsignal(msg.drone_id, msg.signal);
         }
     }
 
@@ -172,6 +199,7 @@ public:
                 pgo->postPerturbSolve();
             }
             writeDataG2o();
+            printf("[D2PGO%d] Write data done. Finish solve.\n", self_id);
             ros::shutdown();
         });
     }

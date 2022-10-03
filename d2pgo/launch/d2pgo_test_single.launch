@@ -19,6 +19,7 @@
     <arg name="enable_linear_pose6d_solver" default="false" />
     <arg name="linear_pose6d_iterations" default="2" />
     <arg name="is_multi" default="false" />
+    <arg name="drone_num" default="1" />
 
     <node name="d2pgo_test_$(arg self_id)" pkg="d2pgo" type="d2pgo_test" output="screen" >
         <param name="self_id" value="$(arg self_id)" type="int" />
@@ -41,5 +42,6 @@
         <param name="enable_linear_pose6d_solver" value="$(arg enable_linear_pose6d_solver)" type="bool" />
         <param name="linear_pose6d_iterations" value="$(arg linear_pose6d_iterations)" type="int" />
         <param name="is_multi" value="$(arg is_multi)" type="bool" />
+        <param name="drone_num" value="$(arg drone_num)" type="int" />
     </node>
 </launch>

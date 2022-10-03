@@ -102,8 +102,8 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
     for i in nodes:
         _id = id_map[i]
         if poses_pgo is not None:
-            plt.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1], label=f"PGO {_id}")
-        plt.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1], label=f"D2VINS {_id}")
+            plt.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1], label=f"$D^2$PGO {_id}")
+        plt.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1], label=f"$D^2$VINS {_id}", linestyle='--')
 
     plt.ylabel('$Y$')
     plt.xlabel('$X$')
@@ -121,8 +121,8 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
         if poses_gt is not None:
             plt.plot(poses_gt[i].pos[:,0], poses_gt[i].pos[:,1], label=f"Ground Truth {_id}")
         if poses_pgo is not None:
-            plt.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1], '.', label=f"PGO {i}")
-        plt.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1], label=f"D2VINS {_id}")
+            plt.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1], '.', label=f"$D^2$GO {i}")
+        plt.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1], label=f"$D^2$VINS {_id}")
         plt.grid()
         plt.ylabel('$Y$')
         plt.xlabel('$X$')
@@ -142,13 +142,13 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
             ax1.plot(poses_gt[i].t, poses_gt[i].pos[:,0], label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
             ax2.plot(poses_gt[i].t, poses_gt[i].pos[:,1], label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
             ax3.plot(poses_gt[i].t, poses_gt[i].pos[:,2], label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
-        ax1.plot(poses_fused[i].t, poses_fused[i].pos[:,0], label=f"D2VINS {_id}")
-        ax2.plot(poses_fused[i].t, poses_fused[i].pos[:,1], label=f"D2VINS {_id}")
-        ax3.plot(poses_fused[i].t, poses_fused[i].pos[:,2], label=f"D2VINS {_id}")
+        ax1.plot(poses_fused[i].t, poses_fused[i].pos[:,0], label=f"$D^2$VINS {_id}")
+        ax2.plot(poses_fused[i].t, poses_fused[i].pos[:,1], label=f"$D^2$VINS {_id}")
+        ax3.plot(poses_fused[i].t, poses_fused[i].pos[:,2], label=f"$D^2$VINS {_id}")
         if poses_pgo is not None:
-            ax1.plot(poses_pgo[i].t, poses_pgo[i].pos[:,0], '.', label=f"PGO Traj{i}")
-            ax2.plot(poses_pgo[i].t, poses_pgo[i].pos[:,1], '.', label=f"PGO Traj{i}")
-            ax3.plot(poses_pgo[i].t, poses_pgo[i].pos[:,2], '.', label=f"PGO Traj{i}")
+            ax1.plot(poses_pgo[i].t, poses_pgo[i].pos[:,0], '.', label=f"$D^2$PGO Traj{i}")
+            ax2.plot(poses_pgo[i].t, poses_pgo[i].pos[:,1], '.', label=f"$D^2$PGO Traj{i}")
+            ax3.plot(poses_pgo[i].t, poses_pgo[i].pos[:,2], '.', label=f"$D^2$PGO Traj{i}")
             
         ax1.tick_params( axis='x', which='both', bottom=False, top=False, labelbottom=False) 
         ax1.set_ylabel("x")
@@ -170,13 +170,13 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
             ax2.plot(poses_gt[i].t, poses_gt[i].ypr[:,1]*57.3, label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
             ax3.plot(poses_gt[i].t, poses_gt[i].ypr[:,2]*57.3, label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
         if poses_pgo is not None:
-            ax1.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,0]*57.3, '.', label=f"PGO {_id}")
-            ax2.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,1]*57.3, '.', label=f"PGO {_id}")
+            ax1.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,0]*57.3, '.', label=f"$D^2$PGO {_id}")
+            ax2.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,1]*57.3, '.', label=f"$D^2$PGO {_id}")
             ax3.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,2]*57.3, '.', label=f"EstKF {_id}")
 
-        ax1.plot(poses_fused[i].t, poses_fused[i].ypr[:,0]*57.3, label=f"D2VINS {_id}")
-        ax2.plot(poses_fused[i].t, poses_fused[i].ypr[:,1]*57.3, label=f"D2VINS {_id}")
-        ax3.plot(poses_fused[i].t, poses_fused[i].ypr[:,2]*57.3, label=f"D2VINS {_id}")
+        ax1.plot(poses_fused[i].t, poses_fused[i].ypr[:,0]*57.3, label=f"$D^2$VINS {_id}")
+        ax2.plot(poses_fused[i].t, poses_fused[i].ypr[:,1]*57.3, label=f"$D^2$VINS {_id}")
+        ax3.plot(poses_fused[i].t, poses_fused[i].ypr[:,2]*57.3, label=f"$D^2$VINS {_id}")
 
         ax1.set_ylabel("Yaw (deg)")
         ax1.set_xlabel("t")
@@ -367,7 +367,7 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
 
     ate_fused_sum = 0
     rmse_fused_ang_sum = 0
-    output_table = [["Drone", "Traj. Len.", "ATE Pos", "ATE Att", "Cov/m: x", "y", "z", "PGO:ATE Pos ", "ATE Att"]]
+    output_table = [["Drone", "Traj. Len.", "ATE Pos", "ATE Att", "Cov/m: x", "y", "z", "Cov Att/m", "PGO:ATE Pos ", "ATE Att"]]
 
     ate_pos_sum = 0
     ate_ang_sum = 0
@@ -462,7 +462,10 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
         length_sum += traj_len
         num += 1
         output_table.append([
-            f"{i}by{main_id}",f"{traj_len:.1f}m", f"{ate_fused:3.3f}", f"{rmse_angular_fused*180/pi:3.3f}", f"{fused_cov_x:.1e}",f"{fused_cov_y:.1e}",f"{fused_cov_z:.1e}",f"{ate_path:3.3f}",f"{rmse_angular_path*180/pi:3.3f}°"
+            f"{i}by{main_id}",f"{traj_len:.1f}m", f"{ate_fused:3.3f}", f"{rmse_angular_fused*180/pi:3.3f}", 
+            f"{fused_cov_x:.1e}",f"{fused_cov_y:.1e}",f"{fused_cov_z:.1e}",
+            f"{fused_yaw_cov_per_meter*180/pi:.2e}",
+            f"{ate_path:3.3f}",f"{rmse_angular_path*180/pi:3.3f}°"
         ])
 
         if show:

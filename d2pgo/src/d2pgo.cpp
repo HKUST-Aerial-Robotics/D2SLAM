@@ -82,6 +82,34 @@ void D2PGO::inputDPGOData(const DPGOData & data) {
     }
 }
 
+
+void D2PGO::inputDPGOsignal(int drone, const std::string & signal) {
+    if (signal == "ROT_INIT_FINISH") {
+        rot_init_finished_robots.insert(drone);
+    }
+}
+
+void D2PGO::waitForRotInitFinish() {
+    if (rot_init_finished) {
+        return;
+    }
+    sendSignal("ROT_INIT_FINISH");
+    rot_init_finished_robots.insert(self_id);
+    D2Common::Utility::TicToc timer;
+    int count = 0;
+    while (rot_init_finished_robots.size() != available_robots.size() && timer.toc()/1000 < config.rot_init_timeout) {
+        usleep(1000);
+        if (count % 100 == 0) {
+            sendSignal("ROT_INIT_FINISH");
+            if (count % 1000 == 0)
+                printf("[D2PGO@%d]Waiting for rot init finish of other drones, %d/%d\n", self_id, rot_init_finished_robots.size(), available_robots.size());
+        }
+        count++;
+    }
+    rot_init_finished = true;
+    printf("[D2PGO@%d]Rot init finish, %d/%d start perturb PGO\n", self_id, rot_init_finished_robots.size(), available_robots.size());
+}
+
 bool D2PGO::solve_multi(bool force_solve) {
     const Guard lock(state_lock);
     if ((state.size(self_id) < config.min_solve_size || !updated) && !force_solve) {
@@ -128,6 +156,10 @@ bool D2PGO::solve_multi(bool force_solve) {
     if (config.debug_rot_init_only) {
         return true;
     }
+    //Here if enable_rotation_initialization, we need to wait other robots to finish rotation initialization.
+    if (config.enable_rotation_initialization) {
+        waitForRotInitFinish();
+    } 
     
     auto report = solver->solve();
     if (!config.perturb_mode) {
@@ -139,7 +171,7 @@ bool D2PGO::solve_multi(bool force_solve) {
     if (config.write_g2o) {
         saveG2O();
     }
-    printf("[D2PGO::solve@%d] solve_count %d mode MULTI,%d total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
+    printf("[D2PGO::solve@%d] solve_count %d mode [multi,%d] total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
             self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
             report.total_iterations, report.initial_cost, report.final_cost);
     solve_count ++;
@@ -204,7 +236,7 @@ bool D2PGO::solve_single() {
     if (config.write_g2o) {
         saveG2O();
     }
-    printf("[D2PGO::solve@%d] solve_count %d mode SINGLE,%d total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
+    printf("[D2PGO::solve@%d] solve_count %d mode single,%d total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
             self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
             report.total_iterations, report.initial_cost, report.final_cost);
     solve_count ++;
@@ -446,6 +478,10 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
 
 void D2PGO::broadcastData(const DPGOData & data) {
     bd_data_callback(data);
+}
+
+void D2PGO::sendSignal(const std::string & signal) {
+    bd_signal_callback(signal);
 }
 
 std::vector<D2BaseFrame*> D2PGO::getAllLocalFrames() {

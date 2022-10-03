@@ -103,7 +103,7 @@ protected:
     }
 
     void processPGOData(const DPGOData & data) {
-        printf("[ARockPGO@%d]process DPGOData from %d\n", self_id, data.drone_id);
+        // printf("[ARockPGO@%d]process DPGOData from %d\n", self_id, data.drone_id);
         auto drone_id = data.drone_id;
         for (auto it: data.frame_duals) {
             auto frame_id = it.first;
