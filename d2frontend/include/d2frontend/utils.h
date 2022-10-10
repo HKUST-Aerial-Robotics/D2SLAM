@@ -40,5 +40,14 @@ void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::ve
 std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
                         std::vector<LandmarkIdType> & ids, TrackLRType type=WHOLE_IMG_MATCH);
 std::vector<cv::DMatch> matchKNN(const cv::Mat & desc_a, const cv::Mat & desc_b, double knn_match_ratio=0.8);
-
+    
+int computeRelativePosePnP(const std::vector<Vector3d> lm_positions_a, const std::vector<Vector3d> lm_3d_norm_b,
+        Swarm::Pose extrinsic_b, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a,
+        std::vector<int> &inliers, bool is_4dof, bool verify_gravity=true);
+Swarm::Pose computePosePnPnonCentral(const std::vector<Vector3d> & lm_positions_a, const std::vector<Vector3d> & lm_3d_norm_b,
+        const std::vector<Swarm::Pose> & cam_extrinsics, const std::vector<int> & camera_indices, std::vector<int> &inliers);
+int computeRelativePosePnPnonCentral(const std::vector<Vector3d> & lm_positions_a, const std::vector<Vector3d> & lm_3d_norm_b,
+        const std::vector<Swarm::Pose> & cam_extrinsics, const std::vector<int> & camera_indices, 
+        Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a,
+        std::vector<int> &inliers, bool is_4dof, bool verify_gravity=true);
 }

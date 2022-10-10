@@ -118,13 +118,6 @@ public:
     int databaseSize() const;
 
 };
-    
-int computeRelativePosePnP(const std::vector<Vector3d> lm_positions_a, const std::vector<Vector3d> lm_3d_norm_b,
-        Swarm::Pose extrinsic_b, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a,
-        std::vector<int> &inliers, bool is_4dof);
-int computeRelativePosePnPnonCentral(const std::vector<Vector3d> lm_positions_a, const std::vector<Vector3d> lm_3d_norm_b,
-        std::vector<Swarm::Pose> cam_extrinsics, std::vector<int> camera_indices, 
-        Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a,
-        std::vector<int> &inliers, bool is_4dof);
+
 
 }

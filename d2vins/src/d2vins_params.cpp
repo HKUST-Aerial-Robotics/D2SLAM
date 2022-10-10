@@ -40,7 +40,9 @@ void D2VINSConfig::init(const std::string & config_file) {
     max_imu_time_err = 1.5/IMU_FREQ;
     frame_step = fsSettings["frame_step"];
     imu_topic = (std::string) fsSettings["imu_topic"];
-
+    int _camconfig = fsSettings["camera_configuration"];
+    camera_configuration = (CameraConfig) _camconfig;
+        
     //Measurements
     acc_n = fsSettings["acc_n"];
     acc_w = fsSettings["acc_w"];

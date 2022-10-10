@@ -88,36 +88,65 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
 
 std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescArray & frame, const Swarm::Pose & initial_pose) {
     //Only use first image for initialization.
-    auto & image = frame.images[0];
-    std::vector<cv::Point3f> pts3d;
-    std::vector<cv::Point2f> pts2d;
-    for (auto & lm: image.landmarks) {
-        auto & lm_id = lm.landmark_id;
-        if (state.hasLandmark(lm_id)) {
-            auto & est_lm = state.getLandmarkbyId(lm_id);
-            if (est_lm.flag >= LandmarkFlag::INITIALIZED) {
-                pts3d.push_back(cv::Point3f(est_lm.position.x(), est_lm.position.y(), est_lm.position.z()));
-                pts2d.push_back(cv::Point2f(lm.pt3d_norm.x()/lm.pt3d_norm.z(), lm.pt3d_norm.y()/lm.pt3d_norm.z()));
+    if (params->camera_configuration == STEREO_PINHOLE || params->camera_configuration == PINHOLE_DEPTH) {
+        //For pinhole
+        auto & image = frame.images[0];
+        std::vector<cv::Point3f> pts3d;
+        std::vector<cv::Point2f> pts2d;
+        for (auto & lm: image.landmarks) {
+            auto & lm_id = lm.landmark_id;
+            if (state.hasLandmark(lm_id)) {
+                auto & est_lm = state.getLandmarkbyId(lm_id);
+                if (est_lm.flag >= LandmarkFlag::INITIALIZED) {
+                    pts3d.push_back(cv::Point3f(est_lm.position.x(), est_lm.position.y(), est_lm.position.z()));
+                    pts2d.push_back(cv::Point2f(lm.pt3d_norm.x()/lm.pt3d_norm.z(), lm.pt3d_norm.y()/lm.pt3d_norm.z()));
+                }
             }
         }
-    }
 
-    if (pts3d.size() < params->pnp_min_inliers) {
-        return std::make_pair(false, Swarm::Pose());
-    }
+        if (pts3d.size() < params->pnp_min_inliers) {
+            return std::make_pair(false, Swarm::Pose());
+        }
 
-    cv::Mat inliers;
-    cv::Mat D, rvec, t;
-    cv::Mat K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0);
-    D2FrontEnd::PnPInitialFromCamPose(initial_pose*image.extrinsic, rvec, t);
-    bool success = cv::solvePnP(pts3d, pts2d, K, D, rvec, t, true);
-    // bool success = cv::solvePnPRansac(pts3d, pts2d, K, D, rvec, t, true, params->pnp_iteratives, 3.0/params->focal_length, 0.99,  inliers);
-    // success = success && inliers.rows > params->pnp_min_inliers;
-    auto pose_cam = D2FrontEnd::PnPRestoCamPose(rvec, t);
-    auto pose_imu = pose_cam*image.extrinsic.inverse();
-    printf("[D2VINS::D2Estimator@%d] PnP succ %d initial %s final %s inliers %d points %d\n", success, self_id, initial_pose.toStr().c_str(), 
-            pose_imu.toStr().c_str(), inliers.rows, pts3d.size());
-    return std::make_pair(success, pose_imu);
+        cv::Mat inliers;
+        cv::Mat D, rvec, t;
+        cv::Mat K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0);
+        D2FrontEnd::PnPInitialFromCamPose(initial_pose*image.extrinsic, rvec, t);
+        bool success = cv::solvePnP(pts3d, pts2d, K, D, rvec, t, true);
+        // bool success = cv::solvePnPRansac(pts3d, pts2d, K, D, rvec, t, true, params->pnp_iteratives, 3.0/params->focal_length, 0.99,  inliers);
+        // success = success && inliers.rows > params->pnp_min_inliers;
+        auto pose_cam = D2FrontEnd::PnPRestoCamPose(rvec, t);
+        auto pose_imu = pose_cam*image.extrinsic.inverse();
+        printf("[D2VINS::D2Estimator@%d] PnP succ %d initial %s final %s inliers %d points %d\n", success, self_id, initial_pose.toStr().c_str(), 
+                pose_imu.toStr().c_str(), inliers.rows, pts3d.size());
+        return std::make_pair(success, pose_imu);
+    } else if (params->camera_configuration == FOURCORNER_FISHEYE) {
+        std::vector<Vector3d> lm_positions_a, lm_3d_norm_b;
+        std::vector<Swarm::Pose> cam_extrinsics;
+        std::vector<int> camera_indices, inliers;
+        //Compute pose with computePosePnPnonCentral
+        int i = 0;
+        for (auto image: frame.images) {
+            cam_extrinsics.push_back(image.extrinsic);
+            for (auto & lm: image.landmarks) {
+                auto & lm_id = lm.landmark_id;
+                if (state.hasLandmark(lm_id)) {
+                    auto & est_lm = state.getLandmarkbyId(lm_id);
+                    if (est_lm.flag >= LandmarkFlag::INITIALIZED) {
+                        lm_positions_a.push_back(est_lm.position);
+                        lm_3d_norm_b.push_back(lm.pt3d_norm);
+                        camera_indices.push_back(lm.camera_index);
+                    }
+                }
+            }
+        }
+        auto pose_imu = D2FrontEnd::computePosePnPnonCentral(lm_positions_a, lm_3d_norm_b, cam_extrinsics, camera_indices, inliers);
+        bool success = inliers.size() > params->pnp_min_inliers;
+        printf("[D2VINS::D2Estimator@%d] PnP succ %d initial %s final %s inliers %d points %d\n", success, self_id, initial_pose.toStr().c_str(), 
+                pose_imu.toStr().c_str(), inliers.size(), lm_positions_a.size());
+        return std::make_pair(success, pose_imu);
+    }
+    return std::make_pair(false, Swarm::Pose());
 }
 
 VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {

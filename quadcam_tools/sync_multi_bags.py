@@ -41,11 +41,11 @@ def generate_groundtruthname(bag):
     return output_bag
 
 def get_time0(bag):
-    for topic, msg, t in rosbag.Bag(bags[0]).read_messages():
+    for topic, msg, t in rosbag.Bag(bag).read_messages():
         return t
 
 def get_pose0(bag):
-    for topic, msg, t in rosbag.Bag(bags[0]).read_messages():
+    for topic, msg, t in rosbag.Bag(bag).read_messages():
         if topic == "/vrpn_client/raw_transform":
             quat0 = msg.transform.rotation
             pos0 = msg.transform.translation
@@ -55,6 +55,7 @@ def get_pose0(bag):
             # ypr = 
             print(f"Will use {t0} as start yaw0 {y0} pos0 {pos0} qcalib {q_calib}")
             return pos0, q_calib, y0
+    return None, None, None
 
 def compress_image_msg(msg):
     img16 = bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
@@ -87,7 +88,6 @@ if __name__ == "__main__":
             break
 
     print(dts)
-    image_topics = {"/cam0/image_raw", "/cam1/image_raw"}
     bridge = CvBridge()
     encode_param = [int(cv.IMWRITE_JPEG_QUALITY), args.quality]
     for bag in bags:

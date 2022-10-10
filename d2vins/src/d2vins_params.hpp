@@ -3,6 +3,7 @@
 #include <ros/ros.h>
 #include <swarm_msgs/Pose.h>
 #include <ceres/ceres.h>
+#include <d2common/d2basetypes.h>
 
 #define UNIT_SPHERE_ERROR
 using namespace Eigen;
@@ -11,6 +12,7 @@ namespace D2Common {
 struct ConsensusSolverConfig;
 };
 namespace D2VINS {
+using D2Common::CameraConfig;
 struct D2VINSConfig {
     //Inputs
     std::string imu_topic;
@@ -23,6 +25,7 @@ struct D2VINSConfig {
     double focal_length = 460.0;
     double initial_pos_sqrt_info = 1000.0;
     double initial_yaw_sqrt_info = 10000.0;
+    D2Common::CameraConfig camera_configuration;
 
     //Sensor frequency
     double IMU_FREQ = 400.0;

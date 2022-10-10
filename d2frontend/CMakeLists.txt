@@ -120,6 +120,7 @@ set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 14)
 target_link_libraries(loop_cnn opencv_dnn 
   onnxruntime
   ${TORCH_LIBRARIES}
+  opengv
 )
 
 add_executable(loop_tensorrt_test

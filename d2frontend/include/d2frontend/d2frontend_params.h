@@ -40,14 +40,9 @@ typedef boost::shared_ptr< Camera > CameraPtr;
 namespace D2Common {
 class FisheyeUndist;
 }
-namespace D2FrontEnd {
-enum CameraConfig{
-    STEREO_PINHOLE = 0,
-    STEREO_FISHEYE = 1,
-    PINHOLE_DEPTH = 2,
-    FOURCORNER_FISHEYE = 3
-};
 
+namespace D2FrontEnd {
+using D2Common::CameraConfig;
 
 enum TrackLRType {
     WHOLE_IMG_MATCH = 0,
@@ -115,7 +110,7 @@ struct D2FrontendParams {
     std::vector<camodocal::CameraPtr> raw_camera_ptrs;
     std::vector<D2Common::FisheyeUndist*> undistortors;
 
-    bool show_raw_image = true;
+    bool show_raw_image = false;
     //Configs of submodules
     LoopCamConfig * loopcamconfig;
     LoopDetectorConfig * loopdetectorconfig;

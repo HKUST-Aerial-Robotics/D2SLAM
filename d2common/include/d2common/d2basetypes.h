@@ -27,6 +27,13 @@ enum PGO_MODE {
     PGO_MODE_DISTRIBUTED_AROCK
 };
 
+enum CameraConfig{
+    STEREO_PINHOLE = 0,
+    STEREO_FISHEYE = 1,
+    PINHOLE_DEPTH = 2,
+    FOURCORNER_FISHEYE = 3
+};
+
 enum PGO_POSE_DOF {
     PGO_POSE_4D,
     PGO_POSE_6D

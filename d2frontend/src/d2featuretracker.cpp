@@ -132,10 +132,10 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
                 } else {
                     prev = last;
                     dir_b = dirs[j];
-                    if (params->verbose) {
-                        printf("[D2FeatureTracker::trackRemote@%d] Remote image match image %d(%ld) %.2f/%.2f\n", params->self_id,
-                                i, last.frame_id, netvlad_similar, params->vlad_threshold);
-                    }
+                    // if (params->verbose) {
+                        printf("[D2FeatureTracker::trackRemote@%d] Remote image match image drone %d(%ld) dir %d:%d %.2f/%.2f\n", params->self_id,
+                                i, last.frame_id, dir_a, dir_b, netvlad_similar, params->vlad_threshold);
+                    // }
                     return true;
                 }
             }
@@ -165,7 +165,26 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
         if (report.remote_matched_num > 0 && params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
             report.compose(trackRemote(frames.images[1], prev.images[1]));
         }
-    } else {
+    } else if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
+        int max_dirs = 4;
+        std::vector<int> dirs_cur; 
+        std::vector<int> dirs_prev;
+        for (int _dir_a = dir_cur; _dir_a < dir_cur + max_dirs; _dir_a ++) {
+            int dir_a = _dir_a % max_dirs;
+            int dir_b = ((dir_prev - dir_cur + max_dirs) % max_dirs + _dir_a)% max_dirs;
+            if (dir_a < frames.images.size() && dir_b < prev.images.size()) {
+                if (prev.images[dir_b].spLandmarkNum() > 0 && frames.images[dir_a].spLandmarkNum() > 0) {
+                    dirs_cur.push_back(dir_a);
+                    dirs_prev.push_back(dir_b);
+                }
+            }
+        }
+        for (size_t i = 0; i < dirs_cur.size(); i++) {
+            int dir_cur = dirs_cur[i];
+            int dir_prev = dirs_prev[i];
+            // printf("[D2FeatureTracker::trackRemoteFrames] dir %d:%d\n", dir_cur, dir_prev);
+            report.compose(trackRemote(frames.images[dir_cur], prev.images[dir_prev]));
+        }
     }
     if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
