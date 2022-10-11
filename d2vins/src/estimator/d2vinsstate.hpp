@@ -64,7 +64,7 @@ public:
     std::vector<Swarm::Pose> localCameraExtrinsics() const;
    
     //Frame operations
-    std::vector<LandmarkPerId> clearFrame(bool keyframe_only=false);
+    std::vector<LandmarkPerId> clearFrame(bool distributed_mode=false);
     void clearLocalLastNonKeyframe();
     VINSFrame * addFrame(const VisualImageDescArray & images, const VINSFrame & _frame);
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);

@@ -235,16 +235,20 @@ void D2EstimatorState::clearLocalLastNonKeyframe() {
     if (self_sld_win.size() >= params->min_solve_frames) {
         if (!self_sld_win[self_sld_win.size() - 1]->is_keyframe) {
             //If last frame is not keyframe then remove it.
+            auto frame_id_to_remove = self_sld_win[self_sld_win.size() - 1]->frame_id;
             if (prior_factor != nullptr) {
-                prior_factor->removeFrame(self_sld_win[self_sld_win.size() - 1]->frame_id);
+                prior_factor->removeFrame(frame_id_to_remove);
             }
-            auto tmp = removeFrameById(self_sld_win[self_sld_win.size() - 1]->frame_id, false);
+            auto tmp = removeFrameById(frame_id_to_remove, false);
             self_sld_win.erase(self_sld_win.end() - 1);
+            if (params->verbose) {
+                printf("[D2VINS::D2EstimatorState] Remove nonkeyframe %d from local window\n", frame_id_to_remove);
+            }
         }
     }
 }
 
-std::vector<LandmarkPerId> D2EstimatorState::clearFrame(bool keyframe_only) {
+std::vector<LandmarkPerId> D2EstimatorState::clearFrame(bool distributed_mode) {
     //If keyframe_only is true, then only remove keyframes.
     const Guard lock(state_lock);
     std::vector<LandmarkPerId> ret;
@@ -285,10 +289,25 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame(bool keyframe_only) {
     // }
     auto & self_sld_win = sld_wins[self_id];
     if (self_sld_win.size() >= params->min_solve_frames) {
-        if (!keyframe_only && !self_sld_win[self_sld_win.size() - 1]->is_keyframe) {
-            //If last frame is not keyframe then remove it.
-            clear_frames.insert(self_sld_win[self_sld_win.size() - 1]->frame_id);
-        } else if (self_sld_win.size() >= params->max_sld_win_size) {
+        int count_removed = 0;
+        int require_sld_win_size = params->max_sld_win_size;
+        int sld_win_size = self_sld_win.size();
+        if (distributed_mode) {
+            //We remove the second last non keyframe
+            if (sld_win_size > require_sld_win_size && !self_sld_win[sld_win_size - 2]->is_keyframe) {
+                //Note in distributed mode, after remove the size should be max_sld_win_size
+                clear_frames.insert(self_sld_win[sld_win_size - 2]->frame_id);
+                count_removed = 1;
+            }
+        } else {
+            require_sld_win_size = params->max_sld_win_size - 1;
+            if (sld_win_size > params->max_sld_win_size && !self_sld_win[sld_win_size - 1]->is_keyframe) {
+                //If last frame is not keyframe then remove it.
+                clear_frames.insert(self_sld_win[sld_win_size - 1]->frame_id);
+                count_removed = 1;
+            } 
+        }
+        if (sld_win_size - count_removed > require_sld_win_size) {
             if (self_sld_win[0]->drone_id == self_id) {
                 marginalized_self_first = true;
             }

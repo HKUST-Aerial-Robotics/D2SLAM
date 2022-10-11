@@ -178,11 +178,7 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     frame.reference_frame_id = state.getReferenceFrameId();
 
     //Clear old frames
-    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        //In distributed mode, marginalization is in solver thread. Here only remove the nonkeyframes
-        //Note after this function, last_frame may be dangling pointer
-        state.clearLocalLastNonKeyframe();
-    } else {
+    if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
         margined_landmarks = state.clearFrame();
     }
     auto frame_ret = state.addFrame(_frame, frame);
@@ -294,6 +290,7 @@ void D2Estimator::addSldWinToFrame(VisualImageDescArray & frame) {
 }
 
 void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
+    const Guard lock(frame_mutex);
     state.updateSldwin(frame.drone_id, frame.sld_win_status);
     auto frame_ptr = addFrameRemote(frame);
     if (params->estimation_mode == D2VINSConfig::SERVER_MODE && state.size(frame.drone_id) >= params->min_solve_frames) {
@@ -304,8 +301,8 @@ void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
 }
 
 bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
-    //We MUST make sure this function is running by only one thread.
-    //It is not thread safe.
+    //Guard 
+    const Guard lock(frame_mutex);
     if(!initFirstPoseFlag) {
         printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imu_bufs[self_id].size());
         initFirstPoseFlag = tryinitFirstPose(_frame);
@@ -451,12 +448,14 @@ void D2Estimator::resetMarginalizer() {
 }
 
 void D2Estimator::solveinDistributedMode() {
+    const Guard lock(frame_mutex);
     if (state.size() < params->min_solve_frames || !updated) {
         return;
     }
+    printf("[D2Estimator::solveinDistributedMode@%d] Start solving. \n", self_id);
     updated = false;
 
-    margined_landmarks = state.clearFrame(true); // Only clear remote frames.
+    margined_landmarks = state.clearFrame(true); // clear in dist mode.
     resetMarginalizer();
     solve_count ++;
     state.preSolve(imu_bufs);

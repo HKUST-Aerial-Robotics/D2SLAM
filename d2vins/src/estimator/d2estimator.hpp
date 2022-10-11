@@ -7,6 +7,7 @@
 #include "../visualization/visualization.hpp"
 #include <d2common/solver/SolverWrapper.hpp>
 #include "solver/ConsensusSync.hpp"
+#include <mutex>
 
 using namespace Eigen;
 using D2Common::VisualImageDescArray;
@@ -46,6 +47,7 @@ protected:
     SyncDataReceiver * sync_data_receiver = nullptr;
     bool updated = false;
     std::set<LandmarkIdType> used_landmarks;
+    std::recursive_mutex frame_mutex;
     
     //Internal functions
     bool tryinitFirstPose(VisualImageDescArray & frame);
