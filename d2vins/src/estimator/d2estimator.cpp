@@ -376,7 +376,8 @@ void D2Estimator::setStateProperties() {
         problem.SetParameterBlockConstant(state.getTdState(self_id));
     }
 
-    if (!state.getPrior() || params->always_fixed_first_pose || !state.marginalizeSelf()) {
+    if (!state.getPrior() || params->always_fixed_first_pose) {
+        //As we added prior for first pose, we do not need to fix it.
         problem.SetParameterBlockConstant(
             state.getPoseState(state.firstFrame(self_id).frame_id));
     }
@@ -405,7 +406,7 @@ void D2Estimator::onSyncSignal(int drone_id, int signal, int64_t token) {
         //First drone start or claim non dist
         ready_to_start = true;
         solve_token = token;
-        printf("[D2Estimator::onSyncSignal@%d] Start signal received from %d.\n", self_id, drone_id);
+        // printf("[D2Estimator::onSyncSignal@%d] Start signal received from %d.\n", self_id, drone_id);
     }
     if (isMain() && ready_drones.size() == state.availableDrones().size()) {
         ready_to_start = true;
@@ -431,9 +432,13 @@ bool D2Estimator::readyForStart() {
 }
 
 void D2Estimator::waitForStart() {
+    D2Common::Utility::TicToc timer;
     while(!readyForStart()) {
         sendSyncSignal(SyncSignal::DSolverReady, -1);
         usleep(100);
+    }
+    if (params->verbose) {
+        printf("[D2Estimator::waitForStart@%d] Wait for start time %f \n", self_id, timer.toc());
     }
 }
 
@@ -734,23 +739,21 @@ void D2Estimator::setupLandmarkFactors() {
                 }
                 info = LandmarkTwoFrameOneCamResInfo::create(f_td, loss_function,
                     firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, enable_depth_mea);
-                residual_count++;
             } else {
                 if (lm_per_frame.frame_id == firstObs.frame_id) {
                     auto f_td = new ProjectionOneFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                         lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
                     info = LandmarkOneFrameTwoCamResInfo::create(f_td, nullptr,
                         firstObs.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
-                    residual_count++;
                 } else {
                     auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                         lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
                     info = LandmarkTwoFrameTwoCamResInfo::create(f_td, loss_function, firstObs.frame_id, lm_per_frame.frame_id, lm_id, 
                         firstObs.camera_id, lm_per_frame.camera_id);
-                    residual_count++;
                 }
             }
             if (info != nullptr) {
+                residual_count++;
                 solver->addResidual(info);
                 marginalizer->addResidualInfo(info);
                 used_landmarks.insert(lm_id);
@@ -761,7 +764,7 @@ void D2Estimator::setupLandmarkFactors() {
         }
     }
     if (params->verbose) {
-        printf("[D2VINS::setupLandmarkFactors@%d] %d residuals\n", self_id, lms.size());
+        printf("[D2VINS::setupLandmarkFactors@%d] %d landmarks %d residuals\n", self_id, lms.size(), residual_count);
     }
 }
 

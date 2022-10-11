@@ -238,6 +238,7 @@ void D2EstimatorState::clearLocalLastNonKeyframe() {
             if (prior_factor != nullptr) {
                 prior_factor->removeFrame(self_sld_win[self_sld_win.size() - 1]->frame_id);
             }
+            auto tmp = removeFrameById(self_sld_win[self_sld_win.size() - 1]->frame_id, false);
             self_sld_win.erase(self_sld_win.end() - 1);
         }
     }
