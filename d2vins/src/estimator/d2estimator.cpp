@@ -151,9 +151,6 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
 
 VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
-    if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        margined_landmarks = state.clearFrame();
-    }
     auto & last_frame = state.lastFrame();
     auto ret = imu_bufs[self_id].periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
     auto _imu = ret.first;
@@ -179,8 +176,16 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     }
     frame.odom.stamp = _frame.stamp;
     frame.reference_frame_id = state.getReferenceFrameId();
-    auto frame_ret = state.addFrame(_frame, frame);
 
+    //Clear old frames
+    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        //In distributed mode, marginalization is in solver thread. Here only remove the nonkeyframes
+        //Note after this function, last_frame may be dangling pointer
+        state.clearLocalLastNonKeyframe();
+    } else {
+        margined_landmarks = state.clearFrame();
+    }
+    auto frame_ret = state.addFrame(_frame, frame);
     //Assign IMU and initialization to VisualImageDescArray for broadcasting.
     _frame.imu_buf = _imu;
     _frame.pose_drone = frame.odom.pose();
@@ -372,11 +377,6 @@ void D2Estimator::setStateProperties() {
     }
 
     if (!state.getPrior() || params->always_fixed_first_pose || !state.marginalizeSelf()) {
-        // printf("[D2Estimator::setStateProperties] Will set first frame as fixed\n");
-        // for (auto drone_id : state.availableDrones()) {
-        //     problem.SetParameterBlockConstant(
-        //             state.getPoseState(state.firstFrame(drone_id).frame_id));
-        // }
         problem.SetParameterBlockConstant(
             state.getPoseState(state.firstFrame(self_id).frame_id));
     }
@@ -451,7 +451,7 @@ void D2Estimator::solveinDistributedMode() {
     }
     updated = false;
 
-    margined_landmarks = state.clearFrame();
+    margined_landmarks = state.clearFrame(true); // Only clear remote frames.
     resetMarginalizer();
     solve_count ++;
     state.preSolve(imu_bufs);
@@ -478,7 +478,9 @@ void D2Estimator::solveinDistributedMode() {
             sendSyncSignal(SyncSignal::DSolverNonDist, solve_token);
         }
     } else {
-        printf("[D2VINS::D2Estimator@%d] async solve...\n", self_id);
+        if (params->verbose) {
+            printf("[D2VINS::D2Estimator@%d] async solve...\n", self_id);
+        }
     }
 
     setupImuFactors();

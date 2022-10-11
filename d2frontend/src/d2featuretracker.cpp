@@ -73,7 +73,8 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     }
 
     report.ft_time = tic.toc();
-    // printf("[D2FeatureTracker::trackLocalFrames] Landmark mem : %.1fkB\n", (lmanager->total_lm_per_frame_num*sizeof(LandmarkPerFrame))/1024.0/1024.0);
+    if (params->verbose || params->enable_perf_output)
+        printf("[D2FeatureTracker] frame_id: %d, landmark_num: %d, time_cost: %.1fms\n", frames.frame_id, frames.landmarkNum(), report.ft_time);
     if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
             draw(frames.images[0], frames.images[1], iskeyframe, report);
@@ -190,12 +191,11 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
             drawRemote(frames.images[0], report);
         } else {
-            for (auto & frame : frames.images) {
-                drawRemote(frame, report);
-            }
         }
     }
     report.ft_time = tic.toc();
+    if (params->verbose || params->enable_perf_output)
+        printf("[D2FeatureTracker::trackRemoteFrames] frame %ld, matched %d, time %.2fms\n", frames.frame_id, report.remote_matched_num, report.ft_time);
     if (report.remote_matched_num > 0) {
         return true;
     } else {

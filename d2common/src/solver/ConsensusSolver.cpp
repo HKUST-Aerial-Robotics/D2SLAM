@@ -52,8 +52,6 @@ SolverReport ConsensusSolver::solve() {
             problem->AddResidualBlock(residual_info->cost_function, residual_info->loss_function,
                 residual_info->paramsPointerList(state));
         }
-        Utility::TicToc tic_sync;
-        // printf("ConsensusSolver wait for sync time: %.1fms step %d/%d", tic_sync.toc(), i, config.max_steps);
         updateTilde();
         setStateProperties();
         ceres::Solver::Summary summary;
@@ -63,7 +61,9 @@ SolverReport ConsensusSolver::solve() {
         iteration_count++;
         broadcastData();
         if (config.sync_with_main) {
+            Utility::TicToc tic_sync;
             waitForSync(); 
+            // printf("ConsensusSolver wait for sync time: %.1fms step %d/%d\n", tic_sync.toc(), i, config.max_steps);
         } else {
             receiveAll();
         }

@@ -229,7 +229,22 @@ int D2EstimatorState::getCameraBelonging(CamIdType cam_id) const {
     return camera_drone.at(cam_id);
 }
 
-std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
+void D2EstimatorState::clearLocalLastNonKeyframe() {
+    const Guard lock(state_lock);
+    auto & self_sld_win = sld_wins[self_id];
+    if (self_sld_win.size() >= params->min_solve_frames) {
+        if (!self_sld_win[self_sld_win.size() - 1]->is_keyframe) {
+            //If last frame is not keyframe then remove it.
+            if (prior_factor != nullptr) {
+                prior_factor->removeFrame(self_sld_win[self_sld_win.size() - 1]->frame_id);
+            }
+            self_sld_win.erase(self_sld_win.end() - 1);
+        }
+    }
+}
+
+std::vector<LandmarkPerId> D2EstimatorState::clearFrame(bool keyframe_only) {
+    //If keyframe_only is true, then only remove keyframes.
     const Guard lock(state_lock);
     std::vector<LandmarkPerId> ret;
     std::set<FrameIdType> clear_frames; //Frames in this set will be deleted.
@@ -269,7 +284,7 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame() {
     // }
     auto & self_sld_win = sld_wins[self_id];
     if (self_sld_win.size() >= params->min_solve_frames) {
-        if (!self_sld_win[self_sld_win.size() - 1]->is_keyframe) {
+        if (!keyframe_only && !self_sld_win[self_sld_win.size() - 1]->is_keyframe) {
             //If last frame is not keyframe then remove it.
             clear_frames.insert(self_sld_win[self_sld_win.size() - 1]->frame_id);
         } else if (self_sld_win.size() >= params->max_sld_win_size) {
