@@ -374,16 +374,15 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
     length_sum = 0
     num = 0
     for i in nodes:
-        t_ = poses_gt[i].t
-        mask = t_<dte
+        t_ = find_common_times(poses_gt[i].t, poses_fused[i].t)
         t_ = t_[t_<dte]
-        pos_gt =  poses_gt[i].pos[mask]
+        pos_gt =  poses_gt[i].resample_pos(t_)
         pos_fused = poses_fused[i].resample_pos(t_)
         ypr_fused = poses_fused[i].resample_ypr(t_)
-        ypr_gt = poses_gt[i].ypr[mask]
+        ypr_gt = poses_gt[i].resample_ypr(t_)
         if poses_vo is not None:
-            pos_vo = poses_vo[i].pos
-            ypr_vo = poses_vo[i].ypr
+            pos_vo = poses_vo[i].resample_pos(t_)
+            ypr_vo = poses_vo[i].resample_ypr(t_)
         
         mask_fused = np.linalg.norm(pos_fused - pos_gt, axis=1) < outlier_thres
         mask_fused = np.logical_and(mask_fused, np.linalg.norm(ypr_gt - ypr_fused, axis=1) < outlier_thres_yaw)

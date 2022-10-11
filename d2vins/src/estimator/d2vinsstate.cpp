@@ -479,6 +479,9 @@ void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame * frame) {
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(POSE_EFF_SIZE, POSE_EFF_SIZE);
     A.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * params->initial_pos_sqrt_info;
     A(5, 5) = params->initial_yaw_sqrt_info;
+    if (self_id == params->main_id) {
+        A = A * 100;
+    }
     VectorXd b = VectorXd::Zero(POSE_EFF_SIZE);
     auto param_info = createFramePose(this, frame->frame_id);
     param_info.index = 0;

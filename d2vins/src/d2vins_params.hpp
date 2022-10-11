@@ -97,6 +97,7 @@ struct D2VINSConfig {
 
     //Multi-drone
     int self_id = 0;
+    int main_id = 0; // This main id is whom will be base reference frame so has a huge prior.
 
     //Debug
     bool debug_print_states = false;
