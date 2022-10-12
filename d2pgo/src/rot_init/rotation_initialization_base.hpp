@@ -43,6 +43,9 @@ protected:
     }
 
     int getFrameIdx(FrameIdType _frame_id) {
+        if (frame_id_to_idx.find(_frame_id) == frame_id_to_idx.end()) {
+            printf("[getFrameIdx@%d] Frame id %d not found in frame_id_to_idx\n", self_id, _frame_id);
+        }
         auto idx =  frame_id_to_idx.at(_frame_id);
         return idx;
     }
@@ -143,26 +146,27 @@ protected:
     VecX solveLinear(int row_id, int cols, const std::vector<Tpl> & triplet_list, VecX & b) {
         SparseMatrix<T> A(row_id, cols);
         A.setFromTriplets(triplet_list.begin(), triplet_list.end());
-        // printf("A rows%ld cols %ld b rows %d/%ld\n", A.rows(), A.cols(), row_id, b.rows());
         auto At = A.transpose();
         SparseMatrix<T> H = At*A;
         if (b.rows() > row_id) {
             b.conservativeResize(row_id);
         }
-        // Solve by LLT
-        // std::cout << "A" << std::endl << A << std::endl;
-        // std::cout << "b" << std::endl << b.transpose() << std::endl;
-        // std::cout << "H" << std::endl << H << std::endl;
         b = At*b;
         Eigen::SimplicialLLT<Eigen::SparseMatrix<T>> solver;
         solver.compute(H);
         if (solver.info() != Eigen::Success) {
-            std::ofstream ofs("/tmp/A.txt");
+            std::cout << solver.info() << std::endl;
+            std::ofstream ofsh("/tmp/H" + std::to_string(self_id) + ".txt");
+            for(int i = 0; i < H.outerSize(); i++)
+                for(typename Eigen::SparseMatrix<T>::InnerIterator it(H,i); it; ++it)
+                    ofsh << it.row() << " " << it.col() << " " << it.value() << std::endl;
+
+            std::ofstream ofs("/tmp/A" + std::to_string(self_id) + ".txt");
             for (auto triplet : triplet_list) {
                 ofs << triplet.row() << " " << triplet.col() << " " << triplet.value() << std::endl;
             }
             ofs.close();
-            std::ofstream ofs1("/tmp/b.txt");
+            std::ofstream ofs1("/tmp/b" + std::to_string(self_id) + ".txt");
             ofs1 << b << std::endl;
             ofs1.close();
         }
@@ -283,62 +287,73 @@ protected:
         if (idx == -1) {
             return row_id;
         }
-        Mat3 Rp = prior.getRotMat().template cast<T>();
         Vec3 Tp = prior.T().template cast<T>();
-        Mat3 Ra = state->getFramebyId(frame_id)->R().template cast<T>();
-        Vec3 Ta = state->getFramebyId(frame_id)->T().template cast<T>();
-        Mat3 sqrt_R = prior.getSqrtInfoMatRot().template cast<T>();
-        Mat3 sqrt_T = prior.getSqrtInfoMat().block<3, 3>(0, 0).template cast<T>();
-        sqrt_R = Mat3::Identity() * sqrt_R.norm()/1.4142;
-        sqrt_T = Mat3::Identity() * sqrt_T.norm();
-
+        // printf("[setupPose6DProblembyPrior%d]Prior for %d T_prior: %.4f %.4f %.4f\n", self_id, frame_id, Tp(0), Tp(1), Tp(2));
         //Translation error.
+        Mat3 sqrt_T = prior.getSqrtInfoMat().block<3, 3>(0, 0).template cast<T>();
         fillInTripet(row_id, pose_size*idx, sqrt_T, triplet_list); // take T_sqrt_info*T_a
         b.segment(row_id, 3) = sqrt_T*Tp;  // T_sqrt_info*T_p
         row_id = row_id + 3;
         if (!finetune_rot) {
             return row_id;
         }
-        //Rotation error
-        Matrix<T, 9, 3> Cm_ra;
-        Cm_ra << 0,         -Ra(0, 2),  Ra(0, 1),
-                Ra(0, 2),   0,          -Ra(0, 0),
-                -Ra(0, 1),  Ra(0, 0),   0,
-                0,         -Ra(1, 2),  Ra(1, 1),
-                Ra(1, 2),   0,          -Ra(1, 0),
-                -Ra(1, 1),  Ra(1, 0),   0,
-                0,         -Ra(2, 2),  Ra(2, 1),
-                Ra(2, 2),   0,          -Ra(2, 0),
-                -Ra(2, 1),  Ra(2, 0),   0;
-        fillInTripet(row_id, pose_size*idx + POS_SIZE, Cm_ra*sqrt_R, triplet_list); //  take Cm_ra*sqrt_R*R_a
-        Matrix<T, 3, 3, RowMajor> Rp_with_info = sqrt_R*Rp;
-        Map<Matrix<T, 9, 1>> right_vec(Rp_with_info.data()); // Flat matrix
-        b.segment(row_id, 9) = right_vec; // Rp
-        return row_id + 9;
+
+        if (prior.is_prior_delta) {
+            ROS_ERROR("Not support prior delta");
+        } else {
+            Mat3 Rp = prior.getRotMat().template cast<T>();
+            Mat3 Ra = state->getFramebyId(frame_id)->R().template cast<T>();
+            Vec3 Ta = state->getFramebyId(frame_id)->T().template cast<T>();
+            Mat3 sqrt_R = prior.getSqrtInfoMatRot().template cast<T>();
+            sqrt_R = Mat3::Identity() * sqrt_R.norm()/1.4142;
+            sqrt_T = Mat3::Identity() * sqrt_T.norm();
+
+            //Rotation error
+            Matrix<T, 9, 3> Cm_ra;
+            Cm_ra << 0,         -Ra(0, 2),  Ra(0, 1),
+                    Ra(0, 2),   0,          -Ra(0, 0),
+                    -Ra(0, 1),  Ra(0, 0),   0,
+                    0,         -Ra(1, 2),  Ra(1, 1),
+                    Ra(1, 2),   0,          -Ra(1, 0),
+                    -Ra(1, 1),  Ra(1, 0),   0,
+                    0,         -Ra(2, 2),  Ra(2, 1),
+                    Ra(2, 2),   0,          -Ra(2, 0),
+                    -Ra(2, 1),  Ra(2, 0),   0;
+            fillInTripet(row_id, pose_size*idx + POS_SIZE, Cm_ra*sqrt_R, triplet_list); //  take Cm_ra*sqrt_R*R_a
+            Matrix<T, 3, 3, RowMajor> Rp_with_info = sqrt_R*Rp;
+            Map<Matrix<T, 9, 1>> right_vec(Rp_with_info.data()); // Flat matrix
+            b.segment(row_id, 9) = right_vec; // Rp
+            return row_id + 9;
+        }
     }
 
-    void solveLinearPose6d() {
+    double solveLinearPose6d(bool finetune_rot = false) {
         TicToc tic;
-        VecX b(loops.size()*(ROTMAT_SIZE+3) + pose_priors.size()*(ROTMAT_SIZE+3));
+        int pose_size = POSE_EFF_SIZE;
+        if (!finetune_rot) {
+            pose_size = POS_SIZE;
+        }
+        VecX b(loops.size()*pose_size + pose_priors.size()*pose_size);
         std::vector<Eigen::Triplet<T>> triplet_list;
         b.setZero();
         int row_id = 0;
         for (auto loop : loops) {
-            row_id = setupPose6dProblembyLoop(row_id, loop, triplet_list, b);
+            row_id = setupPose6dProblembyLoop(row_id, loop, triplet_list, b, finetune_rot);
         }
         for (auto prior: pose_priors) {
-            row_id = setupPose6DProblembyPrior(row_id, prior, triplet_list, b);
+            row_id = setupPose6DProblembyPrior(row_id, prior, triplet_list, b, finetune_rot);
         }
         double dt_setup = tic.toc();
         tic.tic();
         TicToc tic_solve;
-        auto X = solveLinear(row_id, POSE_EFF_SIZE*eff_frame_num, triplet_list, b);
+        auto X = solveLinear(row_id, pose_size*eff_frame_num, triplet_list, b);
         double dt_solve = tic_solve.toc();
         //Recover poses from X
-        recoverPose6dfromLinear(X);
-        printf("[RotInit%d] solveLinearPose6d %.2fms setup %.2fms LLT %.2fms Poses %ld EffPoses %d Loops %ld Priors %ld F32: %d\n", self_id,
-            tic.toc(), dt_setup, dt_solve, frame_id_to_idx.size(), eff_frame_num, loops.size(), pose_priors.size(),
+        double changes = recoverPose6dfromLinear(X, finetune_rot);
+        printf("[RotInit%d] solveLinearPose6d %.2fms setup %.2fms LLT %.2fms changes %.2f%% Poses %ld EffPoses %d Loops %ld Priors %ld F32: %d\n", self_id,
+            tic.toc(), dt_setup, dt_solve, changes*100, frame_id_to_idx.size(), eff_frame_num, loops.size(), pose_priors.size(),
             typeid(T) == typeid(float));
+        return changes;
     }
 
     double recoverRotationLLT(const VecX & X) {
@@ -372,8 +387,10 @@ protected:
         return state_changes_sum/count;
     }
 
-    void recoverPose6dfromLinear(const VecX & X, bool finetune_rot = true) {
+    double recoverPose6dfromLinear(const VecX & X, bool finetune_rot = true) {
         int pose_size = POSE_EFF_SIZE;
+        double state_changes_sum = 0;
+        int count = 0;
         if (!finetune_rot) {
             pose_size = POS_SIZE;
         }
@@ -384,17 +401,19 @@ protected:
                 continue;
             }
             auto frame = state->getFramebyId(frame_id);
-            auto & pose = frame->odom.pose();
-            Matrix3d R0 = pose.R();
+            Matrix3d R0 = state->getAttitudeInit(frame_id).toRotationMatrix().template cast<double>();
             Vec3 t = X.segment(idx*pose_size, POS_SIZE);
-            pose.pos() = t.template cast<double>();
+            Map<Vector6d> perturb_state(state->getPerturbState(frame_id));
+            double changes = (t.template cast<double>()-perturb_state.segment(0, POS_SIZE)).norm()/t.norm();
+            perturb_state.segment(0, POS_SIZE) = t.template cast<double>();
+            state_changes_sum += changes;
+            count ++;
             if (finetune_rot) {
                 Vec3 delta = X.segment(idx*POSE_EFF_SIZE+POS_SIZE, POS_SIZE);
-                Matrix3d R = R0*(Matrix3d::Identity()+skewSymVec3(delta.template cast<double>()));
-                pose.att() = Quaterniond(R);
-                pose.att().normalize();
+                perturb_state.segment(POS_SIZE, POS_SIZE) = delta.template cast<double>();
             }
         }
+        return state_changes_sum/count;
     }
 
 
@@ -448,8 +467,6 @@ public:
     void reset() {
         loops.clear();
         pose_priors.clear(); 
-        // frame_id_to_idx.clear();
-        // is_fixed_frame_set = false;
     }
 };
 

@@ -1,12 +1,14 @@
 #pragma once
-#include "rotation_initialization_base.hpp"
-#include <d2common/solver/ARock.hpp>
 #include <d2common/d2pgo_types.h>
 
+#include <d2common/solver/ARock.hpp>
+
+#include "rotation_initialization_base.hpp"
+
 namespace D2PGO {
-template<typename T>
-class RotationInitARock: public RotationInitialization<T>, public ARockBase {
-protected:
+template <typename T>
+class RotationInitARock : public RotationInitialization<T>, public ARockBase {
+   protected:
     std::recursive_mutex pgo_data_mutex;
     std::vector<DPGOData> pgo_data;
     std::function<void(const DPGOData &)> broadcastDataCallback;
@@ -15,11 +17,11 @@ protected:
         SolverReport report;
         D2Common::Utility::TicToc tic;
         if (solve_6d) {
-            RotationInitialization<T>::solveLinearPose6d();
+            report.state_changes = RotationInitialization<T>::solveLinearPose6d();
         } else {
             report.state_changes = RotationInitialization<T>::solveLinearRot();
         }
-        report.total_time = tic.toc()/1000;
+        report.total_time = tic.toc() / 1000;
         report.total_iterations = 1;
         report.succ = true;
         report.message = "";
@@ -27,25 +29,45 @@ protected:
     }
 
     void setDualStateFactors() {
-        for (auto & param_pair : dual_states_remote) {
+        for (auto &param_pair : dual_states_remote) {
             for (auto it : param_pair.second) {
                 auto state_pointer = it.first;
                 auto param_info = all_estimating_params.at(state_pointer);
                 if (RotationInitialization<T>::isFixedFrame(param_info.id)) {
                     continue;
                 }
-                auto & dual_state = it.second;
-                Map<const Matrix<double, 3, 3, RowMajor>> M(dual_state.data());
-                Swarm::PosePrior prior(param_info.id, M, Matrix3d::Identity()*config.rho_rot_mat);
-                RotationInitialization<T>::pose_priors.emplace_back(prior);
+                auto &dual_state = it.second;
+                if (solve_6d) {
+                    Matrix6d inf = Matrix6d::Identity();
+                    inf.block<3, 3>(0, 0) *= config.rho_frame_T;
+                    inf.block<3, 3>(3, 3) *= config.rho_frame_theta;
+                    // printf("[setDualStateFactors%d] remote dual drone %d: frame_id %d delta:", self_id, 
+                            // param_pair.first, param_info.id);
+                    // std::cout << dual_state.transpose() << std::endl;
+                    Swarm::PosePrior prior = Swarm::PosePrior::createFromDelta(
+                        param_info.id, dual_state, inf);
+                    RotationInitialization<T>::pose_priors.emplace_back(prior);
+                } else {
+                    Map<const Matrix<double, 3, 3, RowMajor>> M(
+                        dual_state.data());
+                    Swarm::PosePrior prior(
+                        param_info.id, M,
+                        Matrix3d::Identity() * config.rho_rot_mat);
+                    RotationInitialization<T>::pose_priors.emplace_back(prior);
+                }
             }
         }
     }
 
     virtual void addFrameId(FrameIdType _frame_id) override {
         RotationInitialization<T>::addFrameId(_frame_id);
-        ParamInfo param_info = createFrameRotMat(state, _frame_id);
-        addParam(param_info);
+        if (solve_6d) {
+            ParamInfo param_info = createFramePose(state, _frame_id, true);
+            addParam(param_info);
+        } else {
+            ParamInfo param_info = createFrameRotMat(state, _frame_id);
+            addParam(param_info);
+        }
     }
 
     virtual void prepareSolverInIter(bool final_iter) {
@@ -54,14 +76,22 @@ protected:
     }
 
     void scanAndCreateDualStates() {
-        for (auto loop: RotationInitialization<T>::loops) {
-            std::vector<ParamInfo> params_list{createFrameRotMat(state, loop.keyframe_id_a), 
-                createFrameRotMat(state, loop.keyframe_id_b)};
-            for (auto param_info: params_list) {
+        for (auto loop : RotationInitialization<T>::loops) {
+            std::vector<ParamInfo> params_list;
+            if (solve_6d) {
+                params_list = std::vector<ParamInfo>{
+                    createFramePose(state, loop.keyframe_id_a, true),
+                    createFramePose(state, loop.keyframe_id_b, true)};
+            } else {
+                params_list = std::vector<ParamInfo>{
+                    createFrameRotMat(state, loop.keyframe_id_a),
+                    createFrameRotMat(state, loop.keyframe_id_b)};
+            }
+            for (auto param_info : params_list) {
                 if (isRemoteParam(param_info)) {
                     auto drone_id = solverId(param_info);
-                    if (drone_id!=self_id) {
-                        if  (!hasDualState(param_info.pointer, drone_id)) {
+                    if (drone_id != self_id) {
+                        if (!hasDualState(param_info.pointer, drone_id)) {
                             createDualState(param_info, drone_id, true);
                         }
                     }
@@ -81,60 +111,78 @@ protected:
 
     void broadcastData() {
         const std::lock_guard<std::recursive_mutex> lock(pgo_data_mutex);
-        //broadcast the data.
+        // broadcast the data.
         for (auto it : dual_states_local) {
             DPGOData data;
             data.stamp = ros::Time::now().toSec();
             data.drone_id = self_id;
             data.target_id = it.first;
             data.reference_frame_id = state->getReferenceFrameId();
-            data.type = DPGO_ROT_MAT_DUAL;
-            // printf("[RotInit%d] broadcast data to %d: size %ld\n", self_id, it.first, it.second.size());
-            for (auto it2: it.second) {
+            if (solve_6d) {
+                data.type = DPGO_DELTA_POSE_DUAL;
+            } else {
+                data.type = DPGO_ROT_MAT_DUAL;
+            }
+            for (auto it2 : it.second) {
                 auto ptr = it2.first;
-                auto & dual_state = it2.second;
+                auto &dual_state = it2.second;
+                // printf("[broadcastData%d] local dual drone %d: frame_id %d delta:", self_id, 
+                //         data.target_id, all_estimating_params.at(ptr).id);
+                // std::cout << dual_state.transpose() << std::endl;
                 ParamInfo param = all_estimating_params.at(ptr);
-                data.frame_poses[param.id] = state->getFramebyId(param.id)->odom.pose();
+                data.frame_poses[param.id] =
+                    state->getFramebyId(param.id)->odom.pose();
                 data.frame_duals[param.id] = dual_state;
             }
-            if (broadcastDataCallback)
-                broadcastDataCallback(data);
+            if (broadcastDataCallback) broadcastDataCallback(data);
         }
     }
 
-    void processPGOData(const DPGOData & data) {
-        // printf("[ARockPGO@%d]process DPGOData from %d\n", self_id, data.drone_id);
+    void processPGOData(const DPGOData &data) {
+        // printf("[ARockPGO@%d]process DPGOData from %d\n", self_id,
+        // data.drone_id);
         auto drone_id = data.drone_id;
-        for (auto it: data.frame_duals) {
+        for (auto it : data.frame_duals) {
             auto frame_id = it.first;
-            auto & dual = it.second;
+            auto &dual = it.second;
             if (state->hasFrame(frame_id)) {
-                auto * ptr = state->getRotState(frame_id);
-                auto frame = state->getFramebyId(frame_id);
-                if (all_estimating_params.find(ptr) != all_estimating_params.end()) {
-                    if (data.target_id == self_id || !hasDualState(ptr, drone_id)) {
+                state_type *ptr;
+                if (solve_6d) {
+                    ptr = state->getPerturbState(frame_id);
+                } else {
+                    ptr = state->getRotState(frame_id);
+                }
+                if (all_estimating_params.find(ptr) !=
+                    all_estimating_params.end()) {
+                    if (data.target_id == self_id ||
+                        !hasDualState(ptr, drone_id)) {
                         updated = true;
                         bool create = false;
                         auto param_info = all_estimating_params.at(ptr);
-                        //Then we check it this param has dual.
+                        // Then we check it this param has dual.
                         if (!hasDualState(ptr, drone_id)) {
-                            //Then we create a new dual state.
+                            // Then we create a new dual state.
                             createDualState(param_info, drone_id, true);
                             create = true;
                         }
-                        //Then we update the dual state.
+                        // Then we update the dual state.
+                        // printf("[processPGOData%d] remote dual drone %d: frame_id %d dual:", self_id, 
+                        //         drone_id, param_info.id);
+                        // std::cout << dual.transpose() << std::endl;
                         dual_states_remote[drone_id][ptr] = dual;
-                        if (create)
+                        if (create) 
                             dual_states_local[drone_id][ptr] = dual;
+                        auto frame = state->getFramebyId(frame_id);
                         if (frame->drone_id == drone_id) {
-                            //Use this to update the pose.
-                            // printf("[ARockPGO@%d]update pose of %d from drone %d\n", self_id, frame_id, drone_id);
                             auto pose = data.frame_poses.at(frame_id);
                             frame->odom.pose() = pose;
-                            RotationInitialization<T>::state->setAttitudeInit(frame_id, pose.att());
+                            RotationInitialization<T>::state->setAttitudeInit(
+                                frame_id, pose.att());
                             pose.to_vector(state->getPoseState(frame_id));
                         }
                     }
+                } else {
+                    ROS_WARN("[ARockPGO@%d]process DPGOData from %d, frame_id %d not found\n", self_id, data.drone_id, frame_id);
                 }
             }
         }
@@ -166,20 +214,20 @@ public:
         RotationInitialization<T>::reset();
     }
 
-    void addLoops(const std::vector<Swarm::LoopEdge> & good_loops) override {
+    void addLoops(const std::vector<Swarm::LoopEdge> &good_loops) override {
         RotationInitialization<T>::addLoops(good_loops);
         updated = true;
     }
 
-    void inputDPGOData(const DPGOData & data) {
-        // printf("[ARockPGO@%d]input DPGOData from %d\n", self_id, data.drone_id);
+    void inputDPGOData(const DPGOData &data) {
+        // printf("[ARockPGO@%d]input DPGOData from %d\n", self_id,
+        // data.drone_id);
         std::lock_guard<std::recursive_mutex> lock(pgo_data_mutex);
         pgo_data.push_back(data);
     }
-
 };
 
 typedef RotationInitARock<double> RotationInitARockd;
 typedef RotationInitARock<float> RotationInitARockf;
 
-}
+}  // namespace D2PGO

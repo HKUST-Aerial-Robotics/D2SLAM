@@ -30,6 +30,7 @@ protected:
     std::map<int, Swarm::DroneTrajectory> ego_motion_trajs;
     SwarmLocalOutlierRejection rejection;
     RotInit * rot_init = nullptr;
+    RotInit * pose6d_init = nullptr;
     std::set<int> available_robots;
     std::set<int> rot_init_finished_robots;
     bool rot_init_finished = false;

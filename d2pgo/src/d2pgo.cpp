@@ -75,7 +75,10 @@ void D2PGO::inputDPGOData(const DPGOData & data) {
         if (data.type == DPGODataType::DPGO_POSE_DUAL && solver!=nullptr) {
             static_cast<ARockPGO*>(solver)->inputDPGOData(data);
         } else {
-            if (rot_init!=nullptr) {
+            if (data.type == DPGO_DELTA_POSE_DUAL) {
+                if (pose6d_init != nullptr) 
+                    pose6d_init->inputDPGOData(data);
+            } else if (rot_init!=nullptr) {
                 rot_init->inputDPGOData(data);
             }
         }
@@ -141,8 +144,7 @@ bool D2PGO::solve_multi(bool force_solve) {
         setupEgoMotionFactors(solver);
     }
 
-    if (config.enable_rotation_initialization && !isRotInitConvergence() || 
-            config.rot_init_config.enable_pose6d_solver) {
+    if (config.enable_rotation_initialization && !isRotInitConvergence()) {
         rotInitial(used_loops);
         if (config.write_g2o) {
             saveG2O();
@@ -159,9 +161,25 @@ bool D2PGO::solve_multi(bool force_solve) {
     //Here if enable_rotation_initialization, we need to wait other robots to finish rotation initialization.
     if (config.enable_rotation_initialization) {
         waitForRotInitFinish();
-    } 
-    
-    auto report = solver->solve();
+    }
+    SolverReport report;
+    if (config.rot_init_config.enable_pose6d_solver) {
+        if (pose6d_init!=nullptr) {
+            pose6d_init->reset();
+        } else {
+            pose6d_init = new RotInit(&state, config.rot_init_config, config.arock_config, 
+                config.mode==PGO_MODE_DISTRIBUTED_AROCK, [&](const DPGOData & data) {
+                this->broadcastData(data);
+            });
+        }
+        pose6d_init->addLoops(used_loops);
+        if (isMain()) {
+            pose6d_init->setFixedFrameId(state.headId(self_id));
+        }
+        report = pose6d_init->solve(true);
+    } else {
+        report = solver->solve();
+    }
     if (!config.perturb_mode) {
         state.syncFromState();
     }
@@ -427,7 +445,7 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
         if (config.perturb_mode) {
             auto pointer = state.getPerturbState(frame_id);
             problem.SetParameterBlockConstant(pointer);
-            printf("[D2PGO::setStateProperties@%d] set perturb state %ld to constant\n", self_id, frame_id);
+            // printf("[D2PGO::setStateProperties@%d] set perturb state %ld to constant\n", self_id, frame_id);
         } else {
             auto pointer = state.getPoseState(frame_id);
             problem.SetParameterBlockConstant(pointer);
