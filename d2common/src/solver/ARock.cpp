@@ -106,7 +106,6 @@ void ARockBase::createDualState(const ParamInfo & param_info, int drone_id, bool
         dual_states_remote[drone_id] = std::map<state_type*, VectorXd>();
         dual_states_local[drone_id] = std::map<state_type*, VectorXd>();
     }
-    // printf("[ARockSolver%d] Creating dual state for param %ld, size %d\n", self_id, param_info.id, param_info.size);
     if (init_to_zero) {
         dual_states_remote[drone_id][param_info.pointer] = VectorXd::Zero(param_info.size);
         dual_states_local[drone_id][param_info.pointer] = VectorXd::Zero(param_info.size);
@@ -165,11 +164,12 @@ void ARockSolver::scanAndCreateDualStates() {
     for (auto res: residuals) {
         auto param_infos = res->paramsList(SolverWrapper::state);
         for (auto param_info: param_infos) {
+            auto frame = SolverWrapper::state->getFramebyId(param_info.id);
             if (isRemoteParam(param_info)) {
                 auto drone_id = solverId(param_info);
                 if (drone_id!=self_id) {
                     if  (!hasDualState(param_info.pointer, drone_id)) {
-                        createDualState(param_info, drone_id);
+                        createDualState(param_info, drone_id, true);
                     }
                 }
             }
@@ -240,10 +240,15 @@ void ARockSolver::setDualStateFactors() {
             } else if (param_info.type == D2Common::POSE_PERTURB_6D) {
                 MatrixXd A(param_info.size, param_info.size);
                 A.setIdentity();
-                A.block<3, 3>(0, 0) *= rho_T;
-                A.block<3, 3>(3, 3) *= rho_theta;
+                A.block<3, 3>(0, 0) *= sqrt(rho_T);
+                A.block<3, 3>(3, 3) *= sqrt(rho_theta);
                 auto factor = new ceres::NormalPrior(A, dual_state);
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
+                // if (self_id == 0) {
+                //     printf("[ARockSolver] ConsenusPosePerturbFactor param %ld, drone_id %d A:\n", 
+                //         param_info.id, param_pair.first);
+                //     std::cout << A << std::endl << "dual_state: " << dual_state.transpose() << std::endl;
+                // }
             } else  {
                 //Is euclidean.
                 MatrixXd A(param_info.size, param_info.size);

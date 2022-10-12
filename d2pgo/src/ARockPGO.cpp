@@ -47,6 +47,8 @@ void ARockPGO::processPGOData(const DPGOData & data) {
                         if (create)
                             dual_states_local[drone_id][ptr] = dual;
                     } else if (param_info.type == ParamsType::POSE_PERTURB_6D) { 
+                        // printf("[ARockPGO@%d] updating dual state for %d@%d.:", self_id, param_info.id, drone_id);
+                        // std::cout << dual.transpose() << std::endl;
                         dual_states_remote[drone_id][ptr] = dual;
                         if (create)
                             dual_states_local[drone_id][ptr] = dual;
@@ -71,6 +73,7 @@ void ARockPGO::broadcastData() {
     // printf("ARockPGO::broadcastData\n");
     const std::lock_guard<std::recursive_mutex> lock(pgo_data_mutex);
     DPGOData data;
+    data.type = DPGO_DELTA_POSE_DUAL;
     //broadcast the data.
     for (auto it : dual_states_local) {
         data.stamp = ros::Time::now().toSec();
@@ -87,7 +90,9 @@ void ARockPGO::broadcastData() {
                 pose = Swarm::Pose(dual_state.data());
             } else if (param.type == ParamsType::POSE_4D) {
                 pose = Swarm::Pose(dual_state.data(), true);
-            } //TODO:If perturb 
+            } else if (param.type == ParamsType::POSE_PERTURB_6D) {//TODO:If perturb 
+                pose = SolverWrapper::state->getFramebyId(param.id)->odom.pose();
+            }
             data.frame_duals[param.id] = dual_state;
             data.frame_poses[param.id] = pose;
         }

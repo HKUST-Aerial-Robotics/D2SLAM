@@ -78,6 +78,10 @@ void D2PGO::inputDPGOData(const DPGOData & data) {
             if (data.type == DPGO_DELTA_POSE_DUAL) {
                 if (pose6d_init != nullptr) 
                     pose6d_init->inputDPGOData(data);
+                else {
+                    printf("[D2PGO@%d]input pgo data from drone %d\n", self_id, data.drone_id);
+                    static_cast<ARockPGO*>(solver)->inputDPGOData(data);
+                }
             } else if (rot_init!=nullptr) {
                 rot_init->inputDPGOData(data);
             }

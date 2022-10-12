@@ -9,12 +9,12 @@
 
 using namespace D2PGO;
 
-#define BACKWARD_HAS_DW 1
-#include <backward.hpp>
-namespace backward
-{
-    backward::SignalHandling sh;
-}
+// #define BACKWARD_HAS_DW 1
+// #include <backward.hpp>
+// namespace backward
+// {
+//     backward::SignalHandling sh;
+// }
 
 class D2PGOTester {
     D2PGO::D2PGO * pgo = nullptr;
