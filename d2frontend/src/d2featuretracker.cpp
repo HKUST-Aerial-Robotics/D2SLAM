@@ -593,24 +593,24 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
         }
     }
     cv::Scalar color = cv::Scalar(255, 0, 0);
-    // if (is_keyframe) {
-    //     color = cv::Scalar(0, 0, 255);
-    // }
-    // if (is_right) {
-    //     sprintf(buf, "Stereo points: %d", stereo_num);
-    //     cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
-    // } else if (is_remote) {
-    //     sprintf(buf, "Drone %d<->%d Matched points: %d", params->self_id, frame.drone_id, report.remote_matched_num);
-    //     cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
-    // }
-    // else {
-    //     sprintf(buf, "KF/FRAME %d/%d @CAM %d ISKF: %d", keyframe_count, frame_count, 
-    //         frame.camera_index, is_keyframe);
-    //     cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
-    //     sprintf(buf, "TRACK %.1fms NUM %d LONG %d Parallex %.1f\%/%.1f",
-    //         report.ft_time, report.parallex_num, report.long_track_num, report.meanParallex()*100, _config.parallex_thres*100);
-    //     cv::putText(img, buf, cv::Point2f(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
-    // }
+    if (is_keyframe) {
+        color = cv::Scalar(0, 0, 255);
+    }
+    if (is_right) {
+        sprintf(buf, "Stereo points: %d", stereo_num);
+        cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+    } else if (is_remote) {
+        sprintf(buf, "Drone %d<->%d Matched points: %d", params->self_id, frame.drone_id, report.remote_matched_num);
+        cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+    }
+    else {
+        sprintf(buf, "KF/FRAME %d/%d @CAM %d ISKF: %d", keyframe_count, frame_count, 
+            frame.camera_index, is_keyframe);
+        cv::putText(img, buf, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+        sprintf(buf, "TRACK %.1fms NUM %d LONG %d Parallex %.1f\%/%.1f",
+            report.ft_time, report.parallex_num, report.long_track_num, report.meanParallex()*100, _config.parallex_thres*100);
+        cv::putText(img, buf, cv::Point2f(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2);
+    }
     return img;
 }
 

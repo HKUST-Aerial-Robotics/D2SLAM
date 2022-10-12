@@ -61,12 +61,13 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
         printf("[D2Estimator::tryinitFirstPose] not enough imu data %d/%d for init\n", _imubuf.size(), imu_bufs[self_id].size());
         return false;
     }
-    auto q0 = Utility::g2R(_imubuf.mean_acc());
+    auto mean_acc = _imubuf.mean_acc();
+    auto q0 = Utility::g2R(mean_acc);
     auto last_odom = Swarm::Odometry(frame.stamp, Swarm::Pose(q0, Vector3d::Zero()));
 
     //Easily use the average value as gyrobias now
     //Also the ba with average acc - g
-    VINSFrame first_frame(frame, _imubuf.mean_acc() - IMUBuffer::Gravity, _imubuf.mean_gyro());
+    VINSFrame first_frame(frame, mean_acc - q0.inverse()*IMUBuffer::Gravity, _imubuf.mean_gyro());
     first_frame.is_keyframe = true;
     first_frame.odom = last_odom;
     first_frame.imu_buf_index = ret.second;
@@ -76,6 +77,7 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
     
     printf("\033[0;32m[D2VINS::D2Estimator] Initial firstPose %ld\n", frame.frame_id);
     printf("[D2VINS::D2Estimator] Init pose with IMU: %s\n", last_odom.toStr().c_str());
+    printf("[D2VINS::D2Estimator] Mean acc %.3f %.3f %.3f", mean_acc.x(), mean_acc.y(), mean_acc.z());
     printf("[D2VINS::D2Estimator] Gyro bias: %.3f %.3f %.3f\n", first_frame.Bg.x(), first_frame.Bg.y(), first_frame.Bg.z());
     printf("[D2VINS::D2Estimator] Acc  bias: %.3f %.3f %.3f\033[0m\n\n", first_frame.Ba.x(), first_frame.Ba.y(), first_frame.Ba.z());
 

@@ -85,7 +85,7 @@ multiple_thread: 1
 
 #outlier rejection
 thres_outlier : 10.0
-perform_outlier_rejection_num: 100000
+perform_outlier_rejection_num: 100
 tri_max_err: 1000000.0
 
 #Marginalization

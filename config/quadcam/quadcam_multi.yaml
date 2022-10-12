@@ -14,7 +14,7 @@ frame_step: 2
 #Camera configuration
 camera_configuration: 3  #STEREO_PINHOLE = 0, STEREO_FISHEYE = 1, PINHOLE_DEPTH = 2, FOURCORNER_FISHEYE = 3
 # calib_file_path: "quad_cam_calib-camchain-imucam.yaml"
-calib_file_path: "quad_cam_calib-camchain-imucam.yaml"
+calib_file_path: "quad_cam_calib-camchain-imucam-2.yaml"
 image_width: 1280
 image_height: 800
 enable_undistort_image: 1
@@ -30,7 +30,7 @@ estimate_td: 0                      # online estimate time offset between camera
 # td: -0.25                             # For old datasets # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 td: -0.212                             # For new datasets
 estimation_mode: 2
-double_counting_common_feature: 0 #0:single; 1:solve all; 2: distributed; 3:server
+double_counting_common_feature: 0
 min_inv_dep: 0.01 #100 meter away.
 
 #optimization parameters
@@ -70,7 +70,7 @@ multiple_thread: 1
 
 #outlier rejection
 thres_outlier : 10.0
-perform_outlier_rejection_num: 100000
+perform_outlier_rejection_num: 100
 tri_max_err: 1000000.0
 
 #Marginalization

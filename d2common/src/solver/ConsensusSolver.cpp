@@ -186,6 +186,7 @@ void ConsensusSolver::updateGlobal() {
 ceres::Solver::Summary ConsensusSolver::solveLocalStep() {
     ceres::Solver::Summary summary;
     ceres::Solve(config.ceres_options, problem, &summary);
+    // std::cout << summary.FullReport() << std::endl;
     return summary;
 }
 
