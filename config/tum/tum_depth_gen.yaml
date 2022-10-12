@@ -1,0 +1,18 @@
+enable_cnn: true
+cnn_int8: false
+cnn_fp16: true
+cnn_use_tensorrt: false
+# cnn_type: "hitnet"
+cnn_type: "crestereo"
+enable_texture: true
+width: 320
+height: 240
+pixel_step: 2
+image_step: 2
+max_z: 3.1
+min_z: 0.3
+calib_file_path: "camchain-imucam-imucalib.yaml"
+photometric_calib: "vingette_0.png"
+photometric_calib_1: "vingette_1.png"
+camera_configuration: 0
+avg_brightness: 1.0

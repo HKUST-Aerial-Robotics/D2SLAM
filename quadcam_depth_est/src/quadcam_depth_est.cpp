@@ -31,10 +31,17 @@ QuadCamDepthEst::QuadCamDepthEst(ros::NodeHandle & _nh): nh(_nh) {
     max_z = config["max_z"].as<double>();
     loadCNN(config);
     loadCameraConfig(config, configPath);
-    std::string format = "compressed";
+    std::string format = "compressed"; //TODO: make it configurable
     image_transport::TransportHints hints(format, ros::TransportHints().tcpNoDelay(true));
     it_ = new image_transport::ImageTransport(nh);
-    image_sub = it_->subscribe("/arducam/image", 1000, &QuadCamDepthEst::imageCallback, this, hints);
+    if (camera_config == CameraConfig::FOURCORNER_FISHEYE) {
+        image_sub = it_->subscribe("/arducam/image", 1000, &QuadCamDepthEst::imageCallback, this, hints);
+    } else {
+        left_sub = new ImageSubscriber(*it_, "/cam0/image_raw", 1000, hints);
+        right_sub = new ImageSubscriber(*it_, "/cam1/image_raw", 1000, hints);
+        sync = new message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> (*left_sub, *right_sub, 1000);
+        sync->registerCallback(boost::bind(&QuadCamDepthEst::stereoImagesCallback, this, _1, _2));
+    }
     if (enable_texture) {
         pcl_color = new PointCloudRGB;
         pcl_color->points.reserve(virtual_stereos.size()*width*height);
@@ -71,6 +78,41 @@ void QuadCamDepthEst::loadCNN(YAML::Node & config) {
     }else {
         printf("[QuadCamDepthEst] CNN disabled. Use OpenCV SGBM\n");
     }
+}
+
+void QuadCamDepthEst::stereoImagesCallback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right) {
+     if (image_count % image_step != 0) {
+        image_count++;
+        return;
+    }
+    TicToc t;
+    cv_bridge::CvImagePtr cv_ptr_l = cv_bridge::toCvCopy(left, sensor_msgs::image_encodings::MONO8);
+    cv_bridge::CvImagePtr cv_ptr_r = cv_bridge::toCvCopy(right, sensor_msgs::image_encodings::MONO8);
+    if (enable_texture) {
+        pcl_conversions::toPCL(left->header.stamp, pcl_color->header.stamp);
+        pcl_color->header.frame_id = "imu";
+        pcl_color->points.clear();
+    } else {
+        pcl_conversions::toPCL(left->header.stamp, pcl->header.stamp);
+        pcl->header.frame_id = "imu";
+        pcl->points.clear();
+    }
+    std::pair<cv::Mat, cv::Mat> ret = virtual_stereos[0]->estimatePointsViaRaw(cv_ptr_l->image, cv_ptr_r->image, cv_ptr_l->image, show);
+    if (enable_texture) {
+        addPointsToPCL(ret.first, ret.second, virtual_stereos[0]->extrinsic, *pcl_color, pixel_step, min_z, max_z);
+    } else {
+        addPointsToPCL(ret.first, ret.second, virtual_stereos[0]->extrinsic, *pcl, pixel_step, min_z, max_z);
+    }
+    if (show) {
+        cv::waitKey(1);
+    }
+    if (enable_texture) {
+        pub_pcl.publish(*pcl_color);
+    } else {
+        pub_pcl.publish(*pcl);
+    }
+    image_count++;
+    printf("[QuadCamDepthEst] count %d process time %.1fms\n", image_count, t.toc());
 }
 
 void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
@@ -127,60 +169,94 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
     printf("[QuadCamDepthEst] count %d process time %.1fms\n", image_count, t.toc());
 }
 
+cv::Mat readVingette(const std::string & mask_file, double avg_brightness) {
+    cv::Mat photometric_inv;
+    cv::Mat photometric_calib = cv::imread(mask_file, cv::IMREAD_GRAYSCALE);
+    std::cout << photometric_calib.type() << std::endl;
+    if (photometric_calib.type() == CV_8U) {
+        photometric_calib.convertTo(photometric_calib, CV_32FC1, 1.0/255.0);
+    } else if (photometric_calib.type() == CV_16S) {
+        photometric_calib.convertTo(photometric_calib, CV_32FC1, 1.0/65535.0);
+    }
+    cv::divide(avg_brightness, photometric_calib, photometric_inv);
+    return photometric_inv;
+}
 
 void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPath) {
-    cv::Mat photometric;
+    int _camera_config = config["camera_configuration"].as<int>();
+    camera_config = (CameraConfig)_camera_config;
+    cv::Mat photometric_inv, photometric_inv_1;
+    float avg_brightness = config["avg_brightness"].as<float>();
     if (config["photometric_calib"]) {
-        std::string mask_file = configPath + "/" + config["photometric_calib"].as<std::string>();
-        cv::Mat photometric_calib = cv::imread(mask_file, cv::IMREAD_GRAYSCALE);
-        photometric_calib.convertTo(photometric_calib, CV_32FC1, 1.0/255.0);
-        cv::divide(0.7, photometric_calib, photometric);
+        photometric_inv = readVingette(configPath + "/" + config["photometric_calib"].as<std::string>(), avg_brightness);
     }
-
+    if (config["photometric_calib_1"]) {
+        photometric_inv_1 = readVingette(configPath + "/" + config["photometric_calib_1"].as<std::string>(), avg_brightness);
+    }
     std::string calib_file_path = config["calib_file_path"].as<std::string>();
-    double fov = config["fov"].as<double>();
     printf("[QuadCamDepthEst] Load camera config from %s\n", calib_file_path.c_str());
     calib_file_path = configPath + "/" + calib_file_path;
-    YAML::Node config_cams = YAML::LoadFile(calib_file_path);
+    YAML::Node config_cams = YAML::LoadFile(calib_file_path); 
+
     for (const auto& kv : config_cams) {
         std::string camera_name = kv.first.as<std::string>();
         printf("[QuadCamDepthEst] Load camera %s\n", camera_name.c_str());
         const YAML::Node& value = kv.second;
         auto ret = D2FrontEnd::readCameraConfig(camera_name, value);
-        undistortors.push_back(new D2Common::FisheyeUndist(ret.first, 0, fov, true,
-            D2Common::FisheyeUndist::UndistortPinhole2, width, height, photometric));
+        raw_cameras.emplace_back(ret.first);
+        if (camera_config == CameraConfig::FOURCORNER_FISHEYE) {
+            double fov = config["fov"].as<double>();
+            undistortors.push_back(new D2Common::FisheyeUndist(ret.first, 0, fov, true,
+                D2Common::FisheyeUndist::UndistortPinhole2, width, height, photometric_inv));
+        }
         raw_cam_extrinsics.emplace_back(ret.second);
     }
-
-    for (const auto & kv: config["stereos"]) {
-        auto node = kv.second;
-        std::string stereo_name = kv.first.as<std::string>();
-        int cam_idx_l = node["cam_idx_l"].as<int>();
-        int cam_idx_r = node["cam_idx_r"].as<int>();
-        int idx_l = node["idx_l"].as<int>();
-        int idx_r = node["idx_r"].as<int>();
-        std::string stereo_calib_file = configPath + "/" + node["stereo_config"].as<std::string>();
-        Swarm::Pose baseline;
-        YAML::Node stereo_calib = YAML::LoadFile(stereo_calib_file);
+    
+    if (camera_config == CameraConfig::STEREO_PINHOLE) {
+        //In stereo mode
         Matrix4d T;
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                T(i, j) = stereo_calib["cam1"]["T_cn_cnm1"][i][j].as<double>();
+                T(i, j) = config_cams["cam1"]["T_cn_cnm1"][i][j].as<double>();
             }
         }
-        baseline = Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
-        auto KD0 = intrinsicsFromNode(stereo_calib["cam0"]);
-        auto KD1 = intrinsicsFromNode(stereo_calib["cam1"]);
-
-        printf("[QuadCamDepthEst] Load stereo %s, stereo %d(%d):%d(%d) baseline: %s\n", 
-            stereo_name.c_str(), cam_idx_l, idx_l, cam_idx_r, idx_r, baseline.toStr().c_str());
-        auto stereo = new VirtualStereo(cam_idx_l, cam_idx_r, baseline, 
-            undistortors[cam_idx_l], undistortors[cam_idx_r], idx_l, idx_r, hitnet, crestereo);
-        auto att = undistortors[cam_idx_l]->t[idx_l];
-        stereo->extrinsic = raw_cam_extrinsics[cam_idx_l] * Swarm::Pose(att, Vector3d(0, 0, 0));
+        auto baseline = Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
+        auto stereo = new VirtualStereo(baseline, raw_cameras[0], raw_cameras[1], hitnet, crestereo);
+        stereo->extrinsic = raw_cam_extrinsics[0];
         stereo->enable_texture = enable_texture;
-        stereo->initRecitfy(baseline, KD0.first, KD0.second, KD1.first, KD1.second);
+        stereo->initVingette(photometric_inv, photometric_inv_1);
         virtual_stereos.emplace_back(stereo);
+    } else if (camera_config == CameraConfig::FOURCORNER_FISHEYE) {
+        for (const auto & kv: config["stereos"]) {
+            auto node = kv.second;
+            std::string stereo_name = kv.first.as<std::string>();
+            int cam_idx_l = node["cam_idx_l"].as<int>();
+            int cam_idx_r = node["cam_idx_r"].as<int>();
+            int idx_l = node["idx_l"].as<int>();
+            int idx_r = node["idx_r"].as<int>();
+            std::string stereo_calib_file = configPath + "/" + node["stereo_config"].as<std::string>();
+            Swarm::Pose baseline;
+            YAML::Node stereo_calib = YAML::LoadFile(stereo_calib_file);
+            Matrix4d T;
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 4; j++) {
+                    T(i, j) = stereo_calib["cam1"]["T_cn_cnm1"][i][j].as<double>();
+                }
+            }
+            baseline = Swarm::Pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
+            auto KD0 = intrinsicsFromNode(stereo_calib["cam0"]);
+            auto KD1 = intrinsicsFromNode(stereo_calib["cam1"]);
+
+            printf("[QuadCamDepthEst] Load stereo %s, stereo %d(%d):%d(%d) baseline: %s\n", 
+                stereo_name.c_str(), cam_idx_l, idx_l, cam_idx_r, idx_r, baseline.toStr().c_str());
+            auto stereo = new VirtualStereo(cam_idx_l, cam_idx_r, baseline, 
+                undistortors[cam_idx_l], undistortors[cam_idx_r], idx_l, idx_r, hitnet, crestereo);
+            auto att = undistortors[cam_idx_l]->t[idx_l];
+            stereo->extrinsic = raw_cam_extrinsics[cam_idx_l] * Swarm::Pose(att, Vector3d(0, 0, 0));
+            stereo->enable_texture = enable_texture;
+            stereo->initRecitfy(baseline, KD0.first, KD0.second, KD1.first, KD1.second);
+            virtual_stereos.emplace_back(stereo);
+        }
     }
 }
 

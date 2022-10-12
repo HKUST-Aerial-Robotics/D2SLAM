@@ -132,7 +132,8 @@ public:
         hwc_to_chw(input_half_left, input_l_half);
         hwc_to_chw(input_half_right, input_r_half);
         doInference();
-        return cv::Mat(height, width, CV_32F, results_);
+        cv::Mat res(height, width, CV_32F, results_);
+        return res;
     }
 };
 }

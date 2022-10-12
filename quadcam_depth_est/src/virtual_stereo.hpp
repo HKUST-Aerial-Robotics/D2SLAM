@@ -39,7 +39,7 @@ protected:
     D2Common::FisheyeUndist* undist_left = nullptr, *undist_right = nullptr;
     int undist_id_l = 0;
     int undist_id_r = 1;
-    cv::Mat R, T, R1, R2, T1, T2, Q;
+    cv::Mat R, T, R1, R2, T1, T2, Q, P1, P2;
     cv::Size img_size;
     VirtualStereoConfig config;
     HitnetONNX* hitnet = nullptr;
@@ -47,6 +47,8 @@ protected:
     cv::Rect roi_l;
     cv::Rect roi_r;
     //Rectify the images from pinhole images.
+    bool input_is_stereo;
+    cv::cuda::GpuMat inv_vingette_l, inv_vingette_r;
 public:
     bool enable_texture = true;
     int cam_idx_a = 0;
@@ -63,6 +65,11 @@ public:
             D2Common::FisheyeUndist* _undist_right,
             int _undist_id_l, 
             int _undist_id_r, HitnetONNX* _hitnet, CREStereoONNX * _crestereo);
+    VirtualStereo(const Swarm::Pose & baseline, 
+            camodocal::CameraPtr cam_left,
+            camodocal::CameraPtr cam_right, 
+            HitnetONNX* _hitnet, CREStereoONNX * _crestereo);
+    void initVingette(const cv::Mat & _inv_vingette_l, const cv::Mat & _inv_vingette_r);
     void initRecitfy(const Swarm::Pose & baseline, cv::Mat K0, cv::Mat D0, cv::Mat K1, cv::Mat D1);
 };
 }

@@ -14,6 +14,7 @@ min_z: 0.3
 calib_file_path: "quad_cam_calib-camchain-imucam.yaml"
 fov: 180
 photometric_calib: "mask.png"
+avg_brightness: 0.7
 stereos:
   # stereo1_0:
   #   cam_idx_l: 1
@@ -39,3 +40,4 @@ stereos:
     idx_l: 1
     idx_r: 0
     stereo_config: "stereo_calib_0_3.yaml"
+camera_configuration: 3
