@@ -190,15 +190,21 @@ cv::Mat VirtualStereo::estimateDisparityOCV(const cv::Mat & left, const cv::Mat 
     auto sgbm = cv::StereoSGBM::create(config.minDisparity, config.numDisparities, config.blockSize,
         config.P1, config.P2, config.disp12MaxDiff, config.preFilterCap, config.uniquenessRatio, 
         config.speckleWindowSize, config.speckleRange, config.mode);
-    auto ret = rectifyImage(left, right);
     cv::Mat disparity;
-    sgbm->compute(cv::Mat(ret[0]), cv::Mat(ret[1]), disparity);
+    if (left.type() == CV_32FC1) {
+        cv::Mat left_show, right_show;
+        left.convertTo(left_show, CV_8U);
+        right.convertTo(right_show, CV_8U);
+        sgbm->compute(left_show, right_show, disparity);
+    } else {
+        sgbm->compute(left, right, disparity);
+    }
     disparity = disparity / 16.0;
     return disparity;
 }
 
 cv::Mat VirtualStereo::estimateDisparity(const cv::Mat & left, const cv::Mat & right) {
-    if (config.use_cnn) {
+    if (config.use_cnn && (hitnet != nullptr || crestereo!=nullptr)) {
         if (hitnet!=nullptr) {
             if (left.channels() == 3) {
                 cv::Mat left_gray;

@@ -52,7 +52,6 @@ QuadCamDepthEst::QuadCamDepthEst(ros::NodeHandle & _nh): nh(_nh) {
 }
 
 void QuadCamDepthEst::loadCNN(YAML::Node & config) {
-    bool enable_cnn;
     std::string quadcam_depth_config_file;
     enable_cnn = config["enable_cnn"].as<bool>();
     std::string cnn_type = config["cnn_type"].as<std::string>();

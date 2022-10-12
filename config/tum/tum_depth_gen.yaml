@@ -1,4 +1,4 @@
-enable_cnn: true
+enable_cnn: false
 cnn_int8: false
 cnn_fp16: true
 cnn_use_tensorrt: false
@@ -9,7 +9,7 @@ width: 320
 height: 240
 pixel_step: 2
 image_step: 2
-max_z: 3.1
+max_z: 2.0
 min_z: 0.3
 calib_file_path: "camchain-imucam-imucalib.yaml"
 photometric_calib: "vingette_0.png"

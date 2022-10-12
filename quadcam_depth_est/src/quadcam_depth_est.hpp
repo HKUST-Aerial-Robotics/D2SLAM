@@ -32,6 +32,7 @@ class QuadCamDepthEst {
     double min_z = 0.1;
     double max_z = 10;
     bool cnn_rgb = false;
+    bool enable_cnn;
 
     ros::NodeHandle nh;
     image_transport::ImageTransport * it_;
