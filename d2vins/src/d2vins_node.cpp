@@ -51,6 +51,11 @@ protected:
                     !frame_desc.is_lazy_frame && frame_desc.matched_frame < 0) {
                 Guard guard(esti_lock);
                 estimator->inputRemoteImage(frame_desc);
+            } else {
+                if (frame_desc.matched_frame < 0) {
+                    VINSFrame frame(frame_desc);
+                    estimator->getVisualizer().pubFrame(&frame);
+                }
             }
         }
         D2Frontend::processRemoteImage(frame_desc);

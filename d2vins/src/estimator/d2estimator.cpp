@@ -811,4 +811,8 @@ D2EstimatorState & D2Estimator::getState() {
 bool D2Estimator::isLocalFrame(FrameIdType frame_id) const {
     return state.getFramebyId(frame_id)->drone_id == self_id;
 }
+
+D2Visualization & D2Estimator::getVisualizer() {
+    return visual;
+}
 }

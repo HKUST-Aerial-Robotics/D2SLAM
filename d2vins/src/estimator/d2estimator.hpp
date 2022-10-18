@@ -91,5 +91,7 @@ public:
     bool readyForStart();
     const std::map<LandmarkIdType, LandmarkPerId> & getLandmarkDB() const;
     const std::vector<VINSFrame*> & getSelfSldWin() const;
+    D2Visualization & getVisualizer();
+
 };
 }
