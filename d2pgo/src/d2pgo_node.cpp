@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include "d2pgo.h"
 #include "swarm_msgs/ImageArrayDescriptor.h"
+#include "swarm_msgs/swarm_fused.h"
 
 #define BACKWARD_HAS_DW 1
 #include <backward.hpp>
@@ -19,7 +20,7 @@ class D2PGONode {
     std::map<int, ros::Publisher> path_pubs;
     ros::Publisher path_pub;
     ros::Publisher dpgo_data_pub;
-    ros::Publisher drone_traj_pub;
+    ros::Publisher drone_traj_pub, swarm_fused_pub;
     bool write_to_file = true;
     bool multi = false;
     int write_to_file_step = 5;
@@ -47,6 +48,10 @@ protected:
     }
 
     void pubTrajs(std::map<int, Swarm::DroneTrajectory> & trajs) {
+        swarm_msgs::swarm_fused swarm_fused;
+        swarm_fused.header.stamp = ros::Time::now();
+        swarm_fused.self_id = config.self_id;
+        swarm_fused.reference_frame_id = pgo->getReferenceFrameId();
         for (auto it : trajs) {
             auto drone_id = it.first;
             auto traj = it.second;
@@ -67,7 +72,21 @@ protected:
                 }
                 csv.close();
             }
+            if (traj.trajectory_size() > 0) {
+                auto pose = traj.get_latest_pose();
+                auto pose_ros = traj.get_latest_pose().toROS();
+                swarm_fused.ids.emplace_back(drone_id);
+                swarm_fused.local_drone_position.emplace_back(pose_ros.position);
+                swarm_fused.local_drone_rotation.emplace_back(pose_ros.orientation);
+                swarm_fused.local_drone_yaw.emplace_back(pose.yaw());
+                if (drone_id == config.self_id) {
+                    swarm_fused.self_pos = pose_ros.position;
+                    swarm_fused.self_yaw = pose.yaw();
+                }
+            }
         }
+        printf("[D2PGONode@%d] pubTrajs, %ld trajs\n", config.self_id, trajs.size());
+        swarm_fused_pub.publish(swarm_fused);
         pub_count++;
     }
 
@@ -90,6 +109,7 @@ protected:
         path_pub = _nh->advertise<nav_msgs::Path>("pgo_path", 1000);
         drone_traj_pub = _nh->advertise<swarm_msgs::DroneTraj>("pgo_traj", 1000);
         dpgo_data_pub = _nh->advertise<swarm_msgs::DPGOData>("pgo_data", 1000);
+        swarm_fused_pub = _nh->advertise<swarm_msgs::swarm_fused>("swarm_fused", 1000);
         pgo->bd_data_callback = [&] (const DPGOData & data) {
             dpgo_data_pub.publish(data.toROS());
         };

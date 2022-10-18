@@ -69,5 +69,8 @@ public:
     void setAvailableRobots(const std::set<int> & _available_robots) {
         available_robots = _available_robots;
     }
+    int getReferenceFrameId() const {
+        return state.getReferenceFrameId();
+    }
 };
 }
