@@ -9,6 +9,7 @@
 #include <queue>
 #include <chrono>
 #include <d2frontend/d2featuretracker.h>
+#include <swarm_msgs/swarm_fused.h>
 
 using namespace std::chrono;
 #define BACKWARD_HAS_DW 1
@@ -27,7 +28,7 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     typedef std::lock_guard<std::mutex> Guard;
     D2Estimator * estimator = nullptr;
     D2VINSNet * d2vins_net = nullptr;
-    ros::Subscriber imu_sub;
+    ros::Subscriber imu_sub, pgo_fused_sub;
     ros::Publisher visual_array_pub;
     int frame_count = 0;
     std::queue<D2Common::VisualImageDescArray> viokf_queue;
@@ -103,7 +104,19 @@ protected:
             }
             if (ret && D2FrontEnd::params->enable_network) {
                 // printf("[D2VINS] Send image to network frame_id %ld: %s\n", viokf.frame_id, viokf.pose_drone.toStr().c_str());
-                loop_net->broadcastVisualImageDescArray(viokf);
+                std::set<int> nearbydrones = estimator->getNearbyDronesbyPGOData(); 
+                bool force_landmarks = false;
+                if (nearbydrones.size() > 0) {
+                    force_landmarks = true;
+                    if (params->verbose) {
+                        printf("[D2VINS] Nearby drones: ");
+                        for (auto & id : nearbydrones) {
+                            printf("%d ", id);
+                        }
+                        printf("\n");
+                    }
+                }
+                loop_net->broadcastVisualImageDescArray(viokf, force_landmarks);
             }
             if (params->pub_visual_frame) {
                 visual_array_pub.publish(viokf.toROS());
@@ -115,6 +128,21 @@ protected:
         IMUData data(imu);
         data.dt = 1.0/params->IMU_FREQ; //TODO
         estimator->inputImu(data);
+    }
+
+    void pgoSwarmFusedCallback(const swarm_msgs::swarm_fused & fused) {
+        if (params->estimation_mode == D2VINSConfig::SINGLE_DRONE_MODE) {
+            return;
+        }
+        Guard guard(esti_lock);
+        std::map<int, Swarm::Pose> poses;
+        for (size_t i = 0; i < fused.ids.size(); i++) {
+            Swarm::Pose pose(fused.local_drone_position[i], fused.local_drone_rotation[i]);
+            poses[fused.ids[i]] = pose;
+            if (params->verbose)
+                printf("[D2VINS] PGO fused drone %d: %s\n", fused.ids[i], pose.toStr().c_str());
+        }
+        estimator->setPGOPoses(poses);
     }
 
     void myHighResolutionTimerThread() {
@@ -139,6 +167,7 @@ protected:
         estimator->init(nh, d2vins_net);
         visual_array_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("image_array_desc", 1);
         imu_sub = nh.subscribe(params->imu_topic, 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
+        pgo_fused_sub = nh.subscribe("/d2pgo/swarm_fused", 1, &D2VINSNode::pgoSwarmFusedCallback, this, ros::TransportHints().tcpNoDelay());
         estimator_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::timerCallback, this);
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
             solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);

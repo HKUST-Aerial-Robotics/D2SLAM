@@ -66,8 +66,16 @@ public:
         return drone_frames.at(drone_id);
     }
 
-    Swarm::DroneTrajectory & getTraj(int drone_id) {
+    Swarm::DroneTrajectory & getEgomotionTraj(int drone_id) {
         return ego_drone_trajs.at(drone_id);
+    }
+
+    const Swarm::DroneTrajectory & getEgomotionTraj(int drone_id) const {
+        return ego_drone_trajs.at(drone_id);
+    }
+    
+    bool hasEgomotionTraj(int drone_id) const {
+        return ego_drone_trajs.find(drone_id) != ego_drone_trajs.end();
     }
 
     FrameIdType headId(int drone_id) {

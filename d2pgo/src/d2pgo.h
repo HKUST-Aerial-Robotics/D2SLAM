@@ -21,6 +21,8 @@ protected:
     mutable std::recursive_mutex state_lock;
     std::vector<Swarm::LoopEdge> all_loops;
     std::set<FrameIdType> used_frames;
+    std::map<int, FrameIdType> used_latest_frames;
+    std::map<int, FrameIdType> used_latest_ts;
     int used_loops_count;
     int solve_count = 0;
     bool updated = false;
@@ -72,5 +74,6 @@ public:
     int getReferenceFrameId() const {
         return state.getReferenceFrameId();
     }
+    std::map<int, Swarm::Odometry> getPredictedOdoms() const;
 };
 }

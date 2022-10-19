@@ -815,4 +815,32 @@ bool D2Estimator::isLocalFrame(FrameIdType frame_id) const {
 D2Visualization & D2Estimator::getVisualizer() {
     return visual;
 }
+
+void D2Estimator::setPGOPoses(const std::map<int, Swarm::Pose> & poses) {
+    last_pgo_poses = poses;
+}
+
+std::set<int> D2Estimator::getNearbyDronesbyPGOData() const {
+    std::set<int> nearby_drones;
+    if (last_pgo_poses.find(self_id) == last_pgo_poses.end()) {
+        return nearby_drones;
+    }
+    auto self_pose = last_pgo_poses.at(self_id);
+    for (auto p : last_pgo_poses) {
+        if (p.first == self_id) {
+            continue;
+        }
+        auto & pose = p.second;
+        auto dist = (pose.pos() - self_pose.pos()).norm();
+        auto dist_yaw = std::abs(pose.yaw() -self_pose.yaw());
+        if (dist < params->nearby_drone_dist && dist_yaw < params->nearby_drone_yaw_dist/57.3) {
+            nearby_drones.insert(p.first);
+        }
+        if (params->verbose) {
+            printf("[D2Estimator::getNearbyDronesbyPGOData] drone %d dist %.1f yaw %.1fdeg\n", p.first, dist, dist_yaw*57.3);
+        }
+    }
+    return nearby_drones;
+}
+
 }

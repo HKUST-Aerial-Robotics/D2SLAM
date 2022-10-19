@@ -48,10 +48,6 @@ protected:
     }
 
     void pubTrajs(std::map<int, Swarm::DroneTrajectory> & trajs) {
-        swarm_msgs::swarm_fused swarm_fused;
-        swarm_fused.header.stamp = ros::Time::now();
-        swarm_fused.self_id = config.self_id;
-        swarm_fused.reference_frame_id = pgo->getReferenceFrameId();
         for (auto it : trajs) {
             auto drone_id = it.first;
             auto traj = it.second;
@@ -72,22 +68,32 @@ protected:
                 }
                 csv.close();
             }
-            if (traj.trajectory_size() > 0) {
-                auto pose = traj.get_latest_pose();
-                auto pose_ros = traj.get_latest_pose().toROS();
-                swarm_fused.ids.emplace_back(drone_id);
-                swarm_fused.local_drone_position.emplace_back(pose_ros.position);
-                swarm_fused.local_drone_rotation.emplace_back(pose_ros.orientation);
-                swarm_fused.local_drone_yaw.emplace_back(pose.yaw());
-                if (drone_id == config.self_id) {
-                    swarm_fused.self_pos = pose_ros.position;
-                    swarm_fused.self_yaw = pose.yaw();
-                }
-            }
+            
         }
         printf("[D2PGONode@%d] pubTrajs, %ld trajs\n", config.self_id, trajs.size());
-        swarm_fused_pub.publish(swarm_fused);
         pub_count++;
+    }
+
+    void pubLatestPredictResults() {
+        swarm_msgs::swarm_fused swarm_fused;
+        swarm_fused.header.stamp = ros::Time::now();
+        swarm_fused.self_id = config.self_id;
+        swarm_fused.reference_frame_id = pgo->getReferenceFrameId();
+        auto latest_odoms = pgo->getPredictedOdoms();
+        for (auto it : latest_odoms) {
+            auto drone_id = it.first;
+            auto pose = it.second.pose();
+            auto pose_ros = pose.toROS();
+            swarm_fused.ids.emplace_back(drone_id);
+            swarm_fused.local_drone_position.emplace_back(pose_ros.position);
+            swarm_fused.local_drone_rotation.emplace_back(pose_ros.orientation);
+            swarm_fused.local_drone_yaw.emplace_back(pose.yaw());
+            if (drone_id == config.self_id) {
+                swarm_fused.self_pos = pose_ros.position;
+                swarm_fused.self_yaw = pose.yaw();
+            }
+        }
+        swarm_fused_pub.publish(swarm_fused);
     }
 
     void solverTimerCallback(const ros::TimerEvent & event) {
@@ -100,6 +106,7 @@ protected:
             auto trajs = pgo->getOptimizedTrajs();
             pubTrajs(trajs);
         }
+        pubLatestPredictResults();
     }
 
     void Init(ros::NodeHandle & nh) {

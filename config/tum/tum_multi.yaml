@@ -57,6 +57,7 @@ rho_landmark: 1.0
 rho_frame_T: 100
 rho_frame_theta: 100
 relaxation_alpha: 0.
+#Note these two param must set to 0 when lazy_broadcast_keyframe=1
 consensus_sync_with_main: 1
 consensus_sync_to_start: 1 #Is sync on start of the solving..
 consensus_trigger_time_err_us: 100
@@ -129,7 +130,7 @@ enable_homography_test: 0
 loop_inlier_feature_num: 40
 accept_loop_max_yaw: 10
 accept_loop_max_pos: 1.0
-lazy_broadcast_keyframe: 0
+lazy_broadcast_keyframe: 0 #If enable coarse-to-fine initialization mode. This is useful when communication is not good.
 
 #PGO
 pgo_solver_time: 0.5

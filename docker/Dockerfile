@@ -106,8 +106,8 @@ RUN   apt update && \
       wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip -O opencv.zip && \
       unzip opencv.zip && \
       rm opencv.zip && \
-      git clone https://github.com/opencv/opencv_contrib.git -b ${OPENCV_VERSION} && \
-      cd opencv-${OPENCV_VERSION} && \
+      git clone https://github.com/opencv/opencv_contrib.git -b ${OPENCV_VERSION}
+RUN   cd opencv-${OPENCV_VERSION} && \
       mkdir build && cd build && \
       cmake .. \
             -D CMAKE_BUILD_TYPE=RELEASE \
@@ -128,7 +128,7 @@ RUN   apt update && \
             -D BUILD_LIST=calib3d,features2d,highgui,dnn,imgproc,imgcodecs,\
 cudev,cudaoptflow,cudaimgproc,cudalegacy,cudaarithm,cudacodec,cudastereo,\
 cudafeatures2d,xfeatures2d,tracking,stereo,\
-aruco,videoio && \
+aruco,videoio,ccalib && \
       make -j $(USE_PROC) && \
       make install 
 

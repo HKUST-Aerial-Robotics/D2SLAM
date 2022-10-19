@@ -527,7 +527,7 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
                     frame_array_a.pose_drone, frame_array_b.pose_drone, DP_old_to_new, inliers, _config.is_4dof);
         }
         if (!success) {
-            ROS_WARN("[LoopDetector::computeLoop@%d] Compute relative pose failed!", self_id);
+            printf("[LoopDetector::computeLoop@%d] Compute relative pose failed!\n", self_id);
             return false;
         }
 

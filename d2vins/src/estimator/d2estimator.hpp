@@ -31,6 +31,7 @@ protected:
     D2EstimatorState state;
     std::map<int, IMUBuffer> imu_bufs;
     std::map<int, Swarm::Odometry> last_prop_odom; //last imu propagation odometry
+    std::map<int, Swarm::Pose> last_pgo_poses; //last pgo poses
     Marginalizer * marginalizer = nullptr;
     SolverWrapper * solver = nullptr;
     D2VINSNet * vinsnet = nullptr;
@@ -92,6 +93,7 @@ public:
     const std::map<LandmarkIdType, LandmarkPerId> & getLandmarkDB() const;
     const std::vector<VINSFrame*> & getSelfSldWin() const;
     D2Visualization & getVisualizer();
-
+    void setPGOPoses(const std::map<int, Swarm::Pose> & poses);
+    std::set<int> getNearbyDronesbyPGOData() const;
 };
 }

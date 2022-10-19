@@ -98,7 +98,7 @@ RUN   apt update && \
             -D BUILD_LIST=calib3d,features2d,highgui,dnn,imgproc,imgcodecs,\
 cudev,cudaoptflow,cudaimgproc,cudalegacy,cudaarithm,cudacodec,cudastereo,\
 cudafeatures2d,xfeatures2d,tracking,stereo,\
-aruco,videoio && \
+aruco,videoio,ccalib && \
       make -j ${USE_PROC} && \
       make install 
 

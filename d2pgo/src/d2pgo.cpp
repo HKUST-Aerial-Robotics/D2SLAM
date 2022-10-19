@@ -79,7 +79,7 @@ void D2PGO::inputDPGOData(const DPGOData & data) {
                 if (pose6d_init != nullptr) 
                     pose6d_init->inputDPGOData(data);
                 else {
-                    printf("[D2PGO@%d]input pgo data from drone %d\n", self_id, data.drone_id);
+                    // printf("[D2PGO@%d]input pgo data from drone %d\n", self_id, data.drone_id);
                     static_cast<ARockPGO*>(solver)->inputDPGOData(data);
                 }
             } else if (rot_init!=nullptr) {
@@ -349,6 +349,18 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::Lo
             solver->addResidual(res_info);
             used_frames.insert(loop.keyframe_id_a);
             used_frames.insert(loop.keyframe_id_b);
+            auto drone_id_a = state.getFramebyId(loop.keyframe_id_a)->drone_id;
+            auto ts_a = state.getFramebyId(loop.keyframe_id_a)->stamp;
+            auto drone_id_b = state.getFramebyId(loop.keyframe_id_b)->drone_id;
+            auto ts_b = state.getFramebyId(loop.keyframe_id_b)->stamp;
+            if (used_latest_ts.find(drone_id_a) == used_latest_ts.end() || ts_a > used_latest_ts[drone_id_a]) {
+                used_latest_frames[drone_id_a] = loop.keyframe_id_a;
+                used_latest_ts[drone_id_a] = ts_a;
+            }
+            if (used_latest_ts.find(drone_id_b) == used_latest_ts.end() || ts_b > used_latest_ts[drone_id_b]) {
+                used_latest_frames[drone_id_b] = loop.keyframe_id_b;
+                used_latest_ts[drone_id_b] = ts_b;
+            }
             used_loops_count ++;
             used_loops.emplace_back(loop);
             // if (loop.id_a != loop.id_b) 
@@ -360,7 +372,7 @@ void D2PGO::setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::Lo
 
 void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
     auto frames = state.getFrames(drone_id);
-    auto traj = state.getTraj(drone_id);
+    auto traj = state.getEgomotionTraj(drone_id);
     for (int i = 0; i < frames.size() - 1; i ++ ) {
         auto frame_a = frames[i];
         auto frame_b = frames[i + 1];
@@ -496,6 +508,26 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
         }
     }
     return trajs;
+}
+
+std::map<int, Swarm::Odometry> D2PGO::getPredictedOdoms() const {
+    std::map<int, Swarm::Odometry> ret;
+    for (auto drone_id : state.availableDrones()) {
+        if (!state.hasEgomotionTraj(drone_id)) {
+            continue;
+        }
+        const Swarm::DroneTrajectory & ego_motion_traj = state.getEgomotionTraj(drone_id);
+        if (ego_motion_traj.trajectory_size() > 0 && used_latest_frames.find(drone_id) != used_latest_frames.end()) {
+            auto latest_ego_pose = ego_motion_traj.get_latest_pose();
+            auto latest_ts = ego_motion_traj.get_latest_stamp();
+            auto last_est_frame_id = used_latest_frames.at(drone_id);
+            auto last_est_frame = state.getFramebyId(last_est_frame_id);
+            auto last_est_ego = last_est_frame->initial_ego_pose;
+            auto predicted_pose = last_est_frame->odom.pose() * last_est_ego.inverse() * latest_ego_pose;
+            ret[drone_id] = Swarm::Odometry(latest_ts, predicted_pose);
+        }
+    }
+    return ret;
 }
 
 void D2PGO::broadcastData(const DPGOData & data) {
