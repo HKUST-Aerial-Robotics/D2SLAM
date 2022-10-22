@@ -475,18 +475,30 @@ void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame * frame) {
     //Prior is in form of A \delta x = b
     //A is a 6x6 matrix, A = diag([a_p, a_p, a_p, 0, 0, a_yaw])
     //b is zero vector
-    printf("\033[0;32m[D2VINS::D2Estimator] Add prior for first frame\033[0m\n");
-    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(POSE_EFF_SIZE, POSE_EFF_SIZE);
+    int local_cam_num = params->camera_num;
+    printf("\033[0;32m[D2VINS::D2Estimator] Add prior for first frame and extrinsic %d: %d\033[0m\n", params->estimate_extrinsic, local_cam_num);
+    int Adim = POSE_EFF_SIZE + (params->estimate_extrinsic?POSE_EFF_SIZE*local_cam_num: 0);
+    printf("Admin %d\n", Adim);
+    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(Adim, Adim);
     A.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * params->initial_pos_sqrt_info;
     A(5, 5) = params->initial_yaw_sqrt_info;
     if (self_id == params->main_id) {
         A = A * 100;
     }
-    VectorXd b = VectorXd::Zero(POSE_EFF_SIZE);
+    VectorXd b = VectorXd::Zero(Adim);
     auto param_info = createFramePose(this, frame->frame_id);
     param_info.index = 0;
-    std::vector<ParamInfo> params{param_info};
-    prior_factor = new PriorFactor(params, A, b);
+    std::vector<ParamInfo> need_fix_params{param_info};
+    if (params->estimate_extrinsic) {
+        for (int i = 0; i < local_cam_num; i ++) {
+            A.block<3, 3>((i + 1)*POSE_EFF_SIZE, (i + 1)*POSE_EFF_SIZE) = Eigen::Matrix3d::Identity() * params->initial_cam_pos_sqrt_info;
+            A.block<3, 3>((i + 1)*POSE_EFF_SIZE + 3, (i + 1)*POSE_EFF_SIZE + 3) = Eigen::Matrix3d::Identity() * params->initial_cam_ang_sqrt_info;
+            auto param_info = createExtrinsic(this, local_camera_ids[i]);
+            param_info.index = need_fix_params.back().index + POSE_EFF_SIZE;
+            need_fix_params.emplace_back(param_info);
+        }
+    }
+    prior_factor = new PriorFactor(need_fix_params, A, b);
 }
 
 void D2EstimatorState::syncFromState() {
@@ -640,5 +652,18 @@ void D2EstimatorState::solveGyroscopeBias() {
         frame_i->pre_integrations->repropagate(frame_i->Ba, frame_i->Bg);
     }
 }
+
+void D2EstimatorState::updateEgoMotion() {
+    const Guard lock(state_lock);
+    auto & sld_win = sld_wins[self_id];
+    for (int i = 0; i < sld_win.size() - 1; i++) {
+        auto frame_ptr = sld_win[i];
+        auto frame_id = sld_win[i]->frame_id;
+        if (ego_motions.find(frame_id) == ego_motions.end()) {
+            //We need create ego motion for this frame use the data in sld_win
+        }
+    }
+}
+
 
 }

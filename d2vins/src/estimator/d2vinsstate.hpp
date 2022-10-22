@@ -21,6 +21,8 @@ protected:
     std::map<CamIdType, int> camera_drone;
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
     std::map<FrameIdType, VectorXd> linear_point;
+    std::map<FrameIdType, Swarm::Odometry> ego_motions;
+    FrameIdType last_ego_frame_id;
 
     Marginalizer * marginalizer = nullptr;
     PriorFactor * prior_factor = nullptr;
@@ -105,5 +107,7 @@ public:
     const std::map<LandmarkIdType, LandmarkPerId> & getLandmarkDB() const {
         return lmanager.getLandmarkDB();
     }
+
+    void updateEgoMotion();
 };
 }

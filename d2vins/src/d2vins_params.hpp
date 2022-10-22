@@ -25,6 +25,8 @@ struct D2VINSConfig {
     double focal_length = 460.0;
     double initial_pos_sqrt_info = 1000.0;
     double initial_yaw_sqrt_info = 10000.0;
+    double initial_cam_pos_sqrt_info = 1000.0;
+    double initial_cam_ang_sqrt_info = 10000.0;
     D2Common::CameraConfig camera_configuration;
 
     //Sensor frequency
@@ -67,6 +69,7 @@ struct D2VINSConfig {
         DISTRIBUTED_CAMERA_CONSENUS, //Distributed camera consensus
         SERVER_MODE //In this mode receive all remote and solve them
     } estimation_mode = SOLVE_ALL_MODE;
+    double estimate_extrinsic_vel_thres = 0.2;
 
     //Fuse depth
     bool fuse_dep = true;

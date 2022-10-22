@@ -354,8 +354,8 @@ void D2Estimator::setStateProperties() {
             continue;
         }
         int drone_id = state.getCameraBelonging(cam_id);
-        if (!params->estimate_extrinsic || state.size(drone_id) < params->max_sld_win_size - 1) {
-            // printf("[D2Estimator::setStateProperties@%d] set camera %d to fixed sld_size %d/%d \n", self_id, cam_id, state.size(drone_id), params->max_sld_win_size - 1);
+        if (!params->estimate_extrinsic || state.size(drone_id) < params->max_sld_win_size || 
+                state.lastFrame().odom.vel().norm() < params->estimate_extrinsic_vel_thres) {
             problem.SetParameterBlockConstant(state.getExtrinsicState(cam_id));
         }
         problem.SetParameterization(state.getExtrinsicState(cam_id), pose_local_param);
@@ -370,7 +370,8 @@ void D2Estimator::setStateProperties() {
         problem.SetParameterLowerBound(pointer, 0, params->min_inv_dep);
     }
 
-    if (!params->estimate_td || state.size() < params->max_sld_win_size) {
+    if (!params->estimate_td || state.size() < params->max_sld_win_size || 
+                state.lastFrame().odom.vel().norm() < params->estimate_extrinsic_vel_thres) {
         // printf("[D2Estimator::setStateProperties@%d] set td to fixed sld_size %d/%d \n", self_id, state.size(), params->max_sld_win_size);
         problem.SetParameterBlockConstant(state.getTdState(self_id));
     }
