@@ -412,7 +412,7 @@ TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualIm
     auto cur_pts = right_frame.landmarks2D();
     std::vector<int> ids_b_to_a;
     TrackReport report;
-    matchLocalFeatures(left_frame, right_frame, ids_b_to_a, _config.enable_superglue_local, type, true);
+    matchLocalFeatures(left_frame, right_frame, ids_b_to_a, _config.enable_superglue_local, type);
     for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
         if (ids_b_to_a[i] >= 0) {
             assert(ids_b_to_a[i] < left_frame.spLandmarkNum() && "too large");
@@ -676,10 +676,11 @@ void D2FeatureTracker::draw(std::vector<VisualImageDesc> frames, bool is_keyfram
     }
 }
 
-std::vector<float> getFeatureHalfImg(const std::vector<cv::Point2f> & pts, const std::vector<float> & desc, bool require_left, 
+std::pair<std::vector<float>, std::vector<cv::Point2f>> getFeatureHalfImg(const std::vector<cv::Point2f> & pts, const std::vector<float> & desc, bool require_left, 
         std::map<int, int> & tmp_to_idx) {
     std::vector<float> desc_half;
-    desc_half.reserve(desc.size());
+    std::vector<cv::Point2f> pts_new;
+    desc_half.resize(desc.size());
     int c = 0;
     float move_cols = params->width_undistort *90.0/params->undistort_fov; //slightly lower than 0.5 cols when fov=200
     for (int i = 0; i < pts.size(); i++) {
@@ -687,10 +688,12 @@ std::vector<float> getFeatureHalfImg(const std::vector<cv::Point2f> & pts, const
             tmp_to_idx[c] = i;
             //Copy from desc to desc_half
             std::copy(desc.begin() + i*params->superpoint_dims, desc.begin() + (i+1)*params->superpoint_dims, desc_half.begin() + c*params->superpoint_dims);
+            pts_new.push_back(pts[i]);
             c += 1;
         }
     }
-    return desc_half;
+    desc_half.resize(c*params->superpoint_dims);
+    return std::make_pair(desc_half, pts_new);
 }
 
 bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, 
@@ -724,17 +727,23 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             }
         } else {
             std::map<int, int> tmp_to_idx_a, tmp_to_idx_b;
-            const auto desc_a_filtered = getFeatureHalfImg(pts_a, raw_desc_a, type==LEFT_RIGHT_IMG_MATCH, tmp_to_idx_a);
-            const auto desc_b_filtered = getFeatureHalfImg(pts_b, raw_desc_b, type==RIGHT_LEFT_IMG_MATCH, tmp_to_idx_b);
+            auto features_a = getFeatureHalfImg(pts_a, raw_desc_a, type==LEFT_RIGHT_IMG_MATCH, tmp_to_idx_a);
+            auto features_b = getFeatureHalfImg(pts_b, raw_desc_b, type==RIGHT_LEFT_IMG_MATCH, tmp_to_idx_b);
             if (tmp_to_idx_a.size() == 0 || tmp_to_idx_b.size() == 0) {
                 // printf("[D2FeatureTracker] No feature to match.\n");
                 return false;
             }
             cv::BFMatcher bfmatcher(cv::NORM_L2, true);
-            const cv::Mat desc_a(tmp_to_idx_a.size(), params->superpoint_dims, CV_32F, const_cast<float *>(desc_a_filtered.data()));
-            const cv::Mat desc_b(tmp_to_idx_b.size(), params->superpoint_dims, CV_32F, const_cast<float *>(desc_b_filtered.data()));
+            const cv::Mat desc_a(tmp_to_idx_a.size(), params->superpoint_dims, CV_32F, const_cast<float *>(features_a.first.data()));
+            const cv::Mat desc_b(tmp_to_idx_b.size(), params->superpoint_dims, CV_32F, const_cast<float *>(features_b.first.data()));
             if (_config.enable_knn_match) {
-                _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio);
+                if (_config.enable_search_local_aera) {
+                    float move_cols = params->width_undistort *90.0/params->undistort_fov; //slightly lower than 0.5 cols when fov=200
+                    for (int i = 0; i < features_a.second.size(); i++) {
+                        features_a.second[i].x += type==LEFT_RIGHT_IMG_MATCH ? move_cols : -move_cols;
+                    }
+                }
+                _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, features_a.second, features_b.second, _config.search_local_max_dist*image_width);
             } else {
                 cv::BFMatcher bfmatcher(cv::NORM_L2, true);
                 bfmatcher.match(desc_a, desc_b, _matches);
