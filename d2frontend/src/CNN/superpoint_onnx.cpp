@@ -8,6 +8,7 @@ using D2Common::Utility::TicToc;
 
 namespace D2FrontEnd {
 SuperPointONNX::SuperPointONNX(std::string engine_path, 
+    int _nms_dist,
     std::string _pca_comp,
     std::string _pca_mean,
     int _width, int _height, 
@@ -17,7 +18,8 @@ SuperPointONNX::SuperPointONNX(std::string engine_path,
         output_shape_semi_{1, _height, _width},
         output_shape_desc_{1, SP_DESC_RAW_LEN, _height/8, _width/8},
         input_shape_{1, 1, _height, _width},
-        max_num(_max_num) {
+        max_num(_max_num),
+        nms_dist(_nms_dist) {
     at::set_num_threads(1);
     std::cout << "Init SuperPointONNX: " << engine_path << " size " << _width << " " << _height << std::endl;
 
@@ -76,7 +78,7 @@ void SuperPointONNX::inference(const cv::Mat & input, std::vector<cv::Point2f> &
     double copy_time = tic1.toc();
 
     TicToc tic2;
-    getKeyPoints(Prob, thres, keypoints, scores, width, height, max_num);
+    getKeyPoints(Prob, thres, nms_dist, keypoints, scores, width, height, max_num);
     double nms_time = tic2.toc();
     computeDescriptors(mProb, mDesc, keypoints, local_descriptors, width, height, pca_comp_T, pca_mean);
     double desc_time = tic2.toc();

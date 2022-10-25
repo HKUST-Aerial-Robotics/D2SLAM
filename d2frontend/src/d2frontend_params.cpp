@@ -96,6 +96,11 @@ namespace D2FrontEnd {
         } else {
             printf("[D2FrontendParams] enable_search_local_aera not found, use default\n");
         }
+        if (!fsSettings["feature_min_dist"].empty()) {
+            feature_min_dist = fsSettings["feature_min_dist"];
+        } else {
+            printf("[D2FrontendParams] feature_min_dist not found, use default\n");
+        }
         //Loop detector
         loopdetectorconfig->netvlad_IP_thres = fsSettings["netvlad_IP_thres"];
         loopdetectorconfig->enable_homography_test = (int) fsSettings["enable_homography_test"];

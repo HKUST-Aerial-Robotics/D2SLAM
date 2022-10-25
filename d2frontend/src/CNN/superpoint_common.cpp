@@ -7,7 +7,7 @@ using D2Common::Utility::TicToc;
 namespace D2FrontEnd {
 void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts, std::vector<float>& scores,
         int border, int dist_thresh, int img_width, int img_height, int max_num);
-void getKeyPoints(const cv::Mat & prob, float threshold, std::vector<cv::Point2f> &keypoints, std::vector<float>& scores, int width, int height, int max_num)
+void getKeyPoints(const cv::Mat & prob, float threshold, int nms_dist, std::vector<cv::Point2f> &keypoints, std::vector<float>& scores, int width, int height, int max_num)
 {
     TicToc getkps;
     auto mask = (prob > threshold);
@@ -26,9 +26,8 @@ void getKeyPoints(const cv::Mat & prob, float threshold, std::vector<cv::Point2f
     }
 
     int border = 0;
-    int dist_thresh = 4;
     TicToc ticnms;
-    NMS2(keypoints_no_nms, conf, keypoints, scores, border, dist_thresh, width, height, max_num);
+    NMS2(keypoints_no_nms, conf, keypoints, scores, border, nms_dist, width, height, max_num);
     if (params->enable_perf_output) {
         printf(" NMS %f keypoints_no_nms %ld keypoints %ld/%ld\n", ticnms.toc(), keypoints_no_nms.size(), keypoints.size(), max_num);
     }
@@ -123,6 +122,7 @@ void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& 
             for(int j = -dist_thresh; j < (dist_thresh+1); j++)
             {
                 if(j==0 && k==0) continue;
+                if (uu+j < 0 || uu+j >= img_width || vv+k < 0 || vv+k >= img_height) continue;
 
                 if ( confidence.at<float>(vv + k, uu + j) < confidence.at<float>(vv, uu) ) {
                     grid.at<char>(vv + k, uu + j) = 0;

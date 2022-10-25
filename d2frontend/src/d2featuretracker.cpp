@@ -219,7 +219,7 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualI
     if (prev_frame.frame_id != frame.frame_id) {
         //Then current keyframe has been assigned, feature tracker by LK.
         std::vector<int> ids_b_to_a;
-        bool success = matchLocalFeatures(prev_frame, frame, ids_b_to_a, _config.enable_superglue_remote);
+        bool success = matchLocalFeatures(prev_frame, frame, ids_b_to_a, _config.enable_superglue_remote, WHOLE_IMG_MATCH, false);
         if (!success) {
             printf("[D2FeatureTracker::trackRemote] matchLocalFeatures failed.\n");
             return report;
@@ -720,7 +720,12 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             const cv::Mat desc_a(raw_desc_a.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, const_cast<float *>(raw_desc_a.data()));
             const cv::Mat desc_b(raw_desc_b.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, const_cast<float *>(raw_desc_b.data()));
             if (_config.enable_knn_match) {
-                _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_a, pts_b, _config.search_local_max_dist*image_width);
+                if (img_desc_a.drone_id  == img_desc_b.drone_id && img_desc_a.camera_id == img_desc_b.camera_id) {
+                    // Is continuous frame
+                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_a, pts_b, _config.search_local_max_dist*image_width);
+                } else {
+                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_a, pts_b);
+                }
             } else {
                 cv::BFMatcher bfmatcher(cv::NORM_L2, true);
                 bfmatcher.match(desc_a, desc_b, _matches); //Query train result
@@ -796,13 +801,17 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             kps_b.push_back(cv::KeyPoint(pts_b[i].x, pts_b[i].y, 1));
         }
         cv::Mat show;
-        cv::drawMatches(img_desc_a.raw_image, kps_a, img_desc_b.raw_image, kps_b, _matches, show);
+        cv::Mat image_b = img_desc_b.raw_image;
+        if (image_b.empty()) {
+            cv::imdecode(img_desc_b.image, cv::IMREAD_COLOR, &image_b);
+        }
+        cv::drawMatches(img_desc_a.raw_image, kps_a, image_b, kps_b, _matches, show);
         char name[100];
         sprintf(name, "matches_CAM@Drone %d@%d_%d@%d", img_desc_a.camera_index,
                 img_desc_a.drone_id, img_desc_b.camera_index, img_desc_b.drone_id);
         cv::imshow(name, show);
         if (params->ftconfig->check_homography) {
-            cv::hconcat(img_desc_a.raw_image, img_desc_b.raw_image, show);
+            cv::hconcat(img_desc_a.raw_image, image_b, show);
             cv::cvtColor(show, show, cv::COLOR_GRAY2BGR);
             for (int i = 0; i < matched_pts_a.size(); i++) {
                 cv::line(show, matched_pts_a[i], matched_pts_b[i] + cv::Point2f(show.cols/2, 0), cv::Scalar(0, 255, 0), 1);

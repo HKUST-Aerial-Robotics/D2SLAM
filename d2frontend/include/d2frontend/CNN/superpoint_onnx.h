@@ -12,9 +12,11 @@ class SuperPointONNX: public ONNXInferenceGeneric {
     std::array<int64_t, 4> input_shape_;
     std::vector<Ort::Value> output_tensors_;
     int max_num = 200;
+    int nms_dist = 10;
 public:
     double thres = 0.015;
     SuperPointONNX(std::string engine_path, 
+        int _nms_dist,
         std::string _pca_comp,
         std::string _pca_mean,
         int _width, int _height, float _thres = 0.015, int _max_num = 200, bool use_tensorrt = true, bool use_fp16 = true, bool use_int8 = false);

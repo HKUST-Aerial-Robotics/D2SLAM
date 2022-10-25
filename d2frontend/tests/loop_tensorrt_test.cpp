@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
 
     SuperGlueOnnx sg_onnx(vm["superglue"].as<std::string>());
     MobileNetVLADONNX netvlad_onnx(vm["netvlad"].as<std::string>(), 640, 480, use_tensorrt);
-    SuperPointONNX sp_onnx(vm["superpoint"].as<std::string>(), "", "", 640, 480, 0.015, 200, use_tensorrt);
+    SuperPointONNX sp_onnx(vm["superpoint"].as<std::string>(), 20, "", "", 640, 480, 0.015, 200, use_tensorrt);
     std::cout << "Finish loading models" << std::endl;
 
     sp_onnx.inference(img_gray0, kps0, local_desc0, scores0);

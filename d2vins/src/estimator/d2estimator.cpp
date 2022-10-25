@@ -801,7 +801,10 @@ Swarm::Odometry D2Estimator::getOdometry() const {
 }
 
 Swarm::Odometry D2Estimator::getOdometry(int drone_id) const {
-    return state.lastFrame(drone_id).odom;
+    // Attention! We output IMU stamp!
+    auto odom =  state.lastFrame(drone_id).odom;
+    odom.stamp = odom.stamp + state.td;
+    return odom;
 }
 
 
