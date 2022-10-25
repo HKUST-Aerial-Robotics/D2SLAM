@@ -768,15 +768,17 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         matched_pts_a.push_back(pts_a[match.queryIdx]);
         matched_pts_b.push_back(pts_b[match.trainIdx]);
     }
-    if (params->ftconfig->check_homography && !enable_superglue) {
+    if (img_desc_a.drone_id != img_desc_b.drone_id &&
+            params->ftconfig->check_homography && !enable_superglue) {
+        //only perform this for remote
         std::vector<unsigned char> mask;
         if (matched_pts_a_normed.size() < MIN_HOMOGRAPHY) {
             return false;
         }
-        cv::findHomography(matched_pts_a, matched_pts_b, cv::RANSAC, params->ftconfig->ransacReprojThreshold, mask);
+        // cv::findHomography(matched_pts_a, matched_pts_b, cv::RANSAC, params->ftconfig->ransacReprojThreshold, mask);
         // Find essential matrix with normalized points
-        // cv::Mat K = (cv::Mat_<double>(3,3) << 1.0, 0, 0.0, 0, 1.0, 0.0, 0, 0, 1);
-        // cv::findEssentialMat(matched_pts_a_normed, matched_pts_b_normed, K, cv::RANSAC, 0.999, params->ftconfig->ransacReprojThreshold/params->focal_length, mask);
+        cv::Mat K = (cv::Mat_<double>(3,3) << 1.0, 0, 0.0, 0, 1.0, 0.0, 0, 0, 1);
+        cv::findEssentialMat(matched_pts_a_normed, matched_pts_b_normed, K, cv::RANSAC, 0.999, params->ftconfig->ransacReprojThreshold/params->focal_length, mask);
         reduceVector(ids_a, mask);
         reduceVector(ids_b, mask);
         reduceVector(matched_pts_a, mask);
@@ -792,6 +794,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     
     // //Plot matches
     if (plot) {
+        char name[100];
         std::vector<cv::KeyPoint> kps_a, kps_b;
         //Kps from points
         for (int i = 0; i < pts_a.size(); i++) {
@@ -803,10 +806,11 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         cv::Mat show;
         cv::Mat image_b = img_desc_b.raw_image;
         if (image_b.empty()) {
-            cv::imdecode(img_desc_b.image, cv::IMREAD_COLOR, &image_b);
+            cv::imdecode(img_desc_b.image, cv::IMREAD_GRAYSCALE, &image_b);
         }
         cv::drawMatches(img_desc_a.raw_image, kps_a, image_b, kps_b, _matches, show);
-        char name[100];
+        sprintf(name, "Matched points: %d", _matches.size());
+        cv::putText(show, name, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
         sprintf(name, "matches_CAM@Drone %d@%d_%d@%d", img_desc_a.camera_index,
                 img_desc_a.drone_id, img_desc_b.camera_index, img_desc_b.drone_id);
         cv::imshow(name, show);

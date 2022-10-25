@@ -28,13 +28,13 @@ estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trus
 estimate_td: 0                      # online estimate time offset between camera and imu
 # td: -0.25                             # For old datasets # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 # td: -0.194                             # For new datasets
-td: -0.2                             # For new datasets
+td: -0.17500                             # For new datasets
 estimation_mode: 2
-double_counting_common_feature: 1
+double_counting_common_feature: 0
 min_inv_dep: 0.01 #100 meter away.
 
 #optimization parameters
-max_solver_time: 0.08 # max solver itration time (ms), to guarantee real time
+max_solver_time: 0.5 # max solver itration time (ms), to guarantee real time
 max_num_iterations: 8   # max solver itrations, to guarantee real time
 consensus_max_steps: 4
 timout_wait_sync: 50
@@ -70,7 +70,7 @@ multiple_thread: 1
 
 #outlier rejection
 thres_outlier : 10.0
-perform_outlier_rejection_num: 100
+perform_outlier_rejection_num: 10000
 tri_max_err: 1000000.0
 
 #Marginalization
@@ -87,14 +87,15 @@ remove_base_when_margin_remote: 2
 max_cnt: 150            # max feature number in feature tracking
 max_superpoint_cnt: 100 # max feature extraction by superpoint
 max_solve_cnt: 1000
-check_homography: 0
+check_homography: 1
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
-remote_min_match_num: 20
+remote_min_match_num: 15
 enable_superglue_local: 0
 enable_superglue_remote: 0
 ransacReprojThreshold: 10.0
 enable_search_local_aera: 1
 search_local_max_dist: 0.05
+feature_min_dist: 30
 
 #CNN
 cnn_use_onnx: 1
@@ -130,6 +131,6 @@ write_pgo_to_file: 1
 output_path: "/root/output/"
 debug_print_sldwin: 0
 debug_print_states: 0
-enable_perf_output: 1
+enable_perf_output: 0
 debug_write_margin_matrix: 0
 show_track_id: 0

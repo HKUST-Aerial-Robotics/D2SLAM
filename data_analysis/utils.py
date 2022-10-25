@@ -177,14 +177,18 @@ def find_common_times(times_a, times_b, dt=0.005):
     # plt.plot(times_b, marker=".", linestyle="None")
     return times_a
 
-def align_paths(paths, paths_gt):
+def align_paths(paths, paths_gt, align_by_first=False):
     # align the first pose in each path to paths_gt
+    dpos = None
+    yaw0 = None
     for i in paths:
         path = paths[i]
         path_gt = paths_gt[i]
-        dpos = path_gt.pos[0,:] - path.pos[0, :]
-        dyaw = wrap_pi(path_gt.ypr[0, 0] - path.ypr[0, 0])
-        path.pos = yaw_rotate_vec(-path.ypr[0, 0], path.pos) + dpos
+        if dpos is None or not align_by_first:
+            dpos = path_gt.pos[0,:] - path.pos[0, :]
+            dyaw = wrap_pi(path_gt.ypr[0, 0] - path.ypr[0, 0])
+            print("dpos by", i, ":", dpos)
+        path.pos = yaw_rotate_vec(dyaw, path.pos) + dpos
         path.ypr = path.ypr + np.array([dyaw, 0, 0])
         path.ypr[:, 0] = wrap_pi(path.ypr[:, 0])
         path.interp()

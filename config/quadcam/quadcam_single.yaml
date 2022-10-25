@@ -27,7 +27,7 @@ avg_photometric: 0.7
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
 estimate_td: 0                      # online estimate time offset between camera and imu
 # td: -0.25                             # For old datasets
-td: -0.194                                 # For new datasets with filter
+td: -0.17500                                 # For new datasets with filter
 estimation_mode: 0
 double_counting_common_feature: 1
 min_inv_dep: 0.01 #100 meter away.
