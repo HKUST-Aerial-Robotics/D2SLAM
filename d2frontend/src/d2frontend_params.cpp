@@ -83,14 +83,19 @@ namespace D2FrontEnd {
         ftconfig->enable_superglue_local = (int) fsSettings["enable_superglue_local"];
         ftconfig->enable_superglue_remote = (int) fsSettings["enable_superglue_remote"];
         vlad_threshold = fsSettings["vlad_threshold"];
+        ftconfig->ransacReprojThreshold = fsSettings["ransacReprojThreshold"];
         nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
         nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);
         nh.param<double>("parallex_thres", ftconfig->parallex_thres, 10.0/460.0);
         nh.param<int>("min_keyframe_num", ftconfig->min_keyframe_num, 2);
-        nh.param<double>("ransacReprojThreshold", ftconfig->ransacReprojThreshold, 10.0);
         nh.param<std::string>("superglue_model_path", ftconfig->superglue_model_path, "");
-
+        if (!fsSettings["enable_search_local_aera"].empty()) {
+            ftconfig->enable_search_local_aera = (int) fsSettings["enable_search_local_aera"];
+            ftconfig->search_local_max_dist = fsSettings["search_local_max_dist"];
+        } else {
+            printf("[D2FrontendParams] enable_search_local_aera not found, use default\n");
+        }
         //Loop detector
         loopdetectorconfig->netvlad_IP_thres = fsSettings["netvlad_IP_thres"];
         loopdetectorconfig->enable_homography_test = (int) fsSettings["enable_homography_test"];

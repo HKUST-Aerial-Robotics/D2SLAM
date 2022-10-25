@@ -211,7 +211,10 @@ bool inBorder(const cv::Point2f &pt, cv::Size shape)
     return BORDER_SIZE <= img_x && img_x < shape.width - BORDER_SIZE && BORDER_SIZE <= img_y && img_y < shape.height - BORDER_SIZE;
 }
 
-std::vector<cv::DMatch> matchKNN(const cv::Mat & desc_a, const cv::Mat & desc_b, double knn_match_ratio) {
+std::vector<cv::DMatch> matchKNN(const cv::Mat & desc_a, const cv::Mat & desc_b, double knn_match_ratio, 
+        const std::vector<cv::Point2f> pts_a,
+        const std::vector<cv::Point2f> pts_b,
+        double search_local_dist) {
     //Match descriptors with OpenCV knnMatch
     std::vector<std::vector<cv::DMatch>> matches;
     cv::BFMatcher bfmatcher(cv::NORM_L2);
@@ -222,6 +225,11 @@ std::vector<cv::DMatch> matchKNN(const cv::Mat & desc_a, const cv::Mat & desc_b,
             continue;
         }
         if (match[0].distance < knn_match_ratio * match[1].distance) {
+            if (search_local_dist > 0) {
+                if (cv::norm(pts_a[match[0].queryIdx] - pts_b[match[0].trainIdx]) > search_local_dist) {
+                    continue;
+                }
+            }
             good_matches.push_back(match[0]);
         }
     }

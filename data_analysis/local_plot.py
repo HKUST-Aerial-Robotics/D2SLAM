@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 from cmath import nan
-import rosbag
 import matplotlib.pyplot as plt
 import numpy as np
 from transformations import * 
-import argparse
 from numpy.linalg import norm
 import scipy.stats as stats
 from utils import *
@@ -545,6 +543,9 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
 
     output_table.append([
         f"Avg.",f"{length_sum/num:.1f}", f"{ate_fused_sum/num:3.3f}", f"{ate_ang_sum/num*180/pi:3.2f}", f"",f"",f"",f"",f""])
+    if poses_pgo is None:
+        #Remove the last two columns of output table
+        output_table = [row[:-2] for row in output_table]
     if verbose:
         import tabulate
         return tabulate.tabulate(output_table, tablefmt='html')

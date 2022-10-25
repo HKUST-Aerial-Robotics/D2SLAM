@@ -32,6 +32,8 @@ struct D2FTConfig {
     bool enable_superglue_local = false;
     bool enable_superglue_remote = false;
     bool enable_knn_match = true;
+    bool enable_search_local_aera = true;
+    double search_local_max_dist = 0.04; //To multiply with width
     double knn_match_ratio = 0.8;
     std::string output_folder = "/root/output/";
     std::string superglue_model_path;
@@ -82,6 +84,7 @@ protected:
     std::pair<bool, LandmarkPerFrame> createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id = -1);
     std::recursive_mutex track_lock;
     std::recursive_mutex keyframe_lock;
+    double image_width = 0.0;
 
     TrackReport trackLK(VisualImageDesc & frame);
     TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk=true, TrackLRType type=WHOLE_IMG_MATCH);
@@ -105,7 +108,7 @@ protected:
     typedef std::lock_guard<std::recursive_mutex> Guard;
     SuperGlueOnnx * superglue = nullptr;
     bool matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, std::vector<int> & ids_down_to_up, 
-            bool enable_superglue=true, TrackLRType type=WHOLE_IMG_MATCH);
+            bool enable_superglue=true, TrackLRType type=WHOLE_IMG_MATCH, bool plot=false);
 public:
     D2FeatureTracker(D2FTConfig config);
     bool trackLocalFrames(VisualImageDescArray & frames);

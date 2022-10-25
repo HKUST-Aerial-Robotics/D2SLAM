@@ -55,6 +55,15 @@ def get_pose0(bag):
             # ypr = 
             print(f"Will use {t0} as start yaw0 {y0} pos0 {pos0} qcalib {q_calib}")
             return pos0, q_calib, y0
+        elif topic == "/SwarmNode1/pose":
+            quat0 = msg.pose.orientation
+            pos0 = msg.pose.position
+            y0, p0, r0 = quat2eulers(quat0.w, quat0.x, quat0.y, quat0.z)
+            pos0 = np.array([pos0.x, pos0.y, pos0.z])
+            q_calib = quaternion_from_euler(0, 0, -y0)
+            # ypr = 
+            print(f"Will use {t0} as start yaw0 {y0} pos0 {pos0} qcalib {q_calib}")
+            return pos0, q_calib, y0
     return None, None, None
 
 def compress_image_msg(msg):
@@ -104,7 +113,8 @@ if __name__ == "__main__":
             c = 0
             for topic, msg, t in rosbag.Bag(bag).read_messages():
                 if msg._has_header:
-                    msg.header.stamp = msg.header.stamp + _dt
+                    if msg.header.stamp.to_sec() > 0:
+                        msg.header.stamp = msg.header.stamp + _dt
                 if msg._type == "sensor_msgs/Image" and args.comp:
                     #compress image
                     # msg.data = msg.data.tobytes()
@@ -116,16 +126,27 @@ if __name__ == "__main__":
                         cv.waitKey(1)
                     continue
                 outbag.write(topic, msg, t + _dt )
-                if topic == "/vrpn_client/raw_transform":
-                    posestamp = PoseStamped()
-                    posestamp.header = msg.header
-                    posestamp.header.frame_id = "world"
-                    pos = msg.transform.translation
-                    pos = np.array([pos.x, pos.y, pos.z])
-                    pos = yaw_rotate_vec(-y0, pos - pos0)
-                    quat = msg.transform.rotation
-                    quat = np.array([quat.w, quat.x, quat.y, quat.z])
-                    quat = quaternion_multiply(q_calib, quat)
+                if topic == "/vrpn_client/raw_transform" or topic == "/SwarmNode1/pose":
+                    if topic == "/vrpn_client/raw_transform":
+                        posestamp = PoseStamped()
+                        posestamp.header = msg.header
+                        posestamp.header.frame_id = "world"
+                        pos = msg.transform.translation
+                        pos = np.array([pos.x, pos.y, pos.z])
+                        pos = yaw_rotate_vec(-y0, pos - pos0)
+                        quat = msg.transform.rotation
+                        quat = np.array([quat.w, quat.x, quat.y, quat.z])
+                        quat = quaternion_multiply(q_calib, quat)
+                    elif topic == "/SwarmNode1/pose":
+                        posestamp = PoseStamped()
+                        posestamp.header = msg.header
+                        posestamp.header.frame_id = "world"
+                        pos = msg.pose.position
+                        pos = np.array([pos.x, pos.y, pos.z])
+                        pos = yaw_rotate_vec(-y0, pos - pos0)
+                        quat = msg.pose.orientation
+                        quat = np.array([quat.w, quat.x, quat.y, quat.z])
+                        quat = quaternion_multiply(q_calib, quat)
                     posestamp.pose.position.x = pos[0]
                     posestamp.pose.position.y = pos[1]
                     posestamp.pose.position.z = pos[2]

@@ -39,7 +39,10 @@ cv::Point2f rotate_pt_norm2d(cv::Point2f pt, Eigen::Quaterniond q);
 void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts);
 std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
                         std::vector<LandmarkIdType> & ids, TrackLRType type=WHOLE_IMG_MATCH);
-std::vector<cv::DMatch> matchKNN(const cv::Mat & desc_a, const cv::Mat & desc_b, double knn_match_ratio=0.8);
+std::vector<cv::DMatch> matchKNN(const cv::Mat & desc_a, const cv::Mat & desc_b, double knn_match_ratio=0.8,
+        const std::vector<cv::Point2f> pts_a=std::vector<cv::Point2f>(),
+        const std::vector<cv::Point2f> pts_b=std::vector<cv::Point2f>(),
+        double search_local_dist = -1);
     
 int computeRelativePosePnP(const std::vector<Vector3d> lm_positions_a, const std::vector<Vector3d> lm_3d_norm_b,
         Swarm::Pose extrinsic_b, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a,
