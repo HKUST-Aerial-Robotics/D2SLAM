@@ -437,8 +437,12 @@ void D2Estimator::waitForStart() {
         sendSyncSignal(SyncSignal::DSolverReady, -1);
         usleep(100);
     }
+    double time = timer.toc();
     if (params->verbose) {
         printf("[D2Estimator::waitForStart@%d] Wait for start time %f \n", self_id, timer.toc());
+    }
+    if (time > 100) {
+        ROS_WARN("[D2Estimator::waitForStart@%d] Wait for start time long: %.1f \n", self_id, timer.toc());
     }
 }
 

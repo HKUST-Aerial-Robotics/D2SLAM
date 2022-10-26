@@ -99,7 +99,7 @@ protected:
                 auto sld_win = estimator->getSelfSldWin();
                 loop_detector->updatebySldWin(sld_win);
                 feature_tracker->updatebySldWin(sld_win);
-                if (params->verbose || params->enable_perf_output)
+                // if (params->verbose || params->enable_perf_output)
                     printf("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
             }
             if (ret && D2FrontEnd::params->enable_network) {

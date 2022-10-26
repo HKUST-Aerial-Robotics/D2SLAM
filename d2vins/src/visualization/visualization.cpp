@@ -4,6 +4,7 @@
 #include "../estimator/d2estimator.hpp"
 #include "CameraPoseVisualization.h"
 #include <opencv2/core/eigen.hpp>
+#include <yaml-cpp/yaml.h>
 
 namespace D2VINS {
 sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color = false);
@@ -75,6 +76,7 @@ void D2Visualization::postSolve() {
     margined_pcl.publish(toPointCloud(_estimator->getMarginedLandmarks(), true));
 
     CameraPoseVisualization camera_visual;
+    YAML::Node output_params;
     for (auto drone_id: state.availableDrones()) {
         auto odom = _estimator->getOdometry(drone_id);
         auto odom_ros = odom.toRos();
@@ -110,16 +112,28 @@ void D2Visualization::postSolve() {
                 camera_pose_ros.pose = pose.toROS();
                 camera_pose_pubs[i].publish(camera_pose_ros);
                 camera_visual.addPose(pose.pos(), pose.att(), Vector3d(0.1, 0.1, 0.5), display_alpha);
-                Eigen::Matrix4d eigen_T = Eigen::Matrix4d::Identity();
-                eigen_T.block<3, 3>(0, 0) = camera_pose.R();
-                eigen_T.block<3, 1>(0, 3) = camera_pose.pos();
+                Eigen::Matrix4d eigen_T = camera_pose.toMatrix();
                 cv::Mat cv_T;
                 cv::eigen2cv(eigen_T, cv_T);
                 std::ofstream ofs(params->output_folder + "/extrinsic" + std::to_string(i) + ".csv", std::ios::out);
-                ofs << "body_T_cam" <<  std::to_string(i) << cv_T ;
+                ofs << "body_T_cam" <<  std::to_string(i) << std::endl << cv_T ;
                 ofs.close();
+                std::vector<std::vector<double>> output_data;
+                for (auto k  = 0; k < 4; k++) {
+                    std::vector<double> row;
+                    for (auto j = 0; j < 4; j++) {
+                        row.push_back(cv_T.at<double>(k, j));
+                    }
+                    output_data.push_back(row);
+                }
+                output_params["body_T_cam" + std::to_string(i)] = output_data;
             }
+            output_params["drone_id"] = drone_id;
+            output_params["td"] = state.getTd(drone_id);
+            std::ofstream ofs(params->output_folder + "/extrinsic.yaml", std::ios::out);
+            ofs << output_params << std::endl;
         }
+        //Write output_params to yaml
         csv_output_files[drone_id] << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << odom.stamp << " " << odom.pose().toStr(true) << std::endl;
         odom_pubs[drone_id].publish(odom_ros);
         path_pubs[drone_id].publish(path);

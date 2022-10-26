@@ -6,35 +6,7 @@ from transformations import *
 from numpy.linalg import norm
 import scipy.stats as stats
 from utils import *
-from scipy.interpolate import interp1d
-
-class Trajectory:
-    def __init__(self, t, pos, quat):
-        self.t = t
-        self.pos = pos
-        self.quat = quat
-        self.ypr = numpy.apply_along_axis(quat2eulers_arr, 1, quat)
-        self.interp()
-
-    def interp(self):
-        self.pos_func = interp1d(self.t, self.pos, axis=0,bounds_error=False,fill_value="extrapolate")
-        self.ypr[:,0] = np.unwrap(self.ypr[:,0])
-        self.ypr_func = interp1d(self.t, self.ypr, axis=0,bounds_error=False,fill_value="extrapolate")
-        self.ypr[:,0] = wrap_pi(self.ypr[:,0])
-
-    def length(self, t=10000000):
-        mask = self.t < t
-        dp = np.diff(self.pos[mask], axis=0)
-        length = np.sum(np.linalg.norm(dp,axis=1))
-        return length
-    
-    def resample_ypr(self, t):
-        ypr = self.ypr_func(t)
-        ypr[:,0] = wrap_pi(ypr[:,0])
-        return ypr
-    
-    def resample_pos(self, t):
-        return self.pos_func(t)
+from trajectory import *
 
 def read_path_from_csv(path, t0=None, delimiter=None):
     arr = np.loadtxt(path, delimiter=delimiter)
@@ -46,10 +18,10 @@ def read_path_from_csv(path, t0=None, delimiter=None):
     quat = arr[:, 4:8]
     return Trajectory(t, pos, quat), t0
 
-def read_paths(folder, nodes, prefix="d2vins", t0=None):
+def read_paths(folder, nodes, prefix="d2vins", suffix=".csv", t0=None):
     ret = {}
     for drone_id in nodes:
-        ret[drone_id], t0 = read_path_from_csv(f"{folder}/{prefix}_{drone_id}.csv", t0)
+        ret[drone_id], t0 = read_path_from_csv(f"{folder}/{prefix}_{drone_id}{suffix}", t0)
     return ret, t0
 
 def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="/home/xuhao/output/", id_map = None, figsize=(6, 6), plot_each=True):
