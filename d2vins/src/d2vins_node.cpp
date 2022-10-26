@@ -33,7 +33,6 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     int frame_count = 0;
     std::queue<D2Common::VisualImageDescArray> viokf_queue;
     std::mutex queue_lock;
-    std::mutex esti_lock;
     ros::Timer estimator_timer, solver_timer;
     std::thread th;
     std::thread th_timer;
@@ -50,7 +49,6 @@ protected:
         {
             if (params->estimation_mode != D2VINSConfig::SINGLE_DRONE_MODE &&
                     !frame_desc.is_lazy_frame && frame_desc.matched_frame < 0) {
-                Guard guard(esti_lock);
                 estimator->inputRemoteImage(frame_desc);
             } else {
                 if (frame_desc.matched_frame < 0) {
@@ -66,11 +64,13 @@ protected:
     }
     
     void distriburedTimerCallback(const ros::TimerEvent & event) {
-        Guard guard(esti_lock);
+        const std::lock_guard<std::recursive_mutex> lock(estimator->frame_mutex);
         estimator->solveinDistributedMode();
-        loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
         auto sld_win = estimator->getSelfSldWin();
-        loop_detector->updatebySldWin(sld_win);
+        if (params->enable_loop) {
+            loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
+            loop_detector->updatebySldWin(sld_win);
+        }
         feature_tracker->updatebySldWin(sld_win);
     }
 
@@ -88,18 +88,19 @@ protected:
             bool ret;
             {
                 Utility::TicToc input;
-                Guard guard(esti_lock);
                 ret = estimator->inputImage(viokf);
                 double input_time = input.toc();
                 Utility::TicToc loop;
                 if (viokf.is_keyframe) {
                     addToLoopQueue(viokf);
                 }
-                loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
                 auto sld_win = estimator->getSelfSldWin();
-                loop_detector->updatebySldWin(sld_win);
+                if (params->enable_loop) {
+                    loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
+                    loop_detector->updatebySldWin(sld_win);
+                }
                 feature_tracker->updatebySldWin(sld_win);
-                // if (params->verbose || params->enable_perf_output)
+                if (params->verbose || params->enable_perf_output)
                     printf("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
             }
             if (ret && D2FrontEnd::params->enable_network) {
@@ -134,7 +135,6 @@ protected:
         if (params->estimation_mode == D2VINSConfig::SINGLE_DRONE_MODE) {
             return;
         }
-        Guard guard(esti_lock);
         std::map<int, Swarm::Pose> poses;
         for (size_t i = 0; i < fused.ids.size(); i++) {
             Swarm::Pose pose(fused.local_drone_position[i], fused.local_drone_rotation[i]);
@@ -168,7 +168,7 @@ protected:
         visual_array_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("image_array_desc", 1);
         imu_sub = nh.subscribe(params->imu_topic, 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
         pgo_fused_sub = nh.subscribe("/d2pgo/swarm_fused", 1, &D2VINSNode::pgoSwarmFusedCallback, this, ros::TransportHints().tcpNoDelay());
-        estimator_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::timerCallback, this);
+        estimator_timer = nh.createTimer(ros::Duration(1.0/params->process_input_timer), &D2VINSNode::timerCallback, this);
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
             solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
             // th_timer = std::thread([&] {

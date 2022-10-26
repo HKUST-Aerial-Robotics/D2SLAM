@@ -48,7 +48,6 @@ protected:
     SyncDataReceiver * sync_data_receiver = nullptr;
     bool updated = false;
     std::set<LandmarkIdType> used_landmarks;
-    std::recursive_mutex frame_mutex;
     
     //Internal functions
     bool tryinitFirstPose(VisualImageDescArray & frame);
@@ -73,7 +72,8 @@ protected:
     void onSyncSignal(int drone_id, int signal, int64_t token);
     void waitForStart();
 public:
-    void setStateProperties();
+    std::recursive_mutex frame_mutex;
+
     D2Estimator(int drone_id);
     void inputImu(IMUData data);
     bool inputImage(VisualImageDescArray & frame);
@@ -95,5 +95,6 @@ public:
     D2Visualization & getVisualizer();
     void setPGOPoses(const std::map<int, Swarm::Pose> & poses);
     std::set<int> getNearbyDronesbyPGOData() const;
+    void setStateProperties();
 };
 }

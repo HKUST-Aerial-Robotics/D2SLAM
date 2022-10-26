@@ -18,8 +18,9 @@
     <arg name="verbose" default="false" />
     <arg name="is_4dof" default="false" />
     <arg name="depth_gen" default="false" />
+    <arg name="main_id" default="1" /> <!-- This only determine trust which drone to setup cooridinate frme -->
     
-    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="$(arg output)" >
+    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="$(arg output)">
         <rosparam>
             lcm_uri: udpm://224.0.0.251:7667?ttl=1
             jpg_quality: 75
@@ -59,6 +60,7 @@
         <param name="send_img" value="$(arg send_img)" type="bool" />
         <param name="send_whole_img_desc" value="$(arg send_whole_img_desc)" type="bool" />
         <param name="self_id" value="$(arg self_id)" type="int" />
+        <param name="main_id" value="$(arg main_id)" type="int" />
         <param name="match_index_dist" value="$(arg match_index_dist)" type="int" />
         <param name="nonkeyframe_waitsec" value="$(arg nonkeyframe_waitsec)" type="double" />
         <param name="inter_drone_init_frames" value="$(arg inter_drone_init_frames)" type="int" />

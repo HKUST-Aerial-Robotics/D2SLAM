@@ -257,22 +257,22 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
             if target_id == target_ids[0]:
                 plt.grid()
 
-            fig = plt.figure("Relative Pose PolarErr", figsize=figsize)
-            fig.suptitle("Relative Pose PolarErr")
-            ax1, ax2 = fig.subplots(2, 1)
+            # fig = plt.figure("Relative Pose PolarErr", figsize=figsize)
+            # fig.suptitle("Relative Pose PolarErr")
+            # ax1, ax2 = fig.subplots(2, 1)
 
-            if poses_gt is not None:
-                ax1.plot(ts[mask], wrap_pi(np.arctan2(dp_gt[:, 0], dp_gt[:, 1]) - np.arctan2(dp_fused[:, 0], dp_fused[:, 1]))[mask], label=f"Relative Pose Angular Err {main_id}->{target_id}")
+            # if poses_gt is not None:
+            #     ax1.plot(ts[mask], wrap_pi(np.arctan2(dp_gt[:, 0], dp_gt[:, 1]) - np.arctan2(dp_fused[:, 0], dp_fused[:, 1]))[mask], label=f"Relative Pose Angular Err {main_id}->{target_id}")
 
-            if poses_gt is not None:
-                ax2.plot(ts[mask], (norm(dp_gt, axis=1) - norm(dp_fused, axis=1))[mask], label=f"Relative Pose Length Err {main_id}->{target_id}")
+            # if poses_gt is not None:
+            #     ax2.plot(ts[mask], (norm(dp_gt, axis=1) - norm(dp_fused, axis=1))[mask], label=f"Relative Pose Length Err {main_id}->{target_id}")
 
 
-            ax1.legend()
-            ax1.grid()
-            ax2.legend()
-            ax2.grid()
-            plt.tight_layout()
+            # ax1.legend()
+            # ax1.grid()
+            # ax2.legend()
+            # ax2.grid()
+            # plt.tight_layout()
 
             fig = plt.figure("Relative Pose", figsize=figsize)
             fig.suptitle(f"Relative Pose {main_id}->{target_ids}")
@@ -314,12 +314,21 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
             ax3.plot(ts[mask], dp_gt[mask,2] - dp_fused[mask,2], label="$E_{zfused}^" + str(target_id) + f"$ RMSE:{rmse_z:3.3f}")
             ax4.plot(ts[mask], wrap_pi(dyaw_gt[mask] - dyaw_fused[mask]), label="$E_{yawfused}^" + str(target_id) + f"$ RMSE:{rmse_z:3.3f}")
 
+
+            fig = plt.figure("Fused Relative Distance vs Error", figsize=figsize)
+            fig.suptitle(f"Fused Relative Distance vs Error {main_id}->{target_ids}")
+            ax1, ax2= fig.subplots(2, 1)
+
+            ax1.scatter(np.linalg.norm(dp_gt[mask,:3], axis=1), 
+                        np.linalg.norm(dp_gt[mask,:3] - dp_fused[mask,:3], axis=1), marker='.', 
+                        label="$E_{xfused}^" + str(target_id) + f"$ RMSE:{rmse_x:3.3f}")
+            ax2.scatter(np.linalg.norm(dp_gt[mask,:3], axis=1), wrap_pi(dyaw_gt[mask] - dyaw_fused[mask]), marker='.',
+                        label="$E_{yawfused}^" + str(target_id) + f"$ RMSE:{rmse_z:3.3f}")
+
             ax1.legend()
             ax2.legend()
-            ax3.legend()
             ax1.grid()
             ax2.grid()
-            ax3.grid()
             plt.tight_layout()
     output_table.append([
         "Avg:", f"", f"{avg_rmse/num:3.3f}", f"{avg_rmse_yaw/num*180/pi:3.2f}°", "", ""])

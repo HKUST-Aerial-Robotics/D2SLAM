@@ -21,6 +21,8 @@ void initParams(ros::NodeHandle & nh) {
     nh.param<bool>("verbose", params->verbose, false);
     nh.param<std::string>("lcm_uri", params->lcm_uri, "udpm://224.0.0.251:7667?ttl=1");
     nh.param<int>("self_id", params->self_id, 0);
+    nh.param<bool>("enable_loop", params->enable_loop, true);
+    nh.param<int>("main_id", params->main_id, 1);
     params->init(vins_config_path);
 }
 

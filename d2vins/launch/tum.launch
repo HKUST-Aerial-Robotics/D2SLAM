@@ -19,6 +19,7 @@
     <arg name="verbose" default="false" />
     <arg name="is_4dof" default="false" />
     <arg name="depth_gen" default="false" />
+    <arg name="main_id" default="1" /> <!-- This only determine trust which drone to setup cooridinate frme -->
     
     <node pkg="d2vins" type="d2vins_node" name="d2vins" output="$(arg output)" >
         <rosparam>

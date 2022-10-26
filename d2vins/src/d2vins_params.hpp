@@ -28,6 +28,7 @@ struct D2VINSConfig {
     double initial_cam_pos_sqrt_info = 1000.0;
     double initial_cam_ang_sqrt_info = 10000.0;
     D2Common::CameraConfig camera_configuration;
+    bool enable_loop;
 
     //Sensor frequency
     double IMU_FREQ = 400.0;
@@ -61,7 +62,8 @@ struct D2VINSConfig {
         LM_POS
     } landmark_param = LM_INV_DEP;
     bool always_fixed_first_pose = false;
-    double estimator_timer_freq = 1000.0;
+    double process_input_timer = 100.0;
+    double estimator_timer_freq = 10.0;
     int warn_pending_frames = 10;
     enum ESTIMATION_MODE {
         SINGLE_DRONE_MODE, //Not accept remote frame
@@ -83,6 +85,7 @@ struct D2VINSConfig {
     D2Common::ConsensusSolverConfig * consensus_config = nullptr;
     bool consensus_sync_to_start = true;
     int consensus_trigger_time_err_us = 50;
+    double wait_for_start_timout = 300.0;
 
     //Outlier rejection
     int perform_outlier_rejection_num = 50;

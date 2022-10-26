@@ -18,6 +18,7 @@
     <arg name="enable_loop" default="true" />
     <arg name="enable_pgo" default="true" />
     <arg name="rviz" default="false" />
+    <arg name="main_id" default="1" /> <!-- This only determine trust which drone to setup cooridinate frme -->
     
     <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" >
         <rosparam>

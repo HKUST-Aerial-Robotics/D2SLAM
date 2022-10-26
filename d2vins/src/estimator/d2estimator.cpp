@@ -384,7 +384,7 @@ void D2Estimator::setStateProperties() {
 }
 
 bool D2Estimator::isMain() const {
-    return self_id == 1; //Temp code/
+    return self_id == params->main_id; //Temp code/
 }
 
 void D2Estimator::onDistributedVinsData(const DistributedVinsData & dist_data) {
@@ -402,7 +402,7 @@ void D2Estimator::onSyncSignal(int drone_id, int signal, int64_t token) {
             // printf("[D2VINS::D2Estimator@%d] Drone %d is ready. Currently ready drone %ld\n", self_id, drone_id, ready_drones.size());
         }
     }
-    if (signal == DSolverStart || (signal==DSolverNonDist && drone_id == 1)) {
+    if (signal == DSolverStart || (signal==DSolverNonDist && isMain())) {
         //First drone start or claim non dist
         ready_to_start = true;
         solve_token = token;
@@ -436,6 +436,9 @@ void D2Estimator::waitForStart() {
     while(!readyForStart()) {
         sendSyncSignal(SyncSignal::DSolverReady, -1);
         usleep(100);
+        if (timer.toc() > params->wait_for_start_timout) {
+            break;
+        }
     }
     double time = timer.toc();
     if (params->verbose) {
@@ -455,21 +458,8 @@ void D2Estimator::resetMarginalizer() {
 }
 
 void D2Estimator::solveinDistributedMode() {
-    const Guard lock(frame_mutex);
-    if (state.size() < params->min_solve_frames || !updated) {
-        return;
-    }
-    printf("[D2Estimator::solveinDistributedMode@%d] Start solving. \n", self_id);
-    updated = false;
-
-    margined_landmarks = state.clearFrame(true); // clear in dist mode.
-    resetMarginalizer();
-    solve_count ++;
-    state.preSolve(imu_bufs);
-    solver->reset();
-
     if (params->consensus_sync_to_start) {
-        if (true || hasCommonLandmarkMeasurments()) {
+        if (true) {
             ready_drones = std::set<int>{self_id};
             if (params->verbose) {
                 printf("[D2VINS::D2Estimator@%d] ready, wait for start signal...\n", self_id);
@@ -493,6 +483,19 @@ void D2Estimator::solveinDistributedMode() {
             printf("[D2VINS::D2Estimator@%d] async solve...\n", self_id);
         }
     }
+
+    const Guard lock(frame_mutex);
+    //We do not check update, just do optimization everytime go here
+    if (state.size() < params->min_solve_frames) {
+        //We do not have enough frames to solve.
+        return;
+    }
+
+    margined_landmarks = state.clearFrame(true); // clear in dist mode.
+    resetMarginalizer();
+    solve_count ++;
+    state.preSolve(imu_bufs);
+    solver->reset();
 
     setupImuFactors();
     setupLandmarkFactors();
@@ -850,5 +853,4 @@ std::set<int> D2Estimator::getNearbyDronesbyPGOData() const {
     }
     return nearby_drones;
 }
-
 }
