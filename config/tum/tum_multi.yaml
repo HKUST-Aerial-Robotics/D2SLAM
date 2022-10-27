@@ -36,9 +36,6 @@ body_T_cam1: !!opencv-matrix
             -0.00772172,   -0.999879,  -0.0135233,  -0.0494102,
             0,           0,           0,           1]
 
-#Frontend
-keyframe_parallax: 10.0 # keyframe selection threshold (pixel)
-
 #estimation
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
 estimate_td: 0                      # online estimate time offset between camera and imu
@@ -109,6 +106,8 @@ enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-mot
 remote_min_match_num: 40
 ransacReprojThreshold: 10.0
 parallex_thres: 0.022
+knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
+
 #CNN
 cnn_use_onnx: 1
 enable_pca_superpoint: 1
@@ -135,7 +134,7 @@ lazy_broadcast_keyframe: 0 #If enable coarse-to-fine initialization mode. This i
 
 #PGO
 pgo_solver_time: 0.5
-pgo_mode: 1
+pgo_mode: 1 #0: central; 1: distributed
 pgo_rho_frame_T: 0.7
 pgo_rho_frame_theta: 0.625
 pgo_eta_k: 0.1

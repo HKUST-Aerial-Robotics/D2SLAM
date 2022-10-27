@@ -98,6 +98,7 @@ enable_search_local_aera: 1
 search_local_max_dist: 0.05
 feature_min_dist: 30
 parallex_thres: 0.012
+knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
 
 #CNN
 cnn_use_onnx: 1

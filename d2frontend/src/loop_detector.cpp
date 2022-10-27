@@ -634,8 +634,8 @@ void LoopDetector::drawMatched(const VisualImageDescArray & frame_array_a,
     double dt = (frame_array_a.stamp - frame_array_b.stamp);
     if (success) {
         auto ypr = DP_b_to_a.rpy()*180/M_PI;
-        sprintf(title, "Loop: %d->%d dt %3.3fs inliers %d", 
-            frame_array_b.drone_id, frame_array_a.drone_id, dt, inliers.size());
+        sprintf(title, "Loop: %d->%d dt %3.1fs LM %d/%d", 
+            frame_array_b.drone_id, frame_array_a.drone_id, dt, inliers.size(), index2dirindex_a.size());
         cv::putText(show, title, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
 
         sprintf(title, "%s", DP_b_to_a.toStr().c_str());
@@ -648,7 +648,8 @@ void LoopDetector::drawMatched(const VisualImageDescArray & frame_array_a,
         cv::putText(show, title, cv::Point2f(20, 150), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
 
     } else {
-        sprintf(title, "FAILED LOOP %d->%d dt %3.3fs inliers %d", frame_array_b.drone_id, frame_array_a.drone_id, dt, inliers.size());
+        sprintf(title, "FAILED %d->%d dt %3.1fs LM %d/%d", frame_array_b.drone_id, frame_array_a.drone_id, dt, inliers.size(),
+            index2dirindex_a.size());
         cv::putText(show, title, cv::Point2f(20, 30), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
     }
 

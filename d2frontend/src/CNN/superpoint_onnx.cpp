@@ -18,6 +18,7 @@ SuperPointONNX::SuperPointONNX(std::string engine_path,
         output_shape_semi_{1, _height, _width},
         output_shape_desc_{1, SP_DESC_RAW_LEN, _height/8, _width/8},
         input_shape_{1, 1, _height, _width},
+        thres(_thres),
         max_num(_max_num),
         nms_dist(_nms_dist) {
     at::set_num_threads(1);

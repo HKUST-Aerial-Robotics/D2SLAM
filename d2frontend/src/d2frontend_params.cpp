@@ -85,6 +85,7 @@ namespace D2FrontEnd {
         vlad_threshold = fsSettings["vlad_threshold"];
         ftconfig->ransacReprojThreshold = fsSettings["ransacReprojThreshold"];
         ftconfig->parallex_thres = fsSettings["parallex_thres"];
+        ftconfig->knn_match_ratio = fsSettings["knn_match_ratio"];
         nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
         nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);
@@ -107,6 +108,7 @@ namespace D2FrontEnd {
         loopdetectorconfig->accept_loop_max_yaw = (double) fsSettings["accept_loop_max_yaw"];
         loopdetectorconfig->accept_loop_max_pos = (double) fsSettings["accept_loop_max_pos"];
         loopdetectorconfig->loop_inlier_feature_num = fsSettings["loop_inlier_feature_num"];
+        loopdetectorconfig->knn_match_ratio = fsSettings["knn_match_ratio"];
         nh.param<bool>("enable_loop", enable_loop, true);
         nh.param<bool>("is_4dof", loopdetectorconfig->is_4dof, true);
         nh.param<int>("match_index_dist", loopdetectorconfig->MATCH_INDEX_DIST, 10);

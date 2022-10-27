@@ -27,8 +27,6 @@
 
 #define CROP_WIDTH_THRES 0.05 //If movement bigger than this, crop some matches down
 
-#define RPERR_THRES 10*DEG2RAD
-
 
 #define ACCEPT_SP_MATCH_DISTANCE 0.7
 

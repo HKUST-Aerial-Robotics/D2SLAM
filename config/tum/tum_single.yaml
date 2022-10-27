@@ -48,7 +48,6 @@ min_inv_dep: 0.1 #10 meter away.
 #optimization parameters
 max_solver_time: 0.08 # max solver itration time (ms), to guarantee real time
 max_num_iterations: 8   # max solver itrations, to guarantee real time
-keyframe_parallax: 10.0 # keyframe selection threshold (pixel)
 consensus_max_steps: 4
 timout_wait_sync: 100
 rho_landmark: 1.0
@@ -107,6 +106,7 @@ enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-mot
 remote_min_match_num: 40
 ransacReprojThreshold: 10.0
 parallex_thres: 0.022
+knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
 
 #CNN
 cnn_use_onnx: 1

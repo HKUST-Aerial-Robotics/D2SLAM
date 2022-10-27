@@ -379,8 +379,8 @@ bool pnp_result_verify(bool pnp_success, int inliers, double rperr, const Swarm:
     if (!pnp_success) {
         return false;
     }
-    if (rperr > RPERR_THRES) {
-        printf("[SWARM_LOOP] Check failed on RP error %f\n", rperr*57.3);
+    if (rperr > params->loopdetectorconfig->gravity_check_thres) {
+        printf("[SWARM_LOOP] Check failed on RP error %fdeg\n", rperr*57.3);
         return false;
     }   
     auto &_config = (*params->loopdetectorconfig);
@@ -388,19 +388,17 @@ bool pnp_result_verify(bool pnp_success, int inliers, double rperr, const Swarm:
     return success;
 }
 
-double RPerror(const Swarm::Pose & p_drone_old_in_new, const Swarm::Pose & drone_pose_old, const Swarm::Pose & drone_pose_now) {
-    Swarm::Pose DP_old_to_new_6d =  Swarm::Pose::DeltaPose(p_drone_old_in_new, drone_pose_now, false);
-    Swarm::Pose Prediect_new_in_old_Pose = drone_pose_old * DP_old_to_new_6d;
-    auto AttNew_in_old = Prediect_new_in_old_Pose.att().normalized();
-    auto AttNew_in_new = drone_pose_now.att().normalized();
-    auto dyaw = quat2eulers(AttNew_in_new).z() - quat2eulers(AttNew_in_old).z();
-    AttNew_in_old = Eigen::AngleAxisd(dyaw, Eigen::Vector3d::UnitZ())*AttNew_in_old;
-    auto RPerr = (quat2eulers(AttNew_in_old) - quat2eulers(AttNew_in_new)).norm();
-    return RPerr;
+double gravityCheck(const Swarm::Pose & pnp_pose, const Swarm::Pose & ego_motion) {
+    //This checks the gravity direction
+    Vector3d gravity(0, 0, 1);
+    Vector3d gravity_pnp = pnp_pose.R().inverse() * gravity;
+    Vector3d gravity_ego = ego_motion.R().inverse() * gravity;
+    double sin_theta = gravity_pnp.cross(gravity_ego).norm();
+    return sin_theta;
 }
 
 int computeRelativePosePnP(const std::vector<Vector3d> lm_positions_a, const std::vector<Vector3d> lm_3d_norm_b,
-            Swarm::Pose extrinsic_b, Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, Swarm::Pose & DP_b_to_a, std::vector<int> &inliers, 
+            Swarm::Pose extrinsic_b, Swarm::Pose ego_motion_a, Swarm::Pose ego_motion_b, Swarm::Pose & DP_b_to_a, std::vector<int> &inliers, 
             bool is_4dof, bool verify_gravity) {
         //Compute PNP
     // ROS_INFO("Matched features %ld", matched_2d_norm_old.size());
@@ -423,15 +421,15 @@ int computeRelativePosePnP(const std::vector<Vector3d> lm_positions_a, const std
     bool success = solvePnPRansac(pts3d, pts2d, K, D, rvec, t, false,   
         iteratives,  5.0/params->focal_length, 0.99,  inliers);
     auto p_cam_old_in_new = PnPRestoCamPose(rvec, t);
-    auto p_drone_old_in_new = p_cam_old_in_new*(extrinsic_b.toIsometry().inverse());
+    auto pnp_predict_pose_b = p_cam_old_in_new*(extrinsic_b.toIsometry().inverse());
     if (!success) {
         return 0;
     }
-    DP_b_to_a =  Swarm::Pose::DeltaPose(p_drone_old_in_new, drone_pose_a, is_4dof);
+    DP_b_to_a =  Swarm::Pose::DeltaPose(pnp_predict_pose_b, ego_motion_a, is_4dof);
     if (verify_gravity) {
-        auto RPerr = RPerror(p_drone_old_in_new, drone_pose_b, drone_pose_a);
+        auto RPerr = gravityCheck(pnp_predict_pose_b, ego_motion_b);
         success = pnp_result_verify(success, inliers.size(), RPerr, DP_b_to_a);
-        printf("[SWARM_LOOP@%d] DPose %s PnPRansac %d inlines %d/%d, dyaw %f dpos %f. Geometry Check %f\n",
+        printf("[SWARM_LOOP@%d] DPose %s PnPRansac %d inlines %d/%d, dyaw %f dpos %f g_err %f \n",
                 params->self_id, DP_b_to_a.toStr().c_str(), success, inliers.size(), pts2d.size(), fabs(DP_b_to_a.yaw())*57.3, DP_b_to_a.pos().norm(), RPerr);
     }
     return success;
@@ -498,22 +496,22 @@ Swarm::Pose computePosePnPnonCentral(const std::vector<Vector3d> & lm_positions_
 
 int computeRelativePosePnPnonCentral(const std::vector<Vector3d> & lm_positions_a, const std::vector<Vector3d> & lm_3d_norm_b,
         const std::vector<Swarm::Pose> & cam_extrinsics, const std::vector<int> & camera_indices, 
-        Swarm::Pose drone_pose_a, Swarm::Pose drone_pose_b, 
+        Swarm::Pose drone_pose_a, Swarm::Pose ego_motion_b, 
         Swarm::Pose & DP_b_to_a, std::vector<int> &inliers, bool is_4dof, bool verify_gravity) {
     D2Common::Utility::TicToc tic;
-    auto p_drone_old_in_new = computePosePnPnonCentral(lm_positions_a, lm_3d_norm_b, cam_extrinsics, camera_indices, inliers);
-    DP_b_to_a =  Swarm::Pose::DeltaPose(p_drone_old_in_new, drone_pose_a, is_4dof);
+    auto pnp_predict_pose_b = computePosePnPnonCentral(lm_positions_a, lm_3d_norm_b, cam_extrinsics, camera_indices, inliers);
+    DP_b_to_a =  Swarm::Pose::DeltaPose(pnp_predict_pose_b, drone_pose_a, is_4dof);
 
     bool success = true;
     double RPerr = 0;
     if (verify_gravity) {
     //Verify the results
-        auto RPerr = RPerror(p_drone_old_in_new, drone_pose_b, drone_pose_a);
+        auto RPerr = gravityCheck(pnp_predict_pose_b, ego_motion_b);
         success = pnp_result_verify(true, inliers.size(), RPerr, DP_b_to_a);
     }
     
     if (params->enable_perf_output) {
-        printf("[SWARM_LOOP@%d] features %d/%d succ %d gPnPRansac time %.2fms RP: %s RPerr %f\n", params->self_id, inliers.size(), lm_3d_norm_b.size(), success,
+        printf("[SWARM_LOOP@%d] features %d/%d succ %d gPnPRansac time %.2fms RP: %s g_err %f\n", params->self_id, inliers.size(), lm_3d_norm_b.size(), success,
                 tic.toc(), DP_b_to_a.toStr().c_str(), RPerr);
     }
     return success;

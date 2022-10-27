@@ -53,6 +53,7 @@ struct LoopDetectorConfig {
     double accept_loop_max_pos = 1.5;
     bool enable_knn_match = true;
     double knn_match_ratio = 0.8;
+    double gravity_check_thres = 0.06;
     std::string superglue_model_path;
 };
 
