@@ -3,6 +3,7 @@
 #include <d2common/solver/RelPoseFactor.hpp>
 #include <d2common/solver/pose_local_parameterization.h>
 #include <d2common/solver/angle_manifold.h>
+#include <d2common/solver/GravityPrior.hpp>
 #include "../test/posegraph_g2o.hpp"
 #include "rot_init/rotation_initialization.hpp"
 
@@ -166,6 +167,9 @@ bool D2PGO::solve_multi(bool force_solve) {
     if (config.enable_rotation_initialization) {
         waitForRotInitFinish();
     }
+    if (config.enable_gravity_prior) {
+        setupGravityPriorFactors(solver);
+    }
     SolverReport report;
     if (config.rot_init_config.enable_pose6d_solver) {
         if (pose6d_init!=nullptr) {
@@ -244,7 +248,9 @@ bool D2PGO::solve_single() {
         updated = false;
         return true;
     }
-    
+    if (config.enable_gravity_prior) {
+        setupGravityPriorFactors(solver);
+    }
     setStateProperties(solver->getProblem());
     auto report = solver->solve();
     if (config.perturb_mode) {
@@ -415,6 +421,28 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
         used_frames.insert(frame_a->frame_id);
         used_frames.insert(frame_b->frame_id);
         used_loops.emplace_back(loop);
+    }
+}
+
+void D2PGO::setupGravityPriorFactors(SolverWrapper * solver) {
+    if (config.pgo_pose_dof == PGO_POSE_4D) {
+        return;
+    }
+    printf("[D2PGO::setupGravityPriorFactors] %ld frames\n", used_frames.size());
+
+    Eigen::Matrix3d gravity_sqrt_info = config.rot_init_config.gravity_sqrt_info*Matrix3d::Identity();
+    for (auto & frame: used_frames) {
+        auto ego_motion = state.getFramebyId(frame)->initial_ego_pose;
+        ceres::CostFunction * factor;
+        if (config.perturb_mode && isRotInitConvergence()) {
+            auto qa = state.getAttitudeInit(frame);
+            factor = GravityPriorPerturbAD::Create(ego_motion, gravity_sqrt_info, qa);
+        } else {
+            //Not implemented
+            ROS_ERROR("[D2PGO::setupGravityPriorFactors] non perturb_mode not implemented");
+        }
+        auto res_info = GravityPriorResInfo::create(factor, nullptr, frame, config.perturb_mode);
+        solver->addResidual(res_info);
     }
 }
 

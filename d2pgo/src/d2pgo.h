@@ -41,6 +41,7 @@ protected:
     void setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::LoopEdge> & good_loops);
     void setupEgoMotionFactors(SolverWrapper * solver);
     void setupEgoMotionFactors(SolverWrapper * solver, int drone_id);
+    void setupGravityPriorFactors(SolverWrapper * solver);
     bool isMain() const;
     bool isRotInitConvergence() const;
     void waitForRotInitFinish();

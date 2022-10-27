@@ -46,7 +46,8 @@ enum ResidualType {
     PriorResidual, // 7
     DepthResidual, // 8
     RelPoseResidual, //9
-    RelRotResidual //10
+    RelRotResidual, //10
+    GravityPriorResidual //11
 };
 
 class ResidualInfo {

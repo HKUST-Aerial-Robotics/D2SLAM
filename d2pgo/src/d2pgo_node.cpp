@@ -166,11 +166,14 @@ protected:
         config.pcm_rej.is_4dof = is_4dof;
         config.is_realtime = true;
         config.enable_rotation_initialization = false;
-        if (config.mode == PGO_MODE_NON_DIST) {
-            config.perturb_mode = false;
-        } else {
-            config.perturb_mode = true;
-        }
+        config.enable_gravity_prior = (int)fsSettings["enable_gravity_prior"];
+        config.rot_init_config.gravity_sqrt_info = fsSettings["gravity_sqrt_info"];
+        // if (config.mode == PGO_MODE_NON_DIST) {
+        //     config.perturb_mode = false;
+        // } else {
+        //     config.perturb_mode = true;
+        // }
+        config.perturb_mode = true;
         int estimation_mode = (int) fsSettings["estimation_mode"];
         if (estimation_mode == 0) {
             multi = false;

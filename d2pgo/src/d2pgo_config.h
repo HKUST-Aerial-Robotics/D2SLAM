@@ -46,6 +46,7 @@ struct D2PGOConfig {
     bool enable_pcm = false;
     bool is_realtime = false;
     bool enable_rotation_initialization = true;
+    bool enable_gravity_prior = false;
     bool debug_rot_init_only = false;
     bool pgo_use_autodiff = true;
     bool perturb_mode = true;
