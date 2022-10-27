@@ -216,7 +216,7 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
                 yaw = yawa_gt[i]
                 dp_gt[i] = yaw_rotate_vec(-yaw, dp_gt[i])
         mask = np.linalg.norm(dp_gt - dp_fused, axis=1) < outlier_thres
-        maskyaw = np.abs(dyaw_gt - dyaw_fused) < outlier_yaw_thres
+        maskyaw = np.abs(wrap_pi(dyaw_gt - dyaw_fused)) < outlier_yaw_thres
         mask = np.logical_and(mask, maskyaw)
         if poses_gt is not None:
             rmse_yaw = RMSE(wrap_pi(dyaw_fused[mask] - dyaw_gt[mask]), 0)
@@ -274,8 +274,8 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
             # ax2.grid()
             # plt.tight_layout()
 
-            fig = plt.figure("Relative Pose", figsize=figsize)
-            fig.suptitle(f"Relative Pose {main_id}->{target_ids}")
+            fig = plt.figure(f"Relative Pose {main_id}->{target_id}", figsize=figsize)
+            fig.suptitle(f"Relative Pose {main_id}->{target_id}")
             ax1, ax2, ax3, ax4 = fig.subplots(4, 1)
 
             if poses_gt is not None:
@@ -305,8 +305,8 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
             ax4.grid()
             plt.tight_layout()
                 
-            fig = plt.figure("Fused Relative Error", figsize=figsize)
-            fig.suptitle(f"Fused Relative Error {main_id}->{target_ids}")
+            fig = plt.figure(f"Fused Relative Error {main_id}->{target_id}", figsize=figsize)
+            fig.suptitle(f"Fused Relative Error {main_id}->{target_id}")
             ax1, ax2, ax3, ax4 = fig.subplots(4, 1)
 
             ax1.plot(ts[mask], dp_gt[mask,0] - dp_fused[mask,0], label="$E_{xfused}^" + str(target_id) + f"$ RMSE:{rmse_x:3.3f}")
@@ -315,8 +315,8 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
             ax4.plot(ts[mask], wrap_pi(dyaw_gt[mask] - dyaw_fused[mask]), label="$E_{yawfused}^" + str(target_id) + f"$ RMSE:{rmse_z:3.3f}")
 
 
-            fig = plt.figure("Fused Relative Distance vs Error", figsize=figsize)
-            fig.suptitle(f"Fused Relative Distance vs Error {main_id}->{target_ids}")
+            fig = plt.figure(f"Fused Relative Distance vs Error {main_id}->{target_id}", figsize=figsize)
+            fig.suptitle(f"Fused Relative Distance vs Error {main_id}->{target_id}")
             ax1, ax2= fig.subplots(2, 1)
 
             ax1.scatter(np.linalg.norm(dp_gt[mask,:3], axis=1), 

@@ -158,7 +158,7 @@ def find_common_times(times_a, times_b, dt=0.005):
     # plt.plot(times_b, marker=".", linestyle="None")
     return times_a
 
-def align_paths(paths, paths_gt, align_by_first=False):
+def align_paths(paths, paths_gt, align_by_first=False, align_with_minize=False):
     # align the first pose in each path to paths_gt
     dpos = None
     yaw0 = None
@@ -166,17 +166,20 @@ def align_paths(paths, paths_gt, align_by_first=False):
         path = paths[i]
         path_gt = paths_gt[i]
         if dpos is None or not align_by_first:
-            t0 = find_common_times(path.t, path_gt.t)[0]
-            dpos = path_gt.pos_func(t0) - path.pos_func(t0)
-            dyaw = wrap_pi(path_gt.ypr_func(t0)[0] - path.ypr_func(t0)[0])
-            print("dpos by", i, ":", dpos)
+            if align_with_minize:
+                dpos, dyaw = align_path_by_minimize(path, path_gt)
+            else:
+                t0 = find_common_times(path.t, path_gt.t)[0]
+                dpos = path_gt.pos_func(t0) - path.pos_func(t0)
+                dyaw = wrap_pi(path_gt.ypr_func(t0)[0] - path.ypr_func(t0)[0])
+                print("dpos by", i, ":", dpos)
         path.pos = yaw_rotate_vec(dyaw, path.pos) + dpos
         path.ypr = path.ypr + np.array([dyaw, 0, 0])
         path.ypr[:, 0] = wrap_pi(path.ypr[:, 0])
         path.interp()
     return paths
 
-def align_path_by_minimize(path, path_gt):
+def align_path_by_minimize(path, path_gt, inplace=False):
     from scipy.optimize import minimize
     t = find_common_times(path.t, path_gt.t)
     pos = path.pos_func(t)
@@ -197,8 +200,9 @@ def align_path_by_minimize(path, path_gt):
     # print("Optimized:", res)
     relative_pos = res.x[:3]
     relative_yaw = res.x[3]
-    path.pos = yaw_rotate_vec(relative_yaw, path.pos) + relative_pos
-    path.ypr = path.ypr + np.array([relative_yaw, 0, 0])
-    path.ypr[:, 0] = wrap_pi(path.ypr[:, 0])
-    path.interp()
-    return path
+    if inplace:
+        path.pos = yaw_rotate_vec(relative_yaw, path.pos) + relative_pos
+        path.ypr = path.ypr + np.array([relative_yaw, 0, 0])
+        path.ypr[:, 0] = wrap_pi(path.ypr[:, 0])
+        path.interp()
+    return relative_pos, relative_yaw

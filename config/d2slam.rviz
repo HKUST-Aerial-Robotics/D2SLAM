@@ -43,8 +43,6 @@ Panels:
         - /VINS-Odom1/Shape1
         - /GT1
         - /Remote1
-        - /PGOPath31
-        - /IMU1
         - /IMU1/Shape1
       Splitter Ratio: 0.5
     Tree Height: 949
@@ -516,6 +514,111 @@ Visualization Manager:
           Topic: /d2vins/path_4
           Unreliable: false
           Value: true
+        - Angle Tolerance: 0.10000000149011612
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Keep: 1
+          Name: Odometry3
+          Position Tolerance: 0.10000000149011612
+          Queue Size: 10
+          Shape:
+            Alpha: 1
+            Axes Length: 0.30000001192092896
+            Axes Radius: 0.10000000149011612
+            Color: 255; 25; 0
+            Head Length: 0.30000001192092896
+            Head Radius: 0.10000000149011612
+            Shaft Length: 0.30000001192092896
+            Shaft Radius: 0.05000000074505806
+            Value: Axes
+          Topic: /d2vins/odometry_3
+          Unreliable: false
+          Value: true
+        - Angle Tolerance: 0.10000000149011612
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Keep: 1
+          Name: Odometry4
+          Position Tolerance: 0.10000000149011612
+          Queue Size: 10
+          Shape:
+            Alpha: 1
+            Axes Length: 0.30000001192092896
+            Axes Radius: 0.10000000149011612
+            Color: 255; 25; 0
+            Head Length: 0.30000001192092896
+            Head Radius: 0.10000000149011612
+            Shaft Length: 0.30000001192092896
+            Shaft Radius: 0.05000000074505806
+            Value: Axes
+          Topic: /d2vins/odometry_4
+          Unreliable: false
+          Value: true
+        - Angle Tolerance: 0.10000000149011612
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Keep: 1
+          Name: Odometry5
+          Position Tolerance: 0.10000000149011612
+          Queue Size: 10
+          Shape:
+            Alpha: 1
+            Axes Length: 0.30000001192092896
+            Axes Radius: 0.10000000149011612
+            Color: 255; 25; 0
+            Head Length: 0.30000001192092896
+            Head Radius: 0.10000000149011612
+            Shaft Length: 0.30000001192092896
+            Shaft Radius: 0.05000000074505806
+            Value: Axes
+          Topic: /d2vins/odometry_5
+          Unreliable: false
+          Value: true
       Enabled: true
       Name: Remote
     - Alpha: 0.6000000238418579
@@ -731,7 +834,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 11.490056037902832
+      Distance: 7.606267929077148
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -747,9 +850,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9347978234291077
+      Pitch: 0.8647977709770203
       Target Frame: world
-      Yaw: 1.3264082670211792
+      Yaw: 0.6464101672172546
     Saved:
       - Class: rviz/XYOrbit
         Distance: 9.527398109436035
@@ -787,5 +890,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1727
-  X: 2094
-  Y: 421
+  X: 2846
+  Y: 448

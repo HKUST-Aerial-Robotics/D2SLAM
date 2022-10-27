@@ -30,14 +30,17 @@ public:
     }
 
     std::set<int> availableDrones() const {
+        const Guard lock(state_lock);
         return all_drones;
     }
 
     bool hasDrone(int drone_id) const{
+        const Guard lock(state_lock);
         return all_drones.find(drone_id) != all_drones.end();
     }
 
     bool hasFrame(FrameIdType frame_id) const {
+        const Guard lock(state_lock);
         return frame_db.find(frame_id) != frame_db.end();
     }
 

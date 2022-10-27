@@ -71,7 +71,7 @@ multiple_thread: 1
 
 #outlier rejection
 thres_outlier : 10.0
-perform_outlier_rejection_num: 10000
+perform_outlier_rejection_num: 100
 tri_max_err: 1000000.0
 
 #Marginalization
@@ -97,6 +97,7 @@ ransacReprojThreshold: 10.0
 enable_search_local_aera: 1
 search_local_max_dist: 0.05
 feature_min_dist: 30
+parallex_thres: 0.012
 
 #CNN
 cnn_use_onnx: 1

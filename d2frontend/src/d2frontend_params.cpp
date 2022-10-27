@@ -84,10 +84,10 @@ namespace D2FrontEnd {
         ftconfig->enable_superglue_remote = (int) fsSettings["enable_superglue_remote"];
         vlad_threshold = fsSettings["vlad_threshold"];
         ftconfig->ransacReprojThreshold = fsSettings["ransacReprojThreshold"];
+        ftconfig->parallex_thres = fsSettings["parallex_thres"];
         nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
         nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);
-        nh.param<double>("parallex_thres", ftconfig->parallex_thres, 10.0/460.0);
         nh.param<int>("min_keyframe_num", ftconfig->min_keyframe_num, 2);
         nh.param<std::string>("superglue_model_path", ftconfig->superglue_model_path, "");
         if (!fsSettings["enable_search_local_aera"].empty()) {

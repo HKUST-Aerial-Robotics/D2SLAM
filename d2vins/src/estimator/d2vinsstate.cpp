@@ -31,8 +31,8 @@ std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
 }
 
 VINSFrame * D2EstimatorState::addVINSFrame(const VINSFrame & _frame) {
-    all_drones.insert(_frame.drone_id);
     const Guard lock(state_lock);
+    all_drones.insert(_frame.drone_id);
     auto * frame = new VINSFrame;
     *frame = _frame;
     frame_db[frame->frame_id] = frame;

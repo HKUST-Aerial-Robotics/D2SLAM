@@ -95,6 +95,7 @@ enable_superglue_remote: 0
 ransacReprojThreshold: 10.0
 enable_search_local_aera: 1
 search_local_max_dist: 0.05
+parallex_thres: 0.012
 
 #CNN
 cnn_use_onnx: 1
