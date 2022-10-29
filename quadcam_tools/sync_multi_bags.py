@@ -40,9 +40,19 @@ def generate_groundtruthname(bag):
     output_bag = p.parents[0].joinpath(bagname)
     return output_bag
 
-def get_time0(bag):
+def get_time0(bag, is_realsense=False):
+    count_camera_available = set()
     for topic, msg, t in rosbag.Bag(bag).read_messages():
-        return t
+        # We use image time as the start time
+        if msg._type == "sensor_msgs/Image" or msg._type == "sensor_msgs/CompressedImage":
+            if not is_realsense:
+                return t
+            if topic == "/camera/infra1/image_rect_raw/compressed" or topic == "/camera/infra1/image_rect_raw":
+                count_camera_available.add(1)
+            if topic == "/camera/infra2/image_rect_raw/compressed" or topic == "/camera/infra2/image_rect_raw":
+                count_camera_available.add(2)
+            if len(count_camera_available) == 2:
+                return t
 
 def get_pose0(bag):
     for topic, msg, t in rosbag.Bag(bag).read_messages():
@@ -85,16 +95,16 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--show', action='store_true', help='compress the image topics')
     args = parser.parse_args()
     bags = args.bags
-    t0 = get_time0(bags[0])
+    t0 = get_time0(bags[0], is_realsense=True)
     pos0, q_calib, y0 = get_pose0(bags[0])
 
     dts = {}
-    for bag in bags[1:]:
-        print("parse bag", bag)
-        for topic, msg, t in rosbag.Bag(bag).read_messages():
-            print(f"Bag {bag} start at {t.to_sec()}")
-            dts[bag] = t0 - t
-            break
+    t0s = {}
+    for bag in bags:
+        t = get_time0(bag, is_realsense=True)
+        print(f"Bag {bag} start at {t.to_sec()}")
+        dts[bag] = t0 - t
+        t0s[bag] = t
 
     print(dts)
     bridge = CvBridge()
@@ -102,16 +112,15 @@ if __name__ == "__main__":
     for bag in bags:
         output_bag = generate_bagname(bag, args.comp)
         print("Write bag to", output_bag)
-        if bag not in dts:
-            _dt = rospy.Duration(0)
-        else:
-            _dt = dts[bag]
+        _dt = dts[bag]
         with rosbag.Bag(output_bag, 'w') as outbag:
             from nav_msgs.msg import Path
             path = Path()
             path_arr = []
             c = 0
             for topic, msg, t in rosbag.Bag(bag).read_messages():
+                if t < t0s[bag]:
+                    continue
                 if msg._has_header:
                     if msg.header.stamp.to_sec() > 0:
                         msg.header.stamp = msg.header.stamp + _dt

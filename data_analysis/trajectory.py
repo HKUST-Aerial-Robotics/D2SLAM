@@ -38,6 +38,13 @@ def ATE_POS(predictions, targets):
 
     return np.sqrt(np.mean(norm2))
 
+def AVG_DIS(predictions, targets):
+    err = predictions-targets
+    norm2 = err[:,0]*err[:,0]+err[:,1]*err[:,1]+err[:,2]*err[:,2]
+    if np.isnan(norm2).any():
+        print("ATE_POS has nan")
+
+    return np.mean(np.sqrt(norm2))
 
 def odometry_covariance_per_meter_with_rp(pos_vo, yaw_vo, pos_gt, yaw_gt, rp_length=1.0, gt_outlier_thres=0.1, show=False,step=1):
     i, j, c = 0, 0, 0

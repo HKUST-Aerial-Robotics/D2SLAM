@@ -140,13 +140,22 @@ RUN git clone https://github.com/laurentkneip/opengv && \
 #Install Backward
 RUN   wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp -O /usr/local/include/backward.hpp
 
+#Install Vulkan
+RUN   wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add - && \
+      wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.231-focal.list https://packages.lunarg.com/vulkan/1.3.231/lunarg-vulkan-1.3.231-focal.list && \
+      apt update && \
+      apt install vulkan-sdk -y
+
+#Install taichi
+RUN    pip install taichi transformations numpy lcm matplotlib scipy && apt install ros-${ROS_VERSION}-ros-numpy
+
 #Build D2SLAM
 RUN   mkdir -p ${SWARM_WS}/src/ && \
       cd ${SWARM_WS}/src/ && \
       git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM && \
       git clone https://github.com/HKUST-Swarm/sync_bag_player.git && \
       git clone https://github.com/ros-perception/vision_opencv.git -b ${ROS_VERSION}
-COPY ./ ${SWARM_WS}/src/D2SLAM
+# COPY ./ ${SWARM_WS}/src/D2SLAM
 WORKDIR $SWARM_WS
 RUN   source "/opt/ros/${ROS_VERSION}/setup.bash" && \
       catkin config -DCMAKE_BUILD_TYPE=Release \

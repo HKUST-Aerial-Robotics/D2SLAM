@@ -28,7 +28,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Split quadcam images')
     parser.add_argument("-i","--input", type=str, help="input bag file")
     parser.add_argument('-v', '--show', action='store_true', help='compress the image topics')
-    parser.add_argument('-s', '--step', type=int, nargs="?", help="step for images, default 5", default=5)
+    parser.add_argument('-s', '--step', type=int, nargs="?", help="step for images, default 1", default=1)
     parser.add_argument('-t', '--start', type=float, nargs="?", help="start time of the first image, default 0", default=0)
     args = parser.parse_args()
     output_bag = generate_bagname(args.input)
@@ -64,9 +64,10 @@ if __name__ == '__main__':
                 imgs = split_image(img)
                 #Compress and write imgs to output bag
                 for i, _img in enumerate(imgs):
-                    comp_img = bridge.cv2_to_compressed_imgmsg(_img)
-                    comp_img.header = msg.header
-                    outbag.write(f"/arducam/image_{i}/compressed", comp_img, t)
+                    if i == 3:
+                        comp_img = bridge.cv2_to_compressed_imgmsg(_img)
+                        comp_img.header = msg.header
+                        outbag.write(f"/arducam/image_{i}/compressed", comp_img, t)
                     # cv.imwrite(f"/home/xuhao/output/quadvins-output/imgs/fisheye_{c:06d}_{i}.jpg", _img)
                 if args.show:
                     for i in range(len(imgs)):

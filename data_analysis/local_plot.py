@@ -72,33 +72,16 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
     for i in nodes:
         _id = id_map[i]
         if poses_pgo is not None:
-            plt.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1], label=f"$D^2$PGO {_id}")
-        plt.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1], label=f"$D^2$VINS {_id}", linestyle='--')
+            plt.plot(poses_pgo[i].pos[:,1], poses_pgo[i].pos[:,0], label=f"$D^2$PGO {_id}")
+        plt.plot(poses_fused[i].pos[:,1], poses_fused[i].pos[:,0], label=f"$D^2$VINS {_id}", linestyle='--')
+        if poses_gt is not None:
+            plt.plot(poses_gt[i].pos[:,1], poses_gt[i].pos[:,0], label=f"Ground Truth {_id}")
 
-    plt.ylabel('$Y$')
-    plt.xlabel('$X$')
+    plt.ylabel('$X$')
+    plt.xlabel('$Y$')
     plt.legend()
     plt.grid()
     plt.savefig(output_path+"fused2d.pdf")
-
-    for i in nodes:
-        # fig.suptitle("Fused Vs GT 2D")
-        _id = id_map[i]
-
-        fig = plt.figure(f"Fused Vs GT 2D {i}", figsize=figsize)
-        plt.gca().set_aspect('equal', adjustable="datalim", anchor="SE")
-
-        if poses_gt is not None:
-            plt.plot(poses_gt[i].pos[:,0], poses_gt[i].pos[:,1], label=f"Ground Truth {_id}")
-        if poses_pgo is not None:
-            plt.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1], '.', label=f"$D^2$GO {i}")
-        plt.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1], label=f"$D^2$VINS {_id}")
-        plt.grid()
-        plt.ylabel('$Y$')
-        plt.xlabel('$X$')
-        plt.legend()
-
-        plt.savefig(output_path+f"fusedvsgt2d_{i}.pdf")
     if not plot_each:
         return
     for i in nodes:
@@ -142,7 +125,7 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
         if poses_pgo is not None:
             ax1.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,0]*57.3, '.', label=f"$D^2$PGO {_id}")
             ax2.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,1]*57.3, '.', label=f"$D^2$PGO {_id}")
-            ax3.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,2]*57.3, '.', label=f"EstKF {_id}")
+            ax3.plot(poses_pgo[i].t, poses_pgo[i].ypr[:,2]*57.3, '.', label=f"$D^2$PGO {_id}")
 
         ax1.plot(poses_fused[i].t, poses_fused[i].ypr[:,0]*57.3, label=f"$D^2$VINS {_id}")
         ax2.plot(poses_fused[i].t, poses_fused[i].ypr[:,1]*57.3, label=f"$D^2$VINS {_id}")

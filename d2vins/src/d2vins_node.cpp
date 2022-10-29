@@ -68,6 +68,7 @@ protected:
         estimator->solveinDistributedMode();
         auto sld_win = estimator->getSelfSldWin();
         if (params->enable_loop) {
+            const std::lock_guard<std::recursive_mutex> lock(estimator->frame_mutex);
             loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
             loop_detector->updatebySldWin(sld_win);
         }
@@ -96,6 +97,7 @@ protected:
                 }
                 auto sld_win = estimator->getSelfSldWin();
                 if (params->enable_loop) {
+                    const std::lock_guard<std::recursive_mutex> lock(estimator->frame_mutex);
                     loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
                     loop_detector->updatebySldWin(sld_win);
                 }

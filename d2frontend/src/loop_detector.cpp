@@ -131,7 +131,8 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
                 }
             }
         } else {
-            printf("[SWARM_LOOP@%d] No matched image for frame %ld\n", self_id, image_array.frame_id);
+            if (params->verbose)
+                printf("[SWARM_LOOP@%d] No matched image for frame %ld\n", self_id, image_array.frame_id);
         }      
         if (!image_array.is_lazy_frame && image_array.matched_frame < 0 && (!image_array.prevent_adding_db || new_node)) {
             //Note in lazy mode, the remote database is not updated
@@ -146,7 +147,8 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
 
     t_sum += tt.toc();
     t_count += 1;
-    printf("[SWARM_LOOP] Full LoopDetect avg %.1fms cur %.1fms\n", t_sum/t_count, tt.toc());
+    if (params->verbose || params->enable_perf_output)
+        printf("[SWARM_LOOP] Full LoopDetect avg %.1fms cur %.1fms\n", t_sum/t_count, tt.toc());
 }
 
 

@@ -120,7 +120,7 @@ void D2PGO::waitForRotInitFinish() {
 
 bool D2PGO::solve_multi(bool force_solve) {
     const Guard lock(state_lock);
-    if ((state.size(self_id) < config.min_solve_size || !updated) && !force_solve) {
+    if ((state.size(self_id) < config.min_solve_size) && !force_solve) {
         // printf("[D2PGO] Not enough frames to solve %d.\n", state.size(self_id));
         return false;
     }
@@ -421,6 +421,10 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper * solver, int drone_id) {
         used_frames.insert(frame_a->frame_id);
         used_frames.insert(frame_b->frame_id);
         used_loops.emplace_back(loop);
+        if (used_latest_ts.find(frame_b->frame_id) == used_latest_ts.end() || frame_b->stamp > used_latest_ts[frame_b->drone_id]) {
+            used_latest_frames[frame_b->drone_id] = frame_b->frame_id;
+            used_latest_ts[frame_b->drone_id] = frame_b->stamp;
+        }
     }
 }
 
@@ -432,7 +436,8 @@ void D2PGO::setupGravityPriorFactors(SolverWrapper * solver) {
 
     Eigen::Matrix3d gravity_sqrt_info = config.rot_init_config.gravity_sqrt_info*Matrix3d::Identity();
     for (auto & frame: used_frames) {
-        auto ego_motion = state.getFramebyId(frame)->initial_ego_pose;
+        auto frame_ptr = state.getFramebyId(frame);
+        auto ego_motion = frame_ptr->initial_ego_pose;
         ceres::CostFunction * factor;
         if (config.perturb_mode && isRotInitConvergence()) {
             auto qa = state.getAttitudeInit(frame);
@@ -443,6 +448,10 @@ void D2PGO::setupGravityPriorFactors(SolverWrapper * solver) {
         }
         auto res_info = GravityPriorResInfo::create(factor, nullptr, frame, config.perturb_mode);
         solver->addResidual(res_info);
+        if (used_latest_ts.find(frame) == used_latest_ts.end() || frame_ptr->stamp > used_latest_ts[frame_ptr->drone_id]) {
+            used_latest_frames[frame_ptr->drone_id] = frame;
+            used_latest_ts[frame_ptr->drone_id] = frame_ptr->stamp;
+        }
     }
 }
 
@@ -542,6 +551,7 @@ std::map<int, Swarm::Odometry> D2PGO::getPredictedOdoms() const {
     std::map<int, Swarm::Odometry> ret;
     for (auto drone_id : state.availableDrones()) {
         if (!state.hasEgomotionTraj(drone_id)) {
+            printf("[D2PGO::getPredictedOdoms] no egomotion traj for drone %d\n", drone_id);
             continue;
         }
         const Swarm::DroneTrajectory & ego_motion_traj = state.getEgomotionTraj(drone_id);

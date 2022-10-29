@@ -196,7 +196,7 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     }
     if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
-            drawRemote(frames.images[0], report);
+            // drawRemote(frames.images[0], report);
         } else {
         }
     }

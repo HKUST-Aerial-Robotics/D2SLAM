@@ -134,6 +134,7 @@ enable_homography_test: 1
 accept_loop_max_yaw: 10
 accept_loop_max_pos: 1.0
 loop_inlier_feature_num: 50
+gravity_check_thres: 0.03
 
 #PGO
 pgo_solver_time: 0.5

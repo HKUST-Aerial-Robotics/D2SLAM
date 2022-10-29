@@ -109,6 +109,7 @@ namespace D2FrontEnd {
         loopdetectorconfig->accept_loop_max_pos = (double) fsSettings["accept_loop_max_pos"];
         loopdetectorconfig->loop_inlier_feature_num = fsSettings["loop_inlier_feature_num"];
         loopdetectorconfig->knn_match_ratio = fsSettings["knn_match_ratio"];
+        loopdetectorconfig->gravity_check_thres = fsSettings["gravity_check_thres"];
         nh.param<bool>("enable_loop", enable_loop, true);
         nh.param<bool>("is_4dof", loopdetectorconfig->is_4dof, true);
         nh.param<int>("match_index_dist", loopdetectorconfig->MATCH_INDEX_DIST, 10);

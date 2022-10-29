@@ -2,6 +2,7 @@
 #include "d2pgo.h"
 #include "swarm_msgs/ImageArrayDescriptor.h"
 #include "swarm_msgs/swarm_fused.h"
+#include "geometry_msgs/PoseStamped.h"
 
 #define BACKWARD_HAS_DW 1
 #include <backward.hpp>
@@ -18,6 +19,7 @@ class D2PGONode {
     double solver_timer_freq = 10;
     D2PGOConfig config;
     std::map<int, ros::Publisher> path_pubs;
+    std::map<int, ros::Publisher> odom_pubs;
     ros::Publisher path_pub;
     ros::Publisher dpgo_data_pub;
     ros::Publisher drone_traj_pub, swarm_fused_pub;
@@ -80,6 +82,7 @@ protected:
         swarm_fused.self_id = config.self_id;
         swarm_fused.reference_frame_id = pgo->getReferenceFrameId();
         auto latest_odoms = pgo->getPredictedOdoms();
+        printf("[D2PGONode@%d] pubLatestPredictResults, %ld odoms\n", config.self_id, latest_odoms.size());
         for (auto it : latest_odoms) {
             auto drone_id = it.first;
             auto pose = it.second.pose();
@@ -92,6 +95,14 @@ protected:
                 swarm_fused.self_pos = pose_ros.position;
                 swarm_fused.self_yaw = pose.yaw();
             }
+            if (odom_pubs.find(drone_id) == odom_pubs.end()) {
+                odom_pubs[drone_id] = _nh->advertise<geometry_msgs::PoseStamped>("pose_" + std::to_string(drone_id), 1000);
+            }
+            geometry_msgs::PoseStamped pose_stamped;
+            pose_stamped.header.stamp = ros::Time(it.second.stamp);
+            pose_stamped.header.frame_id = "world";
+            pose_stamped.pose = pose_ros;
+            odom_pubs[drone_id].publish(pose_stamped);
         }
         swarm_fused_pub.publish(swarm_fused);
     }

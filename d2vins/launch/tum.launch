@@ -80,7 +80,7 @@
         <arg name="self_id" value="$(arg self_id)" />
         <arg name="output" value="log" />
     </include>
-        <include file="$(find quadcam_depth_est)/launch/depth-node.launch" if="$(arg depth_gen)" >
+    <include file="$(find quadcam_depth_est)/launch/depth-node.launch" if="$(arg depth_gen)" >
         <arg name="output" value="screen" />
         <arg name="show" value="$(arg show)" />
         <arg name="config" value="$(arg dep_config)" />
