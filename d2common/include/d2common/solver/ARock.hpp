@@ -14,6 +14,7 @@ struct ARockSolverConfig {
     int max_wait_steps = 10;
     int skip_iteration_usec = 10000;
     bool verbose = false;
+    bool dual_state_init_to_zero = false;
     ceres::Solver::Options ceres_options;
 };
 

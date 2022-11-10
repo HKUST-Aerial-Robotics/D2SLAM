@@ -8,7 +8,7 @@ import scipy.stats as stats
 from utils import *
 from trajectory import *
 
-def read_path_from_csv(path, t0=None, delimiter=None):
+def read_path_from_csv(path, t0=None, delimiter=None,dte=None):
     arr = np.loadtxt(path, delimiter=delimiter)
     t = arr[:, 0]
     if t0 is None:
@@ -16,12 +16,20 @@ def read_path_from_csv(path, t0=None, delimiter=None):
     t = t - t0
     pos = arr[:, 1:4]
     quat = arr[:, 4:8]
+    if dte is not None:
+        mask = t < dte
+        t = t[mask]
+        pos = pos[mask]
+        quat = quat[mask]
     return Trajectory(t, pos, quat), t0
 
-def read_paths(folder, nodes, prefix="d2vins", suffix=".csv", t0=None):
+def read_paths(folder, nodes, prefix="d2vins", suffix=".csv", t0=None, dte=None):
     ret = {}
     for drone_id in nodes:
-        ret[drone_id], t0 = read_path_from_csv(f"{folder}/{prefix}_{drone_id}{suffix}", t0)
+        try:
+            ret[drone_id], t0 = read_path_from_csv(f"{folder}/{prefix}_{drone_id}{suffix}", t0, dte=dte)
+        except:
+            print(f"Failed to read {folder}/{prefix}_{drone_id}{suffix}")
     return ret, t0
 
 def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="/home/xuhao/output/", id_map = None, figsize=(6, 6), plot_each=True):

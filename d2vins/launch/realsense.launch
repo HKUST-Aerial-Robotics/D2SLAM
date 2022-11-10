@@ -83,7 +83,7 @@
     <include file="$(find taichislam)/launch/taichislam-d435.launch" if="$(arg taichislam)" >
         <arg name="show" value="$(arg taichislam_show)" />
         <arg name="drone_id" value="$(arg self_id)" />
-        <arg name="use_cuda" default="true" />
+        <arg name="use_cuda" default="false" />
         <arg name="output_map" default="true" />
     </include>
 </launch>

@@ -196,6 +196,7 @@ public:
         ARockBase(static_cast<D2State*>(state), arock_config),
         broadcastDataCallback(_broadcastDataCallback) {
             RotationInitialization<T>::is_multi = true;
+            config.dual_state_init_to_zero = true;
     }
 
     SolverReport solve() {

@@ -193,6 +193,7 @@ public:
                 } else {
                     pgo->solve_single();
                 }
+                usleep(20*1000);
             }
             //Write data
             if (multi) {

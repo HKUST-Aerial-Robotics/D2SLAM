@@ -170,7 +170,7 @@ void ARockSolver::scanAndCreateDualStates() {
                 if (drone_id!=self_id) {
                     if  (!hasDualState(param_info.pointer, drone_id)) {
                         // createDualState(param_info, drone_id, true);
-                        createDualState(param_info, drone_id);
+                        createDualState(param_info, drone_id, config.dual_state_init_to_zero);
                     }
                 }
             }
