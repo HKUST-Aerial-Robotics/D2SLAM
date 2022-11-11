@@ -11,11 +11,11 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, help='path to the model', default="../models/mobilenetvlad_240x320.onnx")
     parser.add_argument('--input', type=str, help='path to the input', default="../sample_data/fisheye.jpg")
     parser.add_argument('--enable-int8', action='store_true', help='enable int8')
-    parser.add_argument('--enable-fp16', action='store_true', help='enable fp16', default=True)
+    parser.add_argument('--enable-fp16', action='store_true', help='enable fp16', default="True")
     parser.add_argument('--enable-dla', action='store_true', help='enable dla')
-    parser.add_argument('--enable-tensorrt', action='store_true', help='enable tensorrt', default=True)
+    parser.add_argument('--enable-tensorrt', action='store_true', help='enable tensorrt')
     parser.add_argument('--engine-cache', type=str, help='path to cache of engine', default="")
-    parser.add_argument('--calib-table', type=str, help='path to calibration table', default="")
+    parser.add_argument('--calib-table', type=str, help='path to calibration table', default="calibration.flatbuffers")
     parser.add_argument('--width', type=int, default=320, help='input width')
     parser.add_argument('--height', type=int, default=240, help='input height')
     parser.add_argument('--num-run', type=int, default=10, help='num of benchmark runs')
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 			'trt_engine_cache_enable': True,
 			'trt_dla_enable': args.enable_dla,
 			'trt_int8_enable': args.enable_int8,
-			'trt_int8_calibration_table_name': "calibration.flatbuffers"
+			'trt_int8_calibration_table_name': args.calib_table
     	}))
     else:
         providers.append('CUDAExecutionProvider')
