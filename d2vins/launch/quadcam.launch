@@ -68,7 +68,6 @@
         <param name="enable_loop" value="$(arg enable_loop)" type="bool" />
         <param name="verbose" value="$(arg verbose)" type="bool" />
         <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
-        <remap from="~imu" to="/dji_sdk_1/dji_sdk/imu" />
     </node>
     <include file="$(find d2pgo)/launch/d2pgo.launch" if="$(arg enable_pgo)" >
         <arg name="config" value="$(arg config)" />
