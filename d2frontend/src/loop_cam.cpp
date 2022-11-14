@@ -25,10 +25,11 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     if (config.cnn_use_onnx) {
         printf("[D2FrontEnd::LoopCam] Init CNNs using onnx\n");
         netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, img_width, img_height, config.cnn_enable_tensorrt, 
-            config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8);
+            config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8, config.netvlad_int8_calib_table_name);
         superpoint_onnx = new SuperPointONNX(config.superpoint_model, ((int)(params->feature_min_dist/2)), config.pca_comp, 
             config.pca_mean, img_width, img_height, config.superpoint_thres, config.superpoint_max_num, 
-            config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8); 
+            config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8, 
+            config.superpoint_int8_calib_table_name); 
     }
     undistortors = params->undistortors;
     cams = params->camera_ptrs;
@@ -195,7 +196,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
 
     tt_sum+= tt.toc();
     t_count+= 1;
-    // ROS_INFO("[D2Frontend::LoopCam] KF Count %d loop_cam cost avg %.1fms cur %.1fms", kf_count, tt_sum/t_count, tt.toc());
+    ROS_INFO("[D2Frontend::LoopCam] KF Count %d loop_cam cost avg %.1fms cur %.1fms", kf_count, tt_sum/t_count, tt.toc());
 
     visual_array.frame_id = msg.keyframe_id;
     visual_array.pose_drone = msg.pose_drone;

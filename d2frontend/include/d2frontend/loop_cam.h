@@ -54,6 +54,8 @@ struct LoopCamConfig
     bool cnn_enable_tensorrt_int8 = false;
     bool cnn_enable_tensorrt_fp16 = true;
     bool enable_undistort_image; //Undistort image before feature detection
+    std::string netvlad_int8_calib_table_name;
+    std::string superpoint_int8_calib_table_name;
 };
 
 class LoopCam {

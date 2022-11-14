@@ -63,6 +63,10 @@ namespace D2FrontEnd {
         nh.param<std::string>("netvlad_model_path", loopcamconfig->netvlad_model, "");
         loopcamconfig->cnn_enable_tensorrt = (int) fsSettings["cnn_enable_tensorrt"];
         loopcamconfig->cnn_enable_tensorrt_int8 = (int) fsSettings["cnn_enable_tensorrt_int8"];
+        if (loopcamconfig->cnn_enable_tensorrt_int8) {
+            loopcamconfig->netvlad_int8_calib_table_name = (std::string) fsSettings["netvlad_int8_calib_table_name"];
+            loopcamconfig->superpoint_int8_calib_table_name = (std::string) fsSettings["superpoint_int8_calib_table_name"];
+        }
 
         nh.param<bool>("lower_cam_as_main", loopcamconfig->right_cam_as_main, false);
         nh.param<double>("triangle_thres", loopcamconfig->TRIANGLE_THRES, 0.006);
