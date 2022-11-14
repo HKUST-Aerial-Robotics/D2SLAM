@@ -145,11 +145,12 @@ RUN   cd onnxruntime && \
       cd build/Linux/Release && \
       make install && \
       rm -rf ../../../onnxruntime
-
 RUN   apt install python3-pip libopenblas-dev vim -y && \
       wget https://nvidia.box.com/shared/static/v59xkrnvederwewo2f1jtv6yurl92xso.whl -O onnxruntime_gpu-1.12.1-cp38-cp38-linux_aarch64.whl && \
       pip3 install onnxruntime_gpu-1.12.1-cp38-cp38-linux_aarch64.whl && \
       rm onnxruntime_gpu-1.12.1-cp38-cp38-linux_aarch64.whl
-
 #Install Pytorch
 RUN   pip3 install --no-cache https://developer.download.nvidia.com/compute/redist/jp/v50/pytorch/torch-1.12.0a0+84d1cb9.nv22.4-cp38-cp38-linux_aarch64.whl
+
+#Install Taichi
+RUN   pip install taichi transformations numpy lcm matplotlib scipy && apt install ros-${ROS_VERSION}-ros-numpy
