@@ -162,6 +162,10 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
     static int t_count = 0;
     static double tt_sum = 0;
 
+    if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
+        visual_array.images.resize(4);
+    }
+
     for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
         if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             visual_array.images.push_back(generateGrayDepthImageDescriptor(msg, i, tmp));
@@ -178,8 +182,8 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
                 visual_array.images.push_back(_imgs[1]);
             }
         } else if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
-            auto _img = generateImageDescriptor(msg, i, tmp);
-            visual_array.images.push_back(_img);
+            auto seq = params->camera_seq[i];
+            visual_array.images[seq] = generateImageDescriptor(msg, i, tmp);
         }
 
         if (_show.cols == 0) {

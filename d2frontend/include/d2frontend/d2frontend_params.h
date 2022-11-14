@@ -107,6 +107,7 @@ struct D2FrontendParams {
     std::vector<camodocal::CameraPtr> camera_ptrs;
     std::vector<camodocal::CameraPtr> raw_camera_ptrs;
     std::vector<D2Common::FisheyeUndist*> undistortors;
+    std::vector<int> camera_seq;
 
     bool show_raw_image = false;
     //Configs of submodules

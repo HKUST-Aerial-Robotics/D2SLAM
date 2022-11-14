@@ -203,6 +203,14 @@ namespace D2FrontEnd {
         undistort_fov = fsSettings["undistort_fov"];
         width = (int) fsSettings["image_width"];
         height = (int) fsSettings["image_height"];
+        std::string camera_seq_str = fsSettings["camera_seq"]; // Back-right Back-left Front-left Front-right
+        if (camera_seq_str == "") {
+            this->camera_seq = std::vector<int>{0, 1, 2, 3};
+        } else {
+            //Camera seq from string "0123" to vector<int> {0, 1, 2, 3}
+            this->camera_seq = std::vector<int>(camera_seq_str.size());
+            std::transform(camera_seq_str.begin(), camera_seq_str.end(), this->camera_seq.begin(), [](char c) { return c - '0'; });
+        }
         
         std::string calib_file_path = fsSettings["calib_file_path"];
         if (calib_file_path != "") {
