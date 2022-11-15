@@ -19,6 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('--width', type=int, default=320, help='input width')
     parser.add_argument('--height', type=int, default=240, help='input height')
     parser.add_argument('--num-run', type=int, default=10, help='num of benchmark runs')
+    parser.add_argument('--batch', type=int, default=1, help='num of benchmark runs')
     parser.add_argument('--data-bchw', action='store_true', help='data as batch-channels-height-width')
     args = parser.parse_args()
     print(f'Loading model from {args.model}, input from {args.input}')
@@ -48,6 +49,8 @@ if __name__ == '__main__':
         img = img[np.newaxis,np.newaxis,:,:]
     else:
         img = img[np.newaxis,:,:,np.newaxis]
+    if args.batch > 1:
+        img = np.repeat(img, args.batch, axis=0)
     print("input shape: ", img.shape)
     # Run the model
     outputs = sess.run(None, {sess.get_inputs()[0].name: img})
