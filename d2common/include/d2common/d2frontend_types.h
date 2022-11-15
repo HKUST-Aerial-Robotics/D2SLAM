@@ -263,8 +263,10 @@ struct VisualImageDesc {
             for (int i = 0; i < landmark_descriptor.size(); i++) {
                 desc0(i) = desc.landmark_descriptor_int8[i] / 127.0;
             }
-            desc0.normalize();
-            //Processing image_desc
+            //Per feature normalize the landmark desc
+            for (int i = 0; i < desc.landmark_num; i++) {
+                desc0.segment(i * 32, 32).normalize();
+            }
             image_desc.resize(desc.image_desc_size_int8);
             Eigen::Map<VectorXf> gdesc(image_desc.data(), image_desc.size());
             for (int i = 0; i < image_desc.size(); i++) {

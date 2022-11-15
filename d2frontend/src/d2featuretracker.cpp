@@ -827,7 +827,8 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     }
 
     if (params->verbose || params->enable_perf_output)
-        printf("[D2FeatureTracker::track] match features %d:%d %.3f ms enable_knn %d search_dist %.2f check_homography %d sp_dims %d\n", pts_a.size(), pts_b.size(), tic.toc(), 
+        printf("[D2FeatureTracker::matchLocalFeatures] match features %d:%d frame %d:%d t: %.3f ms enable_knn %d search_dist %.2f check_homography %d sp_dims %d\n", 
+                pts_a.size(), pts_b.size(), img_desc_a.frame_id, img_desc_b.frame_id, tic.toc(), 
                 params->ftconfig->enable_knn_match, _config.search_local_max_dist*image_width, params->ftconfig->check_homography, params->superpoint_dims);
     if (ids_b.size() >= params->ftconfig->remote_min_match_num) {
         return true;
