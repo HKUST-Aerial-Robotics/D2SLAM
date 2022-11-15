@@ -30,7 +30,7 @@ void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array, 
             sum_byte_sent+= byte_sent;
             count_img_desc_sent ++;
             sum_features += feature_num;
-            ROS_INFO("[SWARM_LOOP](%d) BD KF %d LM: %d size %d avgsize %.0f sumkB %.0f avgLM %.0f force_features:%d", count_img_desc_sent,
+            printf("[SWARM_LOOP](%d) BD KF %d LM: %d size %d avgsize %.0f sumkB %.0f avgLM %.0f force_features:%d\n", count_img_desc_sent,
                 fisheye_desc.frame_id, feature_num, byte_sent, ceil(sum_byte_sent/count_img_desc_sent), sum_byte_sent/1000, ceil(sum_features/count_img_desc_sent), force_features);
         }
     } else {
@@ -53,7 +53,6 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, bool need_send_featu
     ImageDescriptorHeader_t img_desc_header;
     img_desc_header.timestamp = img_des.timestamp;
     img_desc_header.drone_id = img_des.drone_id;
-    img_desc_header.image_desc = img_des.image_desc;
     img_desc_header.pose_drone = img_des.pose_drone;
     img_desc_header.camera_extrinsic = img_des.camera_extrinsic;
     img_desc_header.prevent_adding_db = img_des.prevent_adding_db;
@@ -66,23 +65,36 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, bool need_send_featu
     img_desc_header.is_lazy_frame = img_des.is_lazy_frame;
     img_desc_header.matched_drone = img_des.matched_drone;
     img_desc_header.matched_frame = img_des.matched_frame;
+    img_desc_header.image_desc_int8 = img_des.image_desc_int8;
+    img_desc_header.image_desc_size_int8 = img_des.image_desc_size_int8;
 
     byte_sent += img_desc_header.getEncodedSize();
+    printf("Header size %d\n", img_desc_header.getEncodedSize());
     lcm.publish("VIOKF_HEADER", &img_desc_header);
     if (need_send_features) {
         for (size_t i = 0; i < img_des.landmark_num; i++ ) {
             if (img_des.landmarks[i].type == LandmarkType::SuperPointLandmark) {
                 LandmarkDescriptor_t lm; 
-                lm.landmark = img_des.landmarks[i];
-                lm.desc_len = params->superpoint_dims;
-                lm.landmark_descriptor = std::vector<float>(img_des.landmark_descriptor.data() + i *params->superpoint_dims, 
-                    img_des.landmark_descriptor.data() + (i+1)*params->superpoint_dims);
+                lm.landmark = img_des.landmarks[i].compact;
+                if (img_des.landmark_descriptor_int8.size() > 0) {
+                    lm.desc_len_int8 = params->superpoint_dims;
+                    lm.desc_len = 0;
+                    lm.landmark_descriptor_int8 = std::vector<int8_t>(img_des.landmark_descriptor_int8.data() + i *params->superpoint_dims, 
+                        img_des.landmark_descriptor_int8.data() + (i+1)*params->superpoint_dims);
+                } else {
+                    lm.desc_len = params->superpoint_dims;
+                    lm.desc_len_int8 = 0;
+                    lm.landmark_descriptor = std::vector<float>(img_des.landmark_descriptor.data() + i *params->superpoint_dims, 
+                        img_des.landmark_descriptor.data() + (i+1)*params->superpoint_dims);
+                }
                 int64_t msg_id = rand() + img_des.timestamp.nsec;
                 sent_message.insert(img_des.msg_id);
 
                 lm.msg_id = msg_id;
                 lm.header_id = img_des.msg_id;
                 byte_sent += lm.getEncodedSize();
+                printf("LM size %d(%d) superpoint_dims %d lm.landmark_descriptor_int8 %d\n", lm.getEncodedSize(), 
+                    lm.landmark.getEncodedSize(), params->superpoint_dims, lm.landmark_descriptor_int8.size());
                 lcm.publish("VIOKF_LANDMARKS", &lm);
             }
         }
@@ -92,8 +104,9 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, bool need_send_featu
     sum_features+=feature_num;
     count_img_desc_sent ++;
     if (params->print_network_status) {
-        ROS_INFO("[SWARM_LOOP](%d) BD KF %d LM: %d size %d avgsize %.0f sumkB %.0f avgLM %.0f need_send_features: %d", count_img_desc_sent,
-            img_desc_header.frame_id, feature_num, byte_sent, ceil(sum_byte_sent/count_img_desc_sent), sum_byte_sent/1000, ceil(sum_features/count_img_desc_sent), need_send_features);
+        printf("[SWARM_LOOP](%d) BD KF %d@%d LM: %d size %d header %d avgsize %.0f sumkB %.0f avgLM %.0f need_send_features: %d\n", count_img_desc_sent,
+            img_desc_header.frame_id,  img_desc_header.camera_index, feature_num, byte_sent, img_desc_header.getEncodedSize(), 
+            ceil(sum_byte_sent/count_img_desc_sent), sum_byte_sent/1000, ceil(sum_features/count_img_desc_sent), need_send_features);
     }
 }
 
@@ -126,11 +139,22 @@ void LoopNet::onLandmarkRecevied(const lcm::ReceiveBuffer* rbuf,
     }
 
     auto & tmp = received_images[msg->header_id];
-    tmp.landmarks.emplace_back(msg->landmark);
-    tmp.landmark_descriptor.insert(tmp.landmark_descriptor.end(),
-        msg->landmark_descriptor.begin(),
-        msg->landmark_descriptor.begin()+params->superpoint_dims
-    );
+    tmp.landmarks.emplace_back(Landmark_t());
+    auto new_lm = tmp.landmarks.back();
+    new_lm.compact = msg->landmark;
+    new_lm.camera_id = tmp.camera_id;
+    new_lm.camera_index = tmp.camera_index;
+    new_lm.frame_id = tmp.frame_id;
+    new_lm.drone_id = tmp.drone_id;
+    new_lm.type = LandmarkType::SuperPointLandmark;
+    new_lm.timestamp = tmp.timestamp;
+    new_lm.cur_td = tmp.cur_td;
+
+    if (tmp.landmark_descriptor_int8.size() > 0) {
+        tmp.landmark_descriptor_int8.insert(tmp.landmark_descriptor_int8.end(), msg->landmark_descriptor_int8.begin(), msg->landmark_descriptor_int8.end());
+    } else {
+        tmp.landmark_descriptor.insert(tmp.landmark_descriptor.end(), msg->landmark_descriptor.begin(), msg->landmark_descriptor.end());
+    }
     tmp.landmark_descriptor_size = tmp.landmark_descriptor.size();
     recv_lock.unlock();
     
@@ -223,6 +247,8 @@ void LoopNet::onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
     tmp.drone_id = msg->drone_id;
     tmp.image_desc_size = msg->image_desc_size;
     tmp.image_desc = msg->image_desc;
+    tmp.image_desc_int8 = msg->image_desc_int8;
+    tmp.image_desc_size_int8 = msg->image_desc_size_int8;
     tmp.pose_drone = msg->pose_drone;
     tmp.camera_extrinsic = msg->camera_extrinsic;
     tmp.landmark_num = msg->feature_num;
@@ -251,7 +277,7 @@ void LoopNet::scanRecvPackets() {
             sum_feature_num_all+=received_images[msg_id].landmark_num;
             sum_feature_num+=received_images[msg_id].landmarks.size();
             float cur_recv_rate = ((float)received_images[msg_id].landmarks.size())/((float) received_images[msg_id].landmark_num);
-            ROS_INFO("[SWAMR_LOOP] Frame %d id %ld from drone %d, Feature %ld/%d recv_rate %.1f cur %.1f feature_desc_size %ld(%ld)", 
+            printf("[SWAMR_LOOP] Frame %d id %ld from drone %d, Feature %ld/%d recv_rate %.1f cur %.1f feature_desc_size %ld(%ld)\n", 
                     sum_packets,
                     msg_id, received_images[msg_id].drone_id, received_images[msg_id].landmarks.size(), received_images[msg_id].landmark_num,
                     sum_feature_num/sum_feature_num_all*100,
@@ -306,7 +332,7 @@ void LoopNet::scanRecvPackets() {
             frame_desc.landmark_num += frame_desc.images[i].landmark_num;
         }
 
-        ROS_INFO("[SWAMR_LOOP@%d] Frame contains of %d images from drone %d, landmark %d", params->self_id, frame_desc.images.size(), 
+        printf("[SWAMR_LOOP@%d] Frame contains of %d images from drone %d, landmark %d\n", params->self_id, frame_desc.images.size(), 
                 frame_desc.drone_id, frame_desc.landmark_num);
 
         frame_desc_callback(frame_desc);

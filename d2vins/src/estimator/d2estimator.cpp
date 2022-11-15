@@ -85,6 +85,7 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
     frame.pose_drone = first_frame.odom.pose();
     frame.Ba = first_frame.Ba;
     frame.Bg = first_frame.Bg;
+    frame.setTd(state.getTd(frame.drone_id));
     return true;
 }
 
@@ -184,6 +185,7 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
         margined_landmarks = state.clearFrame();
     }
     auto frame_ret = state.addFrame(_frame, frame);
+    _frame.setTd(state.getTd(_frame.drone_id));
     //Assign IMU and initialization to VisualImageDescArray for broadcasting.
     _frame.imu_buf = _imu;
     _frame.pose_drone = frame.odom.pose();

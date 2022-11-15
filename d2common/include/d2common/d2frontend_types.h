@@ -96,6 +96,7 @@ struct VisualImageDesc {
     std::vector<uint8_t> image; //Buffer to store compressed image.
     int image_width = 0;
     int image_height = 0;
+    double cur_td = 0;
 
     int landmarkNum() const {
         return landmarks.size();
@@ -165,7 +166,7 @@ struct VisualImageDesc {
         return img_desc;
     }
 
-    ImageDescriptor_t toLCM(bool send_features=true) const {
+    ImageDescriptor_t toLCM(bool send_features=true, bool compress_int8=true) const {
         ImageDescriptor_t img_desc;
         img_desc.timestamp = toLCMTime(ros::Time(stamp));
         img_desc.drone_id = drone_id;
@@ -174,22 +175,48 @@ struct VisualImageDesc {
         img_desc.pose_drone = pose_drone.toLCM();
         img_desc.camera_extrinsic = extrinsic.toLCM();
         if (send_features) {
-            img_desc.landmark_descriptor = landmark_descriptor;
-            img_desc.landmark_descriptor_size = landmark_descriptor.size();
+            if (compress_int8) {
+                //Not send scores currently
+                Eigen::Map<const VectorXf> desc0(landmark_descriptor.data(), landmark_descriptor.size());
+                img_desc.landmark_descriptor_size_int8 = landmark_descriptor.size();
+                img_desc.landmark_descriptor_int8.resize(landmark_descriptor.size());
+                img_desc.landmark_descriptor_size = 0;
+                double max = desc0.cwiseAbs().maxCoeff();
+                for (int i = 0; i < landmark_descriptor.size(); i++) {
+                    img_desc.landmark_descriptor_int8[i] = (int8_t)(desc0[i] / max * 127);
+                }
+                img_desc.landmark_scores_size = 0;
+            } else {
+                img_desc.landmark_descriptor = landmark_descriptor;
+                img_desc.landmark_descriptor_size = landmark_descriptor.size();
+                img_desc.landmark_descriptor_size_int8 = 0;
+                img_desc.landmark_scores_size = landmark_scores.size();
+                img_desc.landmark_scores = landmark_scores;
+            }
             img_desc.landmark_num = landmarks.size();
-            img_desc.landmark_scores_size = landmark_scores.size();
-            img_desc.landmark_scores = landmark_scores;
             for (auto landmark: landmarks) {
                 img_desc.landmarks.emplace_back(landmark.toLCM());
             }
         } else {
             img_desc.landmark_num = 0;
             img_desc.landmark_descriptor_size = 0;
+            img_desc.landmark_descriptor_size_int8 = 0;
             img_desc.landmark_scores_size = 0;
             img_desc.is_lazy_frame = true;
         }
-        img_desc.image_desc = image_desc;
-        img_desc.image_desc_size = image_desc.size();
+        if (compress_int8) {
+            img_desc.image_desc_size_int8 = image_desc.size();
+            img_desc.image_desc_int8.resize(image_desc.size());
+            img_desc.image_desc_size = 0;
+            double max = Eigen::Map<const VectorXf>(image_desc.data(), image_desc.size()).cwiseAbs().maxCoeff();
+            for (int i = 0; i < image_desc.size(); i++) {
+                img_desc.image_desc_int8[i] = (int8_t)(image_desc[i] / max * 127);
+            }
+        } else {
+            img_desc.image_desc = image_desc;
+            img_desc.image_desc_size = image_desc.size();
+            img_desc.image_desc_size_int8 = 0;
+        }
 
         img_desc.image_width = image_width;
         img_desc.image_height = image_height;
@@ -199,6 +226,7 @@ struct VisualImageDesc {
         img_desc.prevent_adding_db = prevent_adding_db;
         img_desc.camera_index = camera_index;
         img_desc.camera_id = camera_id;
+        img_desc.cur_td = cur_td;
         // printf("Encoding landmark num %d landmark_descriptor_size %d \n", 
         //     img_desc.landmark_num, img_desc.landmark_descriptor_size);
         return img_desc;
@@ -229,9 +257,25 @@ struct VisualImageDesc {
             frame_id(desc.frame_id) {
         stamp = toROSTime(desc.timestamp).toSec();
         drone_id = desc.drone_id;
-        landmark_descriptor = desc.landmark_descriptor;
+        if (desc.landmark_descriptor_int8.size() > 0) {
+            landmark_descriptor.resize(desc.landmark_descriptor_int8.size());
+            Eigen::Map<VectorXf> desc0(landmark_descriptor.data(), landmark_descriptor.size());
+            for (int i = 0; i < landmark_descriptor.size(); i++) {
+                desc0(i) = desc.landmark_descriptor_int8[i] / 127.0;
+            }
+            desc0.normalize();
+            //Processing image_desc
+            image_desc.resize(desc.image_desc_size_int8);
+            Eigen::Map<VectorXf> gdesc(image_desc.data(), image_desc.size());
+            for (int i = 0; i < image_desc.size(); i++) {
+                gdesc(i) = desc.image_desc_int8[i] / 127.0;
+            }
+            gdesc.normalize();
+        } else {
+            landmark_descriptor = desc.landmark_descriptor;
+            image_desc = desc.image_desc;
+        }
         landmark_scores = desc.landmark_scores;
-        image_desc = desc.image_desc;
         image = desc.image;
         camera_index = desc.camera_index;
         prevent_adding_db = desc.prevent_adding_db;
@@ -261,6 +305,7 @@ struct VisualImageDescArray {
     IMUBuffer imu_buf;
     Vector3d Ba;
     Vector3d Bg;
+    double cur_td = 0;
 
     void sync_landmark_ids() {
         for (auto & image : images) {
@@ -287,6 +332,13 @@ struct VisualImageDescArray {
     void releaseRawImages() {
         for (auto & img : images) {
             img.releaseRawImage();
+        }
+    }
+
+    void setTd(double td) {
+        cur_td = td;
+        for (auto & img : images) {
+            img.cur_td = td;
         }
     }
 
@@ -317,7 +369,8 @@ struct VisualImageDescArray {
             sld_win_status(img_desc.sld_win_status.frame_ids),
             is_lazy_frame(img_desc.is_lazy_frame),
             matched_frame(img_desc.matched_frame),
-            matched_drone(img_desc.matched_drone)
+            matched_drone(img_desc.matched_drone),
+            cur_td(img_desc.cur_td)
         {
         stamp = toROSTime(img_desc.timestamp).toSec();
         pose_drone = Swarm::Pose(img_desc.pose_drone);
@@ -346,7 +399,7 @@ struct VisualImageDescArray {
         return ret;
     }
 
-    ImageArrayDescriptor_t toLCM(bool send_features=true) const {
+    ImageArrayDescriptor_t toLCM(bool send_features=true, bool compress_int8=true) const {
         ImageArrayDescriptor_t ret;
         ret.msg_id = frame_id;
         ret.frame_id = frame_id;
@@ -357,7 +410,7 @@ struct VisualImageDescArray {
         ret.pose_drone = pose_drone.toLCM();
         ret.is_keyframe = is_keyframe;
         for (auto & _img: images) {
-            ret.images.emplace_back(_img.toLCM(send_features));
+            ret.images.emplace_back(_img.toLCM(send_features, compress_int8));
             ret.images.back().matched_frame = matched_frame;
             ret.images.back().matched_drone = matched_drone;
             ret.images.back().is_lazy_frame = is_lazy_frame;
@@ -378,6 +431,7 @@ struct VisualImageDescArray {
         ret.is_lazy_frame = is_lazy_frame;
         ret.matched_frame = matched_frame;
         ret.matched_drone = matched_drone;
+        ret.cur_td = cur_td;
         for (unsigned int i = 0; i < imu_buf.size(); i ++) {
             ret.imu_buf.emplace_back(imu_buf[i].toLCM());
         }

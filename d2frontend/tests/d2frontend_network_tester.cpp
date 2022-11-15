@@ -56,7 +56,7 @@ public:
         dummy_desc.image_size = 0;
         dummy_desc.landmarks.resize(dummy_desc.landmark_num);
         for (auto & lm : dummy_desc.landmarks) {
-            lm.flag = 1;
+            lm.compact.flag = 1;
         }
         loopnet.broadcastImgDesc(dummy_desc);
         count++;

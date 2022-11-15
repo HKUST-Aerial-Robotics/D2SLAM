@@ -66,8 +66,27 @@ int main(int argc, char* argv[]) {
     sp_onnx.inference(img_gray0, kps0, local_desc0, scores0);
     sp_onnx.inference(img_gray1, kps1, local_desc1, scores1);
     std::cout << "Finish inference superpoint features" << kps0.size() << ":" << kps1.size() << std::endl;
+    Eigen::Map<VectorXf> desc0(local_desc0.data(), local_desc0.size());
+    Eigen::Map<VectorXf> desc1(local_desc1.data(), local_desc1.size());
+    std::cout << "minmax coeff of superpoint" << desc0.minCoeff() << ":" << desc0.maxCoeff() << std::endl;
+    std::cout << "minmax coeff of superpoint" << desc1.minCoeff() << ":" << desc1.maxCoeff() << std::endl;
+    double max0 = desc0.cwiseAbs().maxCoeff();
+    double max1 = desc1.cwiseAbs().maxCoeff();
+    //Convert to int8 with scale maxCoeff()/127
+    VectorXi desc_i0 = (desc0 / max0 * 127).template cast<int>();
+    VectorXi desc_i1 = (desc1 / max1 * 127).template cast<int>();
+
+    //Recover float from int8
+    desc0 = desc_i0.template cast<float>() / 127 * max0;
+    desc1 = desc_i1.template cast<float>() / 127 * max1;
+
+
     auto global_desc0 = netvlad_onnx.inference(img_gray0);
     auto global_desc1 = netvlad_onnx.inference(img_gray1);
+    VectorXf gdesc0 = VectorXf::Map(global_desc0.data(), global_desc0.size());
+    VectorXf gdesc1 = VectorXf::Map(global_desc1.data(), global_desc1.size());
+    std::cout << "minmax coeff of netvlad0 " << gdesc0.minCoeff() << ":" << gdesc0.maxCoeff() << "norm: " << gdesc0.norm() << std::endl;
+    std::cout << "minmax coeff of netvlad1 " << gdesc1.minCoeff() << ":" << gdesc1.maxCoeff() << "norm: " << gdesc1.norm() << std::endl;
     for (size_t i = 0; i < kps0.size(); i ++) {
         kps0_norm.emplace_back(cv::Point2f((kps0[i].x-width/2)/focal, (kps0[i].y-height/2)/focal));
     }

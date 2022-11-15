@@ -67,8 +67,15 @@ void computeDescriptors(const torch::Tensor & mProb, const torch::Tensor & mDesc
     Eigen::Map<Eigen::Matrix<float,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor>> _desc(desc.data<float>(), desc.size(0), desc.size(1));
     if (pca_comp_T.size() > 0) {
         Eigen::Matrix<float,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> _desc_new = (_desc.rowwise() - pca_mean) *pca_comp_T;
+        //Perform row wise normalization
+        for (int i = 0; i < _desc_new.rows(); i++) {
+            _desc_new.row(i) /= _desc_new.row(i).norm();
+        }
         local_descriptors = std::vector<float>(_desc_new.data(), _desc_new.data()+_desc_new.cols()*_desc_new.rows());
     } else {
+        for (int i = 0; i < _desc.rows(); i++) {
+            _desc.row(i) /= _desc.row(i).norm();
+        }
         local_descriptors = std::vector<float>(_desc.data(), _desc.data()+_desc.cols()*_desc.rows());
     }
     if (params->enable_perf_output) {

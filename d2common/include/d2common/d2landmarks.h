@@ -70,20 +70,20 @@ struct LandmarkPerFrame {
 
     LandmarkPerFrame(const Landmark_t & Landmark):
         frame_id(Landmark.frame_id),
-        landmark_id(Landmark.landmark_id),
+        landmark_id(Landmark.compact.landmark_id),
         type((LandmarkType)Landmark.type),
         stamp(toROSTime(Landmark.timestamp).toSec()),
-        stamp_discover(toROSTime(Landmark.stamp_discover).toSec()),
+        stamp_discover(toROSTime(Landmark.compact.stamp_discover).toSec()),
         camera_index(Landmark.camera_index),
         camera_id(Landmark.camera_id),
         drone_id(Landmark.drone_id),
-        flag((LandmarkFlag) Landmark.flag),
-        pt2d(Landmark.pt2d.x, Landmark.pt2d.y),
-        pt3d_norm(Landmark.pt3d_norm.x, Landmark.pt3d_norm.y, Landmark.pt3d_norm.z),
-        pt3d(Landmark.pt3d.x, Landmark.pt3d.y, Landmark.pt3d.z),
-        velocity(Landmark.velocity.x, Landmark.velocity.y, Landmark.velocity.z),
-        depth(Landmark.depth),
-        depth_mea(Landmark.depth_mea),
+        flag((LandmarkFlag) Landmark.compact.flag),
+        pt2d(Landmark.compact.pt2d.x, Landmark.compact.pt2d.y),
+        pt3d_norm(Landmark.compact.pt3d_norm.x, Landmark.compact.pt3d_norm.y, Landmark.compact.pt3d_norm.z),
+        pt3d(Landmark.compact.pt3d.x, Landmark.compact.pt3d.y, Landmark.compact.pt3d.z),
+        velocity(Landmark.compact.velocity.x, Landmark.compact.velocity.y, Landmark.compact.velocity.z),
+        depth(Landmark.compact.depth),
+        depth_mea(Landmark.compact.depth_mea),
         cur_td(Landmark.cur_td)
     {}
 
@@ -108,27 +108,27 @@ struct LandmarkPerFrame {
     Landmark_t toLCM() {
         Landmark_t ret;
         ret.frame_id = frame_id;
-        ret.landmark_id = landmark_id;
+        ret.compact.landmark_id = landmark_id;
         ret.timestamp = toLCMTime(ros::Time(stamp));
-        ret.stamp_discover = toLCMTime(ros::Time(stamp_discover));
+        ret.compact.stamp_discover = toLCMTime(ros::Time(stamp_discover));
         ret.camera_index = camera_index;
         ret.drone_id = drone_id;
-        ret.flag = flag;
         ret.type = type;
         ret.camera_id = camera_id;
-        ret.depth = depth;
-        ret.depth_mea = depth_mea;
-        ret.pt2d.x = pt2d.x;
-        ret.pt2d.y = pt2d.y;
-        ret.velocity.x = velocity.x();
-        ret.velocity.y = velocity.y();
-        ret.velocity.z = velocity.z();
-        ret.pt3d_norm.x = pt3d_norm.x();
-        ret.pt3d_norm.y = pt3d_norm.y();
-        ret.pt3d_norm.z = pt3d_norm.z();
-        ret.pt3d.x = pt3d.x();
-        ret.pt3d.y = pt3d.y();
-        ret.pt3d.z = pt3d.z();
+        ret.compact.flag = flag;
+        ret.compact.depth = depth;
+        ret.compact.depth_mea = depth_mea;
+        ret.compact.pt2d.x = pt2d.x;
+        ret.compact.pt2d.y = pt2d.y;
+        ret.compact.velocity.x = velocity.x();
+        ret.compact.velocity.y = velocity.y();
+        ret.compact.velocity.z = velocity.z();
+        ret.compact.pt3d_norm.x = pt3d_norm.x();
+        ret.compact.pt3d_norm.y = pt3d_norm.y();
+        ret.compact.pt3d_norm.z = pt3d_norm.z();
+        ret.compact.pt3d.x = pt3d.x();
+        ret.compact.pt3d.y = pt3d.y();
+        ret.compact.pt3d.z = pt3d.z();
         ret.cur_td = cur_td;
         return ret;
     }

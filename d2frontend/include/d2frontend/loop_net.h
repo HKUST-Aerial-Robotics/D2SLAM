@@ -32,6 +32,7 @@ class LoopNet {
     double sum_byte_sent = 0;
     double sum_features = 0;
     int count_img_desc_sent = 0;
+    bool compress_int8_desc = true;
 
     void onLoopConnectionRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
