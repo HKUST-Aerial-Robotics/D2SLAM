@@ -13,8 +13,8 @@ SuperPointONNX::SuperPointONNX(std::string engine_path,
     std::string _pca_mean,
     int _width, int _height, 
     float _thres, int _max_num, 
-    bool use_tensorrt, bool use_fp16, bool use_int8):
-        ONNXInferenceGeneric(engine_path, "image", "semi", _width, _height, use_tensorrt, use_fp16, use_int8),
+    bool use_tensorrt, bool use_fp16, bool use_int8, std::string int8_calib_table_name):
+        ONNXInferenceGeneric(engine_path, "image", "semi", _width, _height, use_tensorrt, use_fp16, use_int8, int8_calib_table_name),
         output_shape_semi_{1, _height, _width},
         output_shape_desc_{1, SP_DESC_RAW_LEN, _height/8, _width/8},
         input_shape_{1, 1, _height, _width},
@@ -84,7 +84,8 @@ void SuperPointONNX::inference(const cv::Mat & input, std::vector<cv::Point2f> &
     computeDescriptors(mProb, mDesc, keypoints, local_descriptors, width, height, pca_comp_T, pca_mean);
     double desc_time = tic2.toc();
     if (params->enable_perf_output) {
-        printf("[SuperPointONNX] inference time: %f ms, copy time: %f ms, nms time: %f ms, desc time: %f ms\n");
+        printf("[SuperPointONNX] inference time: %f ms, copy time: %f ms, nms time: %f ms, desc time: %f ms\n", 
+            inference_time, copy_time, nms_time, desc_time);
     }
 }
 }

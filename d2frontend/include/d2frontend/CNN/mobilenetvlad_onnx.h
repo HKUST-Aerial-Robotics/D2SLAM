@@ -11,8 +11,10 @@ protected:
     std::array<int64_t, 4> input_shape_;
 public:
     const int descriptor_size = 4096;
-    MobileNetVLADONNX(std::string engine_path, int _width, int _height, bool use_tensorrt = true, bool use_fp16 = true, bool use_int8 = false): 
-            ONNXInferenceGeneric(engine_path, "image:0", "descriptor:0", _width, _height, use_tensorrt, use_fp16, use_int8),
+    MobileNetVLADONNX(std::string engine_path, int _width, int _height, bool use_tensorrt = true, 
+                bool use_fp16 = true, bool use_int8 = false, std::string int8_calib_table_name = ""): 
+            ONNXInferenceGeneric(engine_path, "image:0", "descriptor:0", _width, _height, 
+                    use_tensorrt, use_fp16, use_int8, int8_calib_table_name),
             output_shape_{1, NETVLAD_DESC_SIZE},
             input_shape_{1, _height, _width, 1},
             results_{0}

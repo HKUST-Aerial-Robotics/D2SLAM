@@ -25,10 +25,11 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     if (config.cnn_use_onnx) {
         printf("[D2FrontEnd::LoopCam] Init CNNs using onnx\n");
         netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, img_width, img_height, config.cnn_enable_tensorrt, 
-            config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8);
+            config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8, config.netvlad_int8_calib_table_name);
         superpoint_onnx = new SuperPointONNX(config.superpoint_model, ((int)(params->feature_min_dist/2)), config.pca_comp, 
             config.pca_mean, img_width, img_height, config.superpoint_thres, config.superpoint_max_num, 
-            config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8); 
+            config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8, 
+            config.superpoint_int8_calib_table_name); 
     }
     undistortors = params->undistortors;
     cams = params->camera_ptrs;
@@ -162,6 +163,10 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
     static int t_count = 0;
     static double tt_sum = 0;
 
+    if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
+        visual_array.images.resize(4);
+    }
+
     for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
         if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             visual_array.images.push_back(generateGrayDepthImageDescriptor(msg, i, tmp));
@@ -178,8 +183,8 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
                 visual_array.images.push_back(_imgs[1]);
             }
         } else if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
-            auto _img = generateImageDescriptor(msg, i, tmp);
-            visual_array.images.push_back(_img);
+            auto seq = params->camera_seq[i];
+            visual_array.images[seq] = generateImageDescriptor(msg, i, tmp);
         }
 
         if (_show.cols == 0) {
@@ -191,7 +196,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
 
     tt_sum+= tt.toc();
     t_count+= 1;
-    // ROS_INFO("[D2Frontend::LoopCam] KF Count %d loop_cam cost avg %.1fms cur %.1fms", kf_count, tt_sum/t_count, tt.toc());
+    ROS_INFO("[D2Frontend::LoopCam] KF Count %d loop_cam cost avg %.1fms cur %.1fms", kf_count, tt_sum/t_count, tt.toc());
 
     visual_array.frame_id = msg.keyframe_id;
     visual_array.pose_drone = msg.pose_drone;

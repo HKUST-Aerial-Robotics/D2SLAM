@@ -61,8 +61,12 @@ namespace D2FrontEnd {
         nh.param<std::string>("pca_mean_path",loopcamconfig->pca_mean, "");
         nh.param<std::string>("superpoint_model_path", loopcamconfig->superpoint_model, "");
         nh.param<std::string>("netvlad_model_path", loopcamconfig->netvlad_model, "");
-        nh.param<bool>("cnn_enable_tensorrt", loopcamconfig->cnn_enable_tensorrt, false);
-        nh.param<bool>("cnn_enable_tensorrt_int8", loopcamconfig->cnn_enable_tensorrt_int8, false);
+        loopcamconfig->cnn_enable_tensorrt = (int) fsSettings["cnn_enable_tensorrt"];
+        loopcamconfig->cnn_enable_tensorrt_int8 = (int) fsSettings["cnn_enable_tensorrt_int8"];
+        if (loopcamconfig->cnn_enable_tensorrt_int8) {
+            loopcamconfig->netvlad_int8_calib_table_name = (std::string) fsSettings["netvlad_int8_calib_table_name"];
+            loopcamconfig->superpoint_int8_calib_table_name = (std::string) fsSettings["superpoint_int8_calib_table_name"];
+        }
 
         nh.param<bool>("lower_cam_as_main", loopcamconfig->right_cam_as_main, false);
         nh.param<double>("triangle_thres", loopcamconfig->TRIANGLE_THRES, 0.006);
@@ -202,6 +206,14 @@ namespace D2FrontEnd {
         undistort_fov = fsSettings["undistort_fov"];
         width = (int) fsSettings["image_width"];
         height = (int) fsSettings["image_height"];
+        std::string camera_seq_str = fsSettings["camera_seq"]; // Back-right Back-left Front-left Front-right
+        if (camera_seq_str == "") {
+            this->camera_seq = std::vector<int>{0, 1, 2, 3};
+        } else {
+            //Camera seq from string "0123" to vector<int> {0, 1, 2, 3}
+            this->camera_seq = std::vector<int>(camera_seq_str.size());
+            std::transform(camera_seq_str.begin(), camera_seq_str.end(), this->camera_seq.begin(), [](char c) { return c - '0'; });
+        }
         
         std::string calib_file_path = fsSettings["calib_file_path"];
         if (calib_file_path != "") {
