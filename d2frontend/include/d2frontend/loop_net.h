@@ -29,6 +29,10 @@ class LoopNet {
     bool send_img;
     bool send_whole_img_desc;
 
+    double sum_byte_sent = 0;
+    double sum_features = 0;
+    int count_img_desc_sent = 0;
+
     void onLoopConnectionRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
                 const LoopEdge_t* msg);
@@ -62,6 +66,7 @@ class LoopNet {
     bool msgBlocked(int64_t _id) {
         return blacklist.find(_id) != blacklist.end() || sent_message.find(_id) != sent_message.end();
     }
+
 public:
     std::function<void(const VisualImageDescArray &)> frame_desc_callback;
     std::function<void(const LoopEdge_t &)> loopconn_callback;

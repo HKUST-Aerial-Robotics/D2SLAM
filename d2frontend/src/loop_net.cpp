@@ -24,6 +24,15 @@ void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array, 
     if (send_whole_img_desc) {
         sent_message.insert(fisheye_desc.msg_id);
         lcm.publish("VIOKF_IMG_ARRAY", &fisheye_desc);
+        if (params->print_network_status) {
+            int feature_num = fisheye_desc.landmark_num;
+            int byte_sent = fisheye_desc.getEncodedSize();
+            sum_byte_sent+= byte_sent;
+            count_img_desc_sent ++;
+            sum_features += feature_num;
+            ROS_INFO("[SWARM_LOOP](%d) BD KF %d LM: %d size %d avgsize %.0f sumkB %.0f avgLM %.0f force_features:%d", count_img_desc_sent,
+                fisheye_desc.frame_id, feature_num, byte_sent, ceil(sum_byte_sent/count_img_desc_sent), sum_byte_sent/1000, ceil(sum_features/count_img_desc_sent), force_features);
+        }
     } else {
         for (auto & img : fisheye_desc.images) {
             if (img.landmark_num > 0) {
@@ -37,17 +46,9 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, bool need_send_featu
     int64_t msg_id = rand() + img_des.timestamp.nsec;
     img_des.msg_id = msg_id;
     sent_message.insert(img_des.msg_id);
-    static double sum_byte_sent = 0;
-    static double sum_features = 0;
-    static int count_byte_sent = 0;
 
     int byte_sent = 0;
-    int feature_num = 0;
-    for (size_t i = 0; i < img_des.landmark_num; i++ ) {
-        if (img_des.landmarks[i].flag > 0) {
-            feature_num ++;
-        }
-    }
+    int feature_num = img_des.landmark_num;
 
     ImageDescriptorHeader_t img_desc_header;
     img_desc_header.timestamp = img_des.timestamp;
@@ -70,7 +71,7 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, bool need_send_featu
     lcm.publish("VIOKF_HEADER", &img_desc_header);
     if (need_send_features) {
         for (size_t i = 0; i < img_des.landmark_num; i++ ) {
-            if (img_des.landmarks[i].flag > 0 || params->SEND_ALL_FEATURES) {
+            if (img_des.landmarks[i].type == LandmarkType::SuperPointLandmark) {
                 LandmarkDescriptor_t lm; 
                 lm.landmark = img_des.landmarks[i];
                 lm.desc_len = params->superpoint_dims;
@@ -89,10 +90,10 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, bool need_send_featu
 
     sum_byte_sent+= byte_sent;
     sum_features+=feature_num;
-    count_byte_sent ++;
+    count_img_desc_sent ++;
     if (params->print_network_status) {
-    ROS_INFO("[SWARM_LOOP](%d) BD KF %d LM: %d size %d avgsize %.0f sumkB %.0f avgLM %.0f", count_byte_sent,
-            img_desc_header.msg_id, feature_num, byte_sent, ceil(sum_byte_sent/count_byte_sent), sum_byte_sent/1000, ceil(sum_features/count_byte_sent));
+        ROS_INFO("[SWARM_LOOP](%d) BD KF %d LM: %d size %d avgsize %.0f sumkB %.0f avgLM %.0f need_send_features: %d", count_img_desc_sent,
+            img_desc_header.frame_id, feature_num, byte_sent, ceil(sum_byte_sent/count_img_desc_sent), sum_byte_sent/1000, ceil(sum_features/count_img_desc_sent), need_send_features);
     }
 }
 

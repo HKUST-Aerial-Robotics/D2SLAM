@@ -56,7 +56,6 @@ struct D2FrontendParams {
     int JPG_QUALITY;
     double ACCEPT_NONKEYFRAME_WAITSEC;
     bool USE_DEPTH;
-    bool SEND_ALL_FEATURES;
     std::string OUTPUT_PATH;
     int width;
     int height;

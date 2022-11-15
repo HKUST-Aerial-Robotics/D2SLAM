@@ -42,9 +42,9 @@ namespace D2FrontEnd {
         nh.param<bool>("enable_pub_local_frame", enable_pub_local_frame, false);
         nh.param<bool>("enable_sub_remote_frame", enable_sub_remote_frame, false);
         nh.param<bool>("verbose", verbose, false);
-        nh.param<bool>("print_network_status", print_network_status, false);
         nh.param<std::string>("output_path", OUTPUT_PATH, "");
         enable_perf_output = (int) fsSettings["enable_perf_output"];
+        print_network_status = (int) fsSettings["print_network_status"];
 
         //Loopcam configs
         loopcamconfig->superpoint_max_num = (int) fsSettings["max_superpoint_cnt"];
@@ -127,7 +127,6 @@ namespace D2FrontEnd {
 
         //Network config
         nh.param<std::string>("lcm_uri", _lcm_uri, "udpm://224.0.0.251:7667?ttl=1");
-        nh.param<bool>("send_all_features", SEND_ALL_FEATURES, false);
         nh.param<double>("recv_msg_duration", recv_msg_duration, 0.5);
         nh.param<bool>("enable_network", enable_network, true);
         lazy_broadcast_keyframe = (int) fsSettings["lazy_broadcast_keyframe"];
