@@ -4,7 +4,8 @@
 namespace D2VINS {
 DistributedVinsData::DistributedVinsData(const DistributedVinsData_t & msg):
     stamp(toROSTime(msg.timestamp).toSec()), drone_id(msg.drone_id), solver_token(msg.solver_token),
-    iteration_count(msg.iteration_count)
+    iteration_count(msg.iteration_count),
+    reference_frame_id(msg.reference_frame_id)
 {
     for (int i = 0; i < msg.frame_ids.size(); i++) {
         frame_ids.emplace_back(msg.frame_ids[i]);
@@ -41,6 +42,7 @@ DistributedVinsData_t DistributedVinsData::toLCM() const {
     msg.remote_drone_num = remote_drone_ids.size();
     msg.solver_token = solver_token;
     msg.iteration_count = iteration_count;
+    msg.reference_frame_id = reference_frame_id;
     return msg;
 }
 

@@ -18,7 +18,6 @@ void initParams(ros::NodeHandle & nh) {
     params = new D2VINSConfig;
     std::string vins_config_path;
     nh.param<std::string>("vins_config_path", vins_config_path, "");
-    nh.param<bool>("verbose", params->verbose, false);
     nh.param<std::string>("lcm_uri", params->lcm_uri, "udpm://224.0.0.251:7667?ttl=1");
     nh.param<int>("self_id", params->self_id, 0);
     nh.param<bool>("enable_loop", params->enable_loop, true);
@@ -70,6 +69,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     enable_perf_output = (int)fsSettings["enable_perf_output"];
     debug_print_sldwin = (int)fsSettings["debug_print_sldwin"];
     debug_write_margin_matrix = (int)fsSettings["debug_write_margin_matrix"];
+    verbose = (int) fsSettings["verbose"];
     
     //Estimation
     td_initial = fsSettings["td"];

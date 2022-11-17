@@ -168,12 +168,12 @@ struct VisualImageDesc {
 
     ImageDescriptor_t toLCM(bool send_features=true, bool compress_int8=true) const {
         ImageDescriptor_t img_desc;
-        img_desc.timestamp = toLCMTime(ros::Time(stamp));
-        img_desc.drone_id = drone_id;
-        img_desc.frame_id = frame_id;
+        img_desc.header.timestamp = toLCMTime(ros::Time(stamp));
+        img_desc.header.drone_id = drone_id;
+        img_desc.header.frame_id = frame_id;
         
-        img_desc.pose_drone = pose_drone.toLCM();
-        img_desc.camera_extrinsic = extrinsic.toLCM();
+        img_desc.header.pose_drone = pose_drone.toLCM();
+        img_desc.header.camera_extrinsic = extrinsic.toLCM();
         if (send_features) {
             if (compress_int8) {
                 //Not send scores currently
@@ -202,20 +202,20 @@ struct VisualImageDesc {
             img_desc.landmark_descriptor_size = 0;
             img_desc.landmark_descriptor_size_int8 = 0;
             img_desc.landmark_scores_size = 0;
-            img_desc.is_lazy_frame = true;
+            img_desc.header.is_lazy_frame = true;
         }
         if (compress_int8) {
-            img_desc.image_desc_size_int8 = image_desc.size();
-            img_desc.image_desc_int8.resize(image_desc.size());
-            img_desc.image_desc_size = 0;
+            img_desc.header.image_desc_size_int8 = image_desc.size();
+            img_desc.header.image_desc_int8.resize(image_desc.size());
+            img_desc.header.image_desc_size = 0;
             double max = Eigen::Map<const VectorXf>(image_desc.data(), image_desc.size()).cwiseAbs().maxCoeff();
             for (int i = 0; i < image_desc.size(); i++) {
-                img_desc.image_desc_int8[i] = (int8_t)(image_desc[i] / max * 127);
+                img_desc.header.image_desc_int8[i] = (int8_t)(image_desc[i] / max * 127);
             }
         } else {
-            img_desc.image_desc = image_desc;
-            img_desc.image_desc_size = image_desc.size();
-            img_desc.image_desc_size_int8 = 0;
+            img_desc.header.image_desc = image_desc;
+            img_desc.header.image_desc_size = image_desc.size();
+            img_desc.header.image_desc_size_int8 = 0;
         }
 
         img_desc.image_width = image_width;
@@ -223,10 +223,11 @@ struct VisualImageDesc {
         img_desc.image = image;
         img_desc.image_size = image.size();
         
-        img_desc.prevent_adding_db = prevent_adding_db;
-        img_desc.camera_index = camera_index;
-        img_desc.camera_id = camera_id;
-        img_desc.cur_td = cur_td;
+        img_desc.header.prevent_adding_db = prevent_adding_db;
+        img_desc.header.camera_index = camera_index;
+        img_desc.header.camera_id = camera_id;
+        img_desc.header.cur_td = cur_td;
+        img_desc.header.sld_win_status.sld_win_len = 0;
         // printf("Encoding landmark num %d landmark_descriptor_size %d \n", 
         //     img_desc.landmark_num, img_desc.landmark_descriptor_size);
         return img_desc;
@@ -252,12 +253,13 @@ struct VisualImageDesc {
     }
 
     VisualImageDesc(const ImageDescriptor_t & desc):
-            extrinsic(desc.camera_extrinsic),
-            pose_drone(desc.pose_drone),
-            frame_id(desc.frame_id) {
-        stamp = toROSTime(desc.timestamp).toSec();
-        drone_id = desc.drone_id;
+            extrinsic(desc.header.camera_extrinsic),
+            pose_drone(desc.header.pose_drone),
+            frame_id(desc.header.frame_id) {
+        stamp = toROSTime(desc.header.timestamp).toSec();
+        drone_id = desc.header.drone_id;
         if (desc.landmark_descriptor_int8.size() > 0) {
+            printf("Decode int8 landmark descriptor size %d \n", desc.landmark_descriptor_int8.size());
             landmark_descriptor.resize(desc.landmark_descriptor_int8.size());
             Eigen::Map<VectorXf> desc0(landmark_descriptor.data(), landmark_descriptor.size());
             for (int i = 0; i < landmark_descriptor.size(); i++) {
@@ -267,23 +269,22 @@ struct VisualImageDesc {
             for (int i = 0; i < desc.landmark_num; i++) {
                 desc0.segment(i * 32, 32).normalize();
             }
-            image_desc.resize(desc.image_desc_size_int8);
+            image_desc.resize(desc.header.image_desc_size_int8);
             Eigen::Map<VectorXf> gdesc(image_desc.data(), image_desc.size());
             for (int i = 0; i < image_desc.size(); i++) {
-                gdesc(i) = desc.image_desc_int8[i] / 127.0;
+                gdesc(i) = desc.header.image_desc_int8[i] / 127.0;
             }
             gdesc.normalize();
         } else {
             landmark_descriptor = desc.landmark_descriptor;
-            image_desc = desc.image_desc;
+            image_desc = desc.header.image_desc;
         }
         landmark_scores = desc.landmark_scores;
         image = desc.image;
-        camera_index = desc.camera_index;
-        prevent_adding_db = desc.prevent_adding_db;
-        camera_index = desc.camera_index;
-        camera_id = desc.camera_id;
-        is_lazy_frame = desc.is_lazy_frame;
+        prevent_adding_db = desc.header.prevent_adding_db;
+        camera_index = desc.header.camera_index;
+        camera_id = desc.header.camera_id;
+        is_lazy_frame = desc.header.is_lazy_frame;
         for (auto landmark: desc.landmarks) {
             landmarks.emplace_back(landmark);
         }
@@ -413,9 +414,12 @@ struct VisualImageDescArray {
         ret.is_keyframe = is_keyframe;
         for (auto & _img: images) {
             ret.images.emplace_back(_img.toLCM(send_features, compress_int8));
-            ret.images.back().matched_frame = matched_frame;
-            ret.images.back().matched_drone = matched_drone;
-            ret.images.back().is_lazy_frame = is_lazy_frame;
+            ret.images.back().header.matched_frame = matched_frame;
+            ret.images.back().header.matched_drone = matched_drone;
+            ret.images.back().header.is_lazy_frame = is_lazy_frame;
+            ret.images.back().header.pose_drone = ret.pose_drone;
+            ret.images.back().header.reference_frame_id = reference_frame_id;
+            ret.images.back().header.cur_td = cur_td;
         }
         ret.image_num = images.size();
         ret.imu_buf_size = imu_buf.size();

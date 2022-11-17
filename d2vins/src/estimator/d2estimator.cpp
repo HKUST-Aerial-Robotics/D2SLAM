@@ -244,14 +244,20 @@ VINSFrame * D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
         } else {
             vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
         }
-        auto ego_last = last_frame.initial_ego_pose;
-        auto pose_local_cur = _frame.pose_drone;
-        auto pred_cur_pose = last_frame.odom.pose() * ego_last.inverse()*pose_local_cur;
-        if (params->verbose) {
-            printf("[D2VINS::D2Estimator] Initial remoteframe %ld@drone%d with ego-motion: %s\n",
-                _frame.frame_id, r_drone_id, pred_cur_pose.toStr().c_str());
+        if (_frame.reference_frame_id != state.getReferenceFrameId()) {
+            auto ego_last = last_frame.initial_ego_pose;
+            auto pose_local_cur = _frame.pose_drone;
+            auto pred_cur_pose = last_frame.odom.pose() * ego_last.inverse()*pose_local_cur;
+            vinsframe.odom.pose() = pred_cur_pose;
+            std::cout << "ego_last " << ego_last.toStr() << std::endl;
+            std::cout << "pose_local_cur " << pose_local_cur.toStr() << std::endl;
+            std::cout << "last_frame " << last_frame.odom.pose().toStr() << std::endl;
+            std::cout << "pred_cur_pose " << pred_cur_pose.toStr() << std::endl;
+            if (params->verbose) {
+                printf("[D2VINS::D2Estimator] Initial remoteframe %ld@drone%d with ego-motion: %s\n",
+                    _frame.frame_id, r_drone_id, pred_cur_pose.toStr().c_str());
+            }
         }
-        vinsframe.odom.pose() = pred_cur_pose;
     } else {
         //Need to init the first frame.
         vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
@@ -295,7 +301,10 @@ void D2Estimator::addSldWinToFrame(VisualImageDescArray & frame) {
 
 void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
     const Guard lock(frame_mutex);
-    state.updateSldwin(frame.drone_id, frame.sld_win_status);
+    if (frame.sld_win_status.size() > 0) {
+        //We need to update the sliding window.
+        state.updateSldwin(frame.drone_id, frame.sld_win_status);
+    }
     auto frame_ptr = addFrameRemote(frame);
     if (params->estimation_mode == D2VINSConfig::SERVER_MODE && state.size(frame.drone_id) >= params->min_solve_frames) {
         state.clearFrame();
@@ -391,10 +400,12 @@ bool D2Estimator::isMain() const {
 
 void D2Estimator::onDistributedVinsData(const DistributedVinsData & dist_data) {
     if (params->verbose) {
-        printf("[D2Estimator::onDistributedVinsData@%d] drone %d solver_id %d iteration %d \n", self_id,
-                dist_data.drone_id, dist_data.solver_token, dist_data.iteration_count);
+        printf("[D2Estimator::onDistributedVinsData@%d] drone %d solver_id %d iteration %d reference_frame_id %ld \n", self_id,
+                dist_data.drone_id, dist_data.solver_token, dist_data.iteration_count, dist_data.reference_frame_id);
     }
-    sync_data_receiver->add(dist_data);
+    if (dist_data.reference_frame_id == state.getReferenceFrameId()) {
+        sync_data_receiver->add(dist_data);
+    }
 }
 
 void D2Estimator::onSyncSignal(int drone_id, int signal, int64_t token) {
@@ -418,7 +429,8 @@ void D2Estimator::onSyncSignal(int drone_id, int signal, int64_t token) {
     }
 }
 
-void D2Estimator::sendDistributedVinsData(const DistributedVinsData & data) {
+void D2Estimator::sendDistributedVinsData(DistributedVinsData data) {
+    data.reference_frame_id = state.getReferenceFrameId();
     vinsnet->sendDistributedVinsData(data);
 }
 
@@ -525,6 +537,9 @@ void D2Estimator::solveinDistributedMode() {
 
     // Reprogation
     for (auto drone_id : state.availableDrones()) {
+        if (drone_id != self_id && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+            continue;
+        }
         auto _imu = imu_bufs[self_id].back(state.lastFrame(drone_id).stamp + state.td);
         last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
     }

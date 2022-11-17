@@ -45,20 +45,20 @@ public:
     void timerCallback(const ros::TimerEvent & e) {
         static int count = 0;
         ImageDescriptor_t dummy_desc;
-        dummy_desc.timestamp = toLCMTime(ros::Time::now());
-        dummy_desc.drone_id = self_id;
-        dummy_desc.msg_id = count + self_id*1000000;
+        dummy_desc.header.timestamp = toLCMTime(ros::Time::now());
+        dummy_desc.header.drone_id = self_id;
+        dummy_desc.header.msg_id = count + self_id*1000000;
         dummy_desc.landmark_num = 200;
         dummy_desc.landmark_descriptor.resize(200*64);
         dummy_desc.landmark_descriptor_size = dummy_desc.landmark_descriptor.size();
-        dummy_desc.image_desc.resize(4096);
-        dummy_desc.image_desc_size = 4096;
+        dummy_desc.header.image_desc.resize(4096);
+        dummy_desc.header.image_desc_size = 4096;
         dummy_desc.image_size = 0;
         dummy_desc.landmarks.resize(dummy_desc.landmark_num);
         for (auto & lm : dummy_desc.landmarks) {
             lm.compact.flag = 1;
         }
-        loopnet.broadcastImgDesc(dummy_desc);
+        loopnet.broadcastImgDesc(dummy_desc, SlidingWindow_t());
         count++;
     }
 };

@@ -15,7 +15,6 @@
     <arg name="enable_loop" default="true" />
     <arg name="enable_pgo" default="true" />
     <arg name="rviz" default="false" />
-    <arg name="verbose" default="false" />
     <arg name="is_4dof" default="false" />
     <arg name="depth_gen" default="false" />
     <arg name="main_id" default="1" /> <!-- This only determine trust which drone to setup cooridinate frme -->
@@ -36,7 +35,7 @@
             superpoint_thres: 0.1
             triangle_thres: 0.012
             #triangle_thres: 0.008
-            min_direction_loop: 1
+            min_direction_loop: 4
             
             detector_match_thres: 0.7
             send_all_features: false
@@ -66,7 +65,6 @@
         <param name="inter_drone_init_frames" value="$(arg inter_drone_init_frames)" type="int" />
         <param name="vins_config_path" value="$(arg config)" type="string" />
         <param name="enable_loop" value="$(arg enable_loop)" type="bool" />
-        <param name="verbose" value="$(arg verbose)" type="bool" />
         <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
     </node>
     <include file="$(find d2pgo)/launch/d2pgo.launch" if="$(arg enable_pgo)" >

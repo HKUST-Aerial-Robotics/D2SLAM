@@ -16,7 +16,6 @@
     <arg name="enable_loop" default="false" />
     <arg name="enable_pgo" default="false" />
     <arg name="rviz" default="false" />
-    <arg name="verbose" default="false" />
     <arg name="is_4dof" default="false" />
     <arg name="depth_gen" default="false" />
     <arg name="main_id" default="1" /> <!-- This only determine trust which drone to setup cooridinate frme -->
@@ -67,7 +66,6 @@
         <param name="inter_drone_init_frames" value="$(arg inter_drone_init_frames)" type="int" />
         <param name="vins_config_path" value="$(arg config)" type="string" />
         <param name="enable_loop" value="$(arg enable_loop)" type="bool" />
-        <param name="verbose" value="$(arg verbose)" type="bool" />
         <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
         <remap from="~imu" to="/dji_sdk_1/dji_sdk/imu" />
     </node>

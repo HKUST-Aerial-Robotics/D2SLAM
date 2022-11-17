@@ -15,6 +15,7 @@ struct DistributedVinsData {
     int drone_id;
     int solver_token;
     int iteration_count;
+    int reference_frame_id = -1;
     std::vector<FrameIdType> frame_ids;
     std::vector<Swarm::Pose> frame_poses;
     std::vector<CamIdType> cam_ids;

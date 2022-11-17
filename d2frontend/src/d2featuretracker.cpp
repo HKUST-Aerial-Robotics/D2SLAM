@@ -130,6 +130,7 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
     if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
         std::vector<int> dirs{2, 3, 0, 1};
         dir_a = 2;
+        printf("[D2FeatureTracker::getMatchedPrevKeyframe] Remote frame %ld view 2/%ld: gdesc %ld\n", frame_a.frame_id, frame_a.images.size(), frame_a.images[2].image_desc.size());
         const Map<const VectorXf> vlad_desc_remote(frame_a.images[2].image_desc.data(), NETVLAD_DESC_SIZE);
         for (int i = current_keyframes.size() - 1; i >= 0; i--) {
             const auto & last = current_keyframes[i];
@@ -719,6 +720,10 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         if (type == WHOLE_IMG_MATCH) {
             const cv::Mat desc_a(raw_desc_a.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, const_cast<float *>(raw_desc_a.data()));
             const cv::Mat desc_b(raw_desc_b.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, const_cast<float *>(raw_desc_b.data()));
+            if (img_desc_b.drone_id != params->self_id) {
+                //print first 10 lines
+                std::cout << "desc_a: " << desc_a.rowRange(0, 10) << std::endl;
+            }
             if (_config.enable_knn_match) {
                 if (img_desc_a.drone_id  == img_desc_b.drone_id && img_desc_a.camera_id == img_desc_b.camera_id) {
                     // Is continuous frame

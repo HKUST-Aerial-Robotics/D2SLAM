@@ -41,10 +41,10 @@ namespace D2FrontEnd {
         nh.param<bool>("enable_pub_remote_frame", enable_pub_remote_frame, false);
         nh.param<bool>("enable_pub_local_frame", enable_pub_local_frame, false);
         nh.param<bool>("enable_sub_remote_frame", enable_sub_remote_frame, false);
-        nh.param<bool>("verbose", verbose, false);
         nh.param<std::string>("output_path", OUTPUT_PATH, "");
         enable_perf_output = (int) fsSettings["enable_perf_output"];
         print_network_status = (int) fsSettings["print_network_status"];
+        verbose = (int) fsSettings["verbose"];
 
         //Loopcam configs
         loopcamconfig->superpoint_max_num = (int) fsSettings["max_superpoint_cnt"];

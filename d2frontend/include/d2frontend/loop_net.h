@@ -12,6 +12,7 @@
 #include <set>
 #include <mutex>
 #include <thread>
+#include <swarm_msgs/lcm_gen/LandmarkDescriptorPacket_t.hpp>
 
 using namespace swarm_msgs;
 using namespace D2Common;
@@ -33,6 +34,7 @@ class LoopNet {
     double sum_features = 0;
     int count_img_desc_sent = 0;
     bool compress_int8_desc = true;
+    int pack_landmark_num = 8;
 
     void onLoopConnectionRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
@@ -48,8 +50,10 @@ class LoopNet {
 
     void onLandmarkRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
-                const LandmarkDescriptor_t* msg);
+                const LandmarkDescriptorPacket_t* msg);
+
     std::map<int64_t, ImageDescriptor_t> received_images;
+    std::map<int64_t, SlidingWindow_t> received_sld_win_status;
     std::map<int64_t, double> msg_recv_last_time;
 
     std::map<int64_t, double> msg_header_recv_time;
@@ -58,11 +62,11 @@ class LoopNet {
     std::set<int64_t> active_receving_msg;
     std::set<int64_t> active_receving_frames;
     std::set<int64_t> blacklist;
-    std::map<int64_t, ImageArrayDescriptor_t> received_frames;
+    std::map<int64_t, ImageArrayDescriptor_t> received_framearrays;
 
 
     void setupNetwork(std::string _lcm_uri);
-    void imageDescCallback(const ImageDescriptor_t & image);
+    void processRecvImageDesc(const ImageDescriptor_t & image, const SlidingWindow_t & sld_win_status);
     void updateRecvImgDescTs(int64_t id, bool is_header=false);
     bool msgBlocked(int64_t _id) {
         return blacklist.find(_id) != blacklist.end() || sent_message.find(_id) != sent_message.end();
@@ -81,7 +85,7 @@ public:
 
     void broadcastLoopConnection(swarm_msgs::LoopEdge & loop_conn);
     void broadcastVisualImageDescArray(VisualImageDescArray & image_array, bool force_features=false);
-    void broadcastImgDesc(ImageDescriptor_t & img_des, bool send_feature = true);
+    void broadcastImgDesc(ImageDescriptor_t & img_des, const SlidingWindow_t & sld_status, bool send_feature = true);
 
     void scanRecvPackets();
 

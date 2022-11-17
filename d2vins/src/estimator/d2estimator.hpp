@@ -87,7 +87,7 @@ public:
     std::vector<LandmarkPerId> getMarginedLandmarks() const;
 
     //Multi-drone comm protocol
-    void sendDistributedVinsData(const DistributedVinsData & data);
+    void sendDistributedVinsData(DistributedVinsData data);
     void sendSyncSignal(SyncSignal data, int64_t token);
     bool readyForStart();
     const std::map<LandmarkIdType, LandmarkPerId> & getLandmarkDB() const;
