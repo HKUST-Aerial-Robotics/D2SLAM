@@ -29,7 +29,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: PointCloud
   - Class: rviz/Displays
     Help Height: 0
     Name: Displays
@@ -167,7 +167,7 @@ Visualization Manager:
           Marker Topic: /d2vins/slding_window
           Name: SldWin
           Namespaces:
-            {}
+            CameraPoseVisualization: true
           Queue Size: 100
           Value: true
         - Class: rviz/MarkerArray
@@ -175,7 +175,7 @@ Visualization Manager:
           Marker Topic: /d2vins/camera_visual
           Name: CameraVisual
           Namespaces:
-            {}
+            CameraPoseVisualization: true
           Queue Size: 100
           Value: true
         - Angle Tolerance: 0.10000000149011612
@@ -875,17 +875,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -13.826457023620605
-        Y: 5.211417198181152
-        Z: 0.6943295001983643
+        X: -5.571759223937988
+        Y: -2.1872010231018066
+        Z: 0.694321870803833
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8997962474822998
+      Pitch: 0.7097964286804199
       Target Frame: world
-      Yaw: 3.540088176727295
+      Yaw: 3.710090160369873
     Saved:
       - Class: rviz/XYOrbit
         Distance: 9.527398109436035
@@ -924,4 +924,4 @@ Window Geometry:
     collapsed: false
   Width: 2133
   X: 2398
-  Y: 315
+  Y: 241

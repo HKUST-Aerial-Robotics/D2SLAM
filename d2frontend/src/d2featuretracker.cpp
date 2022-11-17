@@ -720,10 +720,6 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         if (type == WHOLE_IMG_MATCH) {
             const cv::Mat desc_a(raw_desc_a.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, const_cast<float *>(raw_desc_a.data()));
             const cv::Mat desc_b(raw_desc_b.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, const_cast<float *>(raw_desc_b.data()));
-            if (img_desc_b.drone_id != params->self_id) {
-                //print first 10 lines
-                std::cout << "desc_a: " << desc_a.rowRange(0, 10) << std::endl;
-            }
             if (_config.enable_knn_match) {
                 if (img_desc_a.drone_id  == img_desc_b.drone_id && img_desc_a.camera_id == img_desc_b.camera_id) {
                     // Is continuous frame

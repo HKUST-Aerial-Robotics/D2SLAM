@@ -259,7 +259,6 @@ struct VisualImageDesc {
         stamp = toROSTime(desc.header.timestamp).toSec();
         drone_id = desc.header.drone_id;
         if (desc.landmark_descriptor_int8.size() > 0) {
-            printf("Decode int8 landmark descriptor size %d \n", desc.landmark_descriptor_int8.size());
             landmark_descriptor.resize(desc.landmark_descriptor_int8.size());
             Eigen::Map<VectorXf> desc0(landmark_descriptor.data(), landmark_descriptor.size());
             for (int i = 0; i < landmark_descriptor.size(); i++) {

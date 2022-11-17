@@ -33,7 +33,7 @@ class LoopNet {
     double sum_byte_sent = 0;
     double sum_features = 0;
     int count_img_desc_sent = 0;
-    bool compress_int8_desc = true;
+    bool compress_int8_desc = true; //Currently only int8 mode works
     int pack_landmark_num = 8;
 
     void onLoopConnectionRecevied(const lcm::ReceiveBuffer* rbuf,
