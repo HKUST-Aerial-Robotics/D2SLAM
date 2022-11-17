@@ -174,7 +174,7 @@ struct VisualImageDesc {
         
         img_desc.header.pose_drone = pose_drone.toLCM();
         img_desc.header.camera_extrinsic = extrinsic.toLCM();
-        if (send_features) {
+        if (send_features && landmark_descriptor.size() > 0) {
             if (compress_int8) {
                 //Not send scores currently
                 Eigen::Map<const VectorXf> desc0(landmark_descriptor.data(), landmark_descriptor.size());

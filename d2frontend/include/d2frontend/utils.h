@@ -36,9 +36,9 @@ cv::Vec3b extractColor(const cv::Mat &img, cv::Point2f p);
 cv::Point2f rotate_pt_norm2d(cv::Point2f pt, Eigen::Quaterniond q);
 
 
-void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts);
+void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts, bool enable_cuda=true);
 std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
-                        std::vector<LandmarkIdType> & ids, TrackLRType type=WHOLE_IMG_MATCH);
+                        std::vector<LandmarkIdType> & ids, TrackLRType type=WHOLE_IMG_MATCH, bool enable_cuda=true);
 std::vector<cv::DMatch> matchKNN(const cv::Mat & desc_a, const cv::Mat & desc_b, double knn_match_ratio=0.8,
         const std::vector<cv::Point2f> pts_a=std::vector<cv::Point2f>(),
         const std::vector<cv::Point2f> pts_b=std::vector<cv::Point2f>(),

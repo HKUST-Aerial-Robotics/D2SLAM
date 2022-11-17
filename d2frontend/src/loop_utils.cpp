@@ -11,6 +11,8 @@
 #include <opengv/sac/Ransac.hpp>
 #include <opengv/sac/Lmeds.hpp>
 #include <d2frontend/loop_detector.h>
+#include <opencv2/cudaoptflow.hpp>
+#include <opencv2/cudaimgproc.hpp>
 
 using namespace std::chrono; 
 using namespace D2Common;
@@ -238,7 +240,7 @@ std::vector<cv::DMatch> matchKNN(const cv::Mat & desc_a, const cv::Mat & desc_b,
 
 
 std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat & prev_img, std::vector<cv::Point2f> & prev_pts, 
-        std::vector<LandmarkIdType> & ids, TrackLRType type) {
+        std::vector<LandmarkIdType> & ids, TrackLRType type, bool enable_cuda) {
     if (prev_pts.size() == 0) {
         return std::vector<cv::Point2f>();
     }
@@ -283,37 +285,51 @@ std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat
         return std::vector<cv::Point2f>();
     }
     std::vector<float> err;
-    cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, WIN_SIZE, PYR_LEVEL, 
-            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
     std::vector<uchar> reverse_status;
-    std::vector<cv::Point2f> reverse_pts = cur_pts;
-    for (unsigned int i = 0; i < prev_pts.size(); i++) {
-        auto & pt = reverse_pts[i];
-        if (type == LEFT_RIGHT_IMG_MATCH && status[i] == 1) {
-            pt.x -= move_cols;
+    std::vector<cv::Point2f> reverse_pts;
+    if (enable_cuda) {
+        cv::cuda::GpuMat gpu_prev_img(prev_img);
+        cv::cuda::GpuMat gpu_cur_img(cur_img);
+        cv::cuda::GpuMat gpu_prev_pts(prev_pts);
+        cv::cuda::GpuMat gpu_cur_pts(cur_pts);
+        cv::cuda::GpuMat gpu_status;
+        cv::cuda::GpuMat reverse_gpu_status;
+        cv::Ptr<cv::cuda::SparsePyrLKOpticalFlow> d_pyrLK_sparse = cv::cuda::SparsePyrLKOpticalFlow::create(WIN_SIZE, PYR_LEVEL, 30, true);
+        d_pyrLK_sparse->calc(gpu_prev_img, gpu_cur_img, gpu_prev_pts, gpu_cur_pts, gpu_status);
+        gpu_status.download(status);
+        gpu_cur_pts.download(cur_pts);
+        reverse_pts = cur_pts;
+        for (unsigned int i = 0; i < prev_pts.size(); i++) {
+            auto & pt = reverse_pts[i];
+            if (type == LEFT_RIGHT_IMG_MATCH && status[i] == 1) {
+                pt.x -= move_cols;
+            }
+            if (type == RIGHT_LEFT_IMG_MATCH && status[i] == 1) {
+                pt.x += move_cols;
+            }
         }
-        if (type == RIGHT_LEFT_IMG_MATCH && status[i] == 1) {
-            pt.x += move_cols;
+        cv::cuda::GpuMat reverse_gpu_pts(reverse_pts);
+        d_pyrLK_sparse->calc(gpu_cur_img, gpu_prev_img, gpu_cur_pts, reverse_gpu_pts, reverse_gpu_status);
+        reverse_gpu_pts.download(reverse_pts);
+        reverse_gpu_status.download(reverse_status);
+    } else {
+        cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, WIN_SIZE, PYR_LEVEL, 
+                cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
+        reverse_pts = cur_pts;
+        for (unsigned int i = 0; i < prev_pts.size(); i++) {
+            auto & pt = reverse_pts[i];
+            if (type == LEFT_RIGHT_IMG_MATCH && status[i] == 1) {
+                pt.x -= move_cols;
+            }
+            if (type == RIGHT_LEFT_IMG_MATCH && status[i] == 1) {
+                pt.x += move_cols;
+            }
         }
+        cv::calcOpticalFlowPyrLK(cur_img, prev_img, cur_pts, reverse_pts, reverse_status, err, WIN_SIZE, PYR_LEVEL, 
+                cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
     }
-    cv::calcOpticalFlowPyrLK(cur_img, prev_img, cur_pts, reverse_pts, reverse_status, err, WIN_SIZE, PYR_LEVEL, 
-            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
-    // if (type == D2FeatureTracker::LEFT_RIGHT_IMG_MATCH) {
-    //     cv::Mat show;
-    //     cv::vconcat(prev_img, cur_img, show);
-    //     for (unsigned int i = 0; i < cur_pts.size(); i++) {
-    //         //Draw arrows on the flow field if status[i]
-    //         if (status[i] && reverse_status[i] && cv::norm(prev_pts[i] - reverse_pts[i]) <= 0.5) {
-    //             cv::Point2f prev_pt = prev_pts[i];
-    //             cv::Point2f cur_pt = cur_pts[i];
-    //             cv::Point2f reverse_pt = reverse_pts[i];
-    //             // cv::Point2f reverse_diff = reverse_pt - cur_pt;
-    //             cv::arrowedLine(show, prev_pt, cur_pt, cv::Scalar(0, 255, 0), 2);
-    //             cv::arrowedLine(show, cur_pt, reverse_pt, cv::Scalar(0, 0, 255), 2);
-    //         }
-    //     }
-    //     cv::imshow("opticalflowTrack", show);
-    // }
+    
+
     for(size_t i = 0; i < status.size(); i++)
     {
         if(status[i] && reverse_status[i] && cv::norm(prev_pts[i] - reverse_pts[i]) <= 0.5)
@@ -336,7 +352,7 @@ std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat
 } 
 
 
-void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts) {
+void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts, bool enable_cuda) {
     int lack_up_top_pts = require_pts - static_cast<int>(cur_pts.size());
     cv::Mat mask;
     if (params->enable_perf_output) {
@@ -344,7 +360,16 @@ void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::ve
     }
     if (lack_up_top_pts > require_pts/4) {
         cv::Mat d_prevPts;
-        cv::goodFeaturesToTrack(img, d_prevPts, lack_up_top_pts, 0.01, params->feature_min_dist, mask);
+        if (enable_cuda) {
+            cv::Ptr<cv::cuda::CornersDetector> detector = cv::cuda::createGoodFeaturesToTrackDetector(
+                img.type(), lack_up_top_pts, 0.01, params->feature_min_dist);
+            cv::cuda::GpuMat d_prevPts_gpu;
+            cv::cuda::GpuMat img_cuda(img);
+            detector->detect(img_cuda, d_prevPts_gpu);
+            d_prevPts_gpu.download(d_prevPts);
+        } else {
+            cv::goodFeaturesToTrack(img, d_prevPts, lack_up_top_pts, 0.01, params->feature_min_dist, mask);
+        }
         std::vector<cv::Point2f> n_pts_tmp;
         // std::cout << "d_prevPts size: "<< d_prevPts.size()<<std::endl;
         if(!d_prevPts.empty()) {
