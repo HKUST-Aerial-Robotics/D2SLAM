@@ -15,6 +15,7 @@ void ConsensusSolver::reset() {
     SolverWrapper::reset();
     consenus_params.clear();
     all_estimating_params.clear();
+    active_params.clear();
     residuals.clear();
     if (config.sync_with_main) {
         remote_params.clear();
@@ -22,6 +23,7 @@ void ConsensusSolver::reset() {
 }
 
 void ConsensusSolver::addParam(const ParamInfo & param_info) {
+    active_params.insert(param_info.pointer);
     if (all_estimating_params.find(param_info.pointer) != all_estimating_params.end()) {
         return;
     }
@@ -52,6 +54,7 @@ SolverReport ConsensusSolver::solve() {
             problem->AddResidualBlock(residual_info->cost_function, residual_info->loss_function,
                 residual_info->paramsPointerList(state));
         }
+        // removeDeactivatedParams();
         updateTilde();
         setStateProperties();
         ceres::Solver::Summary summary;
@@ -72,6 +75,23 @@ SolverReport ConsensusSolver::solve() {
     report.total_time = tic.toc()/1000;
     broadcastData();
     return report;
+}
+
+void ConsensusSolver::removeDeactivatedParams() {
+    for (auto it = consenus_params.begin(); it != consenus_params.end();) {
+        if (active_params.find(it->first) == active_params.end()) {
+            it = consenus_params.erase(it);
+        } else {
+            it++;
+        }
+    }
+    for (auto it = all_estimating_params.begin(); it != all_estimating_params.end();) {
+        if (active_params.find(it->first) == active_params.end()) {
+            it = all_estimating_params.erase(it);
+        } else {
+            it++;
+        }
+    }
 }
 
 void ConsensusSolver::updateTilde() {

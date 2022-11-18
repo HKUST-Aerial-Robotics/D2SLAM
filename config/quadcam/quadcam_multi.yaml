@@ -43,8 +43,8 @@ rho_landmark: 1.0
 rho_frame_T: 100
 rho_frame_theta: 100
 relaxation_alpha: 0.
-consensus_sync_with_main: 1
-consensus_sync_to_start: 1 #Is sync on start of the solving..
+consensus_sync_with_main: 0
+consensus_sync_to_start: 0 #Is sync on start of the solving..
 consensus_trigger_time_err_us: 50
 
 #depth fusing
@@ -136,6 +136,6 @@ output_path: "/root/output/"
 debug_print_sldwin: 0
 debug_print_states: 0
 enable_perf_output: 0
-print_network_status: 1
+print_network_status: 0
 debug_write_margin_matrix: 0
 show_track_id: 0

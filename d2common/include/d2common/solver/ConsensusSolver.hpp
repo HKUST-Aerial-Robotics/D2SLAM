@@ -51,6 +51,7 @@ protected:
     std::map<state_type*, ParamInfo> all_estimating_params;
     std::map<state_type*, ConsenusParamState> consenus_params;
     std::map<state_type*, std::map<int, VectorXd>> remote_params;
+    std::set<state_type*> active_params;
     double rho_landmark = 0.1;
     double rho_T = 0.1;
     double rho_theta = 0.1;
@@ -65,6 +66,7 @@ protected:
     void updateTilde();
     void updateGlobal();
     void addParam(const ParamInfo & param_info);
+    void removeDeactivatedParams();
     
 public:
     ConsensusSolver(D2State * _state, ConsensusSolverConfig _config, int _solver_token): 
