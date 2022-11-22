@@ -82,7 +82,7 @@ protected:
         swarm_fused.self_id = config.self_id;
         swarm_fused.reference_frame_id = pgo->getReferenceFrameId();
         auto latest_odoms = pgo->getPredictedOdoms();
-        printf("[D2PGONode@%d] pubLatestPredictResults, %ld odoms\n", config.self_id, latest_odoms.size());
+        // printf("[D2PGONode@%d] pubLatestPredictResults, %ld odoms\n", config.self_id, latest_odoms.size());
         for (auto it : latest_odoms) {
             auto drone_id = it.first;
             auto pose = it.second.pose();

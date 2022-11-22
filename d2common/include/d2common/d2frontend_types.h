@@ -181,7 +181,7 @@ struct VisualImageDesc {
                 img_desc.landmark_descriptor_size_int8 = landmark_descriptor.size();
                 img_desc.landmark_descriptor_int8.resize(landmark_descriptor.size());
                 img_desc.landmark_descriptor_size = 0;
-                double max = desc0.cwiseAbs().maxCoeff();
+                auto max = desc0.cwiseAbs().maxCoeff();
                 for (int i = 0; i < landmark_descriptor.size(); i++) {
                     img_desc.landmark_descriptor_int8[i] = (int8_t)(desc0[i] / max * 127);
                 }
@@ -204,7 +204,7 @@ struct VisualImageDesc {
             img_desc.landmark_scores_size = 0;
             img_desc.header.is_lazy_frame = true;
         }
-        if (compress_int8) {
+        if (compress_int8 && image_desc.size() > 0) {
             img_desc.header.image_desc_size_int8 = image_desc.size();
             img_desc.header.image_desc_int8.resize(image_desc.size());
             img_desc.header.image_desc_size = 0;

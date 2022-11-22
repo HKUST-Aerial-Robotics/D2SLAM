@@ -405,7 +405,7 @@ bool pnp_result_verify(bool pnp_success, int inliers, double rperr, const Swarm:
         return false;
     }
     if (rperr > params->loopdetectorconfig->gravity_check_thres) {
-        printf("[SWARM_LOOP] Check failed on RP error %fdeg\n", rperr*57.3);
+        printf("[SWARM_LOOP] Check failed on RP error %.1fdeg (%.1f)deg\n", rperr*57.3, params->loopdetectorconfig->gravity_check_thres*57.3);
         return false;
     }   
     auto &_config = (*params->loopdetectorconfig);
