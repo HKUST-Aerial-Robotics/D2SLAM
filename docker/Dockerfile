@@ -133,7 +133,7 @@ aruco,videoio,ccalib && \
       make install 
 
 #Install OpenGV
-RUN git clone https://github.com/laurentkneip/opengv && \
+RUN git clone https://github.com/HKUST-Swarm/opengv && \
       mkdir opengv/build && cd opengv/build && cmake .. && make && \
       make install
 
