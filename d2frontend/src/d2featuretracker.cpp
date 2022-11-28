@@ -281,7 +281,7 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
     if (current_keyframes.size() > 0 && current_keyframes.back().frame_id != frame.frame_id) {
         auto & current_keyframe = current_keyframes.back();
         //Then current keyframe has been assigned, feature tracker by LK.
-        auto & previous = current_keyframe.images[frame.camera_index];
+        auto & previous = current_keyframe.images[params->camera_seq[frame.camera_index]];
         std::vector<int> ids_b_to_a;
         matchLocalFeatures(previous, frame, ids_b_to_a, _config.enable_superglue_local, WHOLE_IMG_MATCH, false);
         for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
@@ -297,6 +297,10 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
                 cur_lm.stamp_discover = prev_lm.stamp_discover;
                 lmanager->updateLandmark(cur_lm);
                 report.sum_parallex += (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm();
+                // printf("[D2FeatureTracker::track] landmark %ld cam_idx %d<->%d frame_cam_idx %d<->%d parallex %.1f%% prev_2d %.1f %.1f cur_2d %.3f %.3f prev_3d %.3f %.3f %.3f cur_3d %.3f %.3f %.3f\n", 
+                //     landmark_id, prev_lm.camera_index, cur_lm.camera_index, previous.camera_index, frame.camera_index,
+                //     (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm()*100, prev_lm.pt2d.x, prev_lm.pt2d.y, cur_lm.pt2d.x, cur_lm.pt2d.y,
+                //     prev_lm.pt3d_norm.x(), prev_lm.pt3d_norm.y(), prev_lm.pt3d_norm.z(), cur_lm.pt3d_norm.x(), cur_lm.pt3d_norm.y(), cur_lm.pt3d_norm.z());
                 report.parallex_num ++;
                 if (lmanager->at(landmark_id).track.size() >= _config.long_track_frames) {
                     report.long_track_num ++;

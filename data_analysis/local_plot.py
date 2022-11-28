@@ -81,7 +81,9 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
         _id = id_map[i]
         if poses_pgo is not None:
             plt.plot(poses_pgo[i].pos[:,1], poses_pgo[i].pos[:,0], label=f"$D^2$PGO {_id}")
-        plt.plot(poses_fused[i].pos[:,1], poses_fused[i].pos[:,0], label=f"$D^2$VINS {_id}", linestyle='--')
+            plt.plot(poses_fused[i].pos[:,1], poses_fused[i].pos[:,0], label=f"$D^2$VINS {_id}", linestyle='--')
+        else:
+            plt.plot(poses_fused[i].pos[:,1], poses_fused[i].pos[:,0], label=f"$D^2$VINS {_id}")
         if poses_gt is not None:
             plt.plot(poses_gt[i].pos[:,1], poses_gt[i].pos[:,0], label=f"Ground Truth {_id}")
 
