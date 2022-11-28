@@ -106,16 +106,22 @@ max_cnt: 150            # max feature number in feature tracking
 max_superpoint_cnt: 150 # max feature extraction by superpoint
 max_solve_cnt: 150
 show_track_id: 0
-check_homography: 1
+check_homography: 0
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
 remote_min_match_num: 40
 ransacReprojThreshold: 10.0
 parallex_thres: 0.012
+knn_match_ratio: 0.7 #This apply to superpoint feature track & loop clouse detection.
+feature_min_dist: 20
 
 #CNN
 cnn_use_onnx: 1
 enable_pca_superpoint: 1
 superpoint_pca_dims: 64
+cnn_enable_tensorrt: 0
+cnn_enable_tensorrt_int8: 0
+netvlad_int8_calib_table_name: "mobilenetvlad_calibration.flatbuffers"
+superpoint_int8_calib_table_name: "superpoint_calibration.flatbuffers"
 
 # #Measurement parameters       The more accurate parameters you provide, the better performance
 # acc_n: 0.0028         # accelerometer measurement noise standard deviation. #0.2   0.04
@@ -129,15 +135,24 @@ gyr_w: 0.0004       # gyroscope bias random work noise standard deviation.     #
 g_norm: 9.805         # gravity magnitude
 
 #Loop Closure Detection
-netvlad_IP_thres: 0.8
-enable_homography_test: 1
+netvlad_IP_thres: 0.85
+enable_homography_test: 0
+loop_inlier_feature_num: 20
 accept_loop_max_yaw: 10
 accept_loop_max_pos: 1.0
-loop_inlier_feature_num: 50
-gravity_check_thres: 0.03
+lazy_broadcast_keyframe: 0 #If enable coarse-to-fine initialization mode. This is useful when communication is not good.
+gravity_check_thres: 0.06
 
 #PGO
-pgo_solver_time: 0.5
+pgo_mode: 0 
+pgo_rho_frame_T: 0.7
+pgo_rho_frame_theta: 0.625
+pgo_eta_k: 0.1
+write_g2o: 0
+g2o_output_path: "output.g2o"
+write_pgo_to_file: 1
+enable_gravity_prior: 0
+gravity_sqrt_info: 10
 
 #outputs
 output_path: "/root/output/"
