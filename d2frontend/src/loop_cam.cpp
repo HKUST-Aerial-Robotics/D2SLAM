@@ -224,8 +224,12 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vc
         return ides;
     }
     cv::Mat undist = msg.left_images[vcam_id];
+    TicToc tt;
     if (_config.enable_undistort_image) {
         undist = cv::Mat(undistortors[vcam_id]->undist_id_cuda(undist, 0, true));
+    }
+    if (params->enable_perf_output) {
+        printf("[D2Frontend::LoopCam] undist image cost %.1fms\n", tt.toc());
     }
     VisualImageDesc vframe = extractorImgDescDeepnet(msg.stamp, undist, msg.left_camera_indices[vcam_id], msg.left_camera_ids[vcam_id], false);
 
