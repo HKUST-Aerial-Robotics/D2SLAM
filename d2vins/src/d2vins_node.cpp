@@ -77,6 +77,7 @@ protected:
 
     void timerCallback(const ros::TimerEvent & event) {
         if (!viokf_queue.empty()) {
+            Utility::TicToc estimator_timer;
             if (viokf_queue.size() > params->warn_pending_frames) {
                 ROS_WARN("[D2VINS] Low efficient on D2VINS::estimator pending frames: %d", viokf_queue.size());
             }
@@ -119,11 +120,16 @@ protected:
                         printf("\n");
                     }
                 }
+                Utility::TicToc broadcast_timer;
                 loop_net->broadcastVisualImageDescArray(viokf, force_landmarks);
+                if (params->verbose || params->enable_perf_output)
+                    printf("[D2VINS] broadcastVisualImageDescArray takes %.1f ms\n", broadcast_timer.toc());
             }
             if (params->pub_visual_frame) {
                 visual_array_pub.publish(viokf.toROS());
             }
+            if (params->verbose || params->enable_perf_output)
+                printf("[D2VINS] estimator_timer_callback takes %.1f ms\n", estimator_timer.toc());
         }
     }
 
