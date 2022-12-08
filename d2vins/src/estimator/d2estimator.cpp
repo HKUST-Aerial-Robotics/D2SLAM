@@ -180,11 +180,11 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     frame.odom.stamp = _frame.stamp;
     frame.reference_frame_id = state.getReferenceFrameId();
 
-    //Clear old frames
-    if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        margined_landmarks = state.clearFrame();
-    }
     auto frame_ret = state.addFrame(_frame, frame);
+    //Clear old frames after add
+    if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        margined_landmarks = state.clearUselessFrames();
+    }
     _frame.setTd(state.getTd(_frame.drone_id));
     //Assign IMU and initialization to VisualImageDescArray for broadcasting.
     _frame.imu_buf = _imu;
@@ -307,7 +307,7 @@ void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
     }
     auto frame_ptr = addFrameRemote(frame);
     if (params->estimation_mode == D2VINSConfig::SERVER_MODE && state.size(frame.drone_id) >= params->min_solve_frames) {
-        state.clearFrame();
+        state.clearUselessFrames();
         solveNonDistrib();
     }
     visual.pubFrame(frame_ptr);
@@ -505,7 +505,7 @@ void D2Estimator::solveinDistributedMode() {
         return;
     }
 
-    margined_landmarks = state.clearFrame(true); // clear in dist mode.
+    margined_landmarks = state.clearUselessFrames(); // clear in dist mode.
     resetMarginalizer();
     solve_count ++;
     state.preSolve(imu_bufs);
@@ -626,6 +626,7 @@ void D2Estimator::setupImuFactors() {
             auto & frame_a = state.getFrame(i);
             auto & frame_b = state.getFrame(i + 1);
             auto pre_integrations = frame_b.pre_integrations; //Prev to current
+            // printf("IMU Factor %d<->%d prev %d\n", frame_a.frame_id, frame_b.frame_id, frame_b.prev_frame_id);
             assert(frame_b.prev_frame_id == frame_a.frame_id && "Wrong prev frame id");
             addIMUFactor(frame_a.frame_id, frame_b.frame_id, pre_integrations);
         }

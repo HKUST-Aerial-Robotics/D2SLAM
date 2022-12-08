@@ -232,7 +232,7 @@ int D2EstimatorState::getCameraBelonging(CamIdType cam_id) const {
     return camera_drone.at(cam_id);
 }
 
-std::vector<LandmarkPerId> D2EstimatorState::clearFrame(bool distributed_mode) {
+std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames() {
     //If keyframe_only is true, then only remove keyframes.
     const Guard lock(state_lock);
     std::vector<LandmarkPerId> ret;
@@ -254,56 +254,27 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame(bool distributed_mode) {
         }
     }
 
-    // auto & self_sld_win = sld_wins[self_id];
-    // int remove_local_num = 0;
-    // int remove_index_from_tail = self_sld_win.size() - 2;
-    // int remove_index_from_head = 0;
-    // while (self_sld_win.size() - remove_local_num > params->max_sld_win_size) {
-    //     if (remove_index_from_tail > 0 && !self_sld_win[remove_index_from_tail]->is_keyframe) {
-    //         //If last frame is not keyframe then remove it.
-    //         clear_frames.insert(self_sld_win[remove_index_from_tail]->frame_id);
-    //         remove_index_from_tail --;
-    //         remove_local_num++;
-    //     } else {
-    //         clear_key_frames.insert(self_sld_win[remove_index_from_head]->frame_id);
-    //         clear_frames.insert(self_sld_win[remove_index_from_head]->frame_id);
-    //         remove_index_from_head ++;
-    //         remove_local_num++;
-    //     }
-    // }
     auto & self_sld_win = sld_wins[self_id];
     if (self_sld_win.size() >= params->min_solve_frames) {
         int count_removed = 0;
         int require_sld_win_size = params->max_sld_win_size;
         int sld_win_size = self_sld_win.size();
-        if (distributed_mode) {
-            //We remove the second last non keyframe
-            if (sld_win_size > require_sld_win_size && !self_sld_win[sld_win_size - 2]->is_keyframe) {
-                //Note in distributed mode, after remove the size should be max_sld_win_size
-                clear_frames.insert(self_sld_win[sld_win_size - 2]->frame_id);
-                count_removed = 1;
-                //Here we attach the intergation base of the remove frame to the last frame
-                IntegrationBase * last_pre_int = self_sld_win[sld_win_size - 1]->pre_integrations;
-                auto second_last_pre = self_sld_win[sld_win_size - 2]->pre_integrations;
-                second_last_pre->push_back(last_pre_int);
-                self_sld_win[sld_win_size - 1]->pre_integrations = second_last_pre;
-                self_sld_win[sld_win_size - 1]->prev_frame_id = self_sld_win[sld_win_size - 2]->prev_frame_id;
-                self_sld_win[sld_win_size - 2]->pre_integrations = nullptr; //To avoid delete
-                //then we delete the useless last_pre_int
-                delete last_pre_int;
-            }
-        } else {
-            require_sld_win_size = params->max_sld_win_size - 1;
-            if (sld_win_size > params->max_sld_win_size && !self_sld_win[sld_win_size - 1]->is_keyframe) {
-                //If last frame is not keyframe then remove it.
-                clear_frames.insert(self_sld_win[sld_win_size - 1]->frame_id);
-                count_removed = 1;
-            } 
+        //We remove the second last non keyframe
+        if (sld_win_size > require_sld_win_size && !self_sld_win[sld_win_size - 2]->is_keyframe) {
+            //Note in distributed mode, after remove the size should be max_sld_win_size
+            clear_frames.insert(self_sld_win[sld_win_size - 2]->frame_id);
+            count_removed = 1;
+            //Here we attach the intergation base of the remove frame to the last frame
+            IntegrationBase * last_pre_int = self_sld_win[sld_win_size - 1]->pre_integrations;
+            auto second_last_pre = self_sld_win[sld_win_size - 2]->pre_integrations;
+            second_last_pre->push_back(last_pre_int);
+            self_sld_win[sld_win_size - 1]->pre_integrations = second_last_pre;
+            self_sld_win[sld_win_size - 1]->prev_frame_id = self_sld_win[sld_win_size - 2]->prev_frame_id;
+            self_sld_win[sld_win_size - 2]->pre_integrations = nullptr; //To avoid delete
+            //then we delete the useless last_pre_int
+            delete last_pre_int;
         }
         if (sld_win_size - count_removed > require_sld_win_size) {
-            if (self_sld_win[0]->drone_id == self_id) {
-                marginalized_self_first = true;
-            }
             clear_key_frames.insert(self_sld_win[0]->frame_id);
             clear_frames.insert(self_sld_win[0]->frame_id);
         }

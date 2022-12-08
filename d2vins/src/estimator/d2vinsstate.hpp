@@ -26,7 +26,6 @@ protected:
 
     Marginalizer * marginalizer = nullptr;
     PriorFactor * prior_factor = nullptr;
-    bool marginalized_self_first = false;
 
     std::vector<LandmarkPerId> popFrame(int index);
     std::vector<LandmarkPerId> removeFrameById(FrameIdType frame_id, bool remove_base=false); 
@@ -66,7 +65,7 @@ public:
     std::vector<Swarm::Pose> localCameraExtrinsics() const;
    
     //Frame operations
-    std::vector<LandmarkPerId> clearFrame(bool distributed_mode=false);
+    std::vector<LandmarkPerId> clearUselessFrames();
     VINSFrame * addFrame(const VisualImageDescArray & images, const VINSFrame & _frame);
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
     virtual void moveAllPoses(int new_ref_frame_id, const Swarm::Pose & delta_pose) override;
@@ -96,9 +95,6 @@ public:
 
     //Debug
     void printSldWin(const std::map<FrameIdType, int> & keyframe_measurments) const;
-    bool marginalizeSelf() const {
-        return marginalized_self_first;
-    }
 
     void setMarginalizer(Marginalizer * _marginalizer) {
         marginalizer = _marginalizer;
