@@ -36,6 +36,8 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     ros::Timer estimator_timer, solver_timer;
     std::thread th;
     std::thread th_timer;
+    bool has_received_imu = false;
+    double last_imu_ts = 0;
 protected:
     virtual void frameCallback(const D2Common::VisualImageDescArray & viokf) override {
         if (params->estimation_mode < D2VINSConfig::SERVER_MODE && frame_count % params->frame_step == 0) {
@@ -135,7 +137,12 @@ protected:
 
     virtual void imuCallback(const sensor_msgs::Imu & imu) {
         IMUData data(imu);
-        data.dt = 1.0/params->IMU_FREQ; //TODO
+        if(!has_received_imu) {
+            has_received_imu = true;
+            last_imu_ts = imu.header.stamp.toSec();
+        }
+        data.dt = imu.header.stamp.toSec() - last_imu_ts;
+        last_imu_ts = imu.header.stamp.toSec();
         estimator->inputImu(data);
     }
 
