@@ -232,25 +232,6 @@ int D2EstimatorState::getCameraBelonging(CamIdType cam_id) const {
     return camera_drone.at(cam_id);
 }
 
-void D2EstimatorState::clearLocalLastNonKeyframe() {
-    const Guard lock(state_lock);
-    auto & self_sld_win = sld_wins[self_id];
-    if (self_sld_win.size() >= params->min_solve_frames) {
-        if (!self_sld_win[self_sld_win.size() - 1]->is_keyframe) {
-            //If last frame is not keyframe then remove it.
-            auto frame_id_to_remove = self_sld_win[self_sld_win.size() - 1]->frame_id;
-            if (prior_factor != nullptr) {
-                prior_factor->removeFrame(frame_id_to_remove);
-            }
-            auto tmp = removeFrameById(frame_id_to_remove, false);
-            self_sld_win.erase(self_sld_win.end() - 1);
-            if (params->verbose) {
-                printf("[D2VINS::D2EstimatorState] Remove nonkeyframe %d from local window\n", frame_id_to_remove);
-            }
-        }
-    }
-}
-
 std::vector<LandmarkPerId> D2EstimatorState::clearFrame(bool distributed_mode) {
     //If keyframe_only is true, then only remove keyframes.
     const Guard lock(state_lock);
@@ -301,6 +282,15 @@ std::vector<LandmarkPerId> D2EstimatorState::clearFrame(bool distributed_mode) {
                 //Note in distributed mode, after remove the size should be max_sld_win_size
                 clear_frames.insert(self_sld_win[sld_win_size - 2]->frame_id);
                 count_removed = 1;
+                //Here we attach the intergation base of the remove frame to the last frame
+                IntegrationBase * last_pre_int = self_sld_win[sld_win_size - 1]->pre_integrations;
+                auto second_last_pre = self_sld_win[sld_win_size - 2]->pre_integrations;
+                second_last_pre->push_back(last_pre_int);
+                self_sld_win[sld_win_size - 1]->pre_integrations = second_last_pre;
+                self_sld_win[sld_win_size - 1]->prev_frame_id = self_sld_win[sld_win_size - 2]->prev_frame_id;
+                self_sld_win[sld_win_size - 2]->pre_integrations = nullptr; //To avoid delete
+                //then we delete the useless last_pre_int
+                delete last_pre_int;
             }
         } else {
             require_sld_win_size = params->max_sld_win_size - 1;
@@ -409,6 +399,7 @@ void D2EstimatorState::updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_
                     printf("\033[0;31m[D2VINS::D2Estimator] Remote IMU error freq: %.3f in updateRemoteSldIMU \033[0m\n", 
                         _imu_buf.size()/(frame_b->stamp - frame_a->stamp));
                 }
+                printf("[D2VINS] Update IMU for %d<->%d\n", frame_a->frame_id, frame_b->frame_id);
             }
         }
         return;
@@ -534,7 +525,10 @@ void D2EstimatorState::syncFromState() {
         extrinsic.at(cam_id).from_vector(_camera_extrinsic_state.at(cam_id));
     }
     lmanager.syncState(this);
-    repropagateIMU();
+    if (size() < params->max_sld_win_size ) {
+        //We only repropagte when sld win is smaller than max, means not full initialized.
+        repropagateIMU();
+    }
 }
 
 void D2EstimatorState::repropagateIMU() {

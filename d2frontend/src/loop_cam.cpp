@@ -196,7 +196,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
 
     tt_sum+= tt.toc();
     t_count+= 1;
-    ROS_INFO("[D2Frontend::LoopCam] KF Count %d loop_cam cost avg %.1fms cur %.1fms", kf_count, tt_sum/t_count, tt.toc());
+    printf("[D2Frontend::LoopCam] KF Count %d loop_cam cost avg %.1fms cur %.1fms\n", kf_count, tt_sum/t_count, tt.toc());
 
     visual_array.frame_id = msg.keyframe_id;
     visual_array.pose_drone = msg.pose_drone;

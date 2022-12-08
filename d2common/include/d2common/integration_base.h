@@ -66,6 +66,16 @@ class IntegrationBase
         propagate(dt, acc, gyr);
     }
 
+    void push_back(IntegrationBase * other) 
+    {
+        for (size_t i = 0; i < other->dt_buf.size(); i ++ ) {
+            auto dt = other->dt_buf[i];
+            auto acc = other->acc_buf[i];
+            auto gyr = other->gyr_buf[i];
+            push_back(dt, acc, gyr);
+        }
+    }
+
     void repropagate(const Eigen::Vector3d &_linearized_ba, const Eigen::Vector3d &_linearized_bg)
     {
         sum_dt = 0.0;

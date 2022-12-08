@@ -15,8 +15,8 @@
     <arg name="output_path" default="/home/dji/output/" />
     <arg name="nonkeyframe_waitsec" default="5.0" />
     <arg name="inter_drone_init_frames" default="3" />
-    <arg name="enable_loop" default="true" />
-    <arg name="enable_pgo" default="true" />
+    <arg name="enable_loop" default="false" />
+    <arg name="enable_pgo" default="false" />
     <arg name="rviz" default="false" />
     <arg name="main_id" default="1" /> <!-- This only determine trust which drone to setup cooridinate frme -->
     <arg name="taichislam" default="false" /> <!-- This only determine trust which drone to setup cooridinate frme -->
