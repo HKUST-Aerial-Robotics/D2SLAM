@@ -250,8 +250,8 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualI
                     } else {
                         remote_lm.solver_id = frame.drone_id;
                     }
-                    // printf("[D2FeatureTracker::trackRemote] landmark %ld will solve by %ld\n",
-                    //         remote_lm.landmark_id, remote_lm.solver_id);
+                    // printf("[D2FeatureTracker::trackRemote] landmark %ld will solve by %ld stamp %.3f:%.3f\n",
+                    //         remote_lm.landmark_id, remote_lm.solver_id, local_lm.stamp_discover, remote_lm.stamp_discover);
                     report.remote_matched_num ++;
                 }
             }

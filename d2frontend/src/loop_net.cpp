@@ -248,7 +248,7 @@ void LoopNet::onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
     }
 
     if (params->print_network_status) {
-        printf("[LoopNet]ImageDescriptorHeader %ldc%ld from D%d msg_id %ld: feature num %d gdesc %ld:%ld\n", msg->frame_id, msg->camera_index, msg->drone_id, 
+        printf("[LoopNet]ImageDescriptorHeader %ldc%ld from D%d msg_id %ld: feature num %d gdesc %d:%d\n", msg->frame_id, msg->camera_index, msg->drone_id, 
             msg->msg_id, msg->feature_num, msg->image_desc_size_int8, msg->image_desc_size);
     }
     updateRecvImgDescTs(msg->msg_id, true);
