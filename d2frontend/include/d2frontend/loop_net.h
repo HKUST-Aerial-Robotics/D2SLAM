@@ -22,10 +22,11 @@ class LoopNet {
     lcm::LCM lcm;
 
     std::set<int64_t> sent_message;
+    std::set<int64_t> images_finish_recv;
 
     double recv_period;
 
-    std::mutex recv_lock;
+    std::recursive_mutex recv_lock;
 
     bool send_img;
     bool send_whole_img_desc;

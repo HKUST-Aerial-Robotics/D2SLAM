@@ -39,6 +39,9 @@
 		{
 			"name": "ceres-solver",
 			"path": "../../../source/ceres-solver"
+		},
+		{
+			"path": "../../../Swarm_Docker"
 		}
 	],
 	"settings": {

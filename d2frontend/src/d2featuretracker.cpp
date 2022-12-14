@@ -740,7 +740,8 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             auto features_a = getFeatureHalfImg(pts_a, raw_desc_a, type==LEFT_RIGHT_IMG_MATCH, tmp_to_idx_a);
             auto features_b = getFeatureHalfImg(pts_b, raw_desc_b, type==RIGHT_LEFT_IMG_MATCH, tmp_to_idx_b);
             if (tmp_to_idx_a.size() == 0 || tmp_to_idx_b.size() == 0) {
-                // printf("[D2FeatureTracker] No feature to match.\n");
+                if (params->verbose)
+                    printf("[D2FeatureTracker] matchLocalFeatures failed: no feature to match.\n");
                 return false;
             }
             cv::BFMatcher bfmatcher(cv::NORM_L2, true);
@@ -778,6 +779,8 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         //only perform this for remote
         std::vector<unsigned char> mask;
         if (matched_pts_a_normed.size() < MIN_HOMOGRAPHY) {
+            if (params->verbose)
+                printf("[D2FeatureTracker] matchLocalFeatures failed only %ld pts not meet MIN_HOMOGRAPHY\n", matched_pts_a_normed.size());
             return false;
         }
         // cv::findHomography(matched_pts_a, matched_pts_b, cv::RANSAC, params->ftconfig->ransacReprojThreshold, mask);
@@ -832,8 +835,8 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     }
 
     if (params->verbose || params->enable_perf_output)
-        printf("[D2FeatureTracker::matchLocalFeatures] match features %d:%d frame %d:%d t: %.3f ms enable_knn %d search_dist %.2f check_homography %d sp_dims %d\n", 
-                pts_a.size(), pts_b.size(), img_desc_a.frame_id, img_desc_b.frame_id, tic.toc(), 
+        printf("[D2FeatureTracker::matchLocalFeatures] match features %d:%d matched %ld frame %d:%d t: %.3f ms enable_knn %d search_dist %.2f check_homography %d sp_dims %d\n", 
+                pts_a.size(), pts_b.size(), ids_b.size(), img_desc_a.frame_id, img_desc_b.frame_id, tic.toc(), 
                 params->ftconfig->enable_knn_match, _config.search_local_max_dist*image_width, params->ftconfig->check_homography, params->superpoint_dims);
     if (ids_b.size() >= params->ftconfig->remote_min_match_num) {
         return true;

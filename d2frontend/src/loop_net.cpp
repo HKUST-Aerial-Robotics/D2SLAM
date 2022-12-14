@@ -51,13 +51,14 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, const SlidingWindow_
     int byte_sent = 0;
     int feature_num = img_des.landmark_num;
 
-    ImageDescriptorHeader_t img_desc_header = img_des.header;
+    ImageDescriptorHeader_t & img_desc_header = img_des.header;
     img_desc_header.sld_win_status = sld_status;
     img_desc_header.feature_num = feature_num;
 
     byte_sent += img_desc_header.getEncodedSize();
-    // printf("Header size %d\n", img_desc_header.getEncodedSize());
     lcm.publish("VIOKF_HEADER", &img_desc_header);
+    // printf("[LoopNet] Header id %ld msg_id %ld desc_size %ld:%ld\n", img_desc_header.frame_id, img_desc_header.msg_id, 
+    //     img_desc_header.image_desc_size_int8, img_desc_header.image_desc_size);
     if (need_send_features) {
         LandmarkDescriptorPacket_t * lm_pack = new LandmarkDescriptorPacket_t();
         lm_pack->desc_len = 0;
@@ -86,8 +87,8 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, const SlidingWindow_
                     sent_message.insert(msg_id);
                     byte_sent += lm_pack->getEncodedSize();
                     if (params->print_network_status) {
-                        printf("[LoopNet] BD LMPack LM size %d(%dx%d) superpoint_dims %d lm.landmark_descriptor_int8 %d\n", lm_pack->getEncodedSize(), 
-                            lm_pack->landmarks.size(), lm_pack->landmarks[0].getEncodedSize(), params->superpoint_dims, lm_pack->landmark_descriptor_int8.size());
+                        // printf("[LoopNet] BD LMPack LM size %d(%dx%d) superpoint_dims %d lm.landmark_descriptor_int8 %d\n", lm_pack->getEncodedSize(), 
+                        //     lm_pack->landmarks.size(), lm_pack->landmarks[0].getEncodedSize(), params->superpoint_dims, lm_pack->landmark_descriptor_int8.size());
                     }
                     lcm.publish("VIOKF_LANDMARKS", lm_pack);
                     delete lm_pack;
@@ -113,7 +114,6 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, const SlidingWindow_
 
 void LoopNet::broadcastLoopConnection(swarm_msgs::LoopEdge & loop_conn) {
     auto _loop_conn = toLCMLoopEdge(loop_conn);
-
     sent_message.insert(_loop_conn.id);
     lcm.publish("SWARM_LOOP_CONN", &_loop_conn);
 }
@@ -121,6 +121,7 @@ void LoopNet::broadcastLoopConnection(swarm_msgs::LoopEdge & loop_conn) {
 void LoopNet::onImgArrayRecevied(const lcm::ReceiveBuffer* rbuf,
                 const std::string& chan, 
                 const ImageArrayDescriptor_t* msg) {
+    std::lock_guard<std::recursive_mutex> Guard(recv_lock);
     if (sent_message.find(msg->msg_id) == sent_message.end()) {
         frame_desc_callback(*msg);
     }
@@ -129,10 +130,10 @@ void LoopNet::onImgArrayRecevied(const lcm::ReceiveBuffer* rbuf,
 void LoopNet::onLandmarkRecevied(const lcm::ReceiveBuffer* rbuf,
         const std::string& chan, 
         const LandmarkDescriptorPacket_t* msg) {
+    std::lock_guard<std::recursive_mutex> Guard(recv_lock);
     if(msgBlocked(msg->header_id)) {
         return;
     }
-    recv_lock.lock();
     updateRecvImgDescTs(msg->header_id, false);
     if (received_images.find(msg->header_id) == received_images.end()) {
         //May happen when the image is not received yet
@@ -163,14 +164,12 @@ void LoopNet::onLandmarkRecevied(const lcm::ReceiveBuffer* rbuf,
         tmp.landmark_descriptor_size = tmp.landmark_descriptor.size();
         tmp.landmark_descriptor_size_int8 = 0;
     }
-    recv_lock.unlock();
-    
     scanRecvPackets();
 }
 
 void LoopNet::processRecvImageDesc(const ImageDescriptor_t & image, const SlidingWindow_t & sld_win_status) {
+    std::lock_guard<std::recursive_mutex> Guard(recv_lock);
     int64_t frame_id = image.header.frame_id;
-
     if (received_framearrays.find(frame_id) == received_framearrays.end()) {
         ImageArrayDescriptor_t frame_desc;
         if (params->camera_configuration == CameraConfig::STEREO_FISHEYE) {
@@ -207,7 +206,7 @@ void LoopNet::processRecvImageDesc(const ImageDescriptor_t & image, const Slidin
         frame_header_recv_time[image.header.frame_id] = msg_header_recv_time[image.header.msg_id];
         active_receving_frames.insert(image.header.frame_id);
         if (params->print_network_status) {
-            printf("[LoopNet::processRecvImageDesc] Create frame %dD%d from c%d \n", frame_id, 
+            printf("[LoopNet::processRecvImageDesc] Create frame %dc%d from D%d \n", frame_id, 
                     image.header.camera_index, frame_desc.drone_id);
         }
     } else {
@@ -236,6 +235,7 @@ void LoopNet::onLoopConnectionRecevied(const lcm::ReceiveBuffer* rbuf,
 void LoopNet::onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
     const std::string& chan, 
     const ImageDescriptorHeader_t* msg) {
+    std::lock_guard<std::recursive_mutex> Guard(recv_lock);
 
     if(msgBlocked(msg->msg_id)) {
         return;
@@ -247,50 +247,49 @@ void LoopNet::onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
         printf("[LoopNet@%d] Received image desc from %d matched to frame %ld\n", params->self_id, msg->drone_id, msg->frame_id);
     }
 
-    recv_lock.lock();
-
     if (params->print_network_status) {
-        printf("[LoopNet]ImageDescriptorHeader %ldD%d: feature num %d\n", msg->frame_id, msg->drone_id, msg->feature_num);
+        printf("[LoopNet]ImageDescriptorHeader %ldc%ld from D%d msg_id %ld: feature num %d gdesc %ld:%ld\n", msg->frame_id, msg->camera_index, msg->drone_id, 
+            msg->msg_id, msg->feature_num, msg->image_desc_size_int8, msg->image_desc_size);
     }
     updateRecvImgDescTs(msg->msg_id, true);
 
     if (received_images.find(msg->msg_id) == received_images.end()) {
         ImageDescriptor_t tmp;
-        received_images[msg->msg_id] = tmp; 
-        active_receving_msg.insert(msg->msg_id);
         tmp.landmark_descriptor_size_int8 = 0;
         tmp.landmark_descriptor_size = 0;
         tmp.landmark_scores_size = 0;
+        active_receving_msg.insert(msg->msg_id);
+        received_images[msg->msg_id] = tmp; 
     }
     received_sld_win_status[msg->msg_id] = msg->sld_win_status;
-    auto & tmp = received_images[msg->msg_id];
-    tmp.header = *msg;
-    tmp.landmark_num = msg->feature_num;
-    recv_lock.unlock();
+    received_images[msg->msg_id].header = *msg;
+    received_images[msg->msg_id].landmark_num = msg->feature_num;
 }
 
 void LoopNet::scanRecvPackets() {
+    std::lock_guard<std::recursive_mutex> Guard(recv_lock);
     double tnow = ros::Time::now().toSec();
     std::vector<int64_t> finish_recv;
-    recv_lock.lock();
     static double sum_feature_num = 0;
     static double sum_feature_num_all = 0;
     static int sum_packets = 0;
     for (auto msg_id : active_receving_msg) {
-        auto _frame = received_images[msg_id];
+        auto & _frame = received_images[msg_id];
         if (tnow - msg_header_recv_time[msg_id] > recv_period ||
             _frame.landmark_num == _frame.landmarks.size()) {
             sum_feature_num_all+=_frame.landmark_num;
             sum_feature_num+=_frame.landmarks.size();
             float cur_recv_rate = ((float)_frame.landmarks.size())/((float) _frame.landmark_num);
             if (params->print_network_status) {
-                printf("[LoopNet](%d) frame %ldc%d from D%d, LM %ld/%d recv_rate %.1f cur %.1f gdesc_size %ld/%ld lm_desc_size %ld/%d\n", 
-                    sum_packets, _frame.header.frame_id, _frame.header.camera_index, _frame.header.drone_id, _frame.landmarks.size(), _frame.landmark_num,
-                    sum_feature_num/sum_feature_num_all*100, cur_recv_rate*100, _frame.header.image_desc_size_int8, _frame.header.image_desc_size,
+                printf("[LoopNet](%d) frame %ldc%d from D%d msg_id %ld , LM %d/%d recv duration: %.3fs recv_rate avg %.1f cur %.1f", 
+                    sum_packets, _frame.header.frame_id, _frame.header.camera_index, _frame.header.drone_id, msg_id, _frame.landmarks.size(), _frame.landmark_num,
+                    tnow - msg_header_recv_time[msg_id], sum_feature_num/sum_feature_num_all*100, cur_recv_rate*100);
+                printf(" gdesc_size %d/%d lm_desc_size %d/%d\n",  _frame.header.image_desc_size_int8, _frame.header.image_desc_size,
                     _frame.landmark_descriptor_size_int8,  _frame.landmark_descriptor_size);
             }
             _frame.landmark_num = _frame.landmarks.size();
             finish_recv.push_back(msg_id);
+            images_finish_recv.insert(msg_id);
 
             sum_packets += 1;
             msg_recv_rate_callback(_frame.header.drone_id, cur_recv_rate);
@@ -320,8 +319,9 @@ void LoopNet::scanRecvPackets() {
         int count_images = 0;
         auto & frame_desc = received_framearrays[frame_id];
         for (size_t i = 0; i < frame_desc.images.size(); i++) {
-            if (frame_desc.images[i].landmark_num > 0 && frame_desc.images[i].header.image_desc_size_int8 + frame_desc.images[i].header.image_desc_size > 0) {
-                count_images++;
+            if (frame_desc.images[i].landmark_num > 0 && 
+                    images_finish_recv.find(frame_desc.images[i].header.msg_id) != images_finish_recv.end()) {
+                count_images ++;
             }
         }
 
@@ -339,10 +339,15 @@ void LoopNet::scanRecvPackets() {
         for (size_t i = 0; i < frame_desc.images.size(); i ++) {
             frame_desc.landmark_num += frame_desc.images[i].landmark_num;
             if (params->print_network_status) {
-                printf("[LoopNet::finishRecvArray] frame %ldc%d from D%d, LM %ld/%d gdesc %ld %ld\n", 
+                printf("[LoopNet::finishRecvArray] frame %ldc%d from D%d, LM %ld/%d gdesc %d %d\n", 
                         frame_desc.images[i].header.frame_id, frame_desc.images[i].header.camera_index, 
                         frame_desc.images[i].header.drone_id, frame_desc.images[i].landmarks.size(), frame_desc.images[i].landmark_num,
                         frame_desc.images[i].header.image_desc_size_int8, frame_desc.images[i].header.image_desc_size);
+            }
+            images_finish_recv.erase(frame_desc.images[i].header.msg_id);
+            if (frame_desc.images[i].header.frame_id < 0) {
+                //Has empty header frame
+                return;
             }
         }
 
@@ -354,7 +359,6 @@ void LoopNet::scanRecvPackets() {
         frame_desc_callback(frame_desc);
         received_framearrays.erase(frame_id);
     }
-    recv_lock.unlock();
 }
 
 void LoopNet::updateRecvImgDescTs(int64_t id, bool is_header) {
