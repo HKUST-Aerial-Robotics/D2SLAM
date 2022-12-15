@@ -257,8 +257,8 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualI
             }
         }
     }
-    printf("[D2Frontend::D2FeatureTracker] match %d@cam%d<->%d@cam%d report.remote_matched_num %d\n",
-        frame.drone_id, frame.camera_index, prev_frame.drone_id, frame.camera_index, report.remote_matched_num);
+    // printf("[D2Frontend::D2FeatureTracker] match %d@cam%d<->%d@cam%d report.remote_matched_num %d\n",
+    //     frame.drone_id, frame.camera_index, prev_frame.drone_id, frame.camera_index, report.remote_matched_num);
     return report;
 }
 

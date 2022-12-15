@@ -77,7 +77,7 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
     
     printf("\033[0;32m[D2VINS::D2Estimator] Initial firstPose %ld\n", frame.frame_id);
     printf("[D2VINS::D2Estimator] Init pose with IMU: %s\n", last_odom.toStr().c_str());
-    printf("[D2VINS::D2Estimator] Mean acc %.3f %.3f %.3f", mean_acc.x(), mean_acc.y(), mean_acc.z());
+    printf("[D2VINS::D2Estimator] Mean acc %.3f %.3f %.3f\n", mean_acc.x(), mean_acc.y(), mean_acc.z());
     printf("[D2VINS::D2Estimator] Gyro bias: %.3f %.3f %.3f\n", first_frame.Bg.x(), first_frame.Bg.y(), first_frame.Bg.z());
     printf("[D2VINS::D2Estimator] Acc  bias: %.3f %.3f %.3f\033[0m\n\n", first_frame.Ba.x(), first_frame.Ba.y(), first_frame.Ba.z());
 
@@ -112,8 +112,8 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
     }
     auto pose_imu = D2FrontEnd::computePosePnPnonCentral(lm_positions_a, lm_3d_norm_b, cam_extrinsics, camera_indices, inliers);
     bool success = inliers.size() > params->pnp_min_inliers;
-    printf("[D2VINS::D2Estimator@%d] PnP succ %d initial %s final %s inliers %d points %d\n", success, self_id, initial_pose.toStr().c_str(), 
-            pose_imu.toStr().c_str(), inliers.size(), lm_positions_a.size());
+    printf("[D2VINS::D2Estimator@%d] PnP succ %d frame %ld@%d final %s inliers %d points %d\n", self_id, success, 
+            frame.frame_id, frame.drone_id, pose_imu.toStr().c_str(), inliers.size(), lm_positions_a.size());
     return std::make_pair(success, pose_imu);
 }
 
@@ -124,7 +124,7 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     auto _imu = ret.first;
     auto index = ret.second;
     if (fabs(_imu.size()/(_frame.stamp - last_frame.stamp) - params->IMU_FREQ) > 15) {
-        printf("\033[0;31m[D2VINS::D2Estimator] Local IMU error freq: %.3f  start_t %.3f/%.3f end_t %.3f/%.3f\033[0m\n", 
+        printf("\033[0;31m[D2VINS::D2Estimator] Local IMU error freq: %.3f start_t %.3f/%.3f end_t %.3f/%.3f\033[0m\n", 
             _imu.size()/(_frame.stamp - last_frame.stamp),
             last_frame.stamp + state.td, _imu[0].t, _frame.stamp + state.td, _imu[_imu.size()-1].t);
     }
@@ -266,6 +266,10 @@ void D2Estimator::addSldWinToFrame(VisualImageDescArray & frame) {
 
 void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
     const Guard lock(frame_mutex);
+    if (solve_count == 0 && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        //In consenus mode, we require first to be local initialized before deal with remote
+        return;
+    }
     if (frame.sld_win_status.size() > 0) {
         //We need to update the sliding window.
         state.updateSldwin(frame.drone_id, frame.sld_win_status);
@@ -472,7 +476,6 @@ void D2Estimator::solveinDistributedMode() {
 
     margined_landmarks = state.clearUselessFrames(); // clear in dist mode.
     resetMarginalizer();
-    solve_count ++;
     state.preSolve(imu_bufs);
     solver->reset();
 
@@ -492,13 +495,14 @@ void D2Estimator::solveinDistributedMode() {
     sum_cost += report.final_cost;
 
     if (params->enable_perf_output) {
-        printf("[D2VINS::solveinDistributedMode@%d] average time %.1fms, average time of iter: %.1fms, average iteration %.3f, average cost %.3f\n", 
+        printf("[D2VINS::solveDist@%d] average time %.1fms, average time of iter: %.1fms, average iteration %.3f, average cost %.3f\n", 
             self_id, sum_time*1000/solve_count, sum_time*1000/sum_iteration, sum_iteration/solve_count, sum_cost/solve_count);
     }
 
     auto last_odom = state.lastFrame().odom;
-    printf("[D2VINS::solveinDistributedMode@%d] solve_count %d landmarks %d/%d ref %d odom %s opti_time %.1fms steps %d td %.1fms \n",  
-        self_id, solve_count, used_landmarks.size(), current_landmark_num, state.getReferenceFrameId(), last_odom.toStr().c_str(), report.total_time*1000, report.total_iterations, state.td*1000);
+    printf("[D2VINS::solveDist@%d](%d) odom %s@ref%d landmarks %d/%d drone_num %d opti_time %.1fms steps %d td %.1fms \n",  
+            self_id, solve_count, last_odom.toStr().c_str(), state.getReferenceFrameId(), used_landmarks.size(), current_landmark_num, 
+            state.availableDrones().size(), report.total_time*1000, report.total_iterations, state.td*1000);
 
     // Reprogation
     for (auto drone_id : state.availableDrones()) {
@@ -520,11 +524,11 @@ void D2Estimator::solveinDistributedMode() {
         exit(1);
     }
     // exit(0);
+    solve_count ++;
 }
 
 void D2Estimator::solveNonDistrib() {
     resetMarginalizer();
-    solve_count ++;
     state.preSolve(imu_bufs);
     solver->reset();
     setupImuFactors();
@@ -583,6 +587,7 @@ void D2Estimator::addIMUFactor(FrameIdType frame_ida, FrameIdType frame_idb, Int
         return;
     }
     marginalizer->addResidualInfo(info);
+    solve_count ++;
 }
 
 void D2Estimator::setupImuFactors() {
