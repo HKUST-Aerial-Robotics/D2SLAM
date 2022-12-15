@@ -111,10 +111,9 @@ cv::Vec3b extractColor(const cv::Mat &img, cv::Point2f p) {
 }
 
 
-#define MAXBUFSIZE 100000
 Eigen::MatrixXf load_csv_mat_eigen(std::string csv) {
     int cols = 0, rows = 0;
-    double buff[MAXBUFSIZE];
+    std::vector<double> buff;
 
     // Read numbers from file into buffer.
     std::ifstream infile;
@@ -129,7 +128,7 @@ Eigen::MatrixXf load_csv_mat_eigen(std::string csv) {
 
         while (std::getline(lineStream, cell, ','))
         {
-            buff[rows * cols + temp_cols] = std::stod(cell);
+            buff.emplace_back(std::stod(cell));
             temp_cols ++;
         }
 
@@ -153,7 +152,7 @@ Eigen::MatrixXf load_csv_mat_eigen(std::string csv) {
 
 Eigen::VectorXf load_csv_vec_eigen(std::string csv) {
     int cols = 0, rows = 0;
-    double buff[MAXBUFSIZE];
+    double buff[100000];
 
     // Read numbers from file into buffer.
     std::ifstream infile;

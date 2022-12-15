@@ -53,7 +53,7 @@ max_depth_to_fuse: 5.0
 min_depth_to_fuse: 0.3
 
 #Multi-drone
-vlad_threshold: 0.5
+track_remote_netvlad_thres: 0.5
 
 #Initialization
 init_method: 0 #0 IMU, 1 PnP
@@ -109,7 +109,7 @@ gyr_w: 0.0004       # gyroscope bias random work noise standard deviation.     #
 g_norm: 9.805         # gravity magnitude
 
 #Loop Closure Detection
-netvlad_IP_thres: 0.8
+loop_detection_netvlad_thres: 0.8
 enable_homography_test: 1
 accept_loop_max_yaw: 10
 accept_loop_max_pos: 1.0
