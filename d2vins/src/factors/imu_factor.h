@@ -27,6 +27,8 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
     IMUFactor(IntegrationBase* _pre_integration):pre_integration(_pre_integration)
     {
         sqrt_info = Eigen::LLT<Eigen::Matrix<double, 15, 15>>(pre_integration->covariance.inverse()).matrixL().transpose();
+        // std::cout << "intergation sum_dt" << pre_integration->sum_dt << "cov\n" << pre_integration->covariance.block<3, 3>(O_BA, O_BA) << std::endl << 
+        //     "sqrt_info OBA\n" << sqrt_info.block<3, 3>(O_BA, O_BA) << std::endl;
     }
 
     void testEvaluate(std::vector<double*> param, double *residuals, double **jacobians)
@@ -85,8 +87,8 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
         if (check) {
             std::cout << "residuals: " << residual.transpose() << std::endl;
         }
-        
-        residual = sqrt_info * residual;
+        // std::cout << "residual OBA: " << residual.block<3, 1>(O_BA, 0).transpose() << std::endl;
+        residual.applyOnTheLeft(sqrt_info);
         if (check) {
             std::cout << "residuals_with_inf: " << residual.transpose() << std::endl;
         }
