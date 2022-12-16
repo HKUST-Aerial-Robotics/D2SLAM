@@ -243,6 +243,12 @@ void D2LandmarkManager::syncState(const D2EstimatorState * state) {
         if (lm.solver_flag == LandmarkSolverFlag::SOLVED) {
             if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
                 auto inv_dep = *it.second;
+                if (inv_dep < 0) {
+                    printf("[Warn] negative inv dep %.2f found\n", inv_dep);
+                }
+                if (inv_dep < params->min_inv_dep) {
+                    inv_dep = params->min_inv_dep;
+                }
                 auto lm_per_frame = lm.track[0];
                 const auto & firstFrame = state->getFramebyId(lm_per_frame.frame_id);
                 auto ext = state->getExtrinsic(lm_per_frame.camera_id);
