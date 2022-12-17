@@ -58,13 +58,6 @@ VectorXd Marginalizer::evaluate(SparseMat & J, int eff_residual_size, int eff_pa
                 for (auto j = 0; j < blk_eff_param_size; j ++) {
                     //We only copy the eff param part, that is: on tangent space.
                     triplet_list.push_back(Eigen::Triplet<state_type>(i0 + i, j0 + j, J_blk(i, j)));
-                    if (i0 + i >= eff_residual_size || j0 + j >= eff_param_size) {
-                        printf("J0 %d\n", j0);
-                        printf("J[%d, %d] = %f size %d, %d\n", i0 + i, j0 + j, J_blk(i, j), eff_residual_size, eff_param_size);
-                        fflush(stdout);
-                        exit(1);
-                    }
-                    
                 }
             }
         }

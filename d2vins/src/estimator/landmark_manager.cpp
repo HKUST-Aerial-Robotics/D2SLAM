@@ -140,17 +140,16 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
                                 lm_id, lm.track.size(), (_max - _min).norm(), point_3d.x(), point_3d.y(), point_3d.z(), inv_dep);
                         }
                     }
-                    if (point_3d.x() < -1.0)
-                        for (auto & it: lm.track) {
-                            auto frame = *state->getFramebyId(it.frame_id);
-                            auto ext = state->getExtrinsic(it.camera_id);
-                            auto cam_pose = frame.odom.pose()*ext;
-                            auto reproject_pos = cam_pose.inverse()*point_3d;
-                            reproject_pos.normalize();
-                            printf("Frame %ld camera_id %d index %d cam pose: %s pt3d norm %.3f %.3f %.3f reproject %.3f %.3f %.3f\n", 
-                                    it.frame_id, it.camera_id, it.camera_index, cam_pose.toStr().c_str(), it.pt3d_norm.x(), it.pt3d_norm.y(), it.pt3d_norm.z(), 
-                                    reproject_pos.x(), reproject_pos.y(), reproject_pos.z());
-                        }
+                    // for (auto & it: lm.track) {
+                    //     auto frame = *state->getFramebyId(it.frame_id);
+                    //     auto ext = state->getExtrinsic(it.camera_id);
+                    //     auto cam_pose = frame.odom.pose()*ext;
+                    //     auto reproject_pos = cam_pose.inverse()*point_3d;
+                    //     reproject_pos.normalize();
+                    //     printf("Frame %ld camera_id %d index %d cam pose: %s pt3d norm %.3f %.3f %.3f reproject %.3f %.3f %.3f\n", 
+                    //             it.frame_id, it.camera_id, it.camera_index, cam_pose.toStr().c_str(), it.pt3d_norm.x(), it.pt3d_norm.y(), it.pt3d_norm.z(), 
+                    //             reproject_pos.x(), reproject_pos.y(), reproject_pos.z());
+                    // }
                 } else {
                     lm.flag = LandmarkFlag::INITIALIZED;
                     memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
