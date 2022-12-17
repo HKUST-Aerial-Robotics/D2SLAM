@@ -72,6 +72,7 @@ struct D2VINSConfig {
         SERVER_MODE //In this mode receive all remote and solve them
     } estimation_mode = SOLVE_ALL_MODE;
     double estimate_extrinsic_vel_thres = 0.2;
+    int max_solve_cnt = 10000;
 
     //Fuse depth
     bool fuse_dep = true;

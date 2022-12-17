@@ -52,7 +52,7 @@ public:
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;
     Swarm::Pose getExtrinsic(CamIdType cam_id) const;
     std::set<CamIdType> getAvailableCameraIds() const;
-    std::vector<LandmarkPerId> availableLandmarkMeasurements() const;
+    std::vector<LandmarkPerId> availableLandmarkMeasurements(int max_pts) const;
     std::vector<LandmarkPerId> getInitializedLandmarks() const;
     std::vector<LandmarkPerId> getRelatedLandmarks(FrameIdType frame_id) const;
     LandmarkPerId & getLandmarkbyId(LandmarkIdType id);

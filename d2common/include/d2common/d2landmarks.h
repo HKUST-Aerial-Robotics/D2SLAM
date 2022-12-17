@@ -226,6 +226,32 @@ struct LandmarkPerId {
         }
          
     }
+
+    bool shouldBeSolve(int self_id) const {
+        if (solver_id == -1 && drone_id != self_id) {
+            // This is a internal only remote landmark
+            return false;
+        }
+        if (solver_id > 0 && solver_id != self_id) {
+            return false;
+        }
+        return true;
+    }
+
+    double scoreForSolve(int self_id) const {
+        if (!shouldBeSolve(self_id)) {
+            return -1;
+        }
+        double score = 0;
+        for (auto & it: track) {
+            if (it.drone_id != self_id) {
+                score += 2;
+            } else {
+                score += 1;
+            }
+        }
+        return score;  
+    }
 };
 
 }

@@ -627,7 +627,7 @@ void D2Estimator::setupImuFactors() {
 }
 
 bool D2Estimator::hasCommonLandmarkMeasurments() {
-    auto lms = state.availableLandmarkMeasurements();
+    auto lms = state.availableLandmarkMeasurements(params->max_solve_cnt);
     for (auto lm : lms) {
         if (lm.solver_id == -1 && lm.drone_id != self_id) {
             // This is a internal only remote landmark
@@ -647,7 +647,7 @@ bool D2Estimator::hasCommonLandmarkMeasurments() {
 
 void D2Estimator::setupLandmarkFactors() {
     used_landmarks.clear();
-    auto lms = state.availableLandmarkMeasurements();
+    auto lms = state.availableLandmarkMeasurements(params->max_solve_cnt);
     current_landmark_num = lms.size();
     auto loss_function = new ceres::HuberLoss(1.0);    
     int residual_count = 0;
@@ -683,15 +683,11 @@ void D2Estimator::setupLandmarkFactors() {
 
     for (auto lm : lms) {
         auto lm_id = lm.landmark_id;
-        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-            if (lm.solver_id == -1 && lm.drone_id != self_id) {
-                // This is a internal only remote landmark
-                continue;
-            }
-            if (lm.solver_id > 0 && lm.solver_id != self_id) {
-                continue;
-            }
-        }
+        // if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        //     if (!lm.shouldBeSolve(self_id)) {
+        //         continue;
+        //     }
+        // }
         LandmarkPerFrame firstObs = lm.track[0];
         if (ignore_frames.find(firstObs.frame_id) != ignore_frames.end()) {
             continue;
