@@ -821,15 +821,20 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         cv::putText(show, name, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
         sprintf(name, "matches_CAM@Drone %d@%d_%d@%d", img_desc_a.camera_index,
                 img_desc_a.drone_id, img_desc_b.camera_index, img_desc_b.drone_id);
-        cv::imshow(name, show);
         if (params->ftconfig->check_homography) {
-            cv::hconcat(img_desc_a.raw_image, image_b, show);
-            cv::cvtColor(show, show, cv::COLOR_GRAY2BGR);
+            cv::Mat show_check;
+            cv::hconcat(img_desc_a.raw_image, image_b, show_check);
+            cv::cvtColor(show_check, show_check, cv::COLOR_GRAY2BGR);
             for (int i = 0; i < matched_pts_a.size(); i++) {
-                cv::line(show, matched_pts_a[i], matched_pts_b[i] + cv::Point2f(show.cols/2, 0), cv::Scalar(0, 255, 0), 1);
+                // random color
+                cv::Scalar color(rand()&255, rand()&255, rand()&255);
+                cv::line(show_check, matched_pts_a[i], matched_pts_b[i] + cv::Point2f(show.cols/2, 0), color, 1);
             }
             sprintf(name, "filtered_matches_CAM@Drone %d@%d_%d@%d", img_desc_a.camera_index,
                     img_desc_a.drone_id, img_desc_b.camera_index, img_desc_b.drone_id);
+            cv::vconcat(show, show_check, show);
+            cv::imshow(name, show);
+        } else {
             cv::imshow(name, show);
         }
     }

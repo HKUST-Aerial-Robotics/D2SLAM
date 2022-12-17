@@ -515,6 +515,8 @@ Swarm::Pose computePosePnPnonCentral(const std::vector<Vector3d> & lm_positions_
     R = nonlinear_transformation.block<3, 3>(0, 0);
     t = nonlinear_transformation.block<3, 1>(0, 3);
     Swarm::Pose p_drone_old_in_new(R, t);
+    // printf("[InitPnP] pose_init %s pose_refine %s\n", p_drone_old_in_new_init.toStr().c_str(), 
+    //         p_drone_old_in_new.toStr().c_str());
     return p_drone_old_in_new;
 }
 
