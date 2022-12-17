@@ -485,7 +485,7 @@ Swarm::Pose computePosePnPnonCentral(const std::vector<Vector3d> & lm_positions_
         adapter, opengv::sac_problems::absolute_pose::AbsolutePoseSacProblem::GP3P));
     ransac.sac_model_ = absposeproblem_ptr;
     // ransac.threshold_ = 1.0 - cos(atan(sqrt(10.0)*0.5/460.0));
-    ransac.threshold_ = 1.0/params->focal_length;
+    ransac.threshold_ = 0.5/params->focal_length;
     ransac.max_iterations_ = 50;
     ransac.computeModel();
     //Obtain relative pose results
