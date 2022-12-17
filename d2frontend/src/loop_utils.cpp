@@ -111,10 +111,9 @@ cv::Vec3b extractColor(const cv::Mat &img, cv::Point2f p) {
 }
 
 
-#define MAXBUFSIZE 100000
 Eigen::MatrixXf load_csv_mat_eigen(std::string csv) {
     int cols = 0, rows = 0;
-    double buff[MAXBUFSIZE];
+    std::vector<double> buff;
 
     // Read numbers from file into buffer.
     std::ifstream infile;
@@ -129,7 +128,7 @@ Eigen::MatrixXf load_csv_mat_eigen(std::string csv) {
 
         while (std::getline(lineStream, cell, ','))
         {
-            buff[rows * cols + temp_cols] = std::stod(cell);
+            buff.emplace_back(std::stod(cell));
             temp_cols ++;
         }
 
@@ -153,7 +152,7 @@ Eigen::MatrixXf load_csv_mat_eigen(std::string csv) {
 
 Eigen::VectorXf load_csv_vec_eigen(std::string csv) {
     int cols = 0, rows = 0;
-    double buff[MAXBUFSIZE];
+    double buff[100000];
 
     // Read numbers from file into buffer.
     std::ifstream infile;
@@ -516,6 +515,8 @@ Swarm::Pose computePosePnPnonCentral(const std::vector<Vector3d> & lm_positions_
     R = nonlinear_transformation.block<3, 3>(0, 0);
     t = nonlinear_transformation.block<3, 1>(0, 3);
     Swarm::Pose p_drone_old_in_new(R, t);
+    // printf("[InitPnP] pose_init %s pose_refine %s\n", p_drone_old_in_new_init.toStr().c_str(), 
+    //         p_drone_old_in_new.toStr().c_str());
     return p_drone_old_in_new;
 }
 

@@ -72,7 +72,7 @@ max_depth_to_fuse: 5.0
 min_depth_to_fuse: 0.3
 
 #Multi-drone
-vlad_threshold: 0.5
+track_remote_netvlad_thres: 0.5
 
 #Initialization
 init_method: 0 #0 IMU, 1 PnP
@@ -117,7 +117,9 @@ feature_min_dist: 20
 #CNN
 cnn_use_onnx: 1
 enable_pca_superpoint: 1
+enable_pca_netvlad: 1
 superpoint_pca_dims: 64
+netvlad_pca_dims: 1024
 cnn_enable_tensorrt: 0
 cnn_enable_tensorrt_int8: 0
 netvlad_int8_calib_table_name: "mobilenetvlad_calibration.flatbuffers"
@@ -135,7 +137,7 @@ gyr_w: 0.0004       # gyroscope bias random work noise standard deviation.     #
 g_norm: 9.805         # gravity magnitude
 
 #Loop Closure Detection
-netvlad_IP_thres: 0.85
+loop_detection_netvlad_thres: 0.85
 enable_homography_test: 0
 loop_inlier_feature_num: 20
 accept_loop_max_yaw: 10

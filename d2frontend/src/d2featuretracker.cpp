@@ -106,20 +106,20 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
         for (int i = current_keyframes.size() - 1; i >= 0; i--) {
             const auto & last = current_keyframes[i];
             if (frame_a.images.size() == 0 ||
-                frame_a.images[0].image_desc.size() != NETVLAD_DESC_SIZE) {
+                frame_a.images[0].image_desc.size() != params->netvlad_dims) {
                 ROS_ERROR("[D2FeatureTracker::trackRemote] Warn: no vaild frame.image_desc.size() frame_id %ld ", frame_a.frame_id);
                 return false;
             }
-            const Map<const VectorXf> vlad_desc_remote(frame_a.images[0].image_desc.data(), NETVLAD_DESC_SIZE);
-            const Map<const VectorXf> vlad_desc(last.images[0].image_desc.data(), NETVLAD_DESC_SIZE);
+            const Map<const VectorXf> vlad_desc_remote(frame_a.images[0].image_desc.data(), params->netvlad_dims);
+            const Map<const VectorXf> vlad_desc(last.images[0].image_desc.data(), params->netvlad_dims);
             double netvlad_similar = vlad_desc.dot(vlad_desc_remote);
-            if (netvlad_similar < params->vlad_threshold) {
+            if (netvlad_similar < params->track_remote_netvlad_thres) {
                 // if (params->verbose)
-                //     printf("[D2FeatureTracker::trackRemote@%d] Remote image does not match current image %.2f/%.2f\n", params->self_id, netvlad_similar, params->vlad_threshold);
+                //     printf("[D2FeatureTracker::trackRemote@%d] Remote image does not match current image %.2f/%.2f\n", params->self_id, netvlad_similar, params->track_remote_netvlad_thres);
             } else {
                 if (params->verbose)
                     printf("[D2FeatureTracker::trackRemote@%d] Remote image match image %d(%ld) %.2f/%.2f\n", params->self_id,
-                            i, last.frame_id, netvlad_similar, params->vlad_threshold);
+                            i, last.frame_id, netvlad_similar, params->track_remote_netvlad_thres);
                 prev = last;
                 dir_a = 0;
                 dir_b = 0;
@@ -131,19 +131,19 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
         std::vector<int> dirs{2, 3, 0, 1};
         dir_a = 2;
         printf("[D2FeatureTracker::getMatchedPrevKeyframe] Remote frame %ld view 2/%ld: gdesc %ld\n", frame_a.frame_id, frame_a.images.size(), frame_a.images[2].image_desc.size());
-        const Map<const VectorXf> vlad_desc_remote(frame_a.images[2].image_desc.data(), NETVLAD_DESC_SIZE);
+        const Map<const VectorXf> vlad_desc_remote(frame_a.images[2].image_desc.data(), params->netvlad_dims);
         for (int i = current_keyframes.size() - 1; i >= 0; i--) {
             const auto & last = current_keyframes[i];
             for (int j = 0; j < last.images.size(); j++) {
-                const Map<const VectorXf> vlad_desc(last.images[dirs[j]].image_desc.data(), NETVLAD_DESC_SIZE);
+                const Map<const VectorXf> vlad_desc(last.images[dirs[j]].image_desc.data(), params->netvlad_dims);
                 double netvlad_similar = vlad_desc.dot(vlad_desc_remote);
-                if (netvlad_similar < params->vlad_threshold) {
+                if (netvlad_similar < params->track_remote_netvlad_thres) {
                 } else {
                     prev = last;
                     dir_b = dirs[j];
                     // if (params->verbose) {
                         printf("[D2FeatureTracker::trackRemote@%d] Remote image match image drone %d(%ld) dir %d:%d %.2f/%.2f\n", params->self_id,
-                                i, last.frame_id, dir_a, dir_b, netvlad_similar, params->vlad_threshold);
+                                i, last.frame_id, dir_a, dir_b, netvlad_similar, params->track_remote_netvlad_thres);
                     // }
                     return true;
                 }
@@ -821,15 +821,20 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         cv::putText(show, name, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
         sprintf(name, "matches_CAM@Drone %d@%d_%d@%d", img_desc_a.camera_index,
                 img_desc_a.drone_id, img_desc_b.camera_index, img_desc_b.drone_id);
-        cv::imshow(name, show);
         if (params->ftconfig->check_homography) {
-            cv::hconcat(img_desc_a.raw_image, image_b, show);
-            cv::cvtColor(show, show, cv::COLOR_GRAY2BGR);
+            cv::Mat show_check;
+            cv::hconcat(img_desc_a.raw_image, image_b, show_check);
+            cv::cvtColor(show_check, show_check, cv::COLOR_GRAY2BGR);
             for (int i = 0; i < matched_pts_a.size(); i++) {
-                cv::line(show, matched_pts_a[i], matched_pts_b[i] + cv::Point2f(show.cols/2, 0), cv::Scalar(0, 255, 0), 1);
+                // random color
+                cv::Scalar color(rand()&255, rand()&255, rand()&255);
+                cv::line(show_check, matched_pts_a[i], matched_pts_b[i] + cv::Point2f(show.cols/2, 0), color, 1);
             }
             sprintf(name, "filtered_matches_CAM@Drone %d@%d_%d@%d", img_desc_a.camera_index,
                     img_desc_a.drone_id, img_desc_b.camera_index, img_desc_b.drone_id);
+            cv::vconcat(show, show_check, show);
+            cv::imshow(name, show);
+        } else {
             cv::imshow(name, show);
         }
     }

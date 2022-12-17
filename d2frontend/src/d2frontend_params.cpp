@@ -53,12 +53,21 @@ namespace D2FrontEnd {
         loopcamconfig->DEPTH_NEAR_THRES = fsSettings["depth_near_thres"];
         loopcamconfig->show = (int) fsSettings["show_feature_extraction"];
         enable_pca_superpoint = (int) fsSettings["enable_pca_superpoint"];
+        enable_pca_netvlad = (int) fsSettings["enable_pca_netvlad"];
+        loopdetectorconfig->loop_detection_netvlad_thres = fsSettings["loop_detection_netvlad_thres"];
+        track_remote_netvlad_thres = fsSettings["track_remote_netvlad_thres"]; //This is for d2featuretracker
         if (enable_pca_superpoint) {
             superpoint_dims = (int) fsSettings["superpoint_pca_dims"];
+        }
+        if (enable_pca_netvlad) {
+            netvlad_dims = (int) fsSettings["netvlad_pca_dims"];
+            track_remote_netvlad_thres = 1.46 * track_remote_netvlad_thres - 0.499128; //This is computed in pca_decomp.ipynb
+            loopdetectorconfig->loop_detection_netvlad_thres = 1.46 * loopdetectorconfig->loop_detection_netvlad_thres - 0.499128;
         }
         nh.param<double>("superpoint_thres", loopcamconfig->superpoint_thres, 0.012);
         nh.param<std::string>("pca_comp_path",loopcamconfig->pca_comp, "");
         nh.param<std::string>("pca_mean_path",loopcamconfig->pca_mean, "");
+        nh.param<std::string>("pca_netvlad", pca_netvlad, "");
         nh.param<std::string>("superpoint_model_path", loopcamconfig->superpoint_model, "");
         nh.param<std::string>("netvlad_model_path", loopcamconfig->netvlad_model, "");
         loopcamconfig->cnn_enable_tensorrt = (int) fsSettings["cnn_enable_tensorrt"];
@@ -86,7 +95,6 @@ namespace D2FrontEnd {
         ftconfig->double_counting_common_feature = (int) fsSettings["double_counting_common_feature"];
         ftconfig->enable_superglue_local = (int) fsSettings["enable_superglue_local"];
         ftconfig->enable_superglue_remote = (int) fsSettings["enable_superglue_remote"];
-        vlad_threshold = fsSettings["vlad_threshold"];
         ftconfig->ransacReprojThreshold = fsSettings["ransacReprojThreshold"];
         ftconfig->parallex_thres = fsSettings["parallex_thres"];
         ftconfig->knn_match_ratio = fsSettings["knn_match_ratio"];
@@ -107,7 +115,6 @@ namespace D2FrontEnd {
             printf("[D2FrontendParams] feature_min_dist not found, use default\n");
         }
         //Loop detector
-        loopdetectorconfig->netvlad_IP_thres = fsSettings["netvlad_IP_thres"];
         loopdetectorconfig->enable_homography_test = (int) fsSettings["enable_homography_test"];
         loopdetectorconfig->accept_loop_max_yaw = (double) fsSettings["accept_loop_max_yaw"];
         loopdetectorconfig->accept_loop_max_pos = (double) fsSettings["accept_loop_max_pos"];

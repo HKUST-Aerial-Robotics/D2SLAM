@@ -38,7 +38,7 @@ struct LoopDetectorConfig {
     int MIN_MATCH_PRE_DIR;
     double loop_cov_pos;
     double loop_cov_ang;
-    double netvlad_IP_thres;
+    double loop_detection_netvlad_thres;
     double DETECTOR_MATCH_THRES;
     int inter_drone_init_frames;
     bool DEBUG_NO_REJECT;

@@ -193,7 +193,7 @@ int LoopDetector::addToDatabase(VisualImageDesc & img_desc_a) {
 
 
 int LoopDetector::queryFrameIndexFromDatabase(const VisualImageDesc & img_desc, double & similarity) {
-    double thres = _config.netvlad_IP_thres;
+    double thres = _config.loop_detection_netvlad_thres;
     int ret = -1;
     if (img_desc.drone_id == self_id) {
         //Then this is self drone
@@ -702,8 +702,8 @@ bool LoopDetector::hasFrame(FrameIdType frame_id) {
 LoopDetector::LoopDetector(int _self_id, const LoopDetectorConfig & config):
         self_id(_self_id),
         _config(config),
-        local_index(NETVLAD_DESC_SIZE), 
-        remote_index(NETVLAD_DESC_SIZE), 
+        local_index(params->netvlad_dims), 
+        remote_index(params->netvlad_dims), 
     ego_motion_traj(_self_id, true, _config.pos_covariance_per_meter, _config.yaw_covariance_per_meter) {
     if (_config.enable_superglue) {
         superglue = new SuperGlueOnnx(_config.superglue_model_path);

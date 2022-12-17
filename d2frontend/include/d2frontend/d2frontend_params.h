@@ -17,8 +17,6 @@
 
 #define USE_DEEPNET
 
-#define NETVLAD_DESC_SIZE 4096
-
 #define SEARCH_NEAREST_NUM 5
 // #define ACCEPT_NONKEYFRAME_WAITSEC 5.0
 #define INIT_ACCEPT_NONKEYFRAME_WAITSEC 1.0
@@ -62,9 +60,13 @@ struct D2FrontendParams {
     double recv_msg_duration = 0.5;
     double feature_min_dist = 20;
     int total_feature_num = 150;
-    double vlad_threshold = 0.3;
+    double track_remote_netvlad_thres = 0.3;
     size_t superpoint_dims = 256;
+    size_t netvlad_dims = 4096;
     bool enable_pca_superpoint = false;
+    bool enable_pca_netvlad = false;
+
+    std::string pca_netvlad = "";
 
     double min_movement_keyframe = 0.3;
     int self_id = 0;
