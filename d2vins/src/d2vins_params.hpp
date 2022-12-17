@@ -99,7 +99,7 @@ struct D2VINSConfig {
     bool margin_enable_fej = true;
 
     //Safety
-    int min_measurements_per_keyframe = 20;
+    int min_measurements_per_keyframe = 10;
     double max_imu_time_err = 0.0025;
 
     //Multi-drone

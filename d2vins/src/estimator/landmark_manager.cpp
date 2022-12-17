@@ -47,7 +47,7 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts)
     });
     // return the best max_pts measurements
     for (int i = 0; i < landmark_scores.size() && i < max_pts; i++) {
-        printf("[D2VINS::D2LandmarkManager] Available landmark %ld score %d\n", landmark_scores[i].first, landmark_scores[i].second);
+        // printf("[D2VINS::D2LandmarkManager] Available landmark %ld score %d\n", landmark_scores[i].first, landmark_scores[i].second);
         ret.push_back(landmark_db.at(landmark_scores[i].first));
     }
     return ret;
