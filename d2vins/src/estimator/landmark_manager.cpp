@@ -4,7 +4,7 @@
 
 namespace D2VINS {
 
-double triangulatePoint3DPts(std::vector<Swarm::Pose> poses, std::vector<Vector3d> &points, Vector3d &point_3d);
+double triangulatePoint3DPts(const std::vector<Swarm::Pose> poses, const std::vector<Vector3d> &points, Vector3d &point_3d);
 
 void D2LandmarkManager::addKeyframe(const VisualImageDescArray & images, double td) {
     const Guard lock(state_lock);
@@ -119,7 +119,8 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
         if ((_max - _min).norm() > params->depth_estimate_baseline) {
             //Initialize by triangulation
             Vector3d point_3d(0., 0., 0.);
-            if (triangulatePoint3DPts(poses, points, point_3d) < params->tri_max_err) {
+            double tri_err = triangulatePoint3DPts(poses, points, point_3d);
+            if (tri_err < params->tri_max_err) {
                 lm.position = point_3d;
                 if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
                     auto ptcam = (firstFrame.odom.pose()*ext_base).inverse()*point_3d;
@@ -128,8 +129,8 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
                         lm.flag = LandmarkFlag::INITIALIZED;
                         *landmark_state[lm_id] = inv_dep;
                         if (params->debug_print_states) {
-                            printf("[D2VINS::D2LandmarkManager] Initialize landmark %ld tracks %ld baseline %.2f by triangulation position %.3f %.3f %.3f inv_dep %.3f\n",
-                                lm_id, lm.track.size(), (_max - _min).norm(), point_3d.x(), point_3d.y(), point_3d.z(), inv_dep);
+                            printf("[D2VINS::D2LandmarkManager] Landmark %ld tracks %ld baseline %.2f by tri. P %.3f %.3f %.3f inv_dep %.3f err %.3f\n",
+                                lm_id, lm.track.size(), (_max - _min).norm(), point_3d.x(), point_3d.y(), point_3d.z(), inv_dep, tri_err);
                         }
                     } else {
                         lm.flag = LandmarkFlag::INITIALIZED;
@@ -139,20 +140,22 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
                                 lm_id, lm.track.size(), (_max - _min).norm(), point_3d.x(), point_3d.y(), point_3d.z(), inv_dep);
                         }
                     }
+                    if (point_3d.x() < -1.0)
+                        for (auto & it: lm.track) {
+                            auto frame = *state->getFramebyId(it.frame_id);
+                            auto ext = state->getExtrinsic(it.camera_id);
+                            auto cam_pose = frame.odom.pose()*ext;
+                            auto reproject_pos = cam_pose.inverse()*point_3d;
+                            reproject_pos.normalize();
+                            printf("Frame %ld camera_id %d index %d cam pose: %s pt3d norm %.3f %.3f %.3f reproject %.3f %.3f %.3f\n", 
+                                    it.frame_id, it.camera_id, it.camera_index, cam_pose.toStr().c_str(), it.pt3d_norm.x(), it.pt3d_norm.y(), it.pt3d_norm.z(), 
+                                    reproject_pos.x(), reproject_pos.y(), reproject_pos.z());
+                        }
                 } else {
                     lm.flag = LandmarkFlag::INITIALIZED;
                     memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
                 }
-                for (auto & it: lm.track) {
-                    auto frame = *state->getFramebyId(it.frame_id);
-                    auto ext = state->getExtrinsic(it.camera_id);
-                    auto cam_pose = frame.odom.pose()*ext;
-                    auto reproject_pos = cam_pose.inverse()*point_3d;
-                    reproject_pos.normalize();
-                    // printf("Frame %ld camera_id %d index %d cam pose: %s pt3d norm %.3f %.3f %.3f reproject %.3f %.3f %.3f\n", 
-                    //         it.frame_id, it.camera_id, it.camera_index, cam_pose.toStr().c_str(), it.pt3d_norm.x(), it.pt3d_norm.y(), it.pt3d_norm.z(), 
-                    //         reproject_pos.x(), reproject_pos.y(), reproject_pos.z());
-                }
+                // Some debug code
             } else {
                 if (params->debug_print_states) {
                     printf("\033[0;31m [D2VINS::D2LandmarkManager] Initialize failed too large triangle error: landmark %ld tracks %ld baseline %.2f by triangulation position %.3f %.3f %.3f\033[0m\n",
@@ -328,7 +331,7 @@ void D2LandmarkManager::removeLandmark(const LandmarkIdType & id) {
     landmark_state.erase(id);
 }
 
-double triangulatePoint3DPts(std::vector<Swarm::Pose> poses, std::vector<Vector3d> &points, Vector3d &point_3d) {
+double triangulatePoint3DPts(const std::vector<Swarm::Pose> poses, const std::vector<Vector3d> &points, Vector3d &point_3d) {
     MatrixXd design_matrix(poses.size()*2, 4);
     assert(poses.size() > 0 && poses.size() == points.size() && "We at least have 2 poses and number of pts and poses must equal");
     for (unsigned int i = 0; i < poses.size(); i ++) {
@@ -350,9 +353,13 @@ double triangulatePoint3DPts(std::vector<Swarm::Pose> poses, std::vector<Vector3
     point_3d(1) = triangulated_point(1) / triangulated_point(3);
     point_3d(2) = triangulated_point(2) / triangulated_point(3);
 
-    MatrixXd pts(4, 1);
-    pts << point_3d.x(), point_3d.y(), point_3d.z(), 1;
-    MatrixXd errs = design_matrix*pts;
-    return errs.norm()/ errs.rows(); 
+    double sum_err = 0;
+    for (unsigned int i = 0; i < poses.size(); i ++) {
+        auto reproject_pos = poses[i].inverse()*point_3d;
+        reproject_pos.normalize();
+        Vector3d err = points[i] - reproject_pos;
+        sum_err += err.norm();
+    }
+    return sum_err/ points.size(); 
 }
 }

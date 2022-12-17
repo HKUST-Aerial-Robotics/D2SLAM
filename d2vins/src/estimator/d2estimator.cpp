@@ -214,10 +214,10 @@ VINSFrame * D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
             auto pose_local_cur = _frame.pose_drone;
             auto pred_cur_pose = last_frame.odom.pose() * ego_last.inverse()*pose_local_cur;
             vinsframe.odom.pose() = pred_cur_pose;
-            std::cout << "ego_last " << ego_last.toStr() << std::endl;
-            std::cout << "pose_local_cur " << pose_local_cur.toStr() << std::endl;
-            std::cout << "last_frame " << last_frame.odom.pose().toStr() << std::endl;
-            std::cout << "pred_cur_pose " << pred_cur_pose.toStr() << std::endl;
+            // std::cout << "ego_last " << ego_last.toStr() << std::endl;
+            // std::cout << "pose_local_cur " << pose_local_cur.toStr() << std::endl;
+            // std::cout << "last_frame " << last_frame.odom.pose().toStr() << std::endl;
+            // std::cout << "pred_cur_pose " << pred_cur_pose.toStr() << std::endl;
             if (params->verbose) {
                 printf("[D2VINS::D2Estimator] Initial remoteframe %ld@drone%d with ego-motion: %s\n",
                     _frame.frame_id, r_drone_id, pred_cur_pose.toStr().c_str());
