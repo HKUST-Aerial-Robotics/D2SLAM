@@ -38,7 +38,7 @@ SolverReport ConsensusSolver::solve() {
     Utility::TicToc tic;
     iteration_count = 0;
     for (int i = 0; i < config.max_steps; i++) {
-        //If sync mode.
+        syncData();
         if (problem != nullptr) {
             delete problem;
         }
@@ -62,19 +62,22 @@ SolverReport ConsensusSolver::solve() {
         report.total_iterations += summary.num_successful_steps + summary.num_unsuccessful_steps;
         report.final_cost = summary.final_cost;
         iteration_count++;
-        broadcastData();
-        if (config.sync_with_main) {
-            Utility::TicToc tic_sync;
-            waitForSync(); 
-            // printf("ConsensusSolver wait for sync time: %.1fms step %d/%d\n", tic_sync.toc(), i, config.max_steps);
-        } else {
-            receiveAll();
-        }
-        updateGlobal();
     }
     report.total_time = tic.toc()/1000;
     broadcastData();
     return report;
+}
+
+void ConsensusSolver::syncData() {
+    broadcastData();
+    if (config.sync_with_main) {
+        Utility::TicToc tic_sync;
+        waitForSync(); 
+        // printf("ConsensusSolver wait for sync time: %.1fms step %d/%d\n", tic_sync.toc(), i, config.max_steps);
+    } else {
+        receiveAll();
+    }
+    updateGlobal();
 }
 
 void ConsensusSolver::removeDeactivatedParams() {

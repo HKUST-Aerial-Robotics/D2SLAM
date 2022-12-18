@@ -67,7 +67,7 @@ protected:
     void updateGlobal();
     void addParam(const ParamInfo & param_info);
     void removeDeactivatedParams();
-    
+    void syncData();
 public:
     ConsensusSolver(D2State * _state, ConsensusSolverConfig _config, int _solver_token): 
         SolverWrapper(_state), config(_config), self_id(config.self_id), solver_token(_solver_token)
