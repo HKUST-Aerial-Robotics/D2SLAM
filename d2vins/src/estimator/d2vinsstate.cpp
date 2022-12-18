@@ -329,7 +329,6 @@ std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames() {
             }
         }
     }
-    outlierRejection();
     return ret;
 }
 
@@ -500,6 +499,7 @@ void D2EstimatorState::syncFromState() {
         //We only repropagte when sld win is smaller than max, means not full initialized.
         repropagateIMU();
     }
+    outlierRejection();
 }
 
 void D2EstimatorState::repropagateIMU() {
