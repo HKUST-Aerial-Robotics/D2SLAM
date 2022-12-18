@@ -228,8 +228,11 @@ void D2LandmarkManager::outlierRejection(const D2EstimatorState * state) {
                 pos_cam.normalize();
                 //Compute reprojection error
                 Vector3d reproj_error = pt3d_n - pos_cam;
-                // printf("[D2VINS::D2LandmarkManager] outlierRejection LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f reproj_error %.2f %.2f\n",
-                    // lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z(), reproj_error.x(), reproj_error.y());
+                // if (reproj_error.norm() * params->focal_length > params->landmark_outlier_threshold)
+                // printf("[D2VINS::D2LandmarkManager] outlierRejection LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f pt3d_n %.2f %.2f %.2f\n\tframe %ld pos_cam %.2f %.2f %.2f reproj_error %.4f %.4f\n",
+                //     lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z(), 
+                //     pt3d_n.x(), pt3d_n.y(), pt3d_n.z(), lm.track[i].frame_id,
+                //     pos_cam.x(), pos_cam.y(), pos_cam.z(), reproj_error.x(), reproj_error.y());
                 err_sum += reproj_error.norm();
                 err_cnt += 1;
             }
