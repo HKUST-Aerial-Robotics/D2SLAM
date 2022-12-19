@@ -162,10 +162,11 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
     Utility::TicToc tt;
     SparseMat J(eff_residual_size, total_eff_state_dim);
     auto b = evaluate(J, eff_residual_size, total_eff_state_dim);
+    double t_eval = tt.toc();
     SparseMat H = SparseMatrix<double>(J.transpose())*J;
     VectorXd g = J.transpose()*b; //Ignore -b here and also in prior_factor.cpp toJacRes to reduce compuation
     if (params->enable_perf_output) {
-        printf("[D2VINS::Marginalizer::marginalize] JtJ cost %.1fms\n", tt.toc());
+        printf("[D2VINS::marginalize] evaluation %.1fms JtJ cost %.1fms\n", t_eval, tt.toc() - t_eval);
     }
     std::vector<ParamInfo> keep_params_list(params_list.begin(), params_list.begin() + keep_block_size);
     if (params->margin_enable_fej && last_prior!=nullptr) {
@@ -177,17 +178,22 @@ PriorFactor * Marginalizer::marginalize(std::set<FrameIdType> _remove_frame_ids)
         tt.tic();
         auto Ab = Utility::schurComplement(H, g, keep_state_dim);
         if (params->enable_perf_output) {
-            printf("[D2VINS::Marginalizer::marginalize] schurComplement cost %.1fms\n", tt.toc());
+            printf("[D2VINS::marginalize] schurComplement cost %.1fms\n", tt.toc());
         }
         prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
         // showDeltaXofschurComplement(keep_params_list, Ab.first, Ab.second);
     } else {
+        Utility::TicToc tt;
         auto Ab = Utility::schurComplement(H.toDense(), g, keep_state_dim);
+        double t_schur = tt.toc();
         prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
+        if (params->enable_perf_output) {
+            printf("[D2VINS::marginalize] schurComplement cost %.1fms newPrior %.1fms\n", t_schur, tt.toc() - t_schur);
+        }
     }
 
     if (params->enable_perf_output || params->verbose) {
-        printf("[D2VINS::Marginalizer::marginalize] time cost %.1fms frame_id %ld total_eff_state_dim: %d keep_size %d remove size %d eff_residual_size: %d keep_block_size %d \n", 
+        printf("[D2VINS::marginalize] time cost %.1fms frame_id %ld total_eff_state_dim: %d keep_size %d remove size %d eff_residual_size: %d keep_block_size %d \n", 
             tic.toc(), *remove_frame_ids.begin(), total_eff_state_dim, keep_state_dim, remove_state_dim, eff_residual_size, keep_block_size);
     }
 

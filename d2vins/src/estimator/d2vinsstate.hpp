@@ -31,7 +31,7 @@ protected:
     std::vector<LandmarkPerId> removeFrameById(FrameIdType frame_id, bool remove_base=false); 
         //If remove base, will remove the relevant landmarks' base frame.
         //This is for marginal the keyframes that not is baseframe of all landmarks (in multi-drone)
-    void outlierRejection();
+    void outlierRejection(const std::set<LandmarkIdType> & used_landmarks);
     void updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs);
     void createPriorFactor4FirstFrame(VINSFrame * frame);
     void solveGyroscopeBias();
@@ -89,7 +89,7 @@ public:
     size_t size(int drone_id) const;
 
     //Solving process
-    void syncFromState();
+    void syncFromState(const std::set<LandmarkIdType> & used_landmarks);
     void preSolve(const std::map<int, IMUBuffer> & remote_imu_bufs);
     void repropagateIMU();
 

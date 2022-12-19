@@ -110,10 +110,11 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
             }
         }
     }
+    D2Common::Utility::TicToc tic;
     auto pose_imu = D2FrontEnd::computePosePnPnonCentral(lm_positions_a, lm_3d_norm_b, cam_extrinsics, camera_indices, inliers);
     bool success = inliers.size() > params->pnp_min_inliers;
-    printf("[D2VINS::D2Estimator@%d] PnP succ %d frame %ld@%d final %s inliers %d points %d\n", self_id, success, 
-            frame.frame_id, frame.drone_id, pose_imu.toStr().c_str(), inliers.size(), lm_positions_a.size());
+    printf("[D2VINS::D2Estimator@%d] PnP succ %d frame %ld@%d final %s inliers %d points %d time: %.2fms\n", self_id, success, 
+            frame.frame_id, frame.drone_id, pose_imu.toStr().c_str(), inliers.size(), lm_positions_a.size(), tic.toc());
     return std::make_pair(success, pose_imu);
 }
 
@@ -441,6 +442,7 @@ void D2Estimator::resetMarginalizer() {
 }
 
 void D2Estimator::solveinDistributedMode() {
+    D2Common::Utility::TicToc tic;
     if (params->consensus_sync_to_start) {
         if (true) {
             ready_drones = std::set<int>{self_id};
@@ -482,9 +484,11 @@ void D2Estimator::solveinDistributedMode() {
     setupImuFactors();
     setupLandmarkFactors();
     setupPriorFactor();
-    
+    if (params->enable_perf_output) {
+        printf("[D2VINS::solveDist: beforeSolve time cost %.1f ms\n", tic.toc());
+    }
     auto report = solver->solve();
-    state.syncFromState();
+    state.syncFromState(used_landmarks);
 
     //Now do some statistics
     static double sum_time = 0;
@@ -525,6 +529,9 @@ void D2Estimator::solveinDistributedMode() {
     }
     // exit(0);
     solve_count ++;
+    if (params->enable_perf_output) {
+        printf("[D2VINS::solveDist: total time cost %.1fms\n", tic.toc());
+    }
 }
 
 void D2Estimator::solveNonDistrib() {
@@ -536,7 +543,7 @@ void D2Estimator::solveNonDistrib() {
     setupPriorFactor();
     setStateProperties();
     SolverReport report = solver->solve();
-    state.syncFromState();
+    state.syncFromState(used_landmarks);
 
     //Now do some statistics
     static double sum_time = 0;

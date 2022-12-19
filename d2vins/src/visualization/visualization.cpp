@@ -66,6 +66,7 @@ void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
 }
 
 void D2Visualization::postSolve() {
+    D2Common::Utility::TicToc tic;
     auto & state = _estimator->getState();
     if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
         auto imu_prop = _estimator->getImuPropagation().toRos();
@@ -154,6 +155,7 @@ void D2Visualization::postSolve() {
     header.stamp = ros::Time::now();
     sld_win_visual.publishBy(sld_win_pub, header);
     camera_visual.publishBy(cam_pub, header);
+    // printf("[D2VIZ::postSolve] time cost %.1fms\n", tic.toc());
 }
 
 sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color) {

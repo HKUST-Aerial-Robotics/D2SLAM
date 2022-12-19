@@ -141,7 +141,7 @@ namespace D2FrontEnd {
         nh.param<double>("recv_msg_duration", recv_msg_duration, 0.5);
         nh.param<bool>("enable_network", enable_network, true);
         lazy_broadcast_keyframe = (int) fsSettings["lazy_broadcast_keyframe"];
-        printf("[D2Frontend] Using lazy broadcast keyframe: %d", lazy_broadcast_keyframe);
+        printf("[D2Frontend] Using lazy broadcast keyframe: %d\n", lazy_broadcast_keyframe);
 
         if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
             loopdetectorconfig->MAX_DIRS = 1;

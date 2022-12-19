@@ -473,7 +473,7 @@ void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame * frame) {
     prior_factor = new PriorFactor(need_fix_params, A, b);
 }
 
-void D2EstimatorState::syncFromState() {
+void D2EstimatorState::syncFromState(const std::set<LandmarkIdType> & used_landmarks) {
     const Guard lock(state_lock);
     //copy state buffer to structs.
     //First sync the poses
@@ -497,9 +497,10 @@ void D2EstimatorState::syncFromState() {
     lmanager.syncState(this);
     if (size() < params->max_sld_win_size ) {
         //We only repropagte when sld win is smaller than max, means not full initialized.
+        printf("[D2VINS] not fully initialized, will repropagte IMU\n");
         repropagateIMU();
     }
-    outlierRejection();
+    outlierRejection(used_landmarks);
 }
 
 void D2EstimatorState::repropagateIMU() {
@@ -543,9 +544,9 @@ void D2EstimatorState::moveAllPoses(int new_ref_frame_id, const Swarm::Pose & de
     }
 }
 
-void D2EstimatorState::outlierRejection() {
+void D2EstimatorState::outlierRejection(const std::set<LandmarkIdType> & used_landmarks) {
     //Perform outlier rejection of landmarks
-    lmanager.outlierRejection(this);
+    lmanager.outlierRejection(this, used_landmarks);
 }
 
 void D2EstimatorState::preSolve(const std::map<int, IMUBuffer> & remote_imu_bufs) {

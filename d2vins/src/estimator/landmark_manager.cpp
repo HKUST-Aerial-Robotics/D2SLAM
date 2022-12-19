@@ -206,7 +206,7 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState * state) {
     }
 }
 
-void D2LandmarkManager::outlierRejection(const D2EstimatorState * state) {
+void D2LandmarkManager::outlierRejection(const D2EstimatorState * state, const std::set<LandmarkIdType> & used_landmarks) {
     const Guard lock(state_lock);
     int remove_count = 0;
     int total_count = 0;
@@ -216,23 +216,29 @@ void D2LandmarkManager::outlierRejection(const D2EstimatorState * state) {
     for (auto & it: landmark_db) {
         auto & lm = it.second;
         auto lm_id = it.first;
-        if(lm.flag == LandmarkFlag::ESTIMATED) {
+        if(lm.flag == LandmarkFlag::ESTIMATED && used_landmarks.find(lm_id)!=used_landmarks.end()) {
             double err_sum = 0;
             double err_cnt = 0;
+            double count_err_track = 0;
             total_count ++;
-            for (int i = 1; i < lm.track.size(); i ++) {
-                auto pose = state->getFramebyId(lm.track[i].frame_id)->odom.pose();
-                auto ext = state->getExtrinsic(lm.track[i].camera_id);
-                auto pt3d_n = lm.track[i].pt3d_norm;
+            for (auto it = lm.track.begin() + 1; it != lm.track.end();) {
+                auto pose = state->getFramebyId(it->frame_id)->odom.pose();
+                auto ext = state->getExtrinsic(it->camera_id);
+                auto pt3d_n = it->pt3d_norm;
                 Vector3d pos_cam = (pose*ext).inverse()*lm.position;
                 pos_cam.normalize();
                 //Compute reprojection error
                 Vector3d reproj_error = pt3d_n - pos_cam;
-                // if (reproj_error.norm() * params->focal_length > params->landmark_outlier_threshold)
-                // printf("[D2VINS::D2LandmarkManager] outlierRejection LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f pt3d_n %.2f %.2f %.2f\n\tframe %ld pos_cam %.2f %.2f %.2f reproj_error %.4f %.4f\n",
-                //     lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z(), 
-                //     pt3d_n.x(), pt3d_n.y(), pt3d_n.z(), lm.track[i].frame_id,
-                //     pos_cam.x(), pos_cam.y(), pos_cam.z(), reproj_error.x(), reproj_error.y());
+                if (reproj_error.norm() * params->focal_length > params->landmark_outlier_threshold) {
+                    count_err_track += 1;
+                    printf("[outlierRejection] remove outlier track LM %d frame %ld inv_dep/dep %.2f/%.2f reproj_err %.2f/%.2f\n",
+                            lm_id, it->frame_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), reproj_error.norm() * params->focal_length, 
+                            params->landmark_outlier_threshold);
+                    //Remove the track
+                    it = lm.track.erase(it);
+                } else {
+                    ++it;
+                }
                 err_sum += reproj_error.norm();
                 err_cnt += 1;
             }
@@ -241,8 +247,8 @@ void D2LandmarkManager::outlierRejection(const D2EstimatorState * state) {
                 if (reproj_err*params->focal_length > params->landmark_outlier_threshold) {
                     remove_count ++;
                     lm.flag = LandmarkFlag::OUTLIER;
-                    // printf("[D2VINS::D2LandmarkManager] outlierRejection LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f reproj_error %.2f\n",
-                    //     lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z(), reproj_err*params->focal_length);
+                    printf("[outlierRejection] remove LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f reproj_error %.2f\n",
+                        lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z(), reproj_err*params->focal_length);
                 }
             }
         }

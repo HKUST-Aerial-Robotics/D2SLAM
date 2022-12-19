@@ -41,6 +41,9 @@ std::vector<LandmarkPerId> LandmarkManager::popFrame(FrameIdType frame_id, bool 
     }
     auto _landmark_ids = related_landmarks[frame_id];
     for (auto _id : _landmark_ids) {
+        if (landmark_db.find(_id) == landmark_db.end()) {
+            continue;
+        }
         auto & lm = landmark_db.at(_id);
         if (pop_base) {
             if (related_landmarks.find(lm.base_frame_id)!=related_landmarks.end()) {

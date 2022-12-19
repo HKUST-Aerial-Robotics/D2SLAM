@@ -19,7 +19,7 @@ public:
     LandmarkPerId & getLandmark(LandmarkIdType landmark_id);
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;
     bool hasLandmark(LandmarkIdType landmark_id) const;
-    void outlierRejection(const D2EstimatorState * state);
+    void outlierRejection(const D2EstimatorState * state, const std::set<LandmarkIdType> & used_landmarks);
     std::vector<LandmarkPerId> getRelatedLandmarks(FrameIdType frame_id) const;
     void moveByPose(const Swarm::Pose & delta_pose);
     virtual void removeLandmark(const LandmarkIdType & id) override;
