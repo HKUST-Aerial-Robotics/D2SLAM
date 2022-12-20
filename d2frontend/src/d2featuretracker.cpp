@@ -791,8 +791,8 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     std::vector<cv::Point2f> pts_pred_a_on_b;
     ids_b_to_a.resize(pts_b.size());
     std::fill(ids_b_to_a.begin(), ids_b_to_a.end(), -1);
-    printf("[D2FT] Frame_a %ld<->%ld enable_prediction %d pose_a %s motion_prediction %s\n", 
-        img_desc_a.frame_id, img_desc_b.frame_id, param.enable_prediction, param.pose_a.toStr().c_str(), param.pose_b_prediction.toStr().c_str());
+    // printf("[D2FT] Frame_a %ld<->%ld enable_prediction %d pose_a %s motion_prediction %s\n", 
+    //     img_desc_a.frame_id, img_desc_b.frame_id, param.enable_prediction, param.pose_a.toStr().c_str(), param.pose_b_prediction.toStr().c_str());
     if (param.enable_prediction) {
         if (param.prediction_using_extrinsic) {
             pts_pred_a_on_b = predictLandmarks(img_desc_a, img_desc_a.extrinsic, img_desc_b.extrinsic, true);
@@ -825,6 +825,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
                 bfmatcher.match(desc_a, desc_b, _matches); //Query train result
             }
         } else {
+            //TODO: motion prediction for quadcam on stereo
             std::map<int, int> tmp_to_idx_a, tmp_to_idx_b;
             auto features_a = getFeatureHalfImg(pts_a, raw_desc_a, param.type==LEFT_RIGHT_IMG_MATCH, tmp_to_idx_a);
             auto features_b = getFeatureHalfImg(pts_b, raw_desc_b, param.type==RIGHT_LEFT_IMG_MATCH, tmp_to_idx_b);
