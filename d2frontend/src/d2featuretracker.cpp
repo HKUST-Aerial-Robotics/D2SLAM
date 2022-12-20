@@ -23,6 +23,7 @@ D2FeatureTracker::D2FeatureTracker(D2FTConfig config):
         _config.search_local_max_dist = -1;
     }
     search_radius = _config.search_local_max_dist*image_width;
+    reference_frame_id = params->self_id;
 }
 
 void D2FeatureTracker::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
@@ -34,6 +35,7 @@ void D2FeatureTracker::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
     for (auto & frame: sld_win) {
         sld_win_poses[frame->frame_id] = frame->odom.pose();
     }
+    reference_frame_id = sld_win.back()->reference_frame_id;
     //Remove the keyframe not in the sliding window except the last one
     for (auto it = current_keyframes.begin(); it != current_keyframes.end();) {
         if (sld_win_poses.find(it->frame_id) == sld_win_poses.end() && it->frame_id != current_keyframes.back().frame_id) {
@@ -114,7 +116,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
                 draw(frame, iskeyframe, report);
             }
         } else if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
-            draw(frames.images, iskeyframe, report);
+            draw(frames, iskeyframe, report);
         }
     }
     return iskeyframe;
@@ -165,10 +167,10 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
                 } else {
                     prev = last;
                     dir_b = dirs[j];
-                    // if (params->verbose) {
+                    if (params->verbose) {
                         printf("[D2FeatureTracker::trackRemote@%d] Remote image match image drone %d(%ld) dir %d:%d %.2f/%.2f\n", params->self_id,
                                 i, last.frame_id, dir_a, dir_b, netvlad_similar, params->track_remote_netvlad_thres);
-                    // }
+                    }
                     return true;
                 }
             }
@@ -194,10 +196,13 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     if (!succ) {
         return false;
     }
+    bool use_motion_predict = frames.reference_frame_id == reference_frame_id;
+    printf("[D2FeatureTracker::trackRemoteFrames] frame %ld ref %d cur_ref %d use_motion_predict %d\n", 
+            frames.frame_id, frames.reference_frame_id, reference_frame_id, use_motion_predict);
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
-        report.compose(trackRemote(frames.images[0], prev.images[0]));
+        report.compose(trackRemote(frames.images[0], prev.images[0], use_motion_predict, frames.pose_drone));
         if (report.remote_matched_num > 0 && params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
-            report.compose(trackRemote(frames.images[1], prev.images[1]));
+            report.compose(trackRemote(frames.images[1], prev.images[1], use_motion_predict, frames.pose_drone));
         }
     } else if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
         int max_dirs = 4;
@@ -217,17 +222,16 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
             int dir_cur = dirs_cur[i];
             int dir_prev = dirs_prev[i];
             // printf("[D2FeatureTracker::trackRemoteFrames] dir %d:%d\n", dir_cur, dir_prev);
-            report.compose(trackRemote(frames.images[dir_cur], prev.images[dir_prev]));
+            report.compose(trackRemote(frames.images[dir_cur], prev.images[dir_prev], use_motion_predict, frames.pose_drone));
         }
     }
     if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
-            // drawRemote(frames.images[0], report);
-        } else {
+            drawRemote(frames, report);
         }
     }
     report.ft_time = tic.toc();
-    if (params->verbose || params->enable_perf_output)
+    // if (params->verbose || params->enable_perf_output)
         printf("[D2FeatureTracker::trackRemoteFrames] frame %ld, matched %d, time %.2fms\n", frames.frame_id, report.remote_matched_num, report.ft_time);
     if (report.remote_matched_num > 0) {
         return true;
@@ -236,7 +240,8 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     }
 }
 
-TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame, const Swarm::Pose & motion_prediction) {
+TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame, 
+        bool use_motion_predict, const Swarm::Pose & motion_prediction) {
     TrackReport report;
     if (current_keyframes.size() == 0) {
         printf("[D2FeatureTracker::trackRemote] waiting for initialization.\n");
@@ -248,9 +253,11 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualI
         //TODO: use motion prediction
         MatchLocalFeatureParams match_param;
         match_param.enable_superglue = _config.enable_superglue_remote;
-        match_param.enable_prediction = false; //TODO enable motion prediction
+        match_param.enable_prediction = use_motion_predict;
+        match_param.pose_b_prediction = motion_prediction;
+        match_param.pose_a = prev_frame.pose_drone;
         match_param.type = WHOLE_IMG_MATCH;
-        match_param.search_radius = 10000; //TODO: use motion prediction
+        match_param.search_radius = search_radius*2; // search radius is 100% larger
         match_param.plot = false;
         bool success = matchLocalFeatures(prev_frame, frame, ids_b_to_a, match_param);
         if (!success) {
@@ -577,7 +584,7 @@ void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
     current_keyframes.emplace_back(frames);
 }
 
-cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right, bool is_remote) const {
+cv::Mat D2FeatureTracker::drawToImage(const VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right, bool is_remote) const {
     // ROS_INFO("Drawing ... %d", keyframe_count);
     cv::Mat img = frame.raw_image;
     int width = img.cols;
@@ -588,7 +595,7 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
         if (img.empty()) {
             return cv::Mat();
         }
-        cv::hconcat(img, current_keyframe.images[0].raw_image, img);
+        // cv::hconcat(img, current_keyframe.images[0].raw_image, img);
     }
     auto cur_pts = frame.landmarks2D();
     if (img.channels() == 1) {
@@ -596,25 +603,12 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
     }
     char buf[64] = {0};
     int stereo_num = 0;
-    if (landmark_predictions_viz.find(frame.camera_id) != landmark_predictions_viz.end()) {
-        //Draw predictions here
-        auto & predictions = landmark_predictions_viz.at(frame.camera_id);
-        auto & prev = landmark_predictions_prev_viz.at(frame.camera_id);
-        for (int i = 0; i < predictions.size(); i++) {
-            cv::circle(img, predictions[i], 3, cv::Scalar(0, 255, 0), 2);
-            cv::line(img, prev[i], predictions[i], cv::Scalar(0, 255, 255), 1, 8, 0);
-        }
-    }
     for (size_t j = 0; j < cur_pts.size(); j++) {
         cv::Scalar color = cv::Scalar(0, 140, 255);
         if (frame.landmarks[j].type == SuperPointLandmark) {
             color = cv::Scalar(255, 0, 0); //Superpoint blue
         }
         cv::circle(img, cur_pts[j], 2, color, 2);
-        //Draw searching range using search_radius
-        // if (params->camera_configuration == CameraConfig::STEREO_PINHOLE && !is_right) {
-        //     cv::circle(img, cur_pts[j], search_radius, cv::Scalar(0, 255, 0, 60), 1);
-        // }
         auto _id = frame.landmarks[j].landmark_id;
         if (!lmanager->hasLandmark(_id)) {
             continue;
@@ -629,7 +623,7 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
             auto & pts2d = lmanager->at(_id).track;
             if (pts2d.size() == 0) 
                 continue;
-            if (is_right) {
+            if (is_right || is_remote) {
                 prev = pts2d.back().pt2d;
                 prev_found = true;
             } else {
@@ -645,7 +639,9 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
                 continue;
             }
             if (is_remote) {
-                cv::line(img, prev + cv::Point2f(width, 0), cur_pts[j], cv::Scalar(0, 255, 0));
+                // Random color
+                // cv::Scalar color(rand()%255, rand()%255, rand()%255);
+                // cv::line(img, prev + cv::Point2f(width, 0), cur_pts[j], color);
             } else {
                 cv::arrowedLine(img, prev, cur_pts[j], cv::Scalar(0, 255, 0), 1, 8, 0, 0.2);
             }
@@ -656,6 +652,24 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
         if (_config.show_feature_id && frame.landmarks[j].landmark_id >= 0) {
             sprintf(buf, "%d", frame.landmarks[j].landmark_id%MAX_FEATURE_NUM);
             cv::putText(img, buf, cur_pts[j] - cv::Point2f(5, 0), cv::FONT_HERSHEY_SIMPLEX, 1, color, 1);
+        }
+    }
+    //Draw predictions
+    if (landmark_predictions_viz.find(frame.camera_id) != landmark_predictions_viz.end()) {
+        //Draw predictions here
+        auto & predictions = landmark_predictions_viz.at(frame.camera_id);
+        auto & prev = landmark_predictions_matched_viz.at(frame.camera_id);
+        for (int i = 0; i < predictions.size(); i++) {
+            cv::circle(img, predictions[i], 3, cv::Scalar(0, 255, 0), 2);
+            cv::line(img, prev[i], predictions[i], cv::Scalar(0, 0, 255), 1, 8, 0);
+            // if (cv::norm(prev[i] - predictions[i]) > 20) {
+            //     //Show the landmark id and flag
+            //     auto lm_id = frame.landmarks[i].landmark_id;
+            //     if (lmanager->hasLandmark(lm_id)) {
+            //         printf("Landmark %ld: flag %d %.2f %.2f err %.2f\n", frame.landmarks[i].landmark_id, 
+            //             lmanager->at(lm_id).flag, prev[i].x, prev[i].y, cv::norm(prev[i] - predictions[i]));
+            //     }
+            // }
         }
     }
     cv::Scalar color = cv::Scalar(255, 0, 0);
@@ -680,14 +694,16 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
     return img;
 }
 
-void D2FeatureTracker::drawRemote(VisualImageDesc & frame, const TrackReport & report) const { 
-    cv::Mat img = drawToImage(frame, false, report, false, true);
+void D2FeatureTracker::drawRemote(const VisualImageDescArray & frames, const TrackReport & report) const { 
+    cv::Mat img = drawToImage(frames.images[0], false, report, false, true);
+    cv::Mat img_r = drawToImage(frames.images[1], false, report, true, true);
     if (img.empty()) {
         printf("[D2FeatureTracker::drawRemote] Unable to draw remote image, empty image found\n");
         return;
     }
     char buf[64] = {0};
     sprintf(buf, "RemoteMatched @ Drone %d", params->self_id);
+    cv::hconcat(img, img_r, img);
     cv::imshow(buf, img);
     cv::waitKey(1);
     if (_config.write_to_file) {
@@ -696,7 +712,7 @@ void D2FeatureTracker::drawRemote(VisualImageDesc & frame, const TrackReport & r
     }
 }
 
-void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const {
+void D2FeatureTracker::draw(const VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const {
     cv::Mat img = drawToImage(frame, is_keyframe, report);
     char buf[64] = {0};
     sprintf(buf, "featureTracker @ Drone %d", params->self_id);
@@ -708,7 +724,7 @@ void D2FeatureTracker::draw(VisualImageDesc & frame, bool is_keyframe, const Tra
     }
 }
 
-void D2FeatureTracker::draw(VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const {
+void D2FeatureTracker::draw(const VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const {
     cv::Mat img = drawToImage(lframe, is_keyframe, report);
     cv::Mat img_r = drawToImage(rframe, is_keyframe, report, true);
     cv::hconcat(img, img_r, img);
@@ -722,12 +738,12 @@ void D2FeatureTracker::draw(VisualImageDesc & lframe, VisualImageDesc & rframe, 
     }
 }
 
-void D2FeatureTracker::draw(std::vector<VisualImageDesc> frames, bool is_keyframe, const TrackReport & report) const {
-    cv::Mat img = drawToImage(frames[0], is_keyframe, report);
-    cv::Mat img_r = drawToImage(frames[2], is_keyframe, report);
+void D2FeatureTracker::draw(const VisualImageDescArray & frames, bool is_keyframe, const TrackReport & report) const {
+    cv::Mat img = drawToImage(frames.images[0], is_keyframe, report);
+    cv::Mat img_r = drawToImage(frames.images[2], is_keyframe, report);
     cv::hconcat(img, img_r, img);
-    cv::Mat img1 = drawToImage(frames[1], is_keyframe, report);
-    cv::Mat img1_r = drawToImage(frames[3], is_keyframe, report);
+    cv::Mat img1 = drawToImage(frames.images[1], is_keyframe, report);
+    cv::Mat img1_r = drawToImage(frames.images[3], is_keyframe, report);
     cv::hconcat(img1, img1_r, img1);
     cv::hconcat(img, img1, img);
     
@@ -784,10 +800,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             pts_pred_a_on_b = predictLandmarks(img_desc_a, param.pose_a * img_desc_a.extrinsic, 
                 param.pose_b_prediction*img_desc_b.extrinsic);
         }
-        if (params->show) {
-            landmark_predictions_viz[img_desc_b.camera_id] = pts_pred_a_on_b;
-            landmark_predictions_prev_viz[img_desc_b.camera_id] = pts_a;
-        }
+        
     } else {
         pts_pred_a_on_b = pts_a;
     }
@@ -803,9 +816,9 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             if (_config.enable_knn_match) {
                 if (img_desc_a.drone_id  == img_desc_b.drone_id && img_desc_a.camera_id == img_desc_b.camera_id) {
                     // Is continuous frame
-                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_pred_a_on_b, pts_b, search_radius);
+                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_pred_a_on_b, pts_b, param.search_radius);
                 } else {
-                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_pred_a_on_b, pts_b);
+                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_pred_a_on_b, pts_b, param.search_radius);
                 }
             } else {
                 cv::BFMatcher bfmatcher(cv::NORM_L2, true);
@@ -830,7 +843,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
                         features_a.second[i].x += param.type==LEFT_RIGHT_IMG_MATCH ? move_cols : -move_cols;
                     }
                 }
-                _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, features_a.second, features_b.second, search_radius);
+                _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, features_a.second, features_b.second,  param.search_radius);
             } else {
                 cv::BFMatcher bfmatcher(cv::NORM_L2, true);
                 bfmatcher.match(desc_a, desc_b, _matches);
@@ -842,6 +855,10 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         }
     }
     std::vector<cv::Point2f> matched_pts_a_normed, matched_pts_b_normed, matched_pts_a, matched_pts_b;
+    if (params->show) {
+        landmark_predictions_viz[img_desc_b.camera_id] = std::vector<cv::Point2f>();
+        landmark_predictions_matched_viz[img_desc_b.camera_id] = std::vector<cv::Point2f>();
+    }
     for (auto match : _matches) {
         ids_a.push_back(match.queryIdx);
         ids_b.push_back(match.trainIdx);
@@ -849,6 +866,12 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         matched_pts_b_normed.push_back(pts_b_normed[match.trainIdx]);
         matched_pts_a.push_back(pts_a[match.queryIdx]);
         matched_pts_b.push_back(pts_b[match.trainIdx]);
+        if (params->show) {
+            landmark_predictions_viz[img_desc_b.camera_id].push_back(pts_pred_a_on_b[match.queryIdx]);
+            landmark_predictions_matched_viz[img_desc_b.camera_id].push_back(pts_b[match.trainIdx]);
+            // printf("Point %d: (%f, %f) -> (%f, %f)\n", match.queryIdx, 
+            //     pts_pred_a_on_b[match.queryIdx].x, pts_pred_a_on_b[match.queryIdx].y, pts_b[match.trainIdx].x, pts_b[match.trainIdx].y);
+        }
     }
     if (img_desc_a.drone_id != img_desc_b.drone_id &&
             params->ftconfig->check_homography && !param.enable_superglue) {

@@ -88,6 +88,7 @@ protected:
     D2FTConfig _config;
     double image_width = 0.0;
     double search_radius = 0.0;
+    int reference_frame_id = 0;
 
     std::vector<VisualImageDescArray> current_keyframes;
     LandmarkManager * lmanager = nullptr;
@@ -100,25 +101,26 @@ protected:
     std::recursive_mutex keyframe_lock;
     
     std::map<int, std::vector<cv::Point2f>> landmark_predictions_viz;
-    std::map<int, std::vector<cv::Point2f>> landmark_predictions_prev_viz;
+    std::map<int, std::vector<cv::Point2f>> landmark_predictions_matched_viz;
 
     TrackReport trackLK(VisualImageDesc & frame);
     TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk=true, TrackLRType type=WHOLE_IMG_MATCH);
     TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame, TrackLRType type=WHOLE_IMG_MATCH);
     TrackReport track(VisualImageDesc & frame, const Swarm::Pose & motion_prediction=Swarm::Pose());
-    TrackReport trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame, const Swarm::Pose & motion_prediction=Swarm::Pose());
+    TrackReport trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame, 
+            bool use_motion_predict=false, const Swarm::Pose & motion_prediction=Swarm::Pose());
     bool getMatchedPrevKeyframe(const VisualImageDescArray & frame_a, VisualImageDescArray& prev, int & dir_a, int & dir_b);
     void processKeyframe(VisualImageDescArray & frames);
     bool isKeyframe(const TrackReport & reports);
     Vector3d extractPointVelocity(const LandmarkPerFrame & lpf) const;
     std::pair<bool, LandmarkPerFrame> getPreviousLandmarkFrame(const LandmarkPerFrame & lpf) const;
 
-    void draw(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
-    void draw(VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const;
-    void draw(std::vector<VisualImageDesc> frames, bool is_keyframe, const TrackReport & report) const;
-    void drawRemote(VisualImageDesc & frame, const TrackReport & report) const;
+    void draw(const VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
+    void draw(const VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const;
+    void draw(const VisualImageDescArray & frames, bool is_keyframe, const TrackReport & report) const;
+    void drawRemote(const VisualImageDescArray & frames, const TrackReport & report) const;
     void cvtRemoteLandmarkId(VisualImageDesc & frame) const;
-    cv::Mat drawToImage(VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right=false, bool is_remote=false) const;
+    cv::Mat drawToImage(const VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right=false, bool is_remote=false) const;
     std::unordered_map<LandmarkIdType, LandmarkIdType> remote_to_local; // Remote landmark id to local;
     std::unordered_map<LandmarkIdType, std::unordered_map<int, LandmarkIdType>> local_to_remote; // local landmark id to remote drone and id;
     typedef std::lock_guard<std::recursive_mutex> Guard;
