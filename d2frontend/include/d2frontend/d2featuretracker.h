@@ -33,6 +33,7 @@ struct D2FTConfig {
     bool enable_superglue_remote = false;
     bool enable_knn_match = true;
     bool enable_search_local_aera = true;
+    bool enable_search_local_aera_remote = false; //Enable motion prediction searching for remote drones.
     double search_local_max_dist = 0.04; //To multiply with width
     double knn_match_ratio = 0.8;
     std::string output_folder = "/root/output/";

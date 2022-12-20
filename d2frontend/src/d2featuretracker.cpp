@@ -196,9 +196,9 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     if (!succ) {
         return false;
     }
-    bool use_motion_predict = frames.reference_frame_id == reference_frame_id;
-    printf("[D2FeatureTracker::trackRemoteFrames] frame %ld ref %d cur_ref %d use_motion_predict %d\n", 
-            frames.frame_id, frames.reference_frame_id, reference_frame_id, use_motion_predict);
+    bool use_motion_predict = frames.reference_frame_id == reference_frame_id && _config.enable_search_local_aera_remote;
+    // printf("[D2FeatureTracker::trackRemoteFrames] frame %ld ref %d cur_ref %d use_motion_predict %d\n", 
+    //         frames.frame_id, frames.reference_frame_id, reference_frame_id, use_motion_predict);
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         report.compose(trackRemote(frames.images[0], prev.images[0], use_motion_predict, frames.pose_drone));
         if (report.remote_matched_num > 0 && params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
@@ -866,7 +866,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         matched_pts_b_normed.push_back(pts_b_normed[match.trainIdx]);
         matched_pts_a.push_back(pts_a[match.queryIdx]);
         matched_pts_b.push_back(pts_b[match.trainIdx]);
-        if (params->show) {
+        if (params->show && param.enable_prediction) {
             landmark_predictions_viz[img_desc_b.camera_id].push_back(pts_pred_a_on_b[match.queryIdx]);
             landmark_predictions_matched_viz[img_desc_b.camera_id].push_back(pts_b[match.trainIdx]);
             // printf("Point %d: (%f, %f) -> (%f, %f)\n", match.queryIdx, 

@@ -104,6 +104,7 @@ namespace D2FrontEnd {
         nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);
         nh.param<int>("min_keyframe_num", ftconfig->min_keyframe_num, 2);
         nh.param<std::string>("superglue_model_path", ftconfig->superglue_model_path, "");
+        ftconfig->enable_search_local_aera_remote = (int) fsSettings["enable_search_local_aera_remote"];
         if (!fsSettings["enable_search_local_aera"].empty()) {
             ftconfig->enable_search_local_aera = (int) fsSettings["enable_search_local_aera"];
             ftconfig->search_local_max_dist = fsSettings["search_local_max_dist"];
