@@ -120,6 +120,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
             //Initialize by triangulation
             Vector3d point_3d(0., 0., 0.);
             double tri_err = triangulatePoint3DPts(poses, points, point_3d);
+            // printf("Lm %ld tri err %.3f thres %.3f\n", lm_id, tri_err*params->focal_length, params->tri_max_err*params->focal_length);
             if (tri_err < params->tri_max_err) {
                 lm.position = point_3d;
                 if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
@@ -178,7 +179,7 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState * state) {
         auto lm_id = it.first;
         //Set to unsolved
         lm.solver_flag = LandmarkSolverFlag::UNSOLVED;
-        if (lm.flag == LandmarkFlag::UNINITIALIZED) {
+        if (lm.flag < LandmarkFlag::ESTIMATED) {
             if (lm.track.size() == 0) {
                 printf("\033[0;31m[D2VINS::D2LandmarkManager] Initialize landmark %ld failed, no track.\033[0m\n", lm_id);
                 continue;
@@ -362,12 +363,16 @@ double triangulatePoint3DPts(const std::vector<Swarm::Pose> poses, const std::ve
     point_3d(2) = triangulated_point(2) / triangulated_point(3);
 
     double sum_err = 0;
+    double err_pose_0 = 0.0;
     for (unsigned int i = 0; i < poses.size(); i ++) {
         auto reproject_pos = poses[i].inverse()*point_3d;
         reproject_pos.normalize();
         Vector3d err = points[i] - reproject_pos;
+        if (i == 0) {
+            err_pose_0 = err.norm();
+        }
         sum_err += err.norm();
     }
-    return sum_err/ points.size(); 
+    return sum_err/ points.size() + err_pose_0; 
 }
 }

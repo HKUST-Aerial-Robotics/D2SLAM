@@ -308,6 +308,8 @@ struct VisualImageDescArray {
     Vector3d Ba;
     Vector3d Bg;
     double cur_td = 0;
+    Swarm::Pose motion_prediction;
+    bool send_to_backend = true; //If send to backend
 
     void sync_landmark_ids() {
         for (auto & image : images) {

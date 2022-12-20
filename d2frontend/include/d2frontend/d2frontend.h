@@ -43,7 +43,7 @@ protected:
     std::mutex loop_lock;
     image_transport::ImageTransport * it_;
 
-    virtual void frameCallback(const VisualImageDescArray & viokf) {};
+    virtual void backendFrameCallback(const VisualImageDescArray & viokf) {};
 
     void onLoopConnection (LoopEdge & loop_con, bool is_local = false);
 
@@ -85,6 +85,7 @@ protected:
     ros::Timer timer, loop_timer;
 public:
     D2Frontend ();
+    virtual Swarm::Pose getMotionPredict(double stamp) const {return Swarm::Pose();};
     
 protected:
     virtual void Init(ros::NodeHandle & nh);

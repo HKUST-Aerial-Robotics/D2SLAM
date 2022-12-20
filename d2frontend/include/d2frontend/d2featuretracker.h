@@ -37,6 +37,8 @@ struct D2FTConfig {
     double knn_match_ratio = 0.8;
     std::string output_folder = "/root/output/";
     std::string superglue_model_path;
+    double landmark_distance_assumption = 2.0; // For uninitialized landmark, assume it is 3m away
+    int frame_step = 2;
 };
 
 struct TrackReport {
@@ -71,10 +73,22 @@ struct LKImageInfo {
 class SuperGlueOnnx;
 
 class D2FeatureTracker {
-public:
-
 protected:
+    struct MatchLocalFeatureParams {
+        bool enable_prediction = false;
+        Swarm::Pose pose_a = Swarm::Pose();
+        Swarm::Pose pose_b_prediction = Swarm::Pose();
+        bool enable_superglue=true;
+        TrackLRType type=WHOLE_IMG_MATCH;
+        bool plot=false;
+        double search_radius = 0.0;
+        bool prediction_using_extrinsic = false;
+    };
+
     D2FTConfig _config;
+    double image_width = 0.0;
+    double search_radius = 0.0;
+
     std::vector<VisualImageDescArray> current_keyframes;
     LandmarkManager * lmanager = nullptr;
     int keyframe_count = 0;
@@ -84,13 +98,15 @@ protected:
     std::pair<bool, LandmarkPerFrame> createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id = -1);
     std::recursive_mutex track_lock;
     std::recursive_mutex keyframe_lock;
-    double image_width = 0.0;
+    
+    std::map<int, std::vector<cv::Point2f>> landmark_predictions_viz;
+    std::map<int, std::vector<cv::Point2f>> landmark_predictions_prev_viz;
 
     TrackReport trackLK(VisualImageDesc & frame);
     TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk=true, TrackLRType type=WHOLE_IMG_MATCH);
     TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame, TrackLRType type=WHOLE_IMG_MATCH);
-    TrackReport track(VisualImageDesc & frame);
-    TrackReport trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame);
+    TrackReport track(VisualImageDesc & frame, const Swarm::Pose & motion_prediction=Swarm::Pose());
+    TrackReport trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame, const Swarm::Pose & motion_prediction=Swarm::Pose());
     bool getMatchedPrevKeyframe(const VisualImageDescArray & frame_a, VisualImageDescArray& prev, int & dir_a, int & dir_b);
     void processKeyframe(VisualImageDescArray & frames);
     bool isKeyframe(const TrackReport & reports);
@@ -108,13 +124,15 @@ protected:
     typedef std::lock_guard<std::recursive_mutex> Guard;
     SuperGlueOnnx * superglue = nullptr;
     bool matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, std::vector<int> & ids_down_to_up, 
-            bool enable_superglue=true, TrackLRType type=WHOLE_IMG_MATCH, bool plot=false);
+        const MatchLocalFeatureParams & param);
+    std::vector<cv::Point2f> predictLandmarks(const VisualImageDesc & img_desc_a, 
+            const Swarm::Pose & cam_pose_a, const Swarm::Pose & cam_pose_b, bool use_extrinsic=false) const;
 public:
     D2FeatureTracker(D2FTConfig config);
     bool trackLocalFrames(VisualImageDescArray & frames);
     bool trackRemoteFrames(VisualImageDescArray & frames);
     void updatebySldWin(const std::vector<VINSFrame*> sld_win);
-    
+    void updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPerId> & vins_landmark_db);
     std::vector<camodocal::CameraPtr> cams;
 };
 

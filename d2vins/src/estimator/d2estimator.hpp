@@ -96,5 +96,6 @@ public:
     void setPGOPoses(const std::map<int, Swarm::Pose> & poses);
     std::set<int> getNearbyDronesbyPGOData() const;
     void setStateProperties();
+    virtual std::pair<Swarm::Odometry, std::pair<IMUBuffer, int>> getMotionPredict(double stamp) const;
 };
 }

@@ -39,8 +39,12 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     bool has_received_imu = false;
     double last_imu_ts = 0;
 protected:
-    virtual void frameCallback(const D2Common::VisualImageDescArray & viokf) override {
-        if (params->estimation_mode < D2VINSConfig::SERVER_MODE && frame_count % params->frame_step == 0) {
+    Swarm::Pose getMotionPredict(double stamp) const override {
+        return estimator->getMotionPredict(stamp).first.pose();
+    }
+
+    virtual void backendFrameCallback(const D2Common::VisualImageDescArray & viokf) override {
+        if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
             Guard guard(queue_lock);
             viokf_queue.emplace(viokf);
         }
@@ -75,6 +79,7 @@ protected:
             loop_detector->updatebySldWin(sld_win);
         }
         feature_tracker->updatebySldWin(sld_win);
+        feature_tracker->updatebyLandmarkDB(estimator->getLandmarkDB());
     }
 
     void timerCallback(const ros::TimerEvent & event) {
@@ -105,6 +110,7 @@ protected:
                     loop_detector->updatebySldWin(sld_win);
                 }
                 feature_tracker->updatebySldWin(sld_win);
+                feature_tracker->updatebyLandmarkDB(estimator->getLandmarkDB());
                 if (params->verbose || params->enable_perf_output)
                     printf("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
             }

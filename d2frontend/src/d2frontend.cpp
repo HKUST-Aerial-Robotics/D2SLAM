@@ -95,6 +95,7 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     static int count = 0;
     // ROS_INFO("[D2Frontend::processStereoframe] %d", count ++);
     auto vframearry = loop_cam->processStereoframe(stereoframe);
+    vframearry.motion_prediction = getMotionPredict(vframearry.stamp);
     bool is_keyframe = feature_tracker->trackLocalFrames(vframearry);
     vframearry.prevent_adding_db = !is_keyframe;
     vframearry.is_keyframe = is_keyframe;
@@ -102,7 +103,9 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     if (!params->show) {
         vframearry.releaseRawImages();
     }
-    frameCallback(vframearry);
+    if (vframearry.send_to_backend) {
+        backendFrameCallback(vframearry);
+    }
 }
 
 void D2Frontend::addToLoopQueue(const VisualImageDescArray & viokf) {

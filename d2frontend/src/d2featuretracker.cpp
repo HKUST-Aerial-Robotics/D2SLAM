@@ -22,23 +22,46 @@ D2FeatureTracker::D2FeatureTracker(D2FTConfig config):
     if (!_config.enable_search_local_aera) {
         _config.search_local_max_dist = -1;
     }
+    search_radius = _config.search_local_max_dist*image_width;
 }
 
 void D2FeatureTracker::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
     //update by sliding window
     const Guard lock(keyframe_lock);
-    if (current_keyframes.size() <= 1 || sld_win.size() == 0)
+    if (current_keyframes.size() == 0 || sld_win.size() == 0)
         return;
-    std::set<FrameIdType> sld_win_ids;
+    std::map<FrameIdType, Swarm::Pose> sld_win_poses;
     for (auto & frame: sld_win) {
-        sld_win_ids.insert(frame->frame_id);
+        sld_win_poses[frame->frame_id] = frame->odom.pose();
     }
     //Remove the keyframe not in the sliding window except the last one
     for (auto it = current_keyframes.begin(); it != current_keyframes.end();) {
-        if (sld_win_ids.find(it->frame_id) == sld_win_ids.end() && it->frame_id != current_keyframes.back().frame_id) {
-            it = current_keyframes.erase(it);
+        if (sld_win_poses.find(it->frame_id) == sld_win_poses.end() && it->frame_id != current_keyframes.back().frame_id) {
+            if (current_keyframes.size() <= 1 ) {
+                it++;
+            } else {
+                it = current_keyframes.erase(it);
+            }
         } else {
+            if (sld_win_poses.find(it->frame_id) != sld_win_poses.end()) {
+                it->pose_drone = sld_win_poses[it->frame_id];
+                for (auto & img : it->images) {
+                    img.pose_drone = sld_win_poses[it->frame_id];
+                }
+            }
             it++;
+        }
+    }
+}
+
+void D2FeatureTracker::updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPerId> & vins_landmark_db) {
+    //update by sliding window
+    auto & db = lmanager->getLandmarkDB();
+    for (auto & kv : vins_landmark_db) {
+        if (db.find(kv.first) != db.end()) {
+            auto & lm = lmanager->at(kv.first);
+            lm.flag = kv.second.flag;
+            lm.position = kv.second.position;
         }
     }
 }
@@ -48,33 +71,34 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     bool iskeyframe = false;
     frame_count ++;
     TrackReport report;
-
+    landmark_predictions_viz.clear();
+    frames.send_to_backend = (frame_count % _config.frame_step) == 0;
     TicToc tic;
     if (!inited) {
         inited = true;
         ROS_INFO("[D2FeatureTracker] receive first, will init kf\n");
         processKeyframe(frames);
+        frames.send_to_backend = true;
     }
 
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
-        report.compose(track(frames.images[0]));
+        report.compose(track(frames.images[0], frames.motion_prediction));
         report.compose(track(frames.images[0], frames.images[1]));
     } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         for (auto & frame : frames.images) {
             report.compose(track(frame));
         }
     } else if(params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
-        report.compose(track(frames.images[0]));
-        report.compose(track(frames.images[1]));
-        report.compose(track(frames.images[2]));
-        report.compose(track(frames.images[3]));
+        report.compose(track(frames.images[0], frames.motion_prediction));
+        report.compose(track(frames.images[1], frames.motion_prediction));
+        report.compose(track(frames.images[2], frames.motion_prediction));
+        report.compose(track(frames.images[3], frames.motion_prediction));
         report.compose(track(frames.images[0], frames.images[1], true, LEFT_RIGHT_IMG_MATCH));
         report.compose(track(frames.images[1], frames.images[2], true, LEFT_RIGHT_IMG_MATCH));
         report.compose(track(frames.images[2], frames.images[3], true, LEFT_RIGHT_IMG_MATCH));
         report.compose(track(frames.images[0], frames.images[3], true, RIGHT_LEFT_IMG_MATCH));
     }
-    
-    if (isKeyframe(report)) {
+    if (isKeyframe(report) && frames.send_to_backend) {
         iskeyframe = true;
         processKeyframe(frames);
     }
@@ -160,6 +184,7 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
         return false;
     }
     bool matched = false;
+    landmark_predictions_viz.clear();
     frame_count ++;
     TrackReport report;
     TicToc tic;
@@ -211,7 +236,7 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     }
 }
 
-TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame) {
+TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame, const Swarm::Pose & motion_prediction) {
     TrackReport report;
     if (current_keyframes.size() == 0) {
         printf("[D2FeatureTracker::trackRemote] waiting for initialization.\n");
@@ -220,7 +245,14 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualI
     if (prev_frame.frame_id != frame.frame_id) {
         //Then current keyframe has been assigned, feature tracker by LK.
         std::vector<int> ids_b_to_a;
-        bool success = matchLocalFeatures(prev_frame, frame, ids_b_to_a, _config.enable_superglue_remote, WHOLE_IMG_MATCH, false);
+        //TODO: use motion prediction
+        MatchLocalFeatureParams match_param;
+        match_param.enable_superglue = _config.enable_superglue_remote;
+        match_param.enable_prediction = false; //TODO enable motion prediction
+        match_param.type = WHOLE_IMG_MATCH;
+        match_param.search_radius = 10000; //TODO: use motion prediction
+        match_param.plot = false;
+        bool success = matchLocalFeatures(prev_frame, frame, ids_b_to_a, match_param);
         if (!success) {
             printf("[D2FeatureTracker::trackRemote] matchLocalFeatures failed.\n");
             return report;
@@ -275,7 +307,7 @@ void D2FeatureTracker::cvtRemoteLandmarkId(VisualImageDesc & frame) const {
 }
 
 
-TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
+TrackReport D2FeatureTracker::track(VisualImageDesc & frame, const Swarm::Pose & motion_prediction) {
     TrackReport report;
     const Guard lock(keyframe_lock);
     if (current_keyframes.size() > 0 && current_keyframes.back().frame_id != frame.frame_id) {
@@ -283,7 +315,13 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame) {
         //Then current keyframe has been assigned, feature tracker by LK.
         auto & previous = current_keyframe.images[params->camera_seq[frame.camera_index]];
         std::vector<int> ids_b_to_a;
-        matchLocalFeatures(previous, frame, ids_b_to_a, _config.enable_superglue_local, WHOLE_IMG_MATCH, false);
+        MatchLocalFeatureParams match_param;
+        match_param.enable_superglue = _config.enable_superglue_local;
+        match_param.enable_prediction = true;
+        match_param.pose_a = previous.pose_drone;
+        match_param.pose_b_prediction = motion_prediction;
+        match_param.search_radius = search_radius;
+        matchLocalFeatures(previous, frame, ids_b_to_a, match_param);
         for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
             if (ids_b_to_a[i] >= 0) {
                 assert(ids_b_to_a[i] < previous.spLandmarkNum() && "too large");
@@ -417,7 +455,14 @@ TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualIm
     auto cur_pts = right_frame.landmarks2D();
     std::vector<int> ids_b_to_a;
     TrackReport report;
-    matchLocalFeatures(left_frame, right_frame, ids_b_to_a, _config.enable_superglue_local, type);
+    double search_radius_lr = search_radius;
+    MatchLocalFeatureParams match_param;
+    match_param.enable_superglue = _config.enable_superglue_local;
+    match_param.search_radius = search_radius_lr;
+    match_param.type = type;
+    match_param.enable_prediction = true;
+    match_param.prediction_using_extrinsic = true;
+    matchLocalFeatures(left_frame, right_frame, ids_b_to_a, match_param);
     for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
         if (ids_b_to_a[i] >= 0) {
             assert(ids_b_to_a[i] < left_frame.spLandmarkNum() && "too large");
@@ -523,9 +568,11 @@ void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
             }
         }
     }
-    // if (current_keyframe.frame_id >= 0) {
-    //     lmanager->popFrame(current_keyframe.frame_id);
-    // }
+    // Before solve, use motion prediction as pose
+    for (auto & frame: frames.images) {
+        frame.pose_drone = frames.motion_prediction;
+    }
+    frames.pose_drone = frames.motion_prediction;
     const Guard lock(keyframe_lock);
     current_keyframes.emplace_back(frames);
 }
@@ -549,12 +596,25 @@ cv::Mat D2FeatureTracker::drawToImage(VisualImageDesc & frame, bool is_keyframe,
     }
     char buf[64] = {0};
     int stereo_num = 0;
+    if (landmark_predictions_viz.find(frame.camera_id) != landmark_predictions_viz.end()) {
+        //Draw predictions here
+        auto & predictions = landmark_predictions_viz.at(frame.camera_id);
+        auto & prev = landmark_predictions_prev_viz.at(frame.camera_id);
+        for (int i = 0; i < predictions.size(); i++) {
+            cv::circle(img, predictions[i], 3, cv::Scalar(0, 255, 0), 2);
+            cv::line(img, prev[i], predictions[i], cv::Scalar(0, 255, 255), 1, 8, 0);
+        }
+    }
     for (size_t j = 0; j < cur_pts.size(); j++) {
         cv::Scalar color = cv::Scalar(0, 140, 255);
         if (frame.landmarks[j].type == SuperPointLandmark) {
             color = cv::Scalar(255, 0, 0); //Superpoint blue
         }
         cv::circle(img, cur_pts[j], 2, color, 2);
+        //Draw searching range using search_radius
+        // if (params->camera_configuration == CameraConfig::STEREO_PINHOLE && !is_right) {
+        //     cv::circle(img, cur_pts[j], search_radius, cv::Scalar(0, 255, 0, 60), 1);
+        // }
         auto _id = frame.landmarks[j].landmark_id;
         if (!lmanager->hasLandmark(_id)) {
             continue;
@@ -701,8 +761,8 @@ std::pair<std::vector<float>, std::vector<cv::Point2f>> getFeatureHalfImg(const 
     return std::make_pair(desc_half, pts_new);
 }
 
-bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, 
-        std::vector<int> & ids_b_to_a, bool enable_superglue, TrackLRType type, bool plot) {
+bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, std::vector<int> & ids_b_to_a, 
+        const D2FeatureTracker::MatchLocalFeatureParams & param) {
     TicToc tic;
     auto & raw_desc_a = img_desc_a.landmark_descriptor;
     auto & raw_desc_b = img_desc_b.landmark_descriptor;
@@ -710,26 +770,42 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     auto pts_b = img_desc_b.landmarks2D(true);
     auto pts_a_normed = img_desc_a.landmarks2D(true, true);
     auto pts_b_normed = img_desc_b.landmarks2D(true, true);
-
     std::vector<int> ids_a, ids_b;
     std::vector<cv::DMatch> _matches;
+    std::vector<cv::Point2f> pts_pred_a_on_b;
     ids_b_to_a.resize(pts_b.size());
     std::fill(ids_b_to_a.begin(), ids_b_to_a.end(), -1);
-    if (enable_superglue) {
+    printf("[D2FT] Frame_a %ld<->%ld enable_prediction %d pose_a %s motion_prediction %s\n", 
+        img_desc_a.frame_id, img_desc_b.frame_id, param.enable_prediction, param.pose_a.toStr().c_str(), param.pose_b_prediction.toStr().c_str());
+    if (param.enable_prediction) {
+        if (param.prediction_using_extrinsic) {
+            pts_pred_a_on_b = predictLandmarks(img_desc_a, img_desc_a.extrinsic, img_desc_b.extrinsic, true);
+        } else {
+            pts_pred_a_on_b = predictLandmarks(img_desc_a, param.pose_a * img_desc_a.extrinsic, 
+                param.pose_b_prediction*img_desc_b.extrinsic);
+        }
+        if (params->show) {
+            landmark_predictions_viz[img_desc_b.camera_id] = pts_pred_a_on_b;
+            landmark_predictions_prev_viz[img_desc_b.camera_id] = pts_a;
+        }
+    } else {
+        pts_pred_a_on_b = pts_a;
+    }
+    if (param.enable_superglue) {
         //Superglue only support whole image matching
         auto & scores0 = img_desc_a.landmark_scores;
         auto & scores1 = img_desc_b.landmark_scores;
         _matches = superglue->inference(pts_a, pts_b, raw_desc_a, raw_desc_b, scores0, scores1);
     } else {
-        if (type == WHOLE_IMG_MATCH) {
+        if (param.type == WHOLE_IMG_MATCH) {
             const cv::Mat desc_a(raw_desc_a.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, const_cast<float *>(raw_desc_a.data()));
             const cv::Mat desc_b(raw_desc_b.size()/params->superpoint_dims, params->superpoint_dims, CV_32F, const_cast<float *>(raw_desc_b.data()));
             if (_config.enable_knn_match) {
                 if (img_desc_a.drone_id  == img_desc_b.drone_id && img_desc_a.camera_id == img_desc_b.camera_id) {
                     // Is continuous frame
-                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_a, pts_b, _config.search_local_max_dist*image_width);
+                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_pred_a_on_b, pts_b, search_radius);
                 } else {
-                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_a, pts_b);
+                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_pred_a_on_b, pts_b);
                 }
             } else {
                 cv::BFMatcher bfmatcher(cv::NORM_L2, true);
@@ -737,8 +813,8 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             }
         } else {
             std::map<int, int> tmp_to_idx_a, tmp_to_idx_b;
-            auto features_a = getFeatureHalfImg(pts_a, raw_desc_a, type==LEFT_RIGHT_IMG_MATCH, tmp_to_idx_a);
-            auto features_b = getFeatureHalfImg(pts_b, raw_desc_b, type==RIGHT_LEFT_IMG_MATCH, tmp_to_idx_b);
+            auto features_a = getFeatureHalfImg(pts_a, raw_desc_a, param.type==LEFT_RIGHT_IMG_MATCH, tmp_to_idx_a);
+            auto features_b = getFeatureHalfImg(pts_b, raw_desc_b, param.type==RIGHT_LEFT_IMG_MATCH, tmp_to_idx_b);
             if (tmp_to_idx_a.size() == 0 || tmp_to_idx_b.size() == 0) {
                 if (params->verbose)
                     printf("[D2FeatureTracker] matchLocalFeatures failed: no feature to match.\n");
@@ -751,10 +827,10 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
                 if (_config.enable_search_local_aera) {
                     float move_cols = params->width_undistort *90.0/params->undistort_fov; //slightly lower than 0.5 cols when fov=200
                     for (int i = 0; i < features_a.second.size(); i++) {
-                        features_a.second[i].x += type==LEFT_RIGHT_IMG_MATCH ? move_cols : -move_cols;
+                        features_a.second[i].x += param.type==LEFT_RIGHT_IMG_MATCH ? move_cols : -move_cols;
                     }
                 }
-                _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, features_a.second, features_b.second, _config.search_local_max_dist*image_width);
+                _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, features_a.second, features_b.second, search_radius);
             } else {
                 cv::BFMatcher bfmatcher(cv::NORM_L2, true);
                 bfmatcher.match(desc_a, desc_b, _matches);
@@ -775,7 +851,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         matched_pts_b.push_back(pts_b[match.trainIdx]);
     }
     if (img_desc_a.drone_id != img_desc_b.drone_id &&
-            params->ftconfig->check_homography && !enable_superglue) {
+            params->ftconfig->check_homography && !param.enable_superglue) {
         //only perform this for remote
         std::vector<unsigned char> mask;
         if (matched_pts_a_normed.size() < MIN_HOMOGRAPHY) {
@@ -801,7 +877,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     }
     
     // //Plot matches
-    if (plot) {
+    if (param.plot) {
         char name[100];
         std::vector<cv::KeyPoint> kps_a, kps_b;
         //Kps from points
@@ -847,6 +923,39 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         return true;
     }
     return false;
+}
+
+
+std::vector<cv::Point2f> D2FeatureTracker::predictLandmarks(const VisualImageDesc & img_desc_a, const Swarm::Pose & cam_pose_a, 
+        const Swarm::Pose & cam_pose_b, bool use_extrinsic) const {
+    std::vector<cv::Point2f> pts_a_pred_on_b;
+    assert(img_desc_a.drone_id == params->self_id);
+    auto cam = cams.at(img_desc_a.camera_index);
+    for (int i = 0; i < img_desc_a.spLandmarkNum(); i++) {
+        auto landmark_id = img_desc_a.landmarks[i].landmark_id;
+        //Query 3d landmark position
+        bool find_position = false;
+        Vector3d pt3d(0., 0., 0.);
+        if (!use_extrinsic && lmanager->hasLandmark(landmark_id)) {
+            const auto & lm = lmanager->at(landmark_id);
+            if (lm.flag == LandmarkFlag::INITIALIZED || lm.flag == LandmarkFlag::ESTIMATED) {
+                pt3d = lm.position;
+                find_position = true;
+            }
+        } 
+        if (!find_position) {
+            Vector3d landmark_pos_cam = img_desc_a.landmarks[i].pt3d_norm * _config.landmark_distance_assumption;
+            pt3d = cam_pose_a * landmark_pos_cam;
+        }
+        //Predict 2d position on b
+        Vector2d pt2d_pred;
+        Vector3d pos_cam_b_pred = cam_pose_b.inverse() * pt3d;
+        cam->spaceToPlane(pos_cam_b_pred, pt2d_pred);
+        pts_a_pred_on_b.emplace_back(pt2d_pred.x(), pt2d_pred.y());
+        // printf("[D2FT] Frame_a %ld landmark %ld find_pos:%d position %.2f %.2f %.2f pred %.2f %.2f\n", 
+        //     img_desc_a.frame_id, landmark_id, find_position, pt3d.x(), pt3d.y(), pt3d.z(), pt2d_pred.x(), pt2d_pred.y());
+    }
+    return pts_a_pred_on_b;
 }
 
 }

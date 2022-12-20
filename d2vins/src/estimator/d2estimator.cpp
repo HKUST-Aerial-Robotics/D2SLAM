@@ -121,19 +121,12 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
 VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
     auto & last_frame = state.lastFrame();
-    auto ret = imu_bufs[self_id].periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
-    auto _imu = ret.first;
-    auto index = ret.second;
-    if (fabs(_imu.size()/(_frame.stamp - last_frame.stamp) - params->IMU_FREQ) > 15) {
-        printf("\033[0;31m[D2VINS::D2Estimator] Local IMU error freq: %.3f start_t %.3f/%.3f end_t %.3f/%.3f\033[0m\n", 
-            _imu.size()/(_frame.stamp - last_frame.stamp),
-            last_frame.stamp + state.td, _imu[0].t, _frame.stamp + state.td, _imu[_imu.size()-1].t);
-    }
-    VINSFrame frame(_frame, ret, last_frame);
+    auto motion_predict = getMotionPredict(_frame.stamp); //Redo motion predict for get latest initial pose
+    VINSFrame frame(_frame, motion_predict.second, last_frame);
     if (params->init_method == D2VINSConfig::INIT_POSE_IMU) {
-        frame.odom = _imu.propagation(last_frame);
+        frame.odom = motion_predict.first;
     } else {
-        auto odom_imu = _imu.propagation(last_frame);
+        auto odom_imu = motion_predict.first;
         auto pnp_init = initialFramePnP(_frame, last_frame.odom.pose());
         if (!pnp_init.first) {
             //Use IMU
@@ -153,7 +146,7 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     }
     _frame.setTd(state.getTd(_frame.drone_id));
     //Assign IMU and initialization to VisualImageDescArray for broadcasting.
-    _frame.imu_buf = _imu;
+    _frame.imu_buf = motion_predict.second.first;
     _frame.pose_drone = frame.odom.pose();
     _frame.Ba = frame.Ba;
     _frame.Bg = frame.Bg;
@@ -442,6 +435,10 @@ void D2Estimator::resetMarginalizer() {
 }
 
 void D2Estimator::solveinDistributedMode() {
+    if (!updated) {
+        return;
+    }
+    updated = false;
     D2Common::Utility::TicToc tic;
     if (params->consensus_sync_to_start) {
         if (true) {
@@ -844,4 +841,20 @@ std::set<int> D2Estimator::getNearbyDronesbyPGOData() const {
     }
     return nearby_drones;
 }
+std::pair<Swarm::Odometry, std::pair<IMUBuffer, int>> D2Estimator::getMotionPredict(double stamp) const {
+    if(!initFirstPoseFlag) {
+        return std::make_pair(Swarm::Odometry(), std::make_pair(IMUBuffer(), -1));
+    }
+    const auto & last_frame = state.lastFrame();
+    auto ret = imu_bufs.at(self_id).periodIMU(last_frame.imu_buf_index, stamp + state.td);
+    auto _imu = ret.first;
+    auto index = ret.second;
+    if (fabs(_imu.size()/(stamp - last_frame.stamp) - params->IMU_FREQ) > 15) {
+        printf("\033[0;31m[D2VINS::D2Estimator] Local IMU error freq: %.3f start_t %.3f/%.3f end_t %.3f/%.3f\033[0m\n", 
+            _imu.size()/(stamp - last_frame.stamp),
+            last_frame.stamp + state.td, _imu[0].t, stamp + state.td, _imu[_imu.size()-1].t);
+    }
+    return std::make_pair(_imu.propagation(last_frame), ret);
+}
+
 }

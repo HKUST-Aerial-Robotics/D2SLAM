@@ -182,7 +182,7 @@ class RotationInitARock : public RotationInitialization<T>, public ARockBase {
                         }
                     }
                 } else {
-                    ROS_WARN("[ARockPGO@%d]process DPGOData from %d, frame_id %d not found\n", self_id, data.drone_id, frame_id);
+                    ROS_WARN("[ARockPGO@%d]process DPGOData from %d, frame_id %ld not found\n", self_id, data.drone_id, frame_id);
                 }
             }
         }
