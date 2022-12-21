@@ -54,7 +54,6 @@ void IMUBuffer::add(const IMUData & data) {
     const Guard lock(buf_lock);
     buf.emplace_back(data);
     t_last = data.t;
-    buf_lock.unlock();
 }
 
 Vector3d IMUBuffer::mean_acc() const {

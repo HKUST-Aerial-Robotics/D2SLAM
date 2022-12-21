@@ -550,7 +550,7 @@ void D2EstimatorState::outlierRejection(const std::set<LandmarkIdType> & used_la
 }
 
 void D2EstimatorState::preSolve(const std::map<int, IMUBuffer> & remote_imu_bufs) {
-    updateSldWinsIMU(remote_imu_bufs);
+    // updateSldWinsIMU(remote_imu_bufs); Useless when IMU bufs are correctly set
     lmanager.initialLandmarks(this);
 }
 

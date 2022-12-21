@@ -35,7 +35,8 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts)
     for (auto & it: landmark_db) {
         auto & lm = it.second;
         if (lm.track.size() >= params->landmark_estimate_tracks && 
-            lm.flag >= LandmarkFlag::INITIALIZED && lm.flag != LandmarkFlag::OUTLIER) {
+            lm.flag >= LandmarkFlag::INITIALIZED) {
+            //Note we also use "outlier" tracks but with a much smaller score
             int score = lm.scoreForSolve(params->self_id);
             landmark_scores.push_back(std::make_pair(lm.landmark_id, score));
         }
@@ -216,7 +217,7 @@ void D2LandmarkManager::outlierRejection(const D2EstimatorState * state, const s
         if(lm.flag == LandmarkFlag::ESTIMATED && used_landmarks.find(lm_id)!=used_landmarks.end()) {
             double err_sum = 0;
             double err_cnt = 0;
-            double count_err_track = 0;
+            int count_err_track = 0;
             total_count ++;
             for (auto it = lm.track.begin() + 1; it != lm.track.end();) {
                 auto pose = state->getFramebyId(it->frame_id)->odom.pose();
@@ -228,17 +229,19 @@ void D2LandmarkManager::outlierRejection(const D2EstimatorState * state, const s
                 Vector3d reproj_error = pt3d_n - pos_cam;
                 if (reproj_error.norm() * params->focal_length > params->landmark_outlier_threshold) {
                     count_err_track += 1;
-                    printf("[outlierRejection] remove outlier track LM %d frame %ld inv_dep/dep %.2f/%.2f reproj_err %.2f/%.2f\n",
-                            lm_id, it->frame_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), reproj_error.norm() * params->focal_length, 
-                            params->landmark_outlier_threshold);
-                    //Remove the track
-                    it = lm.track.erase(it);
+                    // printf("[outlierRejection] remove outlier track LM %d frame %ld inv_dep/dep %.2f/%.2f reproj_err %.2f/%.2f\n",
+                    //         lm_id, it->frame_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), reproj_error.norm() * params->focal_length, 
+                    //         params->landmark_outlier_threshold);
+                    // //Remove the track
+                    // it = lm.track.erase(it);
+                    ++it;
                 } else {
                     ++it;
                 }
                 err_sum += reproj_error.norm();
                 err_cnt += 1;
             }
+            lm.num_outlier_tracks = count_err_track;
             if (err_cnt > 0) {
                 double reproj_err = err_sum/err_cnt;
                 if (reproj_err*params->focal_length > params->landmark_outlier_threshold) {

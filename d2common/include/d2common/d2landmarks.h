@@ -178,6 +178,7 @@ struct LandmarkPerId {
     LandmarkFlag flag = UNINITIALIZED;
     LandmarkSolverFlag solver_flag = UNSOLVED; //If 1, is solved
     cv::Vec3b color;
+    int num_outlier_tracks = 0;
     LandmarkPerId():
         color(0, 0, 0) {}
     LandmarkPerId(const LandmarkPerFrame & Landmark):
@@ -250,7 +251,7 @@ struct LandmarkPerId {
                 score += 1;
             }
         }
-        return score;  
+        return score - num_outlier_tracks*2;  
     }
 };
 

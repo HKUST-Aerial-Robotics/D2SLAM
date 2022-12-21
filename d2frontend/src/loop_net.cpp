@@ -202,6 +202,13 @@ void LoopNet::processRecvImageDesc(const ImageDescriptor_t & image, const Slidin
         frame_desc.matched_drone = image.header.matched_drone;
         frame_desc.sld_win_status = sld_win_status;
         frame_desc.reference_frame_id = image.header.reference_frame_id;
+        frame_desc.Ba.x = 0;
+        frame_desc.Ba.y = 0;
+        frame_desc.Ba.z = 0;
+        frame_desc.Bg.x = 0;
+        frame_desc.Bg.y = 0;
+        frame_desc.Bg.z = 0;
+        frame_desc.cur_td = image.header.cur_td;
         received_framearrays[image.header.frame_id] = frame_desc;
         frame_header_recv_time[image.header.frame_id] = msg_header_recv_time[image.header.msg_id];
         active_receving_frames.insert(image.header.frame_id);

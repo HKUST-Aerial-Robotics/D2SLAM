@@ -187,7 +187,7 @@ protected:
         d2vins_net = new D2VINSNet(estimator, params->lcm_uri);
         estimator->init(nh, d2vins_net);
         visual_array_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("image_array_desc", 1);
-        imu_sub = nh.subscribe(params->imu_topic, 1, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay());
+        imu_sub = nh.subscribe(params->imu_topic, 1000, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay()); //We need a big queue for IMU.
         pgo_fused_sub = nh.subscribe("/d2pgo/swarm_fused", 1, &D2VINSNode::pgoSwarmFusedCallback, this, ros::TransportHints().tcpNoDelay());
         estimator_timer = nh.createTimer(ros::Duration(1.0/params->process_input_timer), &D2VINSNode::timerCallback, this);
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
