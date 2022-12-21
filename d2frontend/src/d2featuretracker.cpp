@@ -231,7 +231,7 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
         }
     }
     report.ft_time = tic.toc();
-    // if (params->verbose || params->enable_perf_output)
+    if (params->verbose || params->enable_perf_output)
         printf("[D2FeatureTracker::trackRemoteFrames] frame %ld, matched %d, time %.2fms\n", frames.frame_id, report.remote_matched_num, report.ft_time);
     if (report.remote_matched_num > 0) {
         return true;
@@ -791,6 +791,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     std::vector<cv::Point2f> pts_pred_a_on_b;
     ids_b_to_a.resize(pts_b.size());
     std::fill(ids_b_to_a.begin(), ids_b_to_a.end(), -1);
+    double search_radius = param.search_radius;
     // printf("[D2FT] Frame_a %ld<->%ld enable_prediction %d pose_a %s motion_prediction %s\n", 
     //     img_desc_a.frame_id, img_desc_b.frame_id, param.enable_prediction, param.pose_a.toStr().c_str(), param.pose_b_prediction.toStr().c_str());
     if (param.enable_prediction) {
@@ -803,6 +804,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         
     } else {
         pts_pred_a_on_b = pts_a;
+        search_radius = -1;
     }
     if (param.enable_superglue) {
         //Superglue only support whole image matching
@@ -816,9 +818,9 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             if (_config.enable_knn_match) {
                 if (img_desc_a.drone_id  == img_desc_b.drone_id && img_desc_a.camera_id == img_desc_b.camera_id) {
                     // Is continuous frame
-                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_pred_a_on_b, pts_b, param.search_radius);
+                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_pred_a_on_b, pts_b, search_radius);
                 } else {
-                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_pred_a_on_b, pts_b, param.search_radius);
+                    _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, pts_pred_a_on_b, pts_b, search_radius);
                 }
             } else {
                 cv::BFMatcher bfmatcher(cv::NORM_L2, true);
@@ -844,7 +846,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
                         features_a.second[i].x += param.type==LEFT_RIGHT_IMG_MATCH ? move_cols : -move_cols;
                     }
                 }
-                _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, features_a.second, features_b.second,  param.search_radius);
+                _matches = matchKNN(desc_a, desc_b, _config.knn_match_ratio, features_a.second, features_b.second, search_radius);
             } else {
                 cv::BFMatcher bfmatcher(cv::NORM_L2, true);
                 bfmatcher.match(desc_a, desc_b, _matches);

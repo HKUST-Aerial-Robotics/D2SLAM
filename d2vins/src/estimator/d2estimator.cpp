@@ -113,8 +113,10 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
     D2Common::Utility::TicToc tic;
     auto pose_imu = D2FrontEnd::computePosePnPnonCentral(lm_positions_a, lm_3d_norm_b, cam_extrinsics, camera_indices, inliers);
     bool success = inliers.size() > params->pnp_min_inliers;
-    printf("[D2VINS::D2Estimator@%d] PnP succ %d frame %ld@%d final %s inliers %d points %d time: %.2fms\n", self_id, success, 
-            frame.frame_id, frame.drone_id, pose_imu.toStr().c_str(), inliers.size(), lm_positions_a.size(), tic.toc());
+    if (frame.drone_id != self_id) {
+        printf("[D2VINS::D2Estimator@%d] PnP succ %d frame %ld@%d final %s inliers %d points %d time: %.2fms\n", self_id, success, 
+                frame.frame_id, frame.drone_id, pose_imu.toStr().c_str(), inliers.size(), lm_positions_a.size(), tic.toc());
+    }
     return std::make_pair(success, pose_imu);
 }
 
