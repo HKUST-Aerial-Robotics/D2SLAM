@@ -555,15 +555,11 @@ void D2EstimatorState::preSolve(const std::map<int, IMUBuffer> & remote_imu_bufs
 }
 
 std::vector<LandmarkPerId> D2EstimatorState::getInitializedLandmarks() const {
-    return lmanager.getInitializedLandmarks();
+    return lmanager.getInitializedLandmarks(params->landmark_estimate_tracks);
 }
 
 LandmarkPerId & D2EstimatorState::getLandmarkbyId(LandmarkIdType id) {
-    return lmanager.getLandmark(id);
-}
-
-std::vector<LandmarkPerId> D2EstimatorState::getRelatedLandmarks(FrameIdType frame_id) const {
-    return lmanager.getRelatedLandmarks(frame_id);
+    return lmanager.at(id);
 }
 
 bool D2EstimatorState::hasLandmark(LandmarkIdType id) const {
@@ -640,6 +636,17 @@ void D2EstimatorState::updateEgoMotion() {
             //We need create ego motion for this frame use the data in sld_win
         }
     }
+}
+
+void D2EstimatorState::printLandmarkReport(FrameIdType frame_id) const {
+    auto related_landmarks = lmanager.getRelatedLandmarks(frame_id);
+    printf("Related landmarks of frame %ld:\n");
+    for (auto lm_id : related_landmarks) {
+        auto lm = lmanager.at(lm_id);
+        printf("landmark %ld: flag %d tracks %d solve_by_local %d\n", lm.landmark_id, lm.flag, 
+                lm.track.size(), lm.shouldBeSolve(params->self_id));
+    }
+    printf("===============================\n");
 }
 
 

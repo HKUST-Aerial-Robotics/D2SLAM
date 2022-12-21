@@ -682,6 +682,8 @@ void D2Estimator::setupLandmarkFactors() {
                 printf("\033[0;31m[D2VINS::D2Estimator@%d] frame_id %ld has only %d measurements\033[0m\n", 
                     self_id, frame_id, it.second);
             }
+            //Print a landmark report for this frame
+            // state.printLandmarkReport(frame_id);
         }
     }
 

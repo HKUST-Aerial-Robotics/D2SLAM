@@ -58,10 +58,6 @@ double * D2LandmarkManager::getLandmarkState(LandmarkIdType landmark_id) const {
     return landmark_state.at(landmark_id);
 }
 
-FrameIdType D2LandmarkManager::getLandmarkBaseFrame(LandmarkIdType landmark_id) const {
-    const Guard lock(state_lock);
-    return landmark_db.at(landmark_id).track[0].frame_id;
-}
 
 void D2LandmarkManager::moveByPose(const Swarm::Pose & delta_pose) {
     const Guard lock(state_lock);
@@ -297,42 +293,6 @@ void D2LandmarkManager::syncState(const D2EstimatorState * state) {
             estimated_landmark_size ++;
         }
     }
-}
-
-std::vector<LandmarkPerId> D2LandmarkManager::getInitializedLandmarks() const {
-    const Guard lock(state_lock);
-    std::vector<LandmarkPerId> lm_per_frame_vec;
-    for (auto it : landmark_db) {
-        auto & lm = it.second;
-        if (lm.track.size() >= params->landmark_estimate_tracks && lm.flag >= LandmarkFlag::INITIALIZED) {
-            lm_per_frame_vec.push_back(lm);
-        }
-    }
-    return lm_per_frame_vec;
-}
-
-LandmarkPerId & D2LandmarkManager::getLandmark(LandmarkIdType landmark_id) {
-    const Guard lock(state_lock);
-    return landmark_db.at(landmark_id);
-}
-
-std::vector<LandmarkPerId> D2LandmarkManager::getRelatedLandmarks(FrameIdType frame_id) const {
-    const Guard lock(state_lock);
-    if (related_landmarks.find(frame_id) == related_landmarks.end()) {
-        return std::vector<LandmarkPerId>();
-    }
-    std::vector<LandmarkPerId> lm_per_frame_set;
-    auto _landmark_ids = related_landmarks.at(frame_id);
-    for (auto _id : _landmark_ids) {
-        auto lm = landmark_db.at(_id);
-        lm_per_frame_set.emplace_back(lm);
-    }
-    return lm_per_frame_set;
-}
-
-bool D2LandmarkManager::hasLandmark(LandmarkIdType landmark_id) const {
-    const Guard lock(state_lock);
-    return landmark_db.find(landmark_id) != landmark_db.end();
 }
 
 void D2LandmarkManager::removeLandmark(const LandmarkIdType & id) {

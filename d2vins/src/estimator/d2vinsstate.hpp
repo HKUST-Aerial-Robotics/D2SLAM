@@ -54,7 +54,6 @@ public:
     std::set<CamIdType> getAvailableCameraIds() const;
     std::vector<LandmarkPerId> availableLandmarkMeasurements(int max_pts) const;
     std::vector<LandmarkPerId> getInitializedLandmarks() const;
-    std::vector<LandmarkPerId> getRelatedLandmarks(FrameIdType frame_id) const;
     LandmarkPerId & getLandmarkbyId(LandmarkIdType id);
     bool hasLandmark(LandmarkIdType id) const;
 
@@ -104,5 +103,6 @@ public:
     }
 
     void updateEgoMotion();
+    void printLandmarkReport(FrameIdType frame_id) const;
 };
 }
