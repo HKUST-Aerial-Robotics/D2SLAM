@@ -122,7 +122,11 @@ void D2VINSConfig::init(const std::string & config_file) {
     //Consenus Solver
     consensus_config = new ConsensusSolverConfig;
     consensus_config->ceres_options.linear_solver_type = ceres::DENSE_SCHUR;
-    consensus_config->ceres_options.num_threads = 1;
+    if (!fsSettings["ceres_num_threads"].empty()) {
+        consensus_config->ceres_options.num_threads = (int)fsSettings["ceres_num_threads"];
+    } else {
+        consensus_config->ceres_options.num_threads = 1;
+    }
     consensus_config->ceres_options.trust_region_strategy_type = ceres::DOGLEG;
     consensus_config->max_steps = fsSettings["consensus_max_steps"];
     consensus_config->ceres_options.max_num_iterations = ceres_options.max_num_iterations/consensus_config->max_steps;
