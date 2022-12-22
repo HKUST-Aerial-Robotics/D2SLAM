@@ -34,10 +34,10 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     std::queue<D2Common::VisualImageDescArray> viokf_queue;
     std::mutex queue_lock;
     ros::Timer estimator_timer, solver_timer;
-    std::thread th;
-    std::thread th_timer;
+    std::thread thread_comm, thread_solver, thread_viokf;
     bool has_received_imu = false;
     double last_imu_ts = 0;
+    bool need_solve = false;
 protected:
     Swarm::Pose getMotionPredict(double stamp) const override {
         return estimator->getMotionPredict(stamp).first.pose();
@@ -68,76 +68,72 @@ protected:
             visual_array_pub.publish(frame_desc.toROS());
         }
     }
-    
-    void distriburedTimerCallback(const ros::TimerEvent & event) {
-        const std::lock_guard<std::recursive_mutex> lock(estimator->frame_mutex);
-        estimator->solveinDistributedMode();
-        auto sld_win = estimator->getSelfSldWin();
-        if (params->enable_loop) {
-            const std::lock_guard<std::recursive_mutex> lock(estimator->frame_mutex);
-            loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
-            loop_detector->updatebySldWin(sld_win);
-        }
-        feature_tracker->updatebySldWin(sld_win);
-        feature_tracker->updatebyLandmarkDB(estimator->getLandmarkDB());
-    }
 
-    void timerCallback(const ros::TimerEvent & event) {
-        if (!viokf_queue.empty()) {
-            Utility::TicToc estimator_timer;
-            if (viokf_queue.size() > params->warn_pending_frames) {
-                ROS_WARN("[D2VINS] Low efficient on D2VINS::estimator pending frames: %d", viokf_queue.size());
-            }
-            D2Common::VisualImageDescArray viokf;
-            {
-                Guard guard(queue_lock);
-                viokf = viokf_queue.front();
-                viokf_queue.pop();
-            }
-            bool ret;
-            {
-                Utility::TicToc input;
-                ret = estimator->inputImage(viokf);
-                double input_time = input.toc();
-                Utility::TicToc loop;
-                if (viokf.is_keyframe) {
-                    addToLoopQueue(viokf);
+    void processVIOKFThread() {
+        while(ros::ok()) {
+            if (!viokf_queue.empty()) {
+                Utility::TicToc estimator_timer;
+                if (viokf_queue.size() > params->warn_pending_frames) {
+                    ROS_WARN("[D2VINS] Low efficient on D2VINS::estimator pending frames: %d", viokf_queue.size());
                 }
-                auto sld_win = estimator->getSelfSldWin();
-                if (params->enable_loop) {
-                    const std::lock_guard<std::recursive_mutex> lock(estimator->frame_mutex);
-                    loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
-                    loop_detector->updatebySldWin(sld_win);
+                D2Common::VisualImageDescArray viokf;
+                {
+                    Guard guard(queue_lock);
+                    viokf = viokf_queue.front();
+                    viokf_queue.pop();
                 }
-                feature_tracker->updatebySldWin(sld_win);
-                feature_tracker->updatebyLandmarkDB(estimator->getLandmarkDB());
-                if (params->verbose || params->enable_perf_output)
-                    printf("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
-            }
-            if (ret && D2FrontEnd::params->enable_network) {
-                // printf("[D2VINS] Send image to network frame_id %ld: %s\n", viokf.frame_id, viokf.pose_drone.toStr().c_str());
-                std::set<int> nearbydrones = estimator->getNearbyDronesbyPGOData(); 
-                bool force_landmarks = false;
-                if (nearbydrones.size() > 0) {
-                    force_landmarks = true;
-                    if (params->verbose) {
-                        printf("[D2VINS] Nearby drones: ");
-                        for (auto & id : nearbydrones) {
-                            printf("%d ", id);
-                        }
-                        printf("\n");
+                bool ret;
+                {
+                    Utility::TicToc input;
+                    ret = estimator->inputImage(viokf);
+                    double input_time = input.toc();
+                    Utility::TicToc loop;
+                    if (viokf.is_keyframe) {
+                        addToLoopQueue(viokf);
                     }
+                    {
+                        //Frame related operations. Need to be protected by frame_mutex
+                        const std::lock_guard<std::recursive_mutex> lock(estimator->frame_mutex);
+                        auto sld_win = estimator->getSelfSldWin();
+                        auto landmark_db = estimator->getLandmarkDB();
+                        if (params->enable_loop) {
+                            loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
+                            loop_detector->updatebySldWin(sld_win);
+                        }
+                        feature_tracker->updatebySldWin(sld_win);
+                        feature_tracker->updatebyLandmarkDB(estimator->getLandmarkDB());
+                    }
+                    need_solve = true;
+                    if (params->verbose || params->enable_perf_output)
+                        printf("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
                 }
-                Utility::TicToc broadcast_timer;
-                loop_net->broadcastVisualImageDescArray(viokf, force_landmarks);
+                if (ret && D2FrontEnd::params->enable_network) {
+                    // printf("[D2VINS] Send image to network frame_id %ld: %s\n", viokf.frame_id, viokf.pose_drone.toStr().c_str());
+                    std::set<int> nearbydrones = estimator->getNearbyDronesbyPGOData(); 
+                    bool force_landmarks = false;
+                    if (nearbydrones.size() > 0) {
+                        force_landmarks = true;
+                        if (params->verbose) {
+                            printf("[D2VINS] Nearby drones: ");
+                            for (auto & id : nearbydrones) {
+                                printf("%d ", id);
+                            }
+                            printf("\n");
+                        }
+                    }
+                    Utility::TicToc broadcast_timer;
+                    loop_net->broadcastVisualImageDescArray(viokf, force_landmarks);
+                    if (params->verbose || params->enable_perf_output)
+                        printf("[D2VINS] broadcastVisualImageDescArray takes %.1f ms\n", broadcast_timer.toc());
+                }
+                if (params->pub_visual_frame) {
+                    visual_array_pub.publish(viokf.toROS());
+                }
                 if (params->verbose || params->enable_perf_output)
-                    printf("[D2VINS] broadcastVisualImageDescArray takes %.1f ms\n", broadcast_timer.toc());
+                    printf("[D2VINS] estimator_timer_callback takes %.1f ms\n", estimator_timer.toc());
+            } else {
+                usleep(1000);
             }
-            if (params->pub_visual_frame) {
-                visual_array_pub.publish(viokf.toROS());
-            }
-            if (params->verbose || params->enable_perf_output)
-                printf("[D2VINS] estimator_timer_callback takes %.1f ms\n", estimator_timer.toc());
         }
     }
 
@@ -165,20 +161,26 @@ protected:
         }
         estimator->setPGOPoses(poses);
     }
+    
+    void distriburedTimerCallback(const ros::TimerEvent & e) {
+        estimator->solveinDistributedMode();
+    }
 
-    void myHighResolutionTimerThread() {
-        double freq = params->IMAGE_FREQ/params->frame_step;
-        int duration_us = floor(1000000.0/freq);
-        int allow_err = params->consensus_trigger_time_err_us;
-        int64_t last_invoke = 0;
+    void solverThread() {
         while (ros::ok()) {
-            int64_t usec = duration_cast<microseconds>(high_resolution_clock::now().time_since_epoch()).count();
-            if (usec - last_invoke > duration_us) {
-                last_invoke = usec;
-                distriburedTimerCallback(ros::TimerEvent());
+            if (need_solve) {
+                estimator->solveinDistributedMode();
+                if (!params->consensus_sync_to_start) {
+                    need_solve = false;
+                } else {
+                    usleep(0.5/params->estimator_timer_freq*1e6);
+                }
+            } else {
+                usleep(1000);
             }
         }
     }
+
 
     void Init(ros::NodeHandle & nh) {
         D2Frontend::Init(nh);
@@ -189,14 +191,18 @@ protected:
         visual_array_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("image_array_desc", 1);
         imu_sub = nh.subscribe(params->imu_topic, 1000, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay()); //We need a big queue for IMU.
         pgo_fused_sub = nh.subscribe("/d2pgo/swarm_fused", 1, &D2VINSNode::pgoSwarmFusedCallback, this, ros::TransportHints().tcpNoDelay());
-        estimator_timer = nh.createTimer(ros::Duration(1.0/params->process_input_timer), &D2VINSNode::timerCallback, this);
-        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        thread_viokf = std::thread([&] {
+            processVIOKFThread();
+            printf("[D2VINS] processVIOKFThread exit.\n");
+        });
+        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS & params->consensus_sync_to_start) {
             solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
-            // th_timer = std::thread([&] {
-            //     myHighResolutionTimerThread();
-            // });
+        } else if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+            thread_solver = std::thread([&] {
+                solverThread();
+            });
         }
-        th = std::thread([&] {
+        thread_comm = std::thread([&] {
             ROS_INFO("Starting d2vins_net lcm.");
             while(0 == d2vins_net->lcmHandle()) {
             }

@@ -297,9 +297,6 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     auto frame = addFrame(_frame);
     if (state.size() >= params->min_solve_frames && params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
         solveNonDistrib();
-    } else {
-        //Presolve only for initialization.
-        state.preSolve(imu_bufs);
     }
     addSldWinToFrame(_frame);
     frame_count ++;
