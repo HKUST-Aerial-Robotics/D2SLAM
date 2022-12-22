@@ -48,6 +48,7 @@ protected:
     SyncDataReceiver * sync_data_receiver = nullptr;
     bool updated = false;
     std::set<LandmarkIdType> used_landmarks;
+    std::recursive_mutex imu_prop_lock;
     
     //Internal functions
     bool tryinitFirstPose(VisualImageDescArray & frame);
@@ -79,7 +80,7 @@ public:
     bool inputImage(VisualImageDescArray & frame);
     void inputRemoteImage(VisualImageDescArray & frame);
     void solveinDistributedMode();
-    Swarm::Odometry getImuPropagation() const;
+    Swarm::Odometry getImuPropagation();
     Swarm::Odometry getOdometry() const;
     Swarm::Odometry getOdometry(int drone_id) const;
     void init(ros::NodeHandle & nh, D2VINSNet * net);

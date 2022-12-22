@@ -48,7 +48,7 @@ void MSCKF::predict(const double t, const IMUData & imudata) {
 
     //Naive intergation
     auto qdot = nominal_state.q_imu * omg_l;
-    auto vdot = Rq_hat*acc_hat + IMUBuffer::Gravity;
+    auto vdot = Rq_hat*acc_hat + IMUData::Gravity;
     auto pdot = nominal_state.v_imu;
 
     //Internal the quaternion is save as [qw, qx, qy, qz] in Eigen

@@ -59,7 +59,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     IntegrationBase::noise = noise;
     
     depth_sqrt_inf = fsSettings["depth_sqrt_inf"];
-    IMUBuffer::Gravity = Vector3d(0., 0., fsSettings["g_norm"]);
+    IMUData::Gravity = Vector3d(0., 0., fsSettings["g_norm"]);
     focal_length = D2FrontEnd::params->focal_length;
     printf("[D2VINS::D2VINSConfig] VINS use focal length %.2f\n", focal_length);
 

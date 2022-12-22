@@ -48,10 +48,14 @@ void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
 
 void D2Estimator::inputImu(IMUData data) {
     imu_bufs[self_id].add(data);
-    if (!initFirstPoseFlag) {
+    if (!initFirstPoseFlag || solve_count == 0) {
         return;
     }
     //Propagation current with last Bias.
+    auto last_frame = state.lastFrame(self_id);
+    std::lock_guard<std::recursive_mutex> lock(imu_prop_lock);
+    // data.propagation(last_prop_odom[params->self_id], last_frame.Ba, last_frame.Bg);
+    visual.pubIMUProp(last_prop_odom[params->self_id]);
 }
 
 bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
@@ -67,7 +71,7 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray & frame) {
 
     //Easily use the average value as gyrobias now
     //Also the ba with average acc - g
-    VINSFrame first_frame(frame, mean_acc - q0.inverse()*IMUBuffer::Gravity, _imubuf.mean_gyro());
+    VINSFrame first_frame(frame, mean_acc - q0.inverse()*IMUData::Gravity, _imubuf.mean_gyro());
     first_frame.is_keyframe = true;
     first_frame.odom = last_odom;
     first_frame.imu_buf_index = ret.second;
@@ -509,7 +513,8 @@ void D2Estimator::solveinDistributedMode() {
         if (drone_id != self_id && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
             continue;
         }
-        auto _imu = imu_bufs[self_id].back(state.lastFrame(drone_id).stamp + state.td);
+        auto _imu = imu_bufs[self_id].tail(state.lastFrame(drone_id).stamp + state.td);
+        std::lock_guard<std::recursive_mutex> lock(imu_prop_lock);
         last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
     }
 
@@ -565,7 +570,8 @@ void D2Estimator::solveNonDistrib() {
 
     // Reprogation
     for (auto drone_id : state.availableDrones()) {
-        auto _imu = imu_bufs[self_id].back(state.lastFrame(drone_id).stamp + state.td);
+        auto _imu = imu_bufs[self_id].tail(state.lastFrame(drone_id).stamp + state.td);
+        std::lock_guard<std::recursive_mutex> lock(imu_prop_lock);
         last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
     }
 
@@ -788,7 +794,8 @@ std::vector<LandmarkPerId> D2Estimator::getMarginedLandmarks() const {
     return margined_landmarks;
 }
 
-Swarm::Odometry D2Estimator::getImuPropagation() const {
+Swarm::Odometry D2Estimator::getImuPropagation() {
+    std::lock_guard<std::recursive_mutex> lock(imu_prop_lock);
     return last_prop_odom.at(self_id);
 }
 

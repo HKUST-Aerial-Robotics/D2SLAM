@@ -3,7 +3,7 @@
 #include <d2common/integration_base.h>
 namespace D2Common {
 
-Vector3d IMUBuffer::Gravity = Vector3d(0., 0., 9.805);
+Vector3d IMUData::Gravity = Vector3d(0., 0., 9.805);
 Eigen::Matrix<double, 18, 18> IntegrationBase::noise = Eigen::Matrix<double, 18, 18>::Zero();
 size_t IMUBuffer::searchClosest(double t) const {
     const Guard lock(buf_lock);
@@ -98,7 +98,7 @@ IMUBuffer IMUBuffer::pop(double t) {
     return ret;
 }
 
-IMUBuffer IMUBuffer::back(double t) const {
+IMUBuffer IMUBuffer::tail(double t) const {
     const Guard lock(buf_lock);
     if (buf.size() == 0){
         return IMUBuffer();
@@ -142,20 +142,24 @@ Swarm::Odometry IMUBuffer::propagation(const Swarm::Odometry & prev_odom, const 
     Vector3d gyro_last = buf[0].gyro;
 
     Swarm::Odometry odom = prev_odom;
+    IMUData imu_last = buf[0];
     for (auto & imu: buf) {
-        Vector3d un_acc_0 = prev_odom.att() * (acc_last - Ba) - Gravity;
-        Vector3d un_gyr = 0.5 * (gyro_last + imu.gyro) - Bg;
-        odom.att() = odom.att() * Utility::deltaQ(un_gyr * imu.dt);
-        odom.att().normalize();
-        Vector3d un_acc_1 = odom.att() * (imu.acc - Ba) - Gravity;
-        Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
-        odom.pos() += imu.dt * odom.vel() + 0.5 * imu.dt * imu.dt * un_acc;
-        odom.vel() += imu.dt * un_acc;
-        acc_last = imu.acc;
-        gyro_last = imu.gyro;
-        odom.stamp = imu.t;
+        imu.propagation(odom, Ba, Bg, imu_last);
+        imu_last = imu;
     }
     return odom;
+}
+
+void IMUData::propagation(Swarm::Odometry & odom, const Vector3d & Ba, const Vector3d & Bg, const IMUData & imu_last) const {
+    Vector3d un_acc_0 = odom.att() * (imu_last.acc - Ba) - Gravity;
+    Vector3d un_gyr = 0.5 * (imu_last.gyro + this->gyro) - Bg;
+    odom.att() = odom.att() * Utility::deltaQ(un_gyr * this->dt);
+    odom.att().normalize();
+    Vector3d un_acc_1 = odom.att() * (this->acc - Ba) - Gravity;
+    Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
+    odom.pos() += this->dt * odom.vel() + 0.5 * this->dt * this->dt * un_acc;
+    odom.vel() += this->dt * un_acc;
+    odom.stamp = this->t;
 }
 
 }

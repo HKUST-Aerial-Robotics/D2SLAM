@@ -12,6 +12,8 @@ typedef std::lock_guard<std::recursive_mutex> Guard;
 struct VINSFrame;
 
 struct IMUData {
+    static Vector3d Gravity;
+
     double t = 0.0;
     double dt = 0.0;
     Vector3d acc;
@@ -44,6 +46,8 @@ struct IMUData {
         imu.acc.z = acc.z();
         return imu;
     }
+    
+    void propagation(Swarm::Odometry & odom, const Vector3d & Ba, const Vector3d & Bg, const IMUData & imu_last) const;
 };
 
 
@@ -57,7 +61,6 @@ protected:
 public:
     std::vector<IMUData> buf;
     double t_last = 0.0;
-    static Vector3d Gravity;
     
     IMUBuffer(const IMUBuffer & _buf)
         : buf(_buf.buf), t_last(_buf.t_last) {}
@@ -86,7 +89,7 @@ public:
 
     IMUBuffer pop(double t);
 
-    IMUBuffer back(double t) const;
+    IMUBuffer tail(double t) const;
 
     //Return imu buf and last data's index
     std::pair<IMUBuffer, int> periodIMU(double t0, double t1) const;

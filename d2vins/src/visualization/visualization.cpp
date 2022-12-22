@@ -50,6 +50,10 @@ void D2Visualization::init(ros::NodeHandle & nh, D2Estimator * estimator) {
     _nh = &nh;
 }
 
+void D2Visualization::pubIMUProp(const Swarm::Odometry & odom) {
+    imu_prop_pub.publish(odom.toRos());
+}
+
 void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
     if (frame == nullptr) {
         return;
@@ -68,10 +72,6 @@ void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
 void D2Visualization::postSolve() {
     D2Common::Utility::TicToc tic;
     auto & state = _estimator->getState();
-    if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
-        auto imu_prop = _estimator->getImuPropagation().toRos();
-        imu_prop_pub.publish(imu_prop);
-    }
     auto pcl = state.getInitializedLandmarks();
     pcl_pub.publish(toPointCloud(pcl));
     margined_pcl.publish(toPointCloud(_estimator->getMarginedLandmarks(), true));
