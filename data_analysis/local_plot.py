@@ -155,7 +155,8 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
         ax3.grid()
         plt.savefig(output_path+f"est_by_t{i}_attitude.png")
 
-def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=None,outlier_thres=100, outlier_yaw_thres=10, dte=1000000, show=True, figsize=(6, 6), verbose=True):
+def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=None,outlier_thres=100, 
+        outlier_yaw_thres=10, dte=1000000, show=True, figsize=(6, 6), verbose=True, common_time_dt=0.2):
     if verbose:
         if poses_vo is not None:
             pass
@@ -169,9 +170,9 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
     num = 0
 
     for target_id in target_ids:
-        ts = find_common_times(poses_gt[main_id].t, poses_gt[target_id].t) #We need to find the common time period of these two
-        ts = find_common_times(ts, poses_fused[main_id].t, dt=0.2)
-        ts = find_common_times(ts, poses_fused[target_id].t, dt=0.2)
+        ts = find_common_times(poses_gt[main_id].t, poses_gt[target_id].t, dt=common_time_dt) #We need to find the common time period of these two
+        ts = find_common_times(ts, poses_fused[main_id].t, dt=common_time_dt)
+        ts = find_common_times(ts, poses_fused[target_id].t, dt=common_time_dt)
         ts = ts[ts<dte]
         if poses_vo is not None:
             posa_vo =  poses_vo[main_id].resample_pos(ts)
