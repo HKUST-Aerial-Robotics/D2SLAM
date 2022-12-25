@@ -119,12 +119,13 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts,
         }
     }
     if (params->verbose) {
-        printf("[D2VINS::D2LandmarkManager] Found %ld landmarks in %ld frames\n", ret_set.size(), result_landmark_num.size());
+        printf("[D2VINS::D2LandmarkManager] Found %ld(total %ld) landmarks in %ld frames\n", ret_set.size(), landmark_db.size(), 
+                result_landmark_num.size());
         //print the number of landmarks in each frame
-        // for (auto frame_id : current_frames) {
-        //     printf("[D2VINS::D2LandmarkManager] Frame %ld has %d landmarks\n", frame_id, result_landmark_num[frame_id]);
-        // }
     }
+    // for (auto frame_id : current_frames) {
+    //     printf("[D2VINS::D2LandmarkManager] Frame %ld has %d landmarks\n", frame_id, result_landmark_num[frame_id]);
+    // }
     return ret_set;
 }
 
