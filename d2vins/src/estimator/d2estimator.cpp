@@ -694,11 +694,6 @@ void D2Estimator::setupLandmarkFactors() {
 
     for (auto lm : lms) {
         auto lm_id = lm.landmark_id;
-        // if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        //     if (!lm.shouldBeSolve(self_id)) {
-        //         continue;
-        //     }
-        // }
         LandmarkPerFrame firstObs = lm.track[0];
         if (ignore_frames.find(firstObs.frame_id) != ignore_frames.end()) {
             continue;

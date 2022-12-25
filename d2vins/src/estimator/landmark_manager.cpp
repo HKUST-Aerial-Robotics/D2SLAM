@@ -27,31 +27,105 @@ void D2LandmarkManager::addKeyframe(const VisualImageDescArray & images, double 
     }
 }
 
-std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts) const {
-    //Return all avaiable measurements
-    const Guard lock(state_lock);
-    std::vector<std::pair<LandmarkIdType, int>> landmark_scores;
-    std::vector<LandmarkPerId> ret;
-    for (auto & it: landmark_db) {
-        auto & lm = it.second;
-        if (lm.track.size() >= params->landmark_estimate_tracks && 
-            lm.flag >= LandmarkFlag::INITIALIZED) {
-            //Note we also use "outlier" tracks but with a much smaller score
-            int score = lm.scoreForSolve(params->self_id);
-            landmark_scores.push_back(std::make_pair(lm.landmark_id, score));
+// std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts) const {
+//     //Return all avaiable measurements
+//     const Guard lock(state_lock);
+//     std::vector<std::pair<LandmarkIdType, int>> landmark_scores;
+//     std::vector<LandmarkPerId> ret;
+//     for (auto & it: landmark_db) {
+//         auto & lm = it.second;
+//         if (lm.track.size() >= params->landmark_estimate_tracks && 
+//             lm.flag >= LandmarkFlag::INITIALIZED) {
+//             //Note we also use "outlier" tracks but with a much smaller score
+//             int score = lm.scoreForSolve(params->self_id);
+//             landmark_scores.push_back(std::make_pair(lm.landmark_id, score));
+//         }
+//     }
+//     // sort to get the best max_pts measurements
+//     std::sort(landmark_scores.begin(), landmark_scores.end(), 
+//         [](const std::pair<LandmarkIdType, int> & a, const std::pair<LandmarkIdType, int> & b) {
+//             return a.second > b.second;
+//     });
+//     // return the best max_pts measurements
+//     for (int i = 0; i < landmark_scores.size() && i < max_pts; i++) {
+//         // printf("[D2VINS::D2LandmarkManager] Available landmark %ld score %d\n", landmark_scores[i].first, landmark_scores[i].second);
+//         ret.push_back(landmark_db.at(landmark_scores[i].first));
+//     }
+//     return ret;
+// }
+
+std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts, const std::set<FrameIdType> & current_frames) const {
+    std::map<FrameIdType, int> current_landmark_num;
+    std::map<FrameIdType, int> result_landmark_num;
+    std::map<FrameIdType, std::set<D2Common::LandmarkIdType>> current_assoicated_landmarks;
+    bool exit = false;
+    std::set<D2Common::LandmarkIdType> ret_ids_set;
+    std::vector<LandmarkPerId> ret_set;
+    for (auto frame_id : current_frames) {
+        current_landmark_num[frame_id] = 0;
+        result_landmark_num[frame_id] = 0;
+    }
+    while (!exit) {
+        //found the frame with minimum landmarks in current frames
+        auto it = min_element(current_landmark_num.begin(), current_landmark_num.end(),
+            [](decltype(current_landmark_num)::value_type& l, decltype(current_landmark_num)::value_type& r) -> 
+                bool { return l.second < r.second; });
+        auto frame_id = it->first;
+        //Add the a landmark in its related landmarks with highest score
+        if (related_landmarks.find(frame_id) == related_landmarks.end()) {
+            //Remove the frame from current_landmark_num
+            current_landmark_num.erase(frame_id);
+            continue;
+        }
+        auto frame_related_landmarks = related_landmarks.at(frame_id);
+        //Find the landmark with highest score
+        LandmarkIdType lm_best;
+        double score_best = -10000;
+        bool found = false;
+        for (auto & itre : frame_related_landmarks) {
+            LandmarkIdType lm_id = itre.first;
+            if (landmark_db.find(lm_id) == landmark_db.end() || ret_ids_set.find(lm_id) != ret_ids_set.end()) {
+                //The landmark is not in the database or has been added
+                continue;
+            }
+            auto & lm = landmark_db.at(lm_id);
+            if (lm.track.size() >= params->landmark_estimate_tracks && 
+                lm.flag >= LandmarkFlag::INITIALIZED) {
+                if (lm.scoreForSolve(params->self_id) > score_best) {
+                    score_best = lm.scoreForSolve(params->self_id);
+                    lm_best = lm_id;
+                    found = true;
+                }
+            }
+        }
+        if (found) {
+            auto & lm = landmark_db.at(lm_best);
+            ret_set.emplace_back(lm);
+            ret_ids_set.insert(lm_best);
+            //Add the frame to current_landmark_num
+            for (auto track: lm.track) {
+                auto frame_id = track.frame_id;
+                current_assoicated_landmarks[frame_id].insert(lm_best);
+                //We count the landmark numbers, but not the measurements
+                current_landmark_num[frame_id] = current_assoicated_landmarks[frame_id].size();
+                result_landmark_num[frame_id] = current_landmark_num[frame_id];
+            }
+            if (ret_set.size() >= max_pts) {
+                exit = true;
+            }
+        } else {
+            //Remove the frame from current_landmark_num
+            current_landmark_num.erase(frame_id);
         }
     }
-    // sort to get the best max_pts measurements
-    std::sort(landmark_scores.begin(), landmark_scores.end(), 
-        [](const std::pair<LandmarkIdType, int> & a, const std::pair<LandmarkIdType, int> & b) {
-            return a.second > b.second;
-    });
-    // return the best max_pts measurements
-    for (int i = 0; i < landmark_scores.size() && i < max_pts; i++) {
-        // printf("[D2VINS::D2LandmarkManager] Available landmark %ld score %d\n", landmark_scores[i].first, landmark_scores[i].second);
-        ret.push_back(landmark_db.at(landmark_scores[i].first));
+    if (params->verbose) {
+        printf("[D2VINS::D2LandmarkManager] Found %ld landmarks in %ld frames\n", ret_set.size(), result_landmark_num.size());
+        //print the number of landmarks in each frame
+        // for (auto frame_id : current_frames) {
+        //     printf("[D2VINS::D2LandmarkManager] Frame %ld has %d landmarks\n", frame_id, result_landmark_num[frame_id]);
+        // }
     }
-    return ret;
+    return ret_set;
 }
 
 double * D2LandmarkManager::getLandmarkState(LandmarkIdType landmark_id) const {
@@ -199,8 +273,8 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState * state) {
     }
 
     if (params->debug_print_states) {
-        printf("[D2VINS::D2LandmarkManager] Total %d initialized %d avail %d landmarks\n", 
-            landmark_db.size(), inited_count, availableMeasurements(10000).size());
+        printf("[D2VINS::D2LandmarkManager] Total %d initialized %d\n", 
+            landmark_db.size(), inited_count);
     }
 }
 

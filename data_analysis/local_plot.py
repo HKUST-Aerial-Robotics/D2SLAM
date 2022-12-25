@@ -250,6 +250,14 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
             plt.legend()
             if target_id == target_ids[0]:
                 plt.grid()
+            # Plot the histogram of relative pose of dp_fused in 3d
+            plt.figure(f"Relative Pose Hist {main_id}->{target_id}", figsize=figsize)
+            plt.hist2d(dp_fused[:, 0], dp_fused[:, 1], bins=10, range=[[-1, 1], [-1, 1]])
+            plt.colorbar()
+            plt.xlabel("X")
+            plt.ylabel("Y")
+            plt.grid()
+
 
             # fig = plt.figure("Relative Pose PolarErr", figsize=figsize)
             # fig.suptitle("Relative Pose PolarErr")
