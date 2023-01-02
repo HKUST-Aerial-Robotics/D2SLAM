@@ -458,7 +458,7 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
             // ROS_WARN("[SWARM_LOOP] landmark_id %d not found in landmark_db", landmark_id);
             continue;
         }
-        if (landmark_db.at(landmark_id).flag != LandmarkFlag::ESTIMATED) {
+        if (landmark_db.at(landmark_id).flag != LandmarkFlag::INITIALIZED) {
                 // ROS_WARN("Landmark %ld is not estimated", landmark_id);
             continue;
         }
@@ -677,7 +677,7 @@ void LoopDetector::updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPer
         if (landmark_db.find(landmark_id) == landmark_db.end()) {
             landmark_db[landmark_id] = it.second;
         } else {
-            if (it.second.flag == LandmarkFlag::ESTIMATED) {
+            if (it.second.flag == LandmarkFlag::INITIALIZED) {
                 landmark_db[landmark_id] = it.second;
             }
         }
