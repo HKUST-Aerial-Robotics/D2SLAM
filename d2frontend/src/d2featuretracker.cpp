@@ -368,11 +368,14 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     TrackReport report;
     if (prev_lk_info.find(frame.camera_index) == prev_lk_info.end()) {
         prev_lk_info[frame.camera_index] = LKImageInfo();
+        cv::cuda::GpuMat image_cuda(frame.raw_image);
+        prev_lk_info[frame.camera_index].pyr = buildImagePyramid(image_cuda);
     }
     auto cur_lk_pts = prev_lk_info[frame.camera_index].lk_pts;
     auto cur_lk_ids = prev_lk_info[frame.camera_index].lk_ids;
     if (!cur_lk_ids.empty())
-        cur_lk_pts = opticalflowTrack(frame.raw_image, prev_lk_info[frame.camera_index].image, cur_lk_pts, cur_lk_ids);
+        cur_lk_pts = opticalflowTrackPyr(frame.raw_image, prev_lk_info[frame.camera_index].pyr, cur_lk_pts, cur_lk_ids, 
+            TrackLRType::WHOLE_IMG_MATCH, true);
     auto cur_all_pts = frame.landmarks2D();
     cur_all_pts.insert(cur_all_pts.end(), cur_lk_pts.begin(), cur_lk_pts.end());
     for (int i = 0; i < cur_lk_pts.size(); i++) {
@@ -496,9 +499,11 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
     TrackReport report;
     auto cur_lk_pts = prev_lk_info[left_frame.camera_index].lk_pts;
     auto cur_lk_ids = prev_lk_info[left_frame.camera_index].lk_ids;
+    auto cur_lk_pyr = prev_lk_info[left_frame.camera_index].pyr;
     assert(left_frame.frame_id == prev_lk_info[left_frame.camera_index].frame_id);
-    if (!cur_lk_ids.empty())
-        cur_lk_pts = opticalflowTrack(right_frame.raw_image, left_frame.raw_image, cur_lk_pts, cur_lk_ids, type);
+    if (!cur_lk_ids.empty()) {
+        cur_lk_pts = opticalflowTrackPyr(right_frame.raw_image, cur_lk_pyr, cur_lk_pts, cur_lk_ids, type, false);
+    }
     // printf("[trackLK] indices %d<->%d track type %d LK points: %lu\n", left_frame.camera_index, right_frame.camera_index, type, cur_lk_pts.size());
     for (int i = 0; i < cur_lk_pts.size(); i++) {
         auto ret = createLKLandmark(right_frame, cur_lk_pts[i], cur_lk_ids[i]);

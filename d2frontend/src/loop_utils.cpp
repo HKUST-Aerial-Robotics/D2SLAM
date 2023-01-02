@@ -13,6 +13,8 @@
 #include <d2frontend/loop_detector.h>
 #include <opencv2/cudaoptflow.hpp>
 #include <opencv2/cudaimgproc.hpp>
+#include <opencv2/cudawarping.hpp>
+
 
 using namespace std::chrono; 
 using namespace D2Common;
@@ -22,6 +24,7 @@ using D2Common::Utility::TicToc;
 #define WIN_SIZE cv::Size(21, 21)
 
 namespace D2FrontEnd {
+
 cv::Mat getImageFromMsg(const sensor_msgs::CompressedImageConstPtr &img_msg, int flag) {
     return cv::imdecode(img_msg->data, flag);
 }
@@ -350,6 +353,104 @@ std::vector<cv::Point2f> opticalflowTrack(const cv::Mat & cur_img, const cv::Mat
     return cur_pts;
 } 
 
+std::vector<cv::Point2f> opticalflowTrackPyr(const cv::Mat & cur_img, std::vector<cv::cuda::GpuMat> & prev_pyr, 
+        std::vector<cv::Point2f> & prev_pts, std::vector<LandmarkIdType> & ids, TrackLRType type, bool update_pyr) {
+    if (prev_pts.size() == 0) {
+        return std::vector<cv::Point2f>();
+    }
+    TicToc tic;
+    std::vector<uchar> status;
+    std::vector<cv::Point2f> cur_pts;
+    float move_cols = cur_img.cols*90.0/params->undistort_fov; //slightly lower than 0.5 cols when fov=200
+
+    if (prev_pts.size() == 0) {
+        return std::vector<cv::Point2f>();
+    }
+
+    if (type == WHOLE_IMG_MATCH) {
+        cur_pts = prev_pts;
+    } else  {
+        status.resize(prev_pts.size());
+        std::fill(status.begin(), status.end(), 0);
+        if (type == LEFT_RIGHT_IMG_MATCH) {
+            for (unsigned int i = 0; i < prev_pts.size(); i++) {
+                auto pt = prev_pts[i];
+                if (pt.x < cur_img.cols - move_cols) {
+                    pt.x += move_cols;
+                    status[i] = 1;
+                    cur_pts.push_back(pt);
+                }
+            }
+        } else {
+            for (unsigned int i = 0; i < prev_pts.size(); i++) {
+                auto pt = prev_pts[i];
+                if (pt.x >= move_cols) {
+                    pt.x -= move_cols;
+                    status[i] = 1;
+                    cur_pts.push_back(pt);
+                }
+            }
+        }
+        reduceVector(prev_pts, status);
+        reduceVector(ids, status);
+    }
+    status.resize(0);
+    if (cur_pts.size() == 0) {
+        return std::vector<cv::Point2f>();
+    }
+    std::vector<float> err;
+    std::vector<uchar> reverse_status;
+    std::vector<cv::Point2f> reverse_pts;
+
+    cv::cuda::GpuMat gpu_cur_img(cur_img);
+    cv::cuda::GpuMat gpu_prev_pts(prev_pts);
+    cv::cuda::GpuMat gpu_cur_pts(cur_pts);
+    cv::cuda::GpuMat gpu_status;
+    cv::cuda::GpuMat reverse_gpu_status;
+    auto cur_pyr = buildImagePyramid(gpu_cur_img);
+    cv::Ptr<cv::cuda::SparsePyrLKOpticalFlow> d_pyrLK_sparse = cv::cuda::SparsePyrLKOpticalFlow::create(WIN_SIZE, PYR_LEVEL, 30, true);
+    d_pyrLK_sparse->calc(prev_pyr, cur_pyr, gpu_prev_pts, gpu_cur_pts, gpu_status);
+    gpu_status.download(status);
+    gpu_cur_pts.download(cur_pts);
+    reverse_pts = cur_pts;
+    for (unsigned int i = 0; i < prev_pts.size(); i++) {
+        auto & pt = reverse_pts[i];
+        if (type == LEFT_RIGHT_IMG_MATCH && status[i] == 1) {
+            pt.x -= move_cols;
+        }
+        if (type == RIGHT_LEFT_IMG_MATCH && status[i] == 1) {
+            pt.x += move_cols;
+        }
+    }
+    cv::cuda::GpuMat reverse_gpu_pts(reverse_pts);
+    d_pyrLK_sparse->calc(cur_pyr, prev_pyr, gpu_cur_pts, reverse_gpu_pts, reverse_gpu_status);
+    reverse_gpu_pts.download(reverse_pts);
+    reverse_gpu_status.download(reverse_status);
+
+    for(size_t i = 0; i < status.size(); i++)
+    {
+        if(status[i] && reverse_status[i] && cv::norm(prev_pts[i] - reverse_pts[i]) <= 0.5)
+        {
+            status[i] = 1;
+        }
+        else
+            status[i] = 0;
+    }
+
+    for (int i = 0; i < int(cur_pts.size()); i++){
+        if (status[i] && !inBorder(cur_pts[i], cur_img.size())) {
+            status[i] = 0;
+        }
+    }   
+    reduceVector(prev_pts, status);
+    reduceVector(cur_pts, status);
+    reduceVector(ids, status);
+    if (update_pyr) {
+        prev_pyr = cur_pyr;
+    }
+    return cur_pts;
+} 
+
 
 void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts, bool enable_cuda) {
     int lack_up_top_pts = require_pts - static_cast<int>(cur_pts.size());
@@ -543,4 +644,20 @@ int computeRelativePosePnPnonCentral(const std::vector<Vector3d> & lm_positions_
     return success;
 }
 
+
+std::vector<cv::cuda::GpuMat> buildImagePyramid(const cv::cuda::GpuMat& prevImg, int maxLevel_) {
+    std::vector<cv::cuda::GpuMat> prevPyr;
+    prevPyr.resize(maxLevel_ + 1);
+
+    int cn = prevImg.channels();
+
+    CV_Assert(cn == 1 || cn == 3 || cn == 4);
+
+    prevPyr[0] = prevImg;
+    for (int level = 1; level <= maxLevel_; ++level) {
+        cv::cuda::pyrDown(prevPyr[level - 1], prevPyr[level]);
+    }
+
+    return prevPyr;
+}
 }

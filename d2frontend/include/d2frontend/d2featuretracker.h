@@ -69,6 +69,7 @@ struct LKImageInfo {
     std::vector<cv::Point2f> lk_pts;
     std::vector<LandmarkIdType> lk_ids;
     cv::Mat image;
+    std::vector<cv::cuda::GpuMat> pyr;
 };
 
 class SuperGlueOnnx;
