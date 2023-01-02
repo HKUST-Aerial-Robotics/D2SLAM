@@ -193,9 +193,12 @@ struct VisualImageDesc {
                 img_desc.landmark_scores_size = landmark_scores.size();
                 img_desc.landmark_scores = landmark_scores;
             }
-            img_desc.landmark_num = landmarks.size();
+            img_desc.landmark_num = 0;
             for (auto landmark: landmarks) {
-                img_desc.landmarks.emplace_back(landmark.toLCM());
+                if (landmark.type == LandmarkType::SuperPointLandmark) { // We only send SuperPointLandmarks
+                    img_desc.landmarks.emplace_back(landmark.toLCM());
+                    img_desc.landmark_num++;
+                }
             }
         } else {
             img_desc.landmark_num = 0;
