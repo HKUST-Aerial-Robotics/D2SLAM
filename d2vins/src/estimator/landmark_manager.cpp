@@ -67,6 +67,9 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts,
     }
     while (!exit) {
         //found the frame with minimum landmarks in current frames
+        if (current_landmark_num.size() == 0) {
+            exit = true;
+        }
         auto it = min_element(current_landmark_num.begin(), current_landmark_num.end(),
             [](decltype(current_landmark_num)::value_type& l, decltype(current_landmark_num)::value_type& r) -> 
                 bool { return l.second < r.second; });
