@@ -25,6 +25,7 @@ struct D2FTConfig {
     bool write_to_file = false;
     bool check_homography = false;
     bool enable_lk_optical_flow = true;
+    bool lk_use_fast = false;
     double ransacReprojThreshold = 10;
     double max_pts_velocity_time=0.3;
     int remote_min_match_num = 30;

@@ -373,9 +373,15 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     }
     auto cur_lk_pts = prev_lk_info[frame.camera_index].lk_pts;
     auto cur_lk_ids = prev_lk_info[frame.camera_index].lk_ids;
-    if (!cur_lk_ids.empty())
+    if (!cur_lk_ids.empty()) {
+        int prev_lk_num = cur_lk_ids.size();
         cur_lk_pts = opticalflowTrackPyr(frame.raw_image, prev_lk_info[frame.camera_index].pyr, cur_lk_pts, cur_lk_ids, 
             TrackLRType::WHOLE_IMG_MATCH, true);
+        if (params->verbose) {
+            printf("[D2FeatureTracker::trackLK] track %d LK points, %d lost, track rate %.1f%%\n", 
+                prev_lk_num, prev_lk_num - cur_lk_pts.size(), cur_lk_pts.size() * 100.0 / prev_lk_num);
+        }
+    }
     auto cur_all_pts = frame.landmarks2D();
     cur_all_pts.insert(cur_all_pts.end(), cur_lk_pts.begin(), cur_lk_pts.end());
     for (int i = 0; i < cur_lk_pts.size(); i++) {
@@ -405,7 +411,11 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     //Discover new points.
     std::vector<cv::Point2f> n_pts;
     if (!frame.raw_image.empty()) {
-        detectPoints(frame.raw_image, n_pts, cur_all_pts, params->total_feature_num);
+        TicToc t_det;
+        detectPoints(frame.raw_image, n_pts, cur_all_pts, params->total_feature_num, true, _config.lk_use_fast);
+        if (params->enable_perf_output) {
+            printf("[D2FeatureTracker::trackLK] detect %ld points in %.2fms\n", n_pts.size(), t_det.toc());
+        }
     } else {
         printf("[D2FeatureTracker::trackLK] empty image\n");
     }

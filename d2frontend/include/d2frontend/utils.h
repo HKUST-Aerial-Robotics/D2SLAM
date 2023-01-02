@@ -36,7 +36,8 @@ cv::Vec3b extractColor(const cv::Mat &img, cv::Point2f p);
 cv::Point2f rotate_pt_norm2d(cv::Point2f pt, Eigen::Quaterniond q);
 
 
-void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts, bool enable_cuda=true);
+void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts, 
+    bool enable_cuda=true, bool use_fast=false, int fast_rows=3, int fast_cols=4);
 
 std::vector<cv::cuda::GpuMat> buildImagePyramid(const cv::cuda::GpuMat& prevImg, int maxLevel_=3);
 

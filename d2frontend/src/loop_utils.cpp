@@ -14,7 +14,7 @@
 #include <opencv2/cudaoptflow.hpp>
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/cudawarping.hpp>
-
+#include <opencv2/cudafeatures2d.hpp>
 
 using namespace std::chrono; 
 using namespace D2Common;
@@ -24,6 +24,8 @@ using D2Common::Utility::TicToc;
 #define WIN_SIZE cv::Size(21, 21)
 
 namespace D2FrontEnd {
+
+std::vector<cv::Point2f> detectFastByRegion(cv::InputArray _img, cv::InputArray _mask, int features, int cols, int rows);
 
 cv::Mat getImageFromMsg(const sensor_msgs::CompressedImageConstPtr &img_msg, int flag) {
     return cv::imdecode(img_msg->data, flag);
@@ -452,31 +454,41 @@ std::vector<cv::Point2f> opticalflowTrackPyr(const cv::Mat & cur_img, std::vecto
 } 
 
 
-void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, int require_pts, bool enable_cuda) {
+void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::vector<cv::Point2f> & cur_pts, 
+        int require_pts, bool enable_cuda, bool use_fast, int fast_rows, int fast_cols) {
     int lack_up_top_pts = require_pts - static_cast<int>(cur_pts.size());
     cv::Mat mask;
     if (params->enable_perf_output) {
         ROS_INFO("Lost %d pts; Require %d will detect %d", lack_up_top_pts, require_pts, lack_up_top_pts > require_pts/4);
     }
+    std::vector<cv::Point2f> n_pts_tmp;
     if (lack_up_top_pts > require_pts/4) {
+        int num_to_detect = lack_up_top_pts;
+        if (cur_pts.size() > 0) {
+            //We have some points, so try to detect slightly more points to avoid overlap with current points
+            num_to_detect = lack_up_top_pts * 2;
+        }
         cv::Mat d_prevPts;
-        if (enable_cuda) {
-            cv::Ptr<cv::cuda::CornersDetector> detector = cv::cuda::createGoodFeaturesToTrackDetector(
-                img.type(), lack_up_top_pts, 0.01, params->feature_min_dist);
-            cv::cuda::GpuMat d_prevPts_gpu;
-            cv::cuda::GpuMat img_cuda(img);
-            detector->detect(img_cuda, d_prevPts_gpu);
-            d_prevPts_gpu.download(d_prevPts);
+        if (use_fast) {
+            n_pts_tmp = detectFastByRegion(img, mask, num_to_detect, fast_rows, fast_cols);
         } else {
-            cv::goodFeaturesToTrack(img, d_prevPts, lack_up_top_pts, 0.01, params->feature_min_dist, mask);
-        }
-        std::vector<cv::Point2f> n_pts_tmp;
-        // std::cout << "d_prevPts size: "<< d_prevPts.size()<<std::endl;
-        if(!d_prevPts.empty()) {
-            n_pts_tmp = cv::Mat_<cv::Point2f>(cv::Mat(d_prevPts));
-        }
-        else {
-            n_pts_tmp.clear();
+            //Use goodFeaturesToTrack
+            if (enable_cuda) {
+                cv::Ptr<cv::cuda::CornersDetector> detector = cv::cuda::createGoodFeaturesToTrackDetector(
+                    img.type(), num_to_detect, 0.01, params->feature_min_dist);
+                cv::cuda::GpuMat d_prevPts_gpu;
+                cv::cuda::GpuMat img_cuda(img);
+                detector->detect(img_cuda, d_prevPts_gpu);
+                d_prevPts_gpu.download(d_prevPts);
+            } else {
+                cv::goodFeaturesToTrack(img, d_prevPts, num_to_detect, 0.01, params->feature_min_dist, mask);
+            }
+            if(!d_prevPts.empty()) {
+                n_pts_tmp = cv::Mat_<cv::Point2f>(cv::Mat(d_prevPts));
+            }
+            else {
+                n_pts_tmp.clear();
+            }
         }
         n_pts.clear();
         std::vector<cv::Point2f> all_pts = cur_pts;
@@ -492,12 +504,52 @@ void detectPoints(const cv::Mat & img, std::vector<cv::Point2f> & n_pts, std::ve
                 n_pts.push_back(pt);
                 all_pts.push_back(pt);
             }
+            if (n_pts.size() >= lack_up_top_pts) {
+                break;
+            }
         }
-    }
-    else {
+    } else {
         n_pts.clear();
     }
 }  
+
+std::vector<cv::Point2f> detectFastByRegion(cv::InputArray _img, cv::InputArray _mask, int features, int cols, int rows) {
+    int small_width = _img.cols() / cols;
+    int small_height = _img.rows() / rows;
+    int num_features = ceil((double)features*1.5/ ((double) cols * rows));
+    auto fast = cv::cuda::FastFeatureDetector::create(10, true, cv::FastFeatureDetector::TYPE_9_16, features);
+    cv::cuda::GpuMat gpu_img(_img);
+    std::vector<cv::KeyPoint> total_kpts;
+    for (int i = 0; i < cols; i ++) {
+        for (int j = 0; j < rows; j ++) {
+            std::vector<cv::KeyPoint> kpts;
+            cv::Rect roi(small_width*i, small_height*j, small_width, small_height);
+            fast->detect(gpu_img(roi), kpts);
+            // printf("Detect %d features in region %d %d\n", kpts.size(), i, j);
+            for (auto kp : kpts) {
+                kp.pt.x = kp.pt.x + small_width*i;
+                kp.pt.y = kp.pt.y + small_height*j;
+                total_kpts.push_back(kp);
+            }
+        }
+    }
+    //Sort the keypoints by confidence
+    std::vector<cv::Point2f> ret;
+    if (total_kpts.size() == 0) {
+        return ret;
+    }
+    std::sort(total_kpts.begin(), total_kpts.end(), [](const cv::KeyPoint & a, const cv::KeyPoint & b) {
+        return a.response > b.response;
+    });
+    //Return the top features
+    for (int i = 0; i < total_kpts.size(); i ++) {
+        ret.push_back(total_kpts[i].pt);
+        if (ret.size() >= features) {
+            break;
+        }
+    }
+    return ret;
+}
 
 bool pnp_result_verify(bool pnp_success, int inliers, double rperr, const Swarm::Pose & DP_old_to_new) {
     bool success = pnp_success;

@@ -325,8 +325,10 @@ void D2LandmarkManager::outlierRejection(const D2EstimatorState * state, const s
                 if (reproj_err*params->focal_length > params->landmark_outlier_threshold) {
                     remove_count ++;
                     lm.flag = LandmarkFlag::OUTLIER;
-                    printf("[outlierRejection] remove LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f reproj_error %.2f\n",
-                        lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z(), reproj_err*params->focal_length);
+                    if (params->verbose) {
+                        printf("[outlierRejection] remove LM %d inv_dep/dep %.2f/%.2f pos %.2f %.2f %.2f reproj_error %.2f\n",
+                            lm_id, *landmark_state[lm_id], 1./(*landmark_state[lm_id]), lm.position.x(), lm.position.y(), lm.position.z(), reproj_err*params->focal_length);
+                    }
                 }
             }
         }
