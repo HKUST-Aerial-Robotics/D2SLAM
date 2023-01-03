@@ -4,6 +4,7 @@
 #include <d2common/d2vinsframe.h>
 #include <d2frontend/utils.h>
 #include <d2frontend/loop_cam.h>
+#include <opencv2/core/cuda.hpp>
 
 #define MIN_HOMOGRAPHY 6
 using D2Common::Utility::TicToc;

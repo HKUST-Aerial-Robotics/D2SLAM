@@ -33,15 +33,19 @@
 			"path": "../../../data"
 		},
 		{
-			"name": "swarm_msgs",
-			"path": "../swarm_msgs/swarm_msgs"
-		},
-		{
-			"name": "ceres-solver",
-			"path": "../../../source/ceres-solver"
-		},
-		{
 			"path": "../../../Swarm_Docker"
+		},
+		{
+			"path": "../../../SwarmConfig"
+		},
+		{
+			"path": "../swarm_pilot"
+		},
+		{
+			"path": "../swarmtal_control"
+		},
+		{
+			"path": "../swarm_msgs"
 		}
 	],
 	"settings": {
