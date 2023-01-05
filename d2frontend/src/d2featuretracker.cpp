@@ -225,7 +225,7 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
             report.compose(trackRemote(frames.images[dir_cur], prev.images[dir_prev], use_motion_predict, frames.pose_drone));
         }
     }
-    if (params->show) {
+    if (params->show && params->send_whole_img_desc && params->send_img) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
             drawRemote(frames, report);
         }
