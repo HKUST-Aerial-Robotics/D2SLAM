@@ -4,6 +4,7 @@
 #include <d2common/d2vinsframe.h>
 #include <d2frontend/utils.h>
 #include <d2frontend/loop_cam.h>
+#include <opencv2/core/cuda.hpp>
 
 #define MIN_HOMOGRAPHY 6
 using D2Common::Utility::TicToc;
@@ -324,7 +325,7 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame, const Swarm::Pose &
         std::vector<int> ids_b_to_a;
         MatchLocalFeatureParams match_param;
         match_param.enable_superglue = _config.enable_superglue_local;
-        match_param.enable_prediction = true;
+        match_param.enable_prediction = _config.enable_motion_prediction_local;
         match_param.pose_a = previous.pose_drone;
         match_param.pose_b_prediction = motion_prediction;
         match_param.search_radius = search_radius;
