@@ -44,7 +44,7 @@ protected:
 
     int getFrameIdx(FrameIdType _frame_id) {
         if (frame_id_to_idx.find(_frame_id) == frame_id_to_idx.end()) {
-            printf("[getFrameIdx@%d] Frame id %d not found in frame_id_to_idx\n", self_id, _frame_id);
+            printf("[getFrameIdx@%d] Frame id %ld not found in frame_id_to_idx\n", self_id, _frame_id);
         }
         auto idx =  frame_id_to_idx.at(_frame_id);
         return idx;
