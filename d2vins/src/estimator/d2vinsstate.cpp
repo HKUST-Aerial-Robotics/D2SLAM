@@ -266,17 +266,16 @@ std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames() {
         int require_sld_win_size = params->max_sld_win_size;
         int sld_win_size = self_sld_win.size();
         //We remove the second last non keyframe
-        if (sld_win_size > require_sld_win_size && !self_sld_win[sld_win_size - 2]->is_keyframe) {
-            //Note in distributed mode, after remove the size should be max_sld_win_size
-            clear_frames.insert(self_sld_win[sld_win_size - 2]->frame_id);
+        if (sld_win_size > require_sld_win_size && !self_sld_win[sld_win_size - 3]->is_keyframe) {
+            clear_frames.insert(self_sld_win[sld_win_size - 3]->frame_id);
             count_removed = 1;
             //Here we attach the intergation base of the remove frame to the last frame
-            IntegrationBase * last_pre_int = self_sld_win[sld_win_size - 1]->pre_integrations;
-            auto second_last_pre = self_sld_win[sld_win_size - 2]->pre_integrations;
-            second_last_pre->push_back(last_pre_int);
-            self_sld_win[sld_win_size - 1]->pre_integrations = second_last_pre;
-            self_sld_win[sld_win_size - 1]->prev_frame_id = self_sld_win[sld_win_size - 2]->prev_frame_id;
-            self_sld_win[sld_win_size - 2]->pre_integrations = nullptr; //To avoid delete
+            IntegrationBase * last_pre_int = self_sld_win[sld_win_size - 2]->pre_integrations;
+            auto remove_pre = self_sld_win[sld_win_size - 3]->pre_integrations;
+            remove_pre->push_back(last_pre_int);
+            self_sld_win[sld_win_size - 2]->pre_integrations = remove_pre;
+            self_sld_win[sld_win_size - 2]->prev_frame_id = self_sld_win[sld_win_size - 3]->prev_frame_id;
+            self_sld_win[sld_win_size - 3]->pre_integrations = nullptr; //To avoid delete
             //then we delete the useless last_pre_int
             delete last_pre_int;
         }
