@@ -47,6 +47,10 @@ void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
 }
 
 void D2Estimator::inputImu(IMUData data) {
+    IMUData last = data;
+    if (imu_bufs[self_id].size() > 0 ) {
+        last = imu_bufs[self_id].buf.back();
+    }
     imu_bufs[self_id].add(data);
     if (!initFirstPoseFlag || solve_count == 0) {
         return;
@@ -54,7 +58,7 @@ void D2Estimator::inputImu(IMUData data) {
     //Propagation current with last Bias.
     auto last_frame = state.lastFrame(self_id);
     std::lock_guard<std::recursive_mutex> lock(imu_prop_lock);
-    // data.propagation(last_prop_odom[params->self_id], last_frame.Ba, last_frame.Bg);
+    data.propagation(last_prop_odom[params->self_id], last_frame.Ba, last_frame.Bg, last);
     visual.pubIMUProp(last_prop_odom[params->self_id]);
 }
 
