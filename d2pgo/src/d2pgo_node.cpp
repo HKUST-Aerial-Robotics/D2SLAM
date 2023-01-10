@@ -72,7 +72,7 @@ protected:
             }
             
         }
-        printf("[D2PGONode@%d] pubTrajs, %ld trajs\n", config.self_id, trajs.size());
+        // printf("[D2PGONode@%d] pubTrajs, %ld trajs\n", config.self_id, trajs.size());
         pub_count++;
     }
 
@@ -109,10 +109,12 @@ protected:
 
     void solverTimerCallback(const ros::TimerEvent & event) {
         bool succ;
-        if (multi)
-            succ = pgo->solve_multi();
-        else 
+        if (multi) {
+            succ = pgo->solve_multi();            
+        }
+        else {
             succ = pgo->solve_single();
+        }
         if (succ) { 
             auto trajs = pgo->getOptimizedTrajs();
             pubTrajs(trajs);
@@ -179,17 +181,13 @@ protected:
         config.enable_rotation_initialization = false;
         config.enable_gravity_prior = (int)fsSettings["enable_gravity_prior"];
         config.rot_init_config.gravity_sqrt_info = fsSettings["gravity_sqrt_info"];
-        // if (config.mode == PGO_MODE_NON_DIST) {
-        //     config.perturb_mode = false;
-        // } else {
-        //     config.perturb_mode = true;
-        // }
         config.perturb_mode = true;
-        int estimation_mode = (int) fsSettings["estimation_mode"];
-        if (estimation_mode == 0) {
+        if (config.mode == PGO_MODE::PGO_MODE_NON_DIST) {
             multi = false;
+            printf("[D2PGO] In single mode\n");
         } else {
             multi = true;
+            printf("[D2PGO] In mulyi mode\n");
         }
     }
 public:
