@@ -73,6 +73,7 @@ struct D2FrontendParams {
     std::string vins_config_path;
     std::string _lcm_uri = "0.0.0.0";
     CameraConfig camera_configuration;
+    int min_receive_images = 2;
 
     D2Common::PGO_MODE pgo_mode;
 

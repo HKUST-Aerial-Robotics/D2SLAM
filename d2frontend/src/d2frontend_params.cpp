@@ -149,12 +149,16 @@ namespace D2FrontEnd {
 
         if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
             loopdetectorconfig->MAX_DIRS = 1;
+            min_receive_images = 2;
         } else if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
             loopdetectorconfig->MAX_DIRS = 4;
+            min_receive_images = 2;
         } else if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             loopdetectorconfig->MAX_DIRS = 1;
+            min_receive_images = 1;
         } else if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE)  {
             loopdetectorconfig->MAX_DIRS = 4;
+            min_receive_images = 4;
         } else {
             ROS_ERROR("[D2Frontend] Camera configuration %d not implement yet.", camera_configuration);
             exit(-1);

@@ -338,7 +338,7 @@ void LoopNet::scanRecvPackets() {
         }
 
         if(frame_header_recv_time.find(frame_id) != frame_header_recv_time.end() &&
-                (tnow - frame_header_recv_time[frame_id] > recv_period || count_images >= params->loopdetectorconfig->MIN_DIRECTION_LOOP)) {
+                (tnow - frame_header_recv_time[frame_id] > recv_period || count_images >= params->min_receive_images)) {
             finish_recv_frames.push_back(frame_id);
         }
     }

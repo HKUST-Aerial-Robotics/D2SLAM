@@ -110,7 +110,7 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
 
 void D2Frontend::addToLoopQueue(const VisualImageDescArray & viokf) {
     if (params->enable_loop) {
-        // lock_guard guard(loop_lock);
+        lock_guard guard(loop_lock);
         Utility::TicToc tic;
         loop_queue.push(viokf);
     }
@@ -129,7 +129,7 @@ void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc) {
     if (params->enable_loop) {
         if (frame_desc.matched_frame < 0) {
                 printf("[D2Frontend Remote image %d is not matched, directly pass to detector\n", frame_desc.frame_id);
-            loop_detector->processImageArray(frame_desc);
+            addToLoopQueue(frame_desc);
         } else {
             //We need to wait the matched frame is added to loop detector.
             VisualImageDescArray _frame_desc = frame_desc;
@@ -139,7 +139,7 @@ void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc) {
                     if (loop_detector->hasFrame(frame.matched_frame)) {
                         printf("[D2Frontend] frame %ld waited %d us for matched frame %d\n", frame.frame_id, count * 1000, 
                                 frame.matched_frame);
-                        loop_detector->processImageArray(frame);
+                        addToLoopQueue(frame);
                         break;
                     }
                     usleep(1000);
