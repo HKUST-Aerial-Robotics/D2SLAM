@@ -329,6 +329,7 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame, const Swarm::Pose &
         match_param.pose_a = previous.pose_drone;
         match_param.pose_b_prediction = motion_prediction;
         match_param.search_radius = search_radius;
+        match_param.enable_search_in_local = true;
         matchLocalFeatures(previous, frame, ids_b_to_a, match_param);
         for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
             if (ids_b_to_a[i] >= 0) {
@@ -483,6 +484,7 @@ TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualIm
     match_param.type = type;
     match_param.enable_prediction = true;
     match_param.prediction_using_extrinsic = true;
+    match_param.enable_search_in_local = true;
     matchLocalFeatures(left_frame, right_frame, ids_b_to_a, match_param);
     for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
         if (ids_b_to_a[i] >= 0) {
@@ -820,7 +822,9 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         
     } else {
         pts_pred_a_on_b = pts_a;
-        search_radius = -1;
+        if (!param.enable_search_in_local) {
+            search_radius = -1;
+        }
     }
     if (param.enable_superglue) {
         //Superglue only support whole image matching

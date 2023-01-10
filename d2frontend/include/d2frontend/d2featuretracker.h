@@ -80,6 +80,7 @@ class D2FeatureTracker {
 protected:
     struct MatchLocalFeatureParams {
         bool enable_prediction = false;
+        bool enable_search_in_local = false;
         Swarm::Pose pose_a = Swarm::Pose();
         Swarm::Pose pose_b_prediction = Swarm::Pose();
         bool enable_superglue=true;
