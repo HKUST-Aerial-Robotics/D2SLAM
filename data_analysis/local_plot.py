@@ -35,7 +35,7 @@ def read_paths(folder, nodes, prefix="d2vins", suffix=".csv", t0=None, dte=None)
 def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="/home/xuhao/output/", id_map = None, figsize=(6, 6), plot_each=True):
     fig = plt.figure("plot3d", figsize=figsize)
     ax = fig.add_subplot(111, projection='3d')
-    ax = fig.gca(projection='3d')
+    # ax = fig.gca(projection='3d')
     if id_map is None:
         id_map = {}
         for i in nodes:
