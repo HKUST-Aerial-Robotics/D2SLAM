@@ -20,6 +20,8 @@ using namespace D2Common;
 namespace D2FrontEnd {
 
 void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
+    //Lock frame_mutex with Guard
+    std::lock_guard<std::recursive_mutex> guard(frame_mutex);
     TicToc tt;
     static double t_sum = 0;
     static int t_count = 0;
@@ -234,6 +236,7 @@ int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss
         labels[i] = -1;
     }
     int search_num = SEARCH_NEAREST_NUM + max_index;
+    // printf("Searching for frame %ld desc size %ld\n", img_desc.frame_id, img_desc.image_desc.size());
     index.search(1, img_desc.image_desc.data(), search_num, similiarity, labels);
     int return_frame_id = -1, return_drone_id = -1;
     int k = -1;

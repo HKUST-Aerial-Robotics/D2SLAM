@@ -8,6 +8,7 @@
 #include <swarm_msgs/Pose.h>
 #include <faiss/IndexFlat.h>
 #include <swarm_msgs/drone_trajectory.hpp>
+#include <mutex>
 
 using namespace swarm_msgs;
 #define REMOTE_MAGIN_NUMBER 1000000
@@ -62,6 +63,7 @@ class SuperGlueOnnx;
 class LoopDetector {
     LoopDetectorConfig _config;
     std::map<LandmarkIdType, LandmarkPerId> landmark_db;
+    std::recursive_mutex frame_mutex;
 protected:
     faiss::IndexFlatIP local_index;
     faiss::IndexFlatIP remote_index;
