@@ -39,7 +39,7 @@
             superpoint_thres: 0.2
             triangle_thres: 0.012
             #triangle_thres: 0.008
-            min_direction_loop: 2
+            min_direction_loop: 1
             
             detector_match_thres: 0.7
             send_all_features: false
