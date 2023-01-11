@@ -144,6 +144,8 @@ accept_loop_max_yaw: 10
 accept_loop_max_pos: 1.0
 lazy_broadcast_keyframe: 0 #If enable coarse-to-fine initialization mode. This is useful when communication is not good.
 gravity_check_thres: 0.06
+pgo_solver_time: 1.0
+solver_timer_freq: 1.0
 
 #PGO
 pgo_mode: 0 
