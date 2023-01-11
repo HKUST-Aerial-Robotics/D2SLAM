@@ -133,6 +133,9 @@ loop_inlier_feature_num: 50
 gravity_check_thres: 0.03
 pgo_solver_time: 1.0
 solver_timer_freq: 1.0
+enable_pcm: true
+pcm_thres: 2.8
+
 
 #PGO
 pgo_solver_time: 0.5
