@@ -140,7 +140,9 @@ bool D2PGO::solve_multi(bool force_solve) {
         }
     }
     if (config.enable_pcm) {
+        D2Common::Utility::TicToc tic;
         auto good_loops = rejection.OutlierRejectionLoopEdges(ros::Time::now(), available_loops);
+        printf("[D2PGO] Pcm takes %3.1fms, good %ld/%ld loops\n", good_loops.size(), available_loops.size());
         setupLoopFactors(solver, good_loops);
     } else {
         setupLoopFactors(solver, available_loops);

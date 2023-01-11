@@ -133,10 +133,10 @@ protected:
         pgo->bd_data_callback = [&] (const DPGOData & data) {
             dpgo_data_pub.publish(data.toROS());
         };
-        dpgo_data_sub = nh.subscribe("pgo_data", 1, &D2PGONode::processDPGOData, this, ros::TransportHints().tcpNoDelay());
-        frame_sub = nh.subscribe("frame_local", 1, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
-        remote_frame_sub = nh.subscribe("frame_remote", 1, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
-        loop_sub = nh.subscribe("loop", 1, &D2PGONode::processLoop, this, ros::TransportHints().tcpNoDelay());
+        dpgo_data_sub = nh.subscribe("pgo_data", 1000, &D2PGONode::processDPGOData, this, ros::TransportHints().tcpNoDelay());
+        frame_sub = nh.subscribe("frame_local", 1000, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
+        remote_frame_sub = nh.subscribe("frame_remote", 1000, &D2PGONode::processImageArray, this, ros::TransportHints().tcpNoDelay());
+        loop_sub = nh.subscribe("loop", 1000, &D2PGONode::processLoop, this, ros::TransportHints().tcpNoDelay());
         solver_timer = nh.createTimer(ros::Duration(1.0/solver_timer_freq), &D2PGONode::solverTimerCallback, this);
         printf("[D2PGONode@%d] Initialized\n", config.self_id);
     }
