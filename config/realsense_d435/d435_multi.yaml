@@ -155,6 +155,8 @@ g2o_output_path: "output.g2o"
 write_pgo_to_file: 1
 enable_gravity_prior: 1
 gravity_sqrt_info: 10
+pgo_solver_time: 1.0
+solver_timer_freq: 1.0
 
 #outputs
 output_path: "/root/output/"

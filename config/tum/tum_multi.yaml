@@ -142,6 +142,8 @@ pgo_eta_k: 0.1
 write_g2o: 1
 g2o_output_path: "output.g2o"
 write_pgo_to_file: 1
+pgo_solver_time: 1.0
+solver_timer_freq: 1.0
 
 #outputs
 output_path: "/root/output/"
