@@ -181,6 +181,7 @@ protected:
         config.enable_rotation_initialization = false;
         config.enable_gravity_prior = (int)fsSettings["enable_gravity_prior"];
         config.rot_init_config.gravity_sqrt_info = fsSettings["gravity_sqrt_info"];
+        solver_timer_freq = (double) fsSettings["solver_timer_freq"];
         config.perturb_mode = true;
         if (config.mode == PGO_MODE::PGO_MODE_NON_DIST) {
             multi = false;

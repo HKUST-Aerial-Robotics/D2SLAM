@@ -28,7 +28,8 @@ def read_paths(folder, nodes, prefix="d2vins", suffix=".csv", t0=None, dte=None)
     for drone_id in nodes:
         try:
             ret[drone_id], t0 = read_path_from_csv(f"{folder}/{prefix}_{drone_id}{suffix}", t0, dte=dte)
-        except:
+        except Exception as e:
+            print(e)
             print(f"Failed to read {folder}/{prefix}_{drone_id}{suffix}")
     return ret, t0
 
