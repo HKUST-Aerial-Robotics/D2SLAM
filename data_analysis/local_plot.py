@@ -24,9 +24,14 @@ def read_path_from_csv(path, t0=None, delimiter=None,dte=None, reset_orientation
     pos = pos[mask]
     quat = quat[mask]
     if reset_orientation:
-        rot = quaternion_inverse(quat[0])
+        pos0 = pos[0]
+        quat0 = quat[0]
+        y0, _, _ = quat2eulers(quat0[0], quat0[1], quat0[2], quat0[3])
+        q_calib_pos = quaternion_from_euler(0, 0, -y0)
+        q_calib_att = quaternion_inverse(quat0)
         #Apply rotation to all poses
-        quat = np.apply_along_axis(lambda x: quaternion_multiply(rot, x), 1, quat)
+        quat = np.apply_along_axis(lambda x: quaternion_multiply(q_calib_att, x), 1, quat)
+        pos = np.apply_along_axis(lambda x: quaternion_matrix(q_calib_pos)[:3,:3]@ (x - pos0), 1, pos)
     return Trajectory(t, pos, quat), t0
 
 def read_paths(folder, nodes, prefix="d2vins_", suffix=".csv", t0=None, dte=None, reset_orientation=False):
@@ -35,7 +40,7 @@ def read_paths(folder, nodes, prefix="d2vins_", suffix=".csv", t0=None, dte=None
         try:
             ret[drone_id], t0 = read_path_from_csv(f"{folder}/{prefix}{drone_id}{suffix}", t0, dte=dte, reset_orientation=reset_orientation)
         except Exception as e:
-            # raise(e)
+            raise(e)
             print(f"Failed to read {folder}/{prefix}{drone_id}{suffix}")
     return ret, t0
 
