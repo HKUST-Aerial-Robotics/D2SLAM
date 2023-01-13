@@ -199,6 +199,7 @@ bool D2PGO::solve_multi(bool force_solve) {
     if (config.write_g2o) {
         saveG2O();
     }
+    // std::cout << report.summary.FullReport() << std::endl;
     printf("[D2PGO::solve@%d] solve_count %d mode [multi,%d] total frames %ld loops %d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n", 
             self_id, solve_count, config.mode, used_frames.size(), used_loops_count, report.total_time*1000, 
             report.total_iterations, report.initial_cost, report.final_cost);

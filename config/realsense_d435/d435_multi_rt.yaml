@@ -10,36 +10,33 @@ is_compressed_images: 0
 
 imu_freq: 400
 image_freq: 15
-frame_step: 2
+frame_step: 3
 
 #Camera configuration
 camera_configuration: 0  #STEREO_PINHOLE = 0, STEREO_FISHEYE = 1, PINHOLE_DEPTH = 2, FOURCORNER_FISHEYE = 3
 num_of_cam: 2
 cam0_calib: "left.yaml"
 cam1_calib: "right.yaml"
-image_width: 640
-image_height: 480
+image_width: 480
+image_height: 270
 
 body_T_cam0: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [ 1.1014988987389507e-02, 1.1173204624065403e-02,
-       9.9987690718209743e-01, 9.9229853273207963e-02,
-       -9.9978378585431993e-01, -1.7513561748200734e-02,
-       1.1209669829911950e-02, 2.0092259073349470e-02,
-       1.7636653889311404e-02, -9.9978419404055430e-01,
-       1.0977877129386582e-02, 1.0467856544782061e-02, 0., 0., 0., 1. ]
+   data: [0.003648736435669542, -0.03392277110632558, 0.9994177966810932, 0.07615430795301638,
+      -0.9998094302405535, 0.01904318629621382, 0.004296540206674448, 0.007195970058629293,
+      -0.01917784983992976, -0.9992430148147925, -0.03384682288430585, 0.03643188469105622,
+      0, 0, 0, 1]
+
 body_T_cam1: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [ 1.1640474721606342e-02, 1.1073794390204561e-02,
-       9.9987092688309498e-01, 9.9384303011965547e-02,
-       -9.9977540688348165e-01, -1.7580968119596196e-02,
-       1.1834075838302260e-02, -3.0007342732303328e-02,
-       1.7709747011874111e-02, -9.9978411701615943e-01,
-       1.0866656477233061e-02, 1.1217018588782747e-02, 0., 0., 0., 1. ]
+   data: [0.005854859966095693, -0.03306950675978143, 0.9994359050671746, 0.072988178745315,
+      -0.9997990445016249, 0.01896892540201978, 0.006484634355982825, -0.04056517778767008,
+      -0.01917266878698947, -0.9992730295528633, -0.03295180085863358, 0.03547334787472232,
+      0, 0, 0, 1]
 
 
 #estimation
@@ -52,7 +49,7 @@ min_inv_dep: 0.01 #100 meter away.
 min_measurements_per_keyframe: 20
 
 #optimization parameters
-max_solver_time: 0.08 # max solver itration time (ms), to guarantee real time
+max_solver_time: 0.04 # max solver itration time (ms), to guarantee real time
 max_num_iterations: 8   # max solver itrations, to guarantee real time
 consensus_max_steps: 1
 timout_wait_sync: 100
@@ -63,6 +60,7 @@ relaxation_alpha: 0.
 consensus_sync_with_main: 0
 consensus_sync_to_start: 0 #Is sync on start of the solving..
 consensus_trigger_time_err_us: 100
+ceres_num_threads: 4
 
 #depth fusing
 depth_far_thres: 3.0 # The max depth in frontend
@@ -75,7 +73,7 @@ min_depth_to_fuse: 0.3
 track_remote_netvlad_thres: 0.5
 
 #Initialization
-init_method: 1 #0 IMU, 1 PnP
+init_method: 0 #0 IMU, 1 PnP
 depth_estimate_baseline: 0.045
 
 #sliding window
@@ -104,22 +102,23 @@ remove_base_when_margin_remote: 2
 #feature tracker parameters
 max_cnt: 200            # max feature number in feature tracking
 max_superpoint_cnt: 145 # max feature extraction by superpoint
-max_solve_cnt: 75
+max_solve_cnt: 100
 show_track_id: 0
-check_homography: 1
+check_homography: 0
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
+lk_use_fast: 1
 remote_min_match_num: 40
 ransacReprojThreshold: 5.0
 parallex_thres: 0.012
 knn_match_ratio: 0.9 #This apply to superpoint feature track & loop clouse detection.
-feature_min_dist: 20
+feature_min_dist: 15
 enable_search_local_aera: true
-search_local_max_dist: 0.04
+search_local_max_dist: 0.06
 
 #CNN
 cnn_use_onnx: 1
 enable_pca_superpoint: 1
-enable_pca_netvlad: 0
+enable_pca_netvlad: 1
 superpoint_pca_dims: 64
 netvlad_pca_dims: 1024
 cnn_enable_tensorrt: 1
@@ -157,9 +156,13 @@ g2o_output_path: "output.g2o"
 write_pgo_to_file: 1
 enable_gravity_prior: 0
 gravity_sqrt_info: 10
+pgo_solver_time: 1.0
+solver_timer_freq: 1.0
+enable_pcm: true
+pcm_thres: 2.8
 
 #outputs
-output_path: "/root/output/"
+output_path: "/home/dji/swarm_log_latest/"
 debug_print_sldwin: 0
 debug_print_states: 0
 enable_perf_output: 0

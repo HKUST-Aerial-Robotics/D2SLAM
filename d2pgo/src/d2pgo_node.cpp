@@ -110,6 +110,7 @@ protected:
     void solverTimerCallback(const ros::TimerEvent & event) {
         bool succ;
         if (multi) {
+            // printf("[D2PGO] try to solve multi......\n");
             succ = pgo->solve_multi();            
         }
         else {
@@ -178,6 +179,8 @@ protected:
         config.arock_config.eta_k = fsSettings["pgo_eta_k"];
         config.pcm_rej.is_4dof = is_4dof;
         config.is_realtime = true;
+        config.enable_pcm = (int)fsSettings["enable_pcm"];
+        config.pcm_rej.pcm_thres = fsSettings["pcm_thres"];
         config.enable_rotation_initialization = false;
         config.enable_gravity_prior = (int)fsSettings["enable_gravity_prior"];
         config.rot_init_config.gravity_sqrt_info = fsSettings["gravity_sqrt_info"];

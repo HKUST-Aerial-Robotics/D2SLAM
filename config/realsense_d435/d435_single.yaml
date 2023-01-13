@@ -144,8 +144,7 @@ accept_loop_max_yaw: 10
 accept_loop_max_pos: 1.0
 lazy_broadcast_keyframe: 0 #If enable coarse-to-fine initialization mode. This is useful when communication is not good.
 gravity_check_thres: 0.06
-pgo_solver_time: 1.0
-solver_timer_freq: 1.0
+
 
 #PGO
 pgo_mode: 0 
@@ -157,6 +156,10 @@ g2o_output_path: "output.g2o"
 write_pgo_to_file: 1
 enable_gravity_prior: 0
 gravity_sqrt_info: 10
+pgo_solver_time: 1.0
+solver_timer_freq: 1.0
+enable_pcm: true
+pcm_thres: 2.8
 
 #outputs
 output_path: "/root/output/"
