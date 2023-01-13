@@ -8,7 +8,7 @@ import scipy.stats as stats
 from utils import *
 from trajectory import *
 
-def read_path_from_csv(path, t0=None, delimiter=None,dte=None):
+def read_path_from_csv(path, t0=None, delimiter=None,dte=None, reset_orientation=False):
     arr = np.loadtxt(path, delimiter=delimiter)
     t = arr[:, 0]
     if t0 is None:
@@ -17,20 +17,26 @@ def read_path_from_csv(path, t0=None, delimiter=None,dte=None):
     pos = arr[:, 1:4]
     quat = arr[:, 4:8]
     if dte is not None:
-        mask = t < dte
-        t = t[mask]
-        pos = pos[mask]
-        quat = quat[mask]
+        mask = (t < dte) & (t > 0)
+    else:
+        mask = t > 0
+    t = t[mask]
+    pos = pos[mask]
+    quat = quat[mask]
+    if reset_orientation:
+        rot = quaternion_inverse(quat[0])
+        #Apply rotation to all poses
+        quat = np.apply_along_axis(lambda x: quaternion_multiply(rot, x), 1, quat)
     return Trajectory(t, pos, quat), t0
 
-def read_paths(folder, nodes, prefix="d2vins", suffix=".csv", t0=None, dte=None):
+def read_paths(folder, nodes, prefix="d2vins_", suffix=".csv", t0=None, dte=None, reset_orientation=False):
     ret = {}
     for drone_id in nodes:
         try:
-            ret[drone_id], t0 = read_path_from_csv(f"{folder}/{prefix}_{drone_id}{suffix}", t0, dte=dte)
+            ret[drone_id], t0 = read_path_from_csv(f"{folder}/{prefix}{drone_id}{suffix}", t0, dte=dte, reset_orientation=reset_orientation)
         except Exception as e:
-            print(e)
-            print(f"Failed to read {folder}/{prefix}_{drone_id}{suffix}")
+            # raise(e)
+            print(f"Failed to read {folder}/{prefix}{drone_id}{suffix}")
     return ret, t0
 
 def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="/home/xuhao/output/", id_map = None, figsize=(6, 6), plot_each=True):

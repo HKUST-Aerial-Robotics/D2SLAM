@@ -19,9 +19,9 @@
     <arg name="enable_pgo" default="false" />
     <arg name="rviz" default="false" />
     <arg name="main_id" default="1" /> <!-- This only determine trust which drone to setup cooridinate frme -->
-    <arg name="taichislam" default="false" /> <!-- This only determine trust which drone to setup cooridinate frme -->
-    <arg name="taichislam_show" default="false" /> <!-- This only determine trust which drone to setup cooridinate frme -->
-    <arg name="skeleton_graph_gen" default="true" /> <!-- This only determine trust which drone to setup cooridinate frme -->
+    <arg name="taichislam" default="false" />
+    <arg name="taichislam_show" default="false" /> 
+    <arg name="skeleton_graph_gen" default="true" /> 
     
     <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" >
         <rosparam>
@@ -86,7 +86,8 @@
         <arg name="show" value="$(arg taichislam_show)" />
         <arg name="skeleton_graph_gen" value="$(arg skeleton_graph_gen)" />
         <arg name="drone_id" value="$(arg self_id)" />
-        <arg name="use_cuda" default="true" />
-        <arg name="output_map" default="true" />
+        <arg name="use_cuda" value="true" />
+        <arg name="output_map" value="true" />
+        <arg name="texture_enabled" value="false" />
     </include>
 </launch>
