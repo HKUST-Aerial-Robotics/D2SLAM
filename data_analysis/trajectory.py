@@ -165,7 +165,7 @@ def find_common_times(times_a, times_b, dt=0.005):
     # plt.plot(times_b, marker=".", linestyle="None")
     return times_a
 
-def align_paths(paths, paths_gt, align_by_first=False, align_with_minize=False):
+def align_paths(paths, paths_gt, align_by_first=False, align_with_minize=False, align_coor_only=False):
     # align the first pose in each path to paths_gt
     dpos = None
     yaw0 = None
@@ -174,42 +174,62 @@ def align_paths(paths, paths_gt, align_by_first=False, align_with_minize=False):
         path_gt = paths_gt[i]
         if dpos is None or not align_by_first:
             if align_with_minize:
-                dpos, dyaw = align_path_by_minimize(path, path_gt)
+                dpos, dyaw = align_path_by_minimize(path, path_gt, align_coor_only=align_coor_only)
             else:
                 t0 = find_common_times(path.t, path_gt.t)[0]
                 dpos = path_gt.pos_func(t0) - path.pos_func(t0)
                 dyaw = wrap_pi(path_gt.ypr_func(t0)[0] - path.ypr_func(t0)[0])
-                print("dpos by", i, ":", dpos)
         path.pos = yaw_rotate_vec(dyaw, path.pos) + dpos
         path.ypr = path.ypr + np.array([dyaw, 0, 0])
         path.ypr[:, 0] = wrap_pi(path.ypr[:, 0])
         path.interp()
     return paths
 
-def align_path_by_minimize(path, path_gt, inplace=False):
+def align_path_by_minimize(path, path_gt, inplace=False, align_coor_only=False):
     from scipy.optimize import minimize
     t = find_common_times(path.t, path_gt.t)
     pos = path.pos_func(t)
     pos_gt = path_gt.pos_func(t)
     ypr = path.ypr_func(t)
     ypr_gt = path_gt.ypr_func(t)
-    def cost(x):
-        dpos = x[:3]
-        dyaw = x[3]
-        pos_err = np.linalg.norm(pos_gt - yaw_rotate_vec(dyaw, pos) - dpos, axis=1)
-        yaw_err = np.abs(wrap_pi(ypr_gt[:,0] - ypr[:,0] - dyaw))
-        return np.sum(pos_err) + np.sum(yaw_err)
-    inital_pos = pos_gt[0] - pos[0]
-    inital_yaw = wrap_pi(ypr_gt[0, 0] - ypr[0, 0])
-    inital_guess = np.concatenate([inital_pos, [inital_yaw]])
-    # print("Initial cost", cost(inital_guess))
-    res = minimize(cost, inital_guess)
-    # print("Optimized:", res)
-    relative_pos = res.x[:3]
-    relative_yaw = res.x[3]
-    if inplace:
-        path.pos = yaw_rotate_vec(relative_yaw, path.pos) + relative_pos
-        path.ypr = path.ypr + np.array([relative_yaw, 0, 0])
-        path.ypr[:, 0] = wrap_pi(path.ypr[:, 0])
-        path.interp()
+    if align_coor_only:
+        def cost_coor(x):
+            dpos = x[:3]
+            dyaw = x[3]
+            pos_err = np.linalg.norm(pos_gt - yaw_rotate_vec(dyaw, pos) - dpos, axis=1)
+            return np.sum(pos_err)
+        inital_pos = pos_gt[0] - pos[0]
+        inital_yaw = wrap_pi(ypr_gt[0, 0] - ypr[0, 0])
+        inital_guess = np.concatenate([inital_pos, [inital_yaw]])
+        # print("Initial cost", cost(inital_guess))
+        res = minimize(cost_coor, inital_guess)
+        # print("Optimized:", res)
+        relative_pos = res.x[:3]
+        relative_yaw = res.x[3]
+        # Then we align the attitude
+        if inplace:
+            path.pos = yaw_rotate_vec(relative_yaw, path.pos) + relative_pos
+            path.ypr[:, 0] = wrap_pi(path.ypr[:, 0])
+            path.interp()
+        return relative_pos, relative_yaw
+    else:
+        def cost(x):
+            dpos = x[:3]
+            dyaw = x[3]
+            pos_err = np.linalg.norm(pos_gt - yaw_rotate_vec(dyaw, pos) - dpos, axis=1)
+            yaw_err = np.abs(wrap_pi(ypr_gt[:,0] - ypr[:,0] - dyaw))
+            return np.sum(pos_err) + np.sum(yaw_err)
+        inital_pos = pos_gt[0] - pos[0]
+        inital_yaw = wrap_pi(ypr_gt[0, 0] - ypr[0, 0])
+        inital_guess = np.concatenate([inital_pos, [inital_yaw]])
+        # print("Initial cost", cost(inital_guess))
+        res = minimize(cost, inital_guess)
+        # print("Optimized:", res)
+        relative_pos = res.x[:3]
+        relative_yaw = res.x[3]
+        if inplace:
+            path.pos = yaw_rotate_vec(relative_yaw, path.pos) + relative_pos
+            path.ypr = path.ypr + np.array([relative_yaw, 0, 0])
+            path.ypr[:, 0] = wrap_pi(path.ypr[:, 0])
+            path.interp()
     return relative_pos, relative_yaw
