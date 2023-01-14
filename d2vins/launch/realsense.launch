@@ -23,7 +23,7 @@
     <arg name="taichislam_show" default="false" /> <!-- This only determine trust which drone to setup cooridinate frme -->
     <arg name="skeleton_graph_gen" default="true" /> <!-- This only determine trust which drone to setup cooridinate frme -->
     
-    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" >
+    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" launch-prefix="nice --20 ">
         <rosparam>
             lcm_uri: udpm://224.0.0.251:7667?ttl=1
             jpg_quality: 75
