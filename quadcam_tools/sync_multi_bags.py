@@ -22,14 +22,14 @@ def yaw_rotate_vec(yaw, vec):
     Re = rotation_matrix(yaw, [0, 0, 1])[0:3, 0:3]
     return np.transpose(np.dot(Re, np.transpose(vec)))
 
-def generate_bagname(bag, comp=False):
+def generate_bagname(bag, output_path, comp=False):
     from pathlib import Path
     p = Path(bag)
     if comp:
         bagname = p.stem + "-sync-comp.bag"
     else:
         bagname = p.stem + "-sync.bag"
-    output_bag = p.parents[0].joinpath(bagname)
+    output_bag = output_path.joinpath(bagname)
     # output_bag = "/home/xuhao/Dropbox/data/d2slam/tum_datasets/" + bagname
     return output_bag
 
@@ -92,16 +92,21 @@ if __name__ == "__main__":
                     help='bags to be synchronized')
     parser.add_argument('-c', '--comp', action='store_true', help='compress the image topics')
     parser.add_argument('-q', '--quality', type=int, default=90, help='quality of the compressed image')
-    parser.add_argument('-s', '--show', action='store_true', help='compress the image topics')
+    parser.add_argument('-s', '--show', action='store_true', help="show while sync")
+    parser.add_argument('-r', '--realsense', action='store_true', help="is realsense not TUM")
+    parser.add_argument('-o', '--output', default="", type=str, help='output path')
     args = parser.parse_args()
     bags = args.bags
-    t0 = get_time0(bags[0], is_realsense=True)
+    t0 = get_time0(bags[0], is_realsense=args.realsense)
     pos0, q_calib, y0 = get_pose0(bags[0])
-
+    import pathlib
+    output_path = pathlib.Path(bags[0]).resolve() if args.output == "" else pathlib.Path(args.output)
+    print(f"{len(bags)} bags to process. Will write to", output_path)
+    
     dts = {}
     t0s = {}
     for bag in bags:
-        t = get_time0(bag, is_realsense=True)
+        t = get_time0(bag, is_realsense=args.realsense)
         print(f"Bag {bag} start at {t.to_sec()}")
         dts[bag] = t0 - t
         t0s[bag] = t
@@ -110,7 +115,7 @@ if __name__ == "__main__":
     bridge = CvBridge()
     encode_param = [int(cv.IMWRITE_JPEG_QUALITY), args.quality]
     for bag in bags:
-        output_bag = generate_bagname(bag, args.comp)
+        output_bag = generate_bagname(bag, output_path, args.comp)
         print("Write bag to", output_bag)
         _dt = dts[bag]
         with rosbag.Bag(output_bag, 'w') as outbag:

@@ -74,10 +74,12 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
     for i in nodes:
         _id = id_map[i]
         ax = fig.add_subplot(1, len(nodes), k+1, projection='3d')
-        ax.set_title(f"Traj {_id}, length: {poses_fused[i].length():3.3f}")
+        ax.set_title(f"Traj {_id}, length: {poses_fused[i].length():3.1f}")
         if poses_gt is not None:
             ax.plot(poses_gt[i].pos[:,0], poses_gt[i].pos[:,1],poses_gt[i].pos[:,2], label=f"Ground Truth ${_id}$")
-        ax.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1],poses_fused[i].pos[:,2], label=f"Estimate ${_id}$")
+        ax.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1],poses_fused[i].pos[:,2], label=f"$D^2$VINS ${_id}$")
+        if poses_pgo is not None:
+            ax.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1],poses_pgo[i].pos[:,2], label=f"$D^2$PGO ${_id}$")
         
         plt.legend()
         ax.set_xlabel('$X$')
@@ -360,6 +362,8 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
 
     ate_fused_sum = 0
     rmse_fused_ang_sum = 0
+    ate_pgo_sum = 0
+    rmse_pgo_ang_sum = 0
     output_table = [["Drone", "Traj. Len.", "ATE Pos", "ATE Att", "Cov/m: x", "y", "z", "Cov Att/m", "PGO:ATE Pos ", "ATE Att"]]
 
     ate_pos_sum = 0
@@ -406,20 +410,22 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
         rmse_angular_fused = RMSE(angular_error_ypr_array(ypr_gt, ypr_fused), 0)
 
         ate_fused_sum += ate_fused
-        
         rmse_fused_ang_sum += rmse_angular_fused
         
         if poses_pgo is not None:
-            pos_path_gt =  poses_gt[i].pos
-            pos_path = poses_pgo[i].resample_pos(poses_gt[i].t)
-            ypr_path_gt =  poses_gt[i].ypr
-            ypr_path = poses_pgo[i].resample_ypr(poses_pgo[i].t)
+            t_pgo = poses_pgo[i].t
+            pos_path_gt =  poses_gt[i].resample_pos(t_pgo)
+            pos_path = poses_pgo[i].pos
+            ypr_path_gt =  poses_gt[i].resample_ypr(t_pgo)
+            ypr_path = poses_pgo[i].ypr
             mask_path = np.linalg.norm(pos_path_gt - pos_path, axis=1) < outlier_thres
             t_path = poses_pgo[i].t[mask_path]
             pos_path_gt, pos_path, ypr_path_gt, ypr_path = pos_path_gt[mask_path], pos_path[mask_path], ypr_path_gt[mask_path], ypr_path[mask_path]
 
             ate_path = ATE_POS(pos_path, pos_path_gt)
             rmse_angular_path = RMSE(angular_error_ypr_array(ypr_path_gt, ypr_path), 0)
+            ate_pgo_sum += ate_path
+            rmse_pgo_ang_sum += rmse_angular_path
         else:
             ate_path = nan
             rmse_angular_path = nan
@@ -484,13 +490,13 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
                 ax3.plot(t_vo, pos_gt_vo[:,2]  - pos_vo[:,2], label=label)
 
             if poses_pgo is not None:
-                label = f"$PGO errx_{i}$ RMSE{i}:{rmse_vo_x:3.3f}"
+                label = f"$PGO errx_{i}$"
                 ax1.plot(t_path, pos_path_gt[:,0]  - pos_path[:,0], label=label)
 
-                label = f"$PGO erry_{i}$ RMSE{i}:{rmse_vo_y:3.3f}"
+                label = f"$PGO erry_{i}$"
                 ax2.plot(t_path, pos_path_gt[:,1]  - pos_path[:,1], label=label)
                 
-                label = f"$PGO errz_{i}$ RMSE{i}:{rmse_vo_z:3.3f}"
+                label = f"$PGO errz_{i}$"
                 ax3.plot(t_path, pos_path_gt[:,2]  - pos_path[:,2], label=label)
 
             ax1.legend()
@@ -523,11 +529,11 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
                 ax3.plot(t_vo, wrap_pi(ypr_gt_vo[:,2]-ypr_vo[:,2]), label=label)
             
             if poses_pgo is not None:
-                label = f"$Path yaw_{i}$ RMSE{i}:{rmse_vo_x:3.3f}"
+                label = f"$Path yaw_{i}$"
                 ax1.plot(t_path, wrap_pi(ypr_path_gt[:,0]  - ypr_path[:,0]), ".", label=label)
-                label = f"$Path pitch_{i}$ RMSE{i}:{rmse_vo_y:3.3f}"
+                label = f"$Path pitch_{i}$"
                 ax2.plot(t_path, wrap_pi(ypr_path_gt[:,1]  - ypr_path[:,1]), ".", label=label)
-                label = f"$Path roll_{i}$ RMSE{i}:{rmse_vo_z:3.3f}"
+                label = f"$Path roll_{i}$"
                 ax3.plot(t_path, wrap_pi(ypr_path_gt[:,2]  - ypr_path[:,2]), ".", label=label)
             ax1.legend()
             ax2.legend()
@@ -537,7 +543,8 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
             ax3.grid()
 
     output_table.append([
-        f"Avg.",f"{length_sum/num:.1f}", f"{ate_fused_sum/num:3.3f}", f"{ate_ang_sum/num*180/pi:3.2f}", f"",f"",f"",f"",f""])
+        f"Avg.",f"{length_sum/num:.1f}", f"{ate_fused_sum/num:3.3f}", f"{ate_ang_sum/num*180/pi:3.2f}", "","","",
+            "", f"{ate_pgo_sum/num:.3f}",f"{rmse_pgo_ang_sum/num*180/pi:3.2f}"])
     if poses_pgo is None:
         #Remove the last two columns of output table
         output_table = [row[:-2] for row in output_table]
