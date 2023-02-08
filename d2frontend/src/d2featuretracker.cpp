@@ -80,7 +80,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     if (!inited) {
         inited = true;
         ROS_INFO("[D2FeatureTracker] receive first, will init kf\n");
-        processKeyframe(frames);
+        processFrame(frames, true);
         frames.send_to_backend = true;
     }
 
@@ -103,9 +103,8 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     }
     if (isKeyframe(report) && frames.send_to_backend) {
         iskeyframe = true;
-        processKeyframe(frames);
     }
-
+    processFrame(frames, iskeyframe);
     report.ft_time = tic.toc();
     if (params->verbose || params->enable_perf_output)
         printf("[D2FeatureTracker] frame_id: %d, landmark_num: %d, time_cost: %.1fms\n", frames.frame_id, frames.landmarkNum(), report.ft_time);
@@ -574,7 +573,7 @@ std::pair<bool, LandmarkPerFrame> D2FeatureTracker::createLKLandmark(const Visua
     return std::make_pair(true, lm);
 }
 
-void D2FeatureTracker::processKeyframe(VisualImageDescArray & frames) {
+void D2FeatureTracker::processFrame(VisualImageDescArray & frames, bool is_keyframe) {
     if (current_keyframes.size() > 0 && current_keyframes.back().frame_id == frames.frame_id) {
         return;
     }

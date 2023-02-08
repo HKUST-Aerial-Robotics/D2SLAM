@@ -115,7 +115,7 @@ protected:
     TrackReport trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame, 
             bool use_motion_predict=false, const Swarm::Pose & motion_prediction=Swarm::Pose());
     bool getMatchedPrevKeyframe(const VisualImageDescArray & frame_a, VisualImageDescArray& prev, int & dir_a, int & dir_b);
-    void processKeyframe(VisualImageDescArray & frames);
+    void processFrame(VisualImageDescArray & frames, bool is_keyframe);
     bool isKeyframe(const TrackReport & reports);
     Vector3d extractPointVelocity(const LandmarkPerFrame & lpf) const;
     std::pair<bool, LandmarkPerFrame> getPreviousLandmarkFrame(const LandmarkPerFrame & lpf) const;
