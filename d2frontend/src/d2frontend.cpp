@@ -128,7 +128,7 @@ void D2Frontend::onRemoteImage(VisualImageDescArray frame_desc) {
 void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc) {
     if (params->enable_loop) {
         if (frame_desc.matched_frame < 0) {
-                printf("[D2Frontend Remote image %d is not matched, directly pass to detector\n", frame_desc.frame_id);
+            // printf("[D2Frontend Remote image %d is not matched, directly pass to detector\n", frame_desc.frame_id);
             addToLoopQueue(frame_desc);
         } else {
             //We need to wait the matched frame is added to loop detector.

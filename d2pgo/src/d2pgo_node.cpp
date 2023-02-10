@@ -188,10 +188,10 @@ protected:
         config.perturb_mode = true;
         if (config.mode == PGO_MODE::PGO_MODE_NON_DIST) {
             multi = false;
-            printf("[D2PGO] In single mode\n");
+            printf("[D2PGO] In single mode enable_pcm %d pcm_thres %.1f\n", config.enable_pcm, config.pcm_rej.pcm_thres);
         } else {
             multi = true;
-            printf("[D2PGO] In mulyi mode\n");
+            printf("[D2PGO] In multi mode enable_pcm %d pcm_thres %.1f\n", config.enable_pcm, config.pcm_rej.pcm_thres);
         }
     }
 public:

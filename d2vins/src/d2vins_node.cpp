@@ -195,7 +195,7 @@ protected:
             processVIOKFThread();
             printf("[D2VINS] processVIOKFThread exit.\n");
         });
-        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS & params->consensus_sync_to_start) {
+        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && params->consensus_sync_to_start) {
             solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
         } else if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
             thread_solver = std::thread([&] {

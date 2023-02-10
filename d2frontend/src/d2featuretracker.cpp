@@ -43,6 +43,7 @@ void D2FeatureTracker::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
             if (current_keyframes.size() <= 1 ) {
                 it++;
             } else {
+                lmanager->popFrame(it->frame_id);
                 it = current_keyframes.erase(it);
             }
         } else {
@@ -59,12 +60,14 @@ void D2FeatureTracker::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
 
 void D2FeatureTracker::updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPerId> & vins_landmark_db) {
     //update by sliding window
-    auto & db = lmanager->getLandmarkDB();
-    for (auto & kv : vins_landmark_db) {
-        if (db.find(kv.first) != db.end()) {
-            auto & lm = lmanager->at(kv.first);
-            lm.flag = kv.second.flag;
-            lm.position = kv.second.position;
+    if (_config.enable_motion_prediction_local || _config.enable_search_local_aera_remote) {
+        auto & db = lmanager->getLandmarkDB();
+        for (auto & kv : vins_landmark_db) {
+            if (db.find(kv.first) != db.end()) {
+                auto & lm = lmanager->at(kv.first);
+                lm.flag = kv.second.flag;
+                lm.position = kv.second.position;
+            }
         }
     }
 }
@@ -156,7 +159,7 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
     if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
         std::vector<int> dirs{2, 3, 0, 1};
         dir_a = 2;
-        printf("[D2FeatureTracker::getMatchedPrevKeyframe] Remote frame %ld view 2/%ld: gdesc %ld\n", frame_a.frame_id, frame_a.images.size(), frame_a.images[2].image_desc.size());
+        // printf("[D2FeatureTracker::getMatchedPrevKeyframe] Remote frame %ld view 2/%ld: gdesc %ld\n", frame_a.frame_id, frame_a.images.size(), frame_a.images[2].image_desc.size());
         const Map<const VectorXf> vlad_desc_remote(frame_a.images[2].image_desc.data(), params->netvlad_dims);
         for (int i = current_keyframes.size() - 1; i >= 0; i--) {
             const auto & last = current_keyframes[i];
