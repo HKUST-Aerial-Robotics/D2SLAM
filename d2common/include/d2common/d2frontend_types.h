@@ -118,6 +118,9 @@ struct VisualImageDesc {
     }
     
     VisualImageDesc() {}
+    ~VisualImageDesc() {
+        releaseRawImage();
+    }
 
     void syncIds(int _drone_id, FrameIdType _frame_id) {
         drone_id = drone_id;

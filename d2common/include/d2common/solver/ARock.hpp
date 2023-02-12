@@ -42,6 +42,7 @@ protected:
     virtual void broadcastData() = 0;
     virtual void setDualStateFactors() = 0;
     virtual void scanAndCreateDualStates() = 0;
+    virtual void clearSolver(bool final_substep) {};
 public:
     void reset();
     ARockBase(D2State * _state, ARockSolverConfig _config):
@@ -57,6 +58,8 @@ protected:
     virtual SolverReport solveLocalStep() override;
     void setDualStateFactors() override;
     virtual void prepareSolverInIter(bool final_iter) override;
+    std::vector<ceres::CostFunction*> dual_factors;
+    virtual void clearSolver(bool final_substep) override;
 public:
     ARockSolver(D2State * _state, ARockSolverConfig _config):
             SolverWrapper(_state), ARockBase(_state, _config) {

@@ -376,8 +376,8 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
         std::vector<int> _idx_b;
         std::vector<int> _camera_indices;
 
-        if (dir_a < frame_array_a.images.size() && dir_b < frame_array_b.images.size()) {
-            bool succ = computeCorrespondFeatures(frame_array_a.images.at(dir_a),frame_array_b.images.at(dir_b),
+        if (dir_a < frame_array_a.images.size() && dir_b < frame_array_b.images.size() && dir_a >= 0 && dir_b >= 0) {
+            bool succ = computeCorrespondFeatures(frame_array_a.images[dir_a],frame_array_b.images[dir_b],
                 _lm_pos_a, _idx_a, _lm_norm_3d_b, _idx_b, _camera_indices);
             // ROS_INFO("[SWARM_LOOP] computeCorrespondFeatures on camera_index %d:%d gives %d common features", dir_b, dir_a, _lm_pos_a.size());
             if (!succ) {
@@ -453,12 +453,12 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
         
     }
     Point2fVector lm_b_2d, lm_a_2d;
+    std::lock_guard<std::recursive_mutex> guard(landmark_mutex);
     for (auto match : _matches) {
         int index_a = match.queryIdx;
         int index_b = match.trainIdx;
         auto landmark_id = _a_lms[index_a].landmark_id;
         if (landmark_db.find(landmark_id) == landmark_db.end()) {
-            // ROS_WARN("[SWARM_LOOP] landmark_id %d not found in landmark_db", landmark_id);
             continue;
         }
         if (landmark_db.at(landmark_id).flag == LandmarkFlag::UNINITIALIZED || 
@@ -676,6 +676,7 @@ void LoopDetector::onLoopConnection(LoopEdge & loop_conn) {
 }
 
 void LoopDetector::updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPerId> & vins_landmark_db) {
+    std::lock_guard<std::recursive_mutex> guard(landmark_mutex);
     for (auto it : vins_landmark_db) {
         auto landmark_id = it.first;
         if (landmark_db.find(landmark_id) == landmark_db.end()) {

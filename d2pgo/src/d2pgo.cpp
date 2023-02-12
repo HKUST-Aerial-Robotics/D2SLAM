@@ -142,7 +142,7 @@ bool D2PGO::solve_multi(bool force_solve) {
     if (config.enable_pcm) {
         D2Common::Utility::TicToc tic;
         auto good_loops = rejection.OutlierRejectionLoopEdges(ros::Time::now(), available_loops);
-        printf("[D2PGO] Pcm takes %3.1fms, good %ld/%ld loops\n", good_loops.size(), available_loops.size());
+        printf("[D2PGO] Pcm takes %3.1fms, good %ld/%ld loops\n", tic.toc(), good_loops.size(), available_loops.size());
         setupLoopFactors(solver, good_loops);
     } else {
         setupLoopFactors(solver, available_loops);
@@ -479,7 +479,7 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
             ceres::EuclideanManifold<3> euc_manifold;
             manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
         } else {
-        local_parameterization = new PoseLocalParameterization;
+            local_parameterization = new PoseLocalParameterization;
         }
     }
     if (!config.perturb_mode) {

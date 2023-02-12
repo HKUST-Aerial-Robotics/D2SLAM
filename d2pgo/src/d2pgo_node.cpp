@@ -167,17 +167,24 @@ protected:
         } else {
             config.pgo_pose_dof = PGO_POSE_6D;
         }
+        config.pcm_rej.is_4dof = is_4dof;
+
+        //Config ceres
         config.ceres_options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;// ceres::DENSE_SCHUR;
         config.ceres_options.num_threads = 1;
         config.ceres_options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;// ceres::DOGLEG;
         config.ceres_options.max_solver_time_in_seconds =  fsSettings["pgo_solver_time"];
         config.main_id = 1;
+
+        //Config arock
         config.arock_config.self_id = config.self_id;
         config.arock_config.ceres_options = config.ceres_options;
         config.arock_config.rho_frame_T = fsSettings["pgo_rho_frame_T"];
         config.arock_config.rho_frame_theta = fsSettings["pgo_rho_frame_theta"];
         config.arock_config.eta_k = fsSettings["pgo_eta_k"];
-        config.pcm_rej.is_4dof = is_4dof;
+        config.arock_config.max_steps = 1;
+
+        //Outlier rejection
         config.is_realtime = true;
         config.enable_pcm = (int)fsSettings["enable_pcm"];
         config.pcm_rej.pcm_thres = fsSettings["pcm_thres"];

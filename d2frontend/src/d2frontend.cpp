@@ -160,6 +160,9 @@ void D2Frontend::loopDetectionThread() {
                 vframearry = loop_queue.front();
                 loop_queue.pop();
             }
+            if (loop_queue.size() > 10) {
+                ROS_WARN("[D2Frontend] Loop queue size is %d", loop_queue.size());
+            }
             loop_detector->processImageArray(vframearry);
         }
         usleep(10000);

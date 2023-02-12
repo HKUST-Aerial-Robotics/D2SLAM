@@ -144,6 +144,7 @@ SolverReport ARockBase::solve_arock() {
         auto _report = solveLocalStep();
         updateDualStates();
         broadcastData();
+        clearSolver(iter_cnt == config.max_steps - 1);
         report.compose(_report);
         float changes = (_report.initial_cost-_report.final_cost)/_report.initial_cost;
         if (iter_cnt == 0) {
@@ -164,7 +165,6 @@ void ARockSolver::scanAndCreateDualStates() {
     for (auto res: residuals) {
         auto param_infos = res->paramsList(SolverWrapper::state);
         for (auto param_info: param_infos) {
-            auto frame = SolverWrapper::state->getFramebyId(param_info.id);
             if (isRemoteParam(param_info)) {
                 auto drone_id = solverId(param_info);
                 if (drone_id!=self_id) {
@@ -196,15 +196,10 @@ void ARockSolver::resetResiduals() {
 }
 
 void ARockSolver::prepareSolverInIter(bool final_iter) {
-    // if (problem != nullptr) {
-    //     delete problem;
-    // }
     ceres::Problem::Options problem_options;
     if (!final_iter) {
         problem_options.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
         problem_options.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-        problem_options.local_parameterization_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-        problem_options.manifold_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
     }
     problem = new ceres::Problem(problem_options);
     for (auto residual_info : residuals) {
@@ -216,6 +211,20 @@ void ARockSolver::prepareSolverInIter(bool final_iter) {
 
 SolverReport ARockSolver::solve() {
     return ARockBase::solve_arock();
+}
+
+void ARockSolver::clearSolver(bool final_substep) {
+    if (problem != nullptr) {
+        delete problem;
+    }
+    problem = nullptr;
+    // if (!final_substep) {
+    //     //We need to clear dual factors manually.
+    //     for (auto factor : dual_factors) {
+    //         delete factor;
+    //     }
+    //     dual_factors.clear();
+    // }
 }
 
 void ARockSolver::setDualStateFactors() {
@@ -232,12 +241,14 @@ void ARockSolver::setDualStateFactors() {
                 // printf("[ARockSolver] ConsenusPoseFactor param %ld, drone_id %d pose_dual %s pose_cur %s\n", 
                 //     param_info.id, param_pair.first, pose_dual.toStr().c_str(), Swarm::Pose(state_pointer).toStr().c_str());
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
+                dual_factors.push_back(factor);
             } else if (IsPose4D(param_info.type)) {
                 Swarm::Pose pose_dual(dual_state);
                 // printf("[ARockSolver] ConsenusPoseFactor4D param %ld, drone_id %d pose_dual %s pose_cur %s\n", 
                 //     param_info.id, param_pair.first, pose_dual.toStr().c_str(), Swarm::Pose(state_pointer, true).toStr().c_str());
                 auto factor = ConsenusPoseFactor4D::Create(pose_dual, rho_T, rho_theta, true);
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
+                dual_factors.push_back(factor);
             } else if (param_info.type == D2Common::POSE_PERTURB_6D) {
                 MatrixXd A(param_info.size, param_info.size);
                 A.setIdentity();
@@ -245,6 +256,7 @@ void ARockSolver::setDualStateFactors() {
                 A.block<3, 3>(3, 3) *= sqrt(rho_theta);
                 auto factor = new ceres::NormalPrior(A, dual_state);
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
+                dual_factors.push_back(factor);
                 // if (self_id == 0) {
                 //     printf("[ARockSolver] ConsenusPosePerturbFactor param %ld, drone_id %d A:\n", 
                 //         param_info.id, param_pair.first);
@@ -261,6 +273,7 @@ void ARockSolver::setDualStateFactors() {
                 }
                 auto factor = new ceres::NormalPrior(A, dual_state);
                 problem->AddResidualBlock(factor, nullptr, state_pointer);
+                dual_factors.push_back(factor);
             }
         }
     }

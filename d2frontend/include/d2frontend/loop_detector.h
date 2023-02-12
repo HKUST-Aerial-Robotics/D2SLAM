@@ -63,7 +63,7 @@ class SuperGlueOnnx;
 class LoopDetector {
     LoopDetectorConfig _config;
     std::map<LandmarkIdType, LandmarkPerId> landmark_db;
-    std::recursive_mutex frame_mutex;
+    std::recursive_mutex frame_mutex, landmark_mutex;
 protected:
     faiss::IndexFlatIP local_index;
     faiss::IndexFlatIP remote_index;
