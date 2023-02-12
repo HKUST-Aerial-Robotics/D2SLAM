@@ -179,6 +179,9 @@ int LoopDetector::addToDatabase(VisualImageDescArray & new_fisheye_desc) {
         const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
         keyframe_database[new_fisheye_desc.frame_id] = new_fisheye_desc;
     }
+    printf("[SWARM_LOOP] Add keyframe with %d images from %d to local keyframe database. Total frames: %ld\n", 
+        new_fisheye_desc.images.size(), new_fisheye_desc.drone_id, keyframe_database.size());
+    // new_fisheye_desc.printSize();
     return new_fisheye_desc.frame_id;
 }
 
