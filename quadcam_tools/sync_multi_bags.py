@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 import rosbag
-import sys
 from transformations import *
 import numpy as np
 from math import *
 from geometry_msgs.msg import PoseStamped
-import rospy
 from cv_bridge import CvBridge
 import cv2 as cv
 import argparse
 from sensor_msgs.msg import CompressedImage
+import rospy
 
 def quat2eulers(w, x, y, z):
     r = atan2(2 * (w * x + y * z),
@@ -53,6 +52,30 @@ def get_time0(bag, is_realsense=False):
                 count_camera_available.add(2)
             if len(count_camera_available) == 2:
                 return t
+mav = None
+def get_traj_command_time(bag):
+    from pymavlink4swarm import MAVLink
+    import array
+    class fifo(object):
+        def __init__(self):
+            self.buf = []
+        def write(self, data):
+            self.buf += data
+            return len(data)
+        def read(self):
+            return self.buf.pop(0)
+    global mav
+    if mav is None:
+        f = fifo()
+        mav = MAVLink(f)
+    print("Processing...")
+    for topic, msg, t in rosbag.Bag(bag).read_messages():
+        if topic == "/uwb_node/incoming_broadcast_data":
+            m = mav.decode(array.array('B', (msg.data)))
+            if m.command_type == 16:
+                print(f"Got command {m.command_type} at {t}")
+                return t
+    return None
 
 def get_pose0(bag):
     for topic, msg, t in rosbag.Bag(bag).read_messages():
@@ -95,23 +118,43 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--show', action='store_true', help="show while sync")
     parser.add_argument('-r', '--realsense', action='store_true', help="is realsense not TUM")
     parser.add_argument('-o', '--output', default="", type=str, help='output path')
+    parser.add_argument('-p', '--sync-path', default="", action='store_true', help='sync by path command')
     args = parser.parse_args()
     bags = args.bags
-    t0 = get_time0(bags[0], is_realsense=args.realsense)
+    dts = {}
+    t0s = {}
+
+    if args.sync_path:
+        t_traj_min = 1e10
+        t_traj_min_bag = ""
+        t_trajs = {}
+        for bag in bags:
+            t0 = get_time0(bag, is_realsense=args.realsense)
+            t_traj = get_traj_command_time(bag)
+            t_trajs[bag] = t_traj
+            d_traj_after_start = t_traj.to_sec() - t0.to_sec()
+            if d_traj_after_start < t_traj_min:
+                t_traj_min = d_traj_after_start
+                t_traj_min_bag = bag
+        t0 = t_trajs[bag] - rospy.Duration(t_traj_min)
+        print(f"Bag {bag} start at {t0.to_sec()} traj at {t_traj.to_sec()} diff {t_traj.to_sec() - t0.to_sec()}")
+        for bag in bags:
+            t0s[bag] = t_trajs[bag] - rospy.Duration(t_traj_min)
+            dts[bag] = t0 - t0s[bag]
+    else:
+        t0 = get_time0(bags[0], is_realsense=args.realsense)
+        for bag in bags:
+            t = get_time0(bag, is_realsense=args.realsense)
+            print(f"Bag {bag} start at {t.to_sec()}")
+            dts[bag] = t0 - t
+            t0s[bag] = t
+
     pos0, q_calib, y0 = get_pose0(bags[0])
+    
     import pathlib
     output_path = pathlib.Path(bags[0]).resolve() if args.output == "" else pathlib.Path(args.output)
     print(f"{len(bags)} bags to process. Will write to", output_path)
-    
-    dts = {}
-    t0s = {}
-    for bag in bags:
-        t = get_time0(bag, is_realsense=args.realsense)
-        print(f"Bag {bag} start at {t.to_sec()}")
-        dts[bag] = t0 - t
-        t0s[bag] = t
 
-    print(dts)
     bridge = CvBridge()
     encode_param = [int(cv.IMWRITE_JPEG_QUALITY), args.quality]
     for bag in bags:

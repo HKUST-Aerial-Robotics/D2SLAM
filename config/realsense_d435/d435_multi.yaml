@@ -157,7 +157,7 @@ enable_gravity_prior: 1
 gravity_sqrt_info: 10
 pgo_solver_time: 1.0
 solver_timer_freq: 1.0
-enable_pcm: true
+enable_pcm: 1
 pcm_thres: 2.8
 
 #outputs
