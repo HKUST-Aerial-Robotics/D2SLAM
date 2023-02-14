@@ -43,6 +43,7 @@ add_library(${PROJECT_NAME}
   src/rot_init/rotation_initialization.cpp
   src/swarm_outlier_rejection/swarm_outlier_rejection.cpp
   third_party/fast_max-clique_finder/src/findCliqueHeu.cpp
+  third_party/fast_max-clique_finder/src/findCliqueHeuInc.cpp
   third_party/fast_max-clique_finder/src/findClique.cpp
   third_party/fast_max-clique_finder/src/graphIO.cpp
   third_party/fast_max-clique_finder/src/utils.cpp

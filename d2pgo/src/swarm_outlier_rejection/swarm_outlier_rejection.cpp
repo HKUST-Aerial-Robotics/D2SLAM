@@ -25,28 +25,6 @@ SwarmLocalOutlierRejection::SwarmLocalOutlierRejection(int _self_id, const Swarm
     }
 }
 
-// void SwarmLocalOutlierRejection::good_ids_handle(const lcm::ReceiveBuffer* rbuf,
-//                 const std::string& chan, 
-//                 const LoopInliers_t* msg) {
-//     if (msg->drone_id_a == self_id || msg->drone_id_b == self_id) {
-//         ROS_INFO("[SWARM_LOCAL](OutlierRejection) Recv good ids for %d<->%d from %d, rejected.", msg->drone_id_a, msg->drone_id_b, msg->sender_id);
-//         return;
-//     }
-
-//     ROS_INFO("[SWARM_LOCAL](OutlierRejection) Recv good ids for %d<->%d from %d", msg->drone_id_a, msg->drone_id_b, msg->sender_id);
-
-//     lcm_mutex.lock();
-//     good_loops_set[msg->drone_id_a][msg->drone_id_b].clear();
-//     good_loops_set[msg->drone_id_b][msg->drone_id_a].clear();
-
-//     for (int i = 0; i < msg->inlier_id_size; i ++) {
-//         good_loops_set[msg->drone_id_a][msg->drone_id_b].insert(i);
-//         good_loops_set[msg->drone_id_b][msg->drone_id_a].insert(i);
-//     }
-//     lcm_mutex.unlock();
-// }
-
-
 std::vector<int64_t> SwarmLocalOutlierRejection::good_loops() {
     lcm_mutex.lock();
     std::vector<int64_t> ret;
@@ -61,31 +39,6 @@ std::vector<int64_t> SwarmLocalOutlierRejection::good_loops() {
     return ret;
 }
 
-void SwarmLocalOutlierRejection::broadcast_good_loops(ros::Time stamp, int id_a, int id_b) {
-    // LoopInliers_t msg;
-    // if (good_loops_set.find(id_a) != good_loops_set.end()) {
-    //     if (good_loops_set.find(id_b) != good_loops_set.end()) {
-    //         for (auto _id : good_loops_set[id_a][id_b]) {
-    //             msg.inlier_ids.push_back(_id);
-    //         }
-    //     }
-    // }
-    // msg.drone_id_a = id_a;
-    // msg.drone_id_b = id_b;
-    // msg.sender_id = self_id;
-    // msg.ts = toLCMTime(stamp);
-    // msg.inlier_id_size = msg.inlier_ids.size();
-    // lcm.publish("LOOP_INLIERS", &msg);
-
-    // static double sum_byte_sent = 0;
-    // static int count_byte_sent = 0;
-    // sum_byte_sent+= msg.getEncodedSize();
-    // count_byte_sent ++;
-    // ROS_INFO("[SWARM_LOCAL](%d) BD inliers %d bytes %d avg %.0f sumkB %.0f", 
-    //         count_byte_sent,  msg.inlier_id_size, msg.getEncodedSize(), ceil(sum_byte_sent/count_byte_sent), sum_byte_sent/1000);
-
-}
-
 std::vector<Swarm::LoopEdge> SwarmLocalOutlierRejection::OutlierRejectionLoopEdges(ros::Time stamp, const std::vector<Swarm::LoopEdge> & available_loops) {
     if (param.debug_write_pcm_errors) {
         pcm_errors.open("/root/output/pcm_errors.txt", std::ios::app);
@@ -94,6 +47,7 @@ std::vector<Swarm::LoopEdge> SwarmLocalOutlierRejection::OutlierRejectionLoopEdg
 
     std::map<int, std::map<int, std::vector<Swarm::LoopEdge>>> new_loops;
     std::vector<Swarm::LoopEdge> good_loops;
+    int new_loop_count = 0;
     for (auto & edge: available_loops) {
         if (all_loops_set.find(edge.id) == all_loops_set.end()) {
             new_loops[edge.id_a][edge.id_b].emplace_back(edge);
@@ -103,14 +57,18 @@ std::vector<Swarm::LoopEdge> SwarmLocalOutlierRejection::OutlierRejectionLoopEdg
             if (all_loop_map.find(edge.id) == all_loop_map.end()) {
                 all_loop_map[edge.id] = edge;
             }
-
             all_loops_set_by_pair[edge.id_a][edge.id_b].insert(edge.id);
             all_loops_set_by_pair[edge.id_b][edge.id_a].insert(edge.id);
-
+            new_loop_count += 1;
         }
+        all_loops_set.insert(edge.id);
     }
+    printf("[SWARM_LOCAL](OutlierRejection) %d new loops, %d total loops\n", new_loop_count, all_loops_set.size());
 
     if (param.redundant) {
+        // Note in D2SLAM this is on because we do not broadcast the loops. 
+        // So it's natural to be distributed.
+        // the other branch is for debugging only.
         for (auto it_a: new_loops) {
             for (auto it_b: it_a.second) {
                 if (it_a.first >= it_b.first) {
@@ -123,7 +81,6 @@ std::vector<Swarm::LoopEdge> SwarmLocalOutlierRejection::OutlierRejectionLoopEdg
             for (auto it_b: it_a.second) {
                 if (it_a.first == self_id) {
                     OutlierRejectionLoopEdgesPCM(it_b.second, it_a.first, it_b.first);
-                    broadcast_good_loops(stamp, it_a.first, it_b.first);
                 }
             }
         }
@@ -133,13 +90,10 @@ std::vector<Swarm::LoopEdge> SwarmLocalOutlierRejection::OutlierRejectionLoopEdg
     for (auto & loop : available_loops) {
         auto id_a = loop.id_a;
         auto id_b = loop.id_b;
-
         if (good_loops_set.find(id_a) == good_loops_set.end() || good_loops_set[id_a].find(id_b) == good_loops_set[id_a].end()) {
             //The inlier set of the pair in good loop not established, so we make use all of them
-            // ROS_INFO("[SWARM_LOCAL](OutlierRejection) Drone pair %d<->%d not exist self_id %d, assume all is right", id_a, id_b, self_id);
             good_loops.emplace_back(loop);
         } else {
-            // ROS_INFO("[SWARM_LOCAL](OutlierRejection) Drone pair %d<->%d exist with %d res, use it", id_a, id_b, good_loops_set[loop.id_a][loop.id_b].size());
             auto _good_loops_set = good_loops_set[loop.id_a][loop.id_b];
             if (_good_loops_set.find(loop.id) != _good_loops_set.end()) {
                 good_loops.emplace_back(loop);
@@ -251,31 +205,43 @@ void SwarmLocalOutlierRejection::OutlierRejectionLoopEdgesPCM(const std::vector<
             }
         }
         _all_loops.push_back(edge1);
-        all_loops_set.insert(edge1.id);
     }
 
     double compute_pcm_erros = tic1.toc();
-
+    std::vector<int> max_clique_data;
     FMC::CGraphIO pcm_graph_fmc;
     pcm_graph_fmc.m_vi_Vertices.push_back(0);
-
-	for(size_t i=0;i < pcm_graph.size(); i++) {
-		pcm_graph_fmc.m_vi_Edges.insert(pcm_graph_fmc.m_vi_Edges.end(),pcm_graph[i].begin(),pcm_graph[i].end());
-		pcm_graph_fmc.m_vi_Vertices.push_back(pcm_graph_fmc.m_vi_Edges.size());
-	}
-
+    for(size_t i=0;i < pcm_graph.size(); i++) {
+        pcm_graph_fmc.m_vi_Edges.insert(pcm_graph_fmc.m_vi_Edges.end(),pcm_graph[i].begin(),pcm_graph[i].end());
+        pcm_graph_fmc.m_vi_Vertices.push_back(pcm_graph_fmc.m_vi_Edges.size());
+    }
     pcm_graph_fmc.CalculateVertexDegrees();
-    std::vector<int> max_clique_data;
-    TicToc tic;
-    auto max_clique_size = FMC::maxCliqueHeu(pcm_graph_fmc, max_clique_data);
-    ROS_INFO("[SWARM_LOCAL](OutlierRejection) %d<->%d compute_pcm_errors %.1fms maxCliqueHeu takes %.1fms inter_loop %ld good %ld", 
-        id_a, id_b, compute_pcm_erros, tic.toc(), _all_loops.size(), max_clique_data.size());
-
-    good_loops_set[id_a][id_b].clear();
-    good_loops_set[id_b][id_a].clear();
-    for (auto i : max_clique_data) {
-        good_loops_set[id_a][id_b].insert(_all_loops[i].id);
-        good_loops_set[id_b][id_a].insert(_all_loops[i].id);
+    if (param.incremental_pcm) {
+        TicToc tic;
+        int prev_max_clique_size = good_loops_set[id_a][id_b].size();
+        int ret = FMC::maxCliqueHeuIncremental(pcm_graph_fmc, new_loops.size(), prev_max_clique_size, max_clique_data);
+        if (ret > 0 && max_clique_data.size() > 0) {
+            good_loops_set[id_a][id_b].clear();
+            good_loops_set[id_b][id_a].clear();
+            for (auto i : max_clique_data) {
+                good_loops_set[id_a][id_b].insert(_all_loops[i].id);
+                good_loops_set[id_b][id_a].insert(_all_loops[i].id);
+            }
+        }
+        printf("[D2PGO](OutlierRejection) %d<->%d compute_pcm_errors %.1fms maxCliqueHeuInc takes %.1fms ret %d(%d) loops %ld good %ld\n", 
+            id_a, id_b, compute_pcm_erros, tic.toc(), ret, max_clique_data.size(), _all_loops.size(), good_loops_set[id_a][id_b].size());
+    } else {
+        TicToc tic;
+        FMC::maxCliqueHeu(pcm_graph_fmc, max_clique_data);
+        printf("[D2PGO](OutlierRejection) %d<->%d compute_pcm_errors %.1fms maxCliqueHeu takes %.1fms loops %ld good %ld\n", 
+            id_a, id_b, compute_pcm_erros, tic.toc(), _all_loops.size(), max_clique_data.size());
+        //In non-incremental mode, we need to clear the good_loops_set
+        good_loops_set[id_a][id_b].clear();
+        good_loops_set[id_b][id_a].clear();
+        for (auto i : max_clique_data) {
+            good_loops_set[id_a][id_b].insert(_all_loops[i].id);
+            good_loops_set[id_b][id_a].insert(_all_loops[i].id);
+        }
     }
 }
 }

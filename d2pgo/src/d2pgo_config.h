@@ -25,6 +25,7 @@ struct SwarmLocalOutlierRejectionParams {
     bool enable_pcm = true;
     bool redundant = true;
     bool is_4dof = true;
+    bool incremental_pcm = true;
 };
 
 struct D2PGOConfig {

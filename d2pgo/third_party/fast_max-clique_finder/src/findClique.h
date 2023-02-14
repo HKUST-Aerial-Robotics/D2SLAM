@@ -50,5 +50,9 @@ int maxCliqueHeu( CGraphIO& gio );
 int maxCliqueHeu(CGraphIO& gio, vector<int>& max_clique_data);
 void maxCliqueHelperHeu( CGraphIO& gio, vector<int>* U, int sizeOfClique, int& maxClq, vector<int>& max_clique_data_inter );
 
+int maxCliqueHeuIncremental(CGraphIO& gio,
+                            size_t num_new_lc,
+                            size_t prev_maxclique_size,
+                            vector<int>& max_clique_data);
 }
 #endif 
