@@ -104,6 +104,7 @@ protected:
     std::pair<bool, LandmarkPerFrame> createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id = -1);
     std::recursive_mutex track_lock;
     std::recursive_mutex keyframe_lock;
+    std::recursive_mutex lmanager_lock;
     
     std::map<int, std::vector<cv::Point2f>> landmark_predictions_viz;
     std::map<int, std::vector<cv::Point2f>> landmark_predictions_matched_viz;

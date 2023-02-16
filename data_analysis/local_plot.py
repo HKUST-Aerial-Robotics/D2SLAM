@@ -44,6 +44,21 @@ def read_paths(folder, nodes, prefix="d2vins_", suffix=".csv", t0=None, dte=None
             print(f"Failed to read {folder}/{prefix}{drone_id}{suffix}")
     return ret, t0
 
+def read_multi_folder(folder, nodes, enable_pgo=True):
+    paths = {}
+    paths_pgo = {}
+    t0 = None
+    for i in nodes:
+        output_folder = folder + str(i) + "/"
+        _paths, t0 = read_paths(output_folder, [i], t0=t0)
+        if enable_pgo:
+            _paths_pgo, t0 = read_paths(output_folder, [i], prefix="pgo_", t0=t0)
+            paths_pgo[i] = _paths_pgo[i]
+        paths[i] = _paths[i]
+    if len(paths_pgo) == 0:
+        return paths, None, t0
+    return paths, paths_pgo, t0
+    
 def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="/home/xuhao/output/", id_map = None, figsize=(6, 6), plot_each=True):
     fig = plt.figure("plot3d", figsize=figsize)
     ax = fig.add_subplot(111, projection='3d')

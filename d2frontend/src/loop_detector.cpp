@@ -43,7 +43,7 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
     int images_num = image_array.images.size();
 
     if (drone_id!= this->self_id && databaseSize() == 0) {
-        ROS_INFO("[SWARM_LOOP] Empty local database, where giveup remote image");
+        ROS_INFO("[SWARM_LOOP] Empty local database, will giveup remote image");
         return;
     } else {
         printf("[SWARM_LOOP@%d] Recv KF %ld from drone %d images: %d landmark: %d lazy: %d matched_to %d\n", self_id, image_array.frame_id,

@@ -30,6 +30,7 @@ D2FeatureTracker::D2FeatureTracker(D2FTConfig config):
 void D2FeatureTracker::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
     //update by sliding window
     const Guard lock(keyframe_lock);
+    const Guard guard2(lmanager_lock);
     if (current_keyframes.size() == 0 || sld_win.size() == 0)
         return;
     std::map<FrameIdType, Swarm::Pose> sld_win_poses;
@@ -60,6 +61,7 @@ void D2FeatureTracker::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
 
 void D2FeatureTracker::updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPerId> & vins_landmark_db) {
     //update by sliding window
+    const Guard guard2(lmanager_lock);
     if (_config.enable_motion_prediction_local || _config.enable_search_local_aera_remote) {
         auto & db = lmanager->getLandmarkDB();
         for (auto & kv : vins_landmark_db) {
@@ -74,6 +76,8 @@ void D2FeatureTracker::updatebyLandmarkDB(const std::map<LandmarkIdType, Landmar
 
 bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     const Guard lock(track_lock);
+    const Guard guard(keyframe_lock);
+    const Guard guard2(lmanager_lock);
     bool iskeyframe = false;
     frame_count ++;
     TrackReport report;
@@ -319,7 +323,6 @@ void D2FeatureTracker::cvtRemoteLandmarkId(VisualImageDesc & frame) const {
 
 TrackReport D2FeatureTracker::track(VisualImageDesc & frame, const Swarm::Pose & motion_prediction) {
     TrackReport report;
-    const Guard lock(keyframe_lock);
     if (current_keyframes.size() > 0 && current_keyframes.back().frame_id != frame.frame_id) {
         auto & current_keyframe = current_keyframes.back();
         //Then current keyframe has been assigned, feature tracker by LK.
@@ -400,7 +403,6 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
         if (prev_found.first) {
             lm.stamp_discover = prev_found.second.stamp_discover;
         }
-        lmanager->updateLandmark(lm);
         frame.landmarks.emplace_back(lm);
         if (lmanager->at(cur_lk_ids[i]).track.size() >= _config.long_track_frames) {
             report.long_track_num ++;
@@ -600,7 +602,6 @@ void D2FeatureTracker::processFrame(VisualImageDescArray & frames, bool is_keyfr
         frame.pose_drone = frames.motion_prediction;
     }
     frames.pose_drone = frames.motion_prediction;
-    const Guard lock(keyframe_lock);
     current_keyframes.emplace_back(frames);
 }
 
