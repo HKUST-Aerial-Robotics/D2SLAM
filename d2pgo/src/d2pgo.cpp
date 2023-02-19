@@ -150,7 +150,12 @@ bool D2PGO::solve_multi(bool force_solve) {
     if (config.enable_ego_motion) {
         setupEgoMotionFactors(solver);
     }
-
+    if (config.debug_save_g2o_only) {
+        saveG2O(true);
+        used_loops.clear();
+        solver->reset();
+        return false;
+    }
     if (config.enable_rotation_initialization && !isRotInitConvergence()) {
         rotInitial(used_loops);
         if (config.write_g2o) {
@@ -304,13 +309,31 @@ void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge> & good_loops) {
     }
 }
 
-void D2PGO::saveG2O() {
+void D2PGO::saveG2O(bool only_self) {
     std::vector<D2BaseFrame*> frames;
     for (auto frame_id: used_frames) {
-        frames.emplace_back(state.getFramebyId(frame_id));
+        if (only_self) {
+            if (state.getFramebyId(frame_id)->drone_id == self_id) {
+                frames.emplace_back(state.getFramebyId(frame_id));
+            }
+        } else {
+            frames.emplace_back(state.getFramebyId(frame_id));
+        }
     }
     printf("[D2PGO::saveG2O@%d] save %ld frames\n", self_id, frames.size());
-    write_result_to_g2o(config.g2o_output_path, frames, used_loops, config.g2o_use_raw_data);
+    std::string path = config.g2o_output_path + "g2o_drone_" + std::to_string(self_id) + "_iter_" + std::to_string(save_count) + ".g2o";
+    std::cout << "save g2o to " << path << std::endl;
+    write_result_to_g2o(path, frames, used_loops, config.g2o_use_raw_data);
+    path = config.g2o_output_path + "frame_timestamp.txt";
+    //output the timestamp of the frames.
+    std::fstream file;
+    file.open(path.c_str(), std::fstream::out);
+    std::cout.precision(9);
+    for (auto frame: frames) {
+        file << frame->frame_id <<"  "<< std::fixed << frame->stamp << std::endl;
+    }
+    file.close();
+    save_count ++;
 }
 
 void D2PGO::evalLoop(const Swarm::LoopEdge & loop) {
@@ -551,6 +574,7 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
 }
 
 std::map<int, Swarm::Odometry> D2PGO::getPredictedOdoms() const {
+    const Guard lock(state_lock);
     std::map<int, Swarm::Odometry> ret;
     for (auto drone_id : state.availableDrones()) {
         if (!state.hasEgomotionTraj(drone_id)) {

@@ -55,5 +55,6 @@ struct D2PGOConfig {
     SwarmLocalOutlierRejectionParams pcm_rej;
     RotInitConfig rot_init_config;
     double rot_init_timeout = 3;
+    bool debug_save_g2o_only = false;
 };
 }

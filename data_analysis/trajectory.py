@@ -170,7 +170,7 @@ def find_common_times(times_a, times_b, dt=0.005):
     # plt.plot(times_b, marker=".", linestyle="None")
     return times_a
 
-def align_paths(paths, paths_gt, align_by_first=False, align_with_minize=False, align_coor_only=False):
+def align_paths(paths, paths_gt, align_by_first=False, align_with_minize=False, align_coor_only=True):
     # align the first pose in each path to paths_gt
     dpos = None
     for i in paths:
@@ -244,11 +244,11 @@ def align_path_by_minimize(path, path_gt, inplace=False, align_coor_only=False):
         relative_yaw = res.x[3]
         relative_pitch = res.x[4]
         relative_roll = res.x[5]
-        datt = quaternion_from_euler(relative_roll, relative_pitch, relative_yaw)
         if inplace:
             path.pos = yaw_rotate_vec(relative_yaw, path.pos) + relative_pos
             path.ypr = path.ypr + res.x[3:]
             path.ypr[:, 0] = wrap_pi(path.ypr[:, 0])
             path.interp()
+    datt = quaternion_from_euler(relative_roll, relative_pitch, relative_yaw)
     return relative_pos, relative_yaw, datt
             

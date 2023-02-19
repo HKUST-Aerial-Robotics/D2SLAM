@@ -70,7 +70,13 @@ class KeyFrame():
         for edge in self.edges:
             cp.add_edge(edge.copy())
         return cp
-    
+
+    def csv(self, ts=None):
+        if ts is None:
+            return f"{self.keyframe_id},{self.pos[0]},{self.pos[1]},{self.pos[2]},{self.quat[0]},{self.quat[1]},{self.quat[2]},{self.quat[3]}"
+        else:
+            return f"{ts} {self.pos[0]} {self.pos[1]} {self.pos[2]} {self.quat[0]} {self.quat[1]} {self.quat[2]} {self.quat[3]}"
+        
 class Edge():
     def __init__(self, _ida, _idb, pos, quat, is_inter, is_4d=False, inf_mat=np.eye(6, 6)):
         self.keyframe_ida = _ida
@@ -162,6 +168,15 @@ class Agent():
 
             for edge in addition_edges:
                 print(edge.g2o(cvt_id,force_ids), file=f)
+    
+    def write_to_csv(self, path, idx_stamp_map = None):
+        with open(path, 'w') as f:
+            for keyframe in self.keyframes:
+                if idx_stamp_map is not None:
+                    stamp = idx_stamp_map[keyframe.keyframe_id]
+                else:
+                    stamp=None
+                print(keyframe.csv(stamp), file=f)
 
     def check_connected_keyframes(self, kf_id):
         visited_keyframes = set()
@@ -392,9 +407,12 @@ class PoseGraph():
 
         return self.cut(), self.communication_volume(), min_keyframes, max_keyframes, len(self.keyframes), len(self.edges)
 
-    def communication_volume(self):
+    def communication_volume(self, broadcast=False):
         _v = 0
         agent_vol = {}
+        edge_keyframes = {}
+        for i in self.agents:
+            edge_keyframes[i] = set()
         for kf_id in self.keyframes:
             kf = self.keyframes[kf_id]
             if kf.agent_id not in agent_vol:
@@ -405,12 +423,19 @@ class PoseGraph():
                 _agent_idb = self.keyframes[edge.keyframe_idb].agent_id
                 if _agent_ida != kf.agent_id:
                     _agent_set.add(_agent_ida)
+                    edge_keyframes[kf.agent_id].add(kf.keyframe_id)
                 elif _agent_idb != kf.agent_id:
                     _agent_set.add(_agent_idb)
+                    edge_keyframes[kf.agent_id].add(kf.keyframe_id)
             _v += len(_agent_set)
             agent_vol[kf.agent_id] += len(_agent_set)
-
-        return _v
+        if broadcast:
+            vol = 0
+            for i in self.agents:
+                vol += len(edge_keyframes[i])
+            return vol
+        else:
+            return _v
 
     def setup_graph(self, show=False):
         G = nx.Graph()
@@ -1011,7 +1036,7 @@ class PoseGraph():
         for agent_id in self.agents:
             c += len(self.agents[agent_id].edges)
             self.agents[agent_id].write_to_g2o(f"{path}/{agent_id}.g2o", cvt_id)
-        print(f"Wrote {c} edges total {len(self.edges)}")
+        # print(f"Wrote {c} edges total {len(self.edges)}")
 
     def write_to_g2o(self, path, cvt_id=False, agent_id=0):
         self.agents[agent_id].write_to_g2o(path, cvt_id)

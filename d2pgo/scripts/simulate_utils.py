@@ -67,10 +67,10 @@ def call_DGS_solver(path, agent_num, optimizer_path=OPTIM_PATH, rthresh=1e-2, pt
     s = os.popen(command)
     output = s.read()
     try:
-        iterations, min_time, max_time, initial, final, util_rate = pocess_DGS_result(output)
-        return iterations, min_time, max_time, initial, final, util_rate
+        iterations, min_time, max_time, initial, final, util_rate, total_optim = pocess_DGS_result(output)
+        return iterations, min_time, max_time, initial, final, util_rate, total_optim
     except:
-        print("DGS Error!", command, "RET:", output, "\n")
+        # print("DGS Error!", command, "RET:", output, "\n")
         return -1, 0, 0, 0, 0, 0
         
 def call_SESync(path, path_output, optimizer_path="/home/xuhao/source/SESync/C++/build/bin/SE-Sync"):
@@ -230,11 +230,12 @@ def pocess_DGS_result(output):
     solve_times = re.findall("\[DGS\] Robot \(\d+\) time (\S+)ms", output, flags=0)
     initial = float(re.findall("Initial error\s+(\S+)", output, flags=0)[0])
     final = float(re.findall("Distributed Error:\s+(\S+)", output, flags=0)[0])
+    total_optim = float(re.findall("optimizedPoses time: ([0-9]+\.?[0-9]*)ms", output, flags=0)[0])
     sum_of_solve_time = 0
     for t in solve_times:
         sum_of_solve_time += float(t)
     ut_rate  = sum_of_solve_time/(len(solve_times)*max_time)
-    return iterations, min_time, max_time, initial, final, ut_rate
+    return iterations, min_time, max_time, initial, final, ut_rate, total_optim
 
 def pocess_DSLAM_result(output):
     print(output)

@@ -157,7 +157,7 @@ protected:
         config.write_g2o = (int) fsSettings["write_g2o"];
         fsSettings["g2o_output_path"] >> config.g2o_output_path;
         write_to_file = (int) fsSettings["write_pgo_to_file"];
-        config.g2o_output_path = output_folder + "/" + config.g2o_output_path;
+        config.g2o_output_path = output_folder + "/";// + config.g2o_output_path;
         config.mode = static_cast<PGO_MODE>((int) fsSettings["pgo_mode"]);
         nh.param<int>("self_id", config.self_id, -1);
         bool is_4dof;
@@ -193,6 +193,8 @@ protected:
         config.rot_init_config.gravity_sqrt_info = fsSettings["gravity_sqrt_info"];
         solver_timer_freq = (double) fsSettings["solver_timer_freq"];
         config.perturb_mode = true;
+        //Debugging 
+        config.debug_save_g2o_only = (int) fsSettings["debug_save_g2o_only"];
         if (config.mode == PGO_MODE::PGO_MODE_NON_DIST) {
             multi = false;
             printf("[D2PGO] In single mode enable_pcm %d pcm_thres %.1f\n", config.enable_pcm, config.pcm_rej.pcm_thres);

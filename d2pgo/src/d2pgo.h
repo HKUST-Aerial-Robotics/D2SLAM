@@ -36,8 +36,9 @@ protected:
     std::set<int> available_robots;
     std::set<int> rot_init_finished_robots;
     bool rot_init_finished = false;
+    int save_count = 0;
 
-    void saveG2O();
+    void saveG2O(bool only_self=false);
     void setupLoopFactors(SolverWrapper * solver, const std::vector<Swarm::LoopEdge> & good_loops);
     void setupEgoMotionFactors(SolverWrapper * solver);
     void setupEgoMotionFactors(SolverWrapper * solver, int drone_id);
