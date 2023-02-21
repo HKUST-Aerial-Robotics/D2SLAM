@@ -135,10 +135,12 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
         } else {
             if (params->verbose)
                 printf("[SWARM_LOOP@%d] No matched image for frame %ld\n", self_id, image_array.frame_id);
-        }      
+        }     
         if (!image_array.is_lazy_frame && image_array.matched_frame < 0 && (!image_array.prevent_adding_db || new_node)) {
-            //Note in lazy mode, the remote database is not updated
-            addToDatabase(image_array);
+            if (image_array.drone_id == self_id) { 
+                //Only add local frame to database
+                addToDatabase(image_array);
+            }
         } else {
             ROS_DEBUG("[SWARM_LOOP] This image is prevent to adding to DB");
         }
@@ -348,8 +350,11 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
     std::vector<int> dirs_a;
     std::vector<int> dirs_b;
     
-    if (params->camera_configuration == STEREO_PINHOLE || params->camera_configuration == PINHOLE_DEPTH) {
-        dirs_a = {0};
+    if (params->camera_configuration == STEREO_PINHOLE) {
+        dirs_a = {0, 1};
+        dirs_b = {0, 1};
+    } else if (params->camera_configuration == PINHOLE_DEPTH) {
+        dirs_a = {0, 1};
         dirs_b = {0};
     } else if (params->camera_configuration == STEREO_FISHEYE || params->camera_configuration == FOURCORNER_FISHEYE) {
         for (int _dir_a = main_dir_a; _dir_a < main_dir_a + _config.MAX_DIRS; _dir_a ++) {
@@ -395,20 +400,9 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
         Swarm::Pose _extrinsic_a(frame_array_a.images[dir_a].extrinsic);
         Swarm::Pose _extrinsic_b(frame_array_b.images[dir_b].extrinsic);
 
-        if (params->camera_configuration == STEREO_FISHEYE) {
-            Eigen::Quaterniond dq_new = main_quat_new.inverse() * _extrinsic_a.att();
-            Eigen::Quaterniond dq_old = main_quat_old.inverse() * _extrinsic_b.att();
-            for (size_t id = 0; id < _lm_norm_3d_b.size(); id++) {
-                auto pt = _lm_norm_3d_b[id];
-                index2dirindex_a.push_back(std::make_pair(dir_a, _idx_a[id]));
-                index2dirindex_b.push_back(std::make_pair(dir_b, _idx_b[id]));
-                _lm_norm_3d_b[i] = dq_old*pt;
-            }
-        } else {
-            for (size_t id = 0; id < _lm_norm_3d_b.size(); id++) {
-                index2dirindex_a.push_back(std::make_pair(dir_a, _idx_a[id]));
-                index2dirindex_b.push_back(std::make_pair(dir_b, _idx_b[id]));
-            }
+        for (size_t id = 0; id < _lm_norm_3d_b.size(); id++) {
+            index2dirindex_a.push_back(std::make_pair(dir_a, _idx_a[id]));
+            index2dirindex_b.push_back(std::make_pair(dir_b, _idx_b[id]));
         }
         lm_pos_a.insert(lm_pos_a.end(), _lm_pos_a.begin(), _lm_pos_a.end());
         lm_norm_3d_b.insert(lm_norm_3d_b.end(), _lm_norm_3d_b.begin(), _lm_norm_3d_b.end());
@@ -524,17 +518,12 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
         main_dir_a, main_dir_b, lm_pos_a, lm_norm_3d_b, camera_indices, index2dirindex_a, index2dirindex_b);
     
     if(success) {
-        if (params->camera_configuration == FOURCORNER_FISHEYE) {
-            std::vector<Swarm::Pose> extrinsics;
-            for (auto & img: frame_array_b.images) {
-                extrinsics.push_back(img.extrinsic);
-            }
-            success = computeRelativePosePnPnonCentral(lm_pos_a, lm_norm_3d_b,
-                    extrinsics, camera_indices, frame_array_a.pose_drone, frame_array_b.pose_drone, DP_old_to_new, inliers, _config.is_4dof);
-        } else {
-            success = computeRelativePosePnP( lm_pos_a, lm_norm_3d_b, frame_array_b.images[main_dir_b].extrinsic,
-                    frame_array_a.pose_drone, frame_array_b.pose_drone, DP_old_to_new, inliers, _config.is_4dof);
+        std::vector<Swarm::Pose> extrinsics;
+        for (auto & img: frame_array_b.images) {
+            extrinsics.push_back(img.extrinsic);
         }
+        success = computeRelativePosePnPnonCentral(lm_pos_a, lm_norm_3d_b,
+                extrinsics, camera_indices, frame_array_a.pose_drone, frame_array_b.pose_drone, DP_old_to_new, inliers, _config.is_4dof);
         if (!success) {
             printf("[LoopDetector::computeLoop@%d] Compute relative pose failed!\n", self_id);
             return false;
