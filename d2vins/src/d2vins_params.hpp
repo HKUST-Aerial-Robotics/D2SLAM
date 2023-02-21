@@ -117,6 +117,7 @@ struct D2VINSConfig {
     bool pub_visual_frame = false;
 
     bool verbose = true;
+    bool print_network_status = false;
 
     //Initialial states
     std::vector<Swarm::Pose> camera_extrinsics;

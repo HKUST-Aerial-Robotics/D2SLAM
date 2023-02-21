@@ -70,6 +70,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     debug_print_sldwin = (int)fsSettings["debug_print_sldwin"];
     debug_write_margin_matrix = (int)fsSettings["debug_write_margin_matrix"];
     verbose = (int) fsSettings["verbose"];
+    print_network_status = (int) fsSettings["print_network_status"];
     
     //Estimation
     td_initial = fsSettings["td"];

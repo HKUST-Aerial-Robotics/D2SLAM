@@ -96,6 +96,7 @@ void ARockPGO::broadcastData() {
             data.frame_duals[param.id] = dual_state;
             data.frame_poses[param.id] = pose;
         }
+        // printf("[Drone %d] DPGO broadcast poses %ld\n", self_id, data.frame_poses.size());
         pgo->broadcastData(data);
     }
 }

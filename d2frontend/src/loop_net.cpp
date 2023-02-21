@@ -111,7 +111,7 @@ void LoopNet::broadcastImgDesc(ImageDescriptor_t & img_des, const SlidingWindow_
     if (params->print_network_status) {
         printf("[SWARM_LOOP](%d) BD KF %d@%d LM: %d size %d header %d avgsize %.0f sumkB %.0f avgLM %.0f need_send_features: %d\n", count_img_desc_sent,
             img_desc_header.frame_id,  img_desc_header.camera_index, feature_num, byte_sent, img_desc_header.getEncodedSize(), 
-            ceil(sum_byte_sent/count_img_desc_sent), sum_byte_sent/1000, ceil(sum_features/count_img_desc_sent), need_send_features);
+            ceil(sum_byte_sent/count_img_desc_sent), sum_byte_sent/1024, ceil(sum_features/count_img_desc_sent), need_send_features);
     }
 }
 

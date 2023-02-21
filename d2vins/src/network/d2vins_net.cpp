@@ -62,7 +62,10 @@ void D2VINSNet::onDistributedVinsData(const lcm::ReceiveBuffer* rbuf,
 
 void D2VINSNet::sendDistributedVinsData(const DistributedVinsData & data) {
     DistributedVinsData_t msg = data.toLCM();
-    // printf("VINS Data size %ld", msg.getEncodedSize());
+    if (params->print_network_status) {
+        printf("[D2VINS] Broadcast VINS Data size %ld with %ld poses %ld extrinsic.\n", 
+            msg.getEncodedSize(), data.frame_poses.size(), data.extrinsic.size());
+    }
     lcm.publish("DISTRIB_VINS_DATA", &msg);
 }
 }
