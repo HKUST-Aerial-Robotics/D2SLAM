@@ -43,6 +43,7 @@ def solve_pgo(path, iter_idx, nodes, working_folder, pgo_old=None, thres=0.01, m
     frame_id0 = min(pgo_input.agents[0].get_keyframe_ids())
     pos0, quat0 = pgo_optimized.keyframes[frame_id0].pos, pgo_input.keyframes[frame_id0].quat
     R0 = quaternion_matrix(quat0)[0:3,0:3]
+    c = 0
     for agent_id in pgo_input.agents:
         # Find the keyframe with largest frame_id
         robot_idx = agent_id + 1
@@ -58,10 +59,12 @@ def solve_pgo(path, iter_idx, nodes, working_folder, pgo_old=None, thres=0.01, m
                 pos = np.matmul(R0.T, pos - pos0)
                 quat = quaternion_multiply(quaternion_inverse(quat0), quat)
                 pgo_latest_states[robot_idx].append(np.concatenate(([ts], pos, quat)))
+                c += 1
         pgo_latest_states[robot_idx] = np.array(pgo_latest_states[robot_idx])
+    print("Total number of new states: ", c)
     return max_time, volume, iterations, pgo_latest_states, pgo_optimized
 
-def evaluate_door_slam(path, nodes=[], thres=0.01):
+def evaluate_door_slam(path, nodes=[], thres=0.01, step=1):
     working_folder = path + "/door-slam/"
     min_iter = 10000000
     max_iter = 0
@@ -89,7 +92,7 @@ def evaluate_door_slam(path, nodes=[], thres=0.01):
     solve_time = 0
     count = 0
     iterations = 0
-    for iter_idx in range(max_iter):
+    for iter_idx in range(200, max_iter, step):
         max_time, _volume, iters, _pgo_latest_states, pgo_optim = solve_pgo(path, iter_idx, nodes, working_folder, pgo_optim, 
                                                                         thres=thres, max_iters=max_iters)
         if _pgo_latest_states is not None:
@@ -99,7 +102,7 @@ def evaluate_door_slam(path, nodes=[], thres=0.01):
             for i in nodes:
                 if len(pgo_latest_states[i]) > 0:
                     if len(_pgo_latest_states[i]) > 0:
-                        np.concatenate([pgo_latest_states[i], _pgo_latest_states[i]], axis=0)
+                        pgo_latest_states[i] = np.concatenate([pgo_latest_states[i], _pgo_latest_states[i]], axis=0)
                 else:
                     pgo_latest_states[i] = _pgo_latest_states[i]
             count += 1
@@ -108,6 +111,7 @@ def evaluate_door_slam(path, nodes=[], thres=0.01):
     print(f"Total solve time: {solve_time}, average {solve_time/count} avg iter {iterations/count}, total volume: {volume} (poses)")
     for i in nodes:
         np.savetxt(f"{working_folder}/realtime_{i}.csv", pgo_latest_states[i], delimiter=" ")
+    return pgo_latest_states
 
 if __name__ == "__main__":
     path = "/home/xuhao/data/d2slam/quadcam_7inch_n3_2023_1_14/outputs/doorslam-5-yaw"

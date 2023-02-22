@@ -14,213 +14,14 @@ import copy
 from typing import List, Set, Dict, Tuple, Optional
 
 random.seed(datetime.now())
-
-class KeyFrame():
-    def __init__(self, _id, agent_id, pos, quat, is_4d=False, drone_id = -1):
-        self.keyframe_id = _id
-        self.agent_id = agent_id
-        self.drone_id = drone_id
-        self.pos = pos
-        self.quat = quat
-        self.edges = []
-        self._connected_keyframe_ids = set()
-        self._connected_edges = dict()
-        
-    def __str__(self):
-        #Output Pos Quat WXYZ
-        return f"<KeyFrame {self.keyframe_id}\
-\tAgent:{self.agent_id} Drone:{self.drone_id}\
-\tPos [{self.pos[0]:3.3f} {self.pos[1]:3.3f}  {self.pos[2]:3.3f}]\
-\tQuat [{self.quat[0]:3.1f} {self.quat[1]:3.1f} {self.quat[2]:3.1f} {self.quat[3]:3.1f}]\
-\t Edges {len(self.edges)}>"
-    
-    def g2o(self, cvt_id=False,force_ids=None):
-        _id = self.keyframe_id
-        if cvt_id:
-            if force_ids is None:
-                _id = convert_keyframe_id(self.agent_id, _id)
-            else:
-                _id = convert_keyframe_id(force_ids[self.agent_id], _id)
-
-        return f"VERTEX_SE3:QUAT {_id} {self.pos[0]} {self.pos[1]} {self.pos[2]} \
-{self.quat[1]} {self.quat[2]} {self.quat[3]} {self.quat[0]}"
-    
-    def add_edge(self, edge):
-        self.edges.append(edge)
-        if edge.keyframe_ida != self.keyframe_id:
-            self._connected_keyframe_ids.add(edge.keyframe_ida)
-            self._connected_edges[edge.keyframe_ida] = edge
-        else:
-            self._connected_keyframe_ids.add(edge.keyframe_idb)
-            self._connected_edges[edge.keyframe_idb] = edge
-    
-    def get_edge_to_id(self, _id):
-        if _id in self._connected_edges:
-            return self._connected_edges[_id]
-        return None
-
-    def clear_edges(self):
-        self.edges = []
-
-    def connected_keyframe_ids(self):
-        return self._connected_keyframe_ids
-
-    def copy(self):
-        cp = KeyFrame(self.keyframe_id, self.agent_id, self.pos, self.quat, drone_id=self.drone_id)
-        for edge in self.edges:
-            cp.add_edge(edge.copy())
-        return cp
-
-    def csv(self, ts=None):
-        if ts is None:
-            return f"{self.keyframe_id},{self.pos[0]},{self.pos[1]},{self.pos[2]},{self.quat[0]},{self.quat[1]},{self.quat[2]},{self.quat[3]}"
-        else:
-            return f"{ts} {self.pos[0]} {self.pos[1]} {self.pos[2]} {self.quat[0]} {self.quat[1]} {self.quat[2]} {self.quat[3]}"
-        
-class Edge():
-    def __init__(self, _ida, _idb, pos, quat, is_inter, is_4d=False, inf_mat=np.eye(6, 6)):
-        self.keyframe_ida = _ida
-        self.keyframe_idb = _idb
-        self.pos = pos
-        self.quat = quat
-        self.is_inter = is_inter
-        self.agent_ida = -1
-        self.agent_idb = -1
-        self.information_matrix = inf_mat.copy()
-    
-    def g2o(self, cvt_id=False,force_ids=None):
-        _ida = self.keyframe_ida
-        _idb = self.keyframe_idb
-        if cvt_id:
-            if force_ids is None:
-                _ida = convert_keyframe_id(self.agent_ida, _ida)
-                _idb = convert_keyframe_id(self.agent_idb, _idb)
-            else:
-                if self.agent_ida in force_ids and self.agent_idb in force_ids:
-                    _ida = convert_keyframe_id(force_ids[self.agent_ida], _ida)
-                    _idb = convert_keyframe_id(force_ids[self.agent_idb], _idb)
-                else:
-                    # print(self, "not in ", force_ids)
-                    return ""
-            
-        _str =  f"EDGE_SE3:QUAT {_ida} {_idb} \
-{self.pos[0]} {self.pos[1]} {self.pos[2]} \
-{self.quat[1]} {self.quat[2]} {self.quat[3]} {self.quat[0]}"
-        for i in range(6):
-            for j in range(i, 6):
-                _str += f" {self.information_matrix[i][j]}"
-        return _str
-
-    def __str__(self):
-        #Output Pos Quat WXYZ
-        _inf_dig = np.diagonal(self.information_matrix)
-        return f"<Edge ({self.keyframe_ida}<->{self.keyframe_idb}\
-\tAgent {self.agent_ida}<->{self.agent_idb} \
-\tPos [{self.pos[0]:3.3f} {self.pos[1]:3.3f}  {self.pos[2]:3.3f}]\
-\tQuat [{self.quat[0]:3.1f} {self.quat[1]:3.1f} {self.quat[2]:3.1f} {self.quat[3]:3.1f}\
-\tQuat [{_inf_dig[0]:3.1f} {_inf_dig[1]:3.1f} {_inf_dig[2]:3.1f} {_inf_dig[3]:3.1f} \
-{_inf_dig[4]:3.1f} {_inf_dig[5]:3.1f}"
-
-    def copy(self):
-        return Edge(self.keyframe_ida, self.keyframe_idb, self.pos, self.quat, self.is_inter, 
-                inf_mat=self.information_matrix)
-
-class Agent():
-    def __init__(self, agent_id):
-        self.agent_id = agent_id
-        self.keyframes = []
-        self.kfs = {}
-        self.edges = []
-        self.inter_edge_num = 0
-        
-    def add_keyframe(self, kf):
-        kf.clear_edges()
-        self.keyframes.append(kf)
-        self.kfs[kf.keyframe_id] = kf
-    
-    def has_keyframe(self, kf_id):
-        return kf_id in self.kfs
-    
-    def get_keyframe_ids(self):
-        return list(self.kfs.keys())
-    
-    def add_edge(self, edge):
-        if edge.keyframe_ida in self.kfs:
-            self.kfs[edge.keyframe_ida].add_edge(edge)
-        if edge.keyframe_idb in self.kfs:
-            self.kfs[edge.keyframe_idb].add_edge(edge)
-        self.edges.append(edge)
-        if edge.is_inter:
-            self.inter_edge_num += 1
-
-    def clear_edges(self):
-        self.edges = []
-        for kfid in self.kfs:
-            self.kfs[kfid].clear_edges()
-    
-    def write_to_g2o(self, path, cvt_id=False, addition_edges = [], force_ids=None):
-        with open(path, 'w') as f:
-            for keyframe in self.keyframes:
-                print(keyframe.g2o(cvt_id,force_ids), file=f)
-            
-            for edge in self.edges:
-                print(edge.g2o(cvt_id,force_ids), file=f)
-
-            for edge in addition_edges:
-                print(edge.g2o(cvt_id,force_ids), file=f)
-    
-    def write_to_csv(self, path, idx_stamp_map = None):
-        with open(path, 'w') as f:
-            for keyframe in self.keyframes:
-                if idx_stamp_map is not None:
-                    stamp = idx_stamp_map[keyframe.keyframe_id]
-                else:
-                    stamp=None
-                print(keyframe.csv(stamp), file=f)
-
-    def check_connected_keyframes(self, kf_id):
-        visited_keyframes = set()
-        visited_keyframes.add(self.kfs[kf_id].keyframe_id)
-        keyframe_queue = [self.kfs[kf_id]]
-        while len(keyframe_queue) > 0:
-            _keyframe = keyframe_queue.pop(0)
-            for edge in _keyframe.edges:
-                if edge.keyframe_ida == _keyframe.keyframe_id:
-                    _idb = edge.keyframe_idb
-                else:
-                    _idb = edge.keyframe_ida
-                if _idb not in visited_keyframes and _idb in self.kfs :
-                    visited_keyframes.add(_idb)
-                    keyframe_queue.append(self.kfs[_idb])
-        return visited_keyframes
-
-    def check_agent_connection(self):
-        clusters = []
-        if len(self.keyframes) == 0:
-            return False, clusters
-        visited_keyframes = set()
-        clusters.append(self.check_connected_keyframes(self.keyframes[0].keyframe_id))
-        visited_keyframes = visited_keyframes | clusters[0]
-        num_visited_keyframes = len(clusters[0])
-        if num_visited_keyframes == len(self.keyframes):
-            return True, clusters
-        
-        ptr = 1
-        while num_visited_keyframes < len(self.keyframes) and ptr < len(self.keyframes):
-            if self.keyframes[ptr].keyframe_id not in visited_keyframes:
-                new_cluster = self.check_connected_keyframes(self.keyframes[ptr].keyframe_id)
-                visited_keyframes = visited_keyframes | new_cluster
-                num_visited_keyframes = num_visited_keyframes + len(new_cluster)
-                clusters.append(new_cluster)
-            ptr += 1
-        return False, clusters
-
+from pose_graph_partitioning.Keyframe import KeyFrame
+from pose_graph_partitioning.Edge import Edge
+from pose_graph_partitioning.Agent import Agent
 
 class PoseGraph():
     edges: List[Edge]
     keyframes: Dict[int, KeyFrame]
-    def __init__(self, is_4d=True):
-        self.is_4d = is_4d
+    def __init__(self, path = "", single=False):
         self.keyframes = {}
         self.agents = {}
         self.edges = []
@@ -235,7 +36,11 @@ class PoseGraph():
         self.partition_set = {}
         self.partition_of_id = {}
         self.agent_ids = []
-
+        if path != "":
+            if single:
+                self.read_g2o_single(path)
+            else:
+                self.read_g2o_folder(path)
 
     def agent_num(self):
         return len(self.agents)
@@ -970,7 +775,7 @@ class PoseGraph():
             if not update_only:
                 self.inter_edge_num += agent.inter_edge_num
 
-    def read_g2o_folder(self, folder, read_optimized=False, prt=True):
+    def read_g2o_folder(self, folder, read_optimized=False, prt=True, update_only=False):
         max_keyframes = 0
         min_keyframes = 10000
         
@@ -993,9 +798,10 @@ class PoseGraph():
                         # print("Give up", file)
                 if agent_id >= 0:
                     # print(f"Read file {file}")
-                    self.agents[agent_id] = Agent(agent_id)
+                    if not update_only:
+                        self.agents[agent_id] = Agent(agent_id)
                     fpath = os.path.join(folder, file)
-                    self.read_g2o(fpath, agent_id)
+                    self.read_g2o(fpath, agent_id, update_only=update_only)
                     keyframe_num = len(self.agents[agent_id].keyframes)
                     if  keyframe_num > max_keyframes:
                         max_keyframes = keyframe_num
@@ -1041,6 +847,10 @@ class PoseGraph():
     def write_to_g2o(self, path, cvt_id=False, agent_id=0):
         self.agents[agent_id].write_to_g2o(path, cvt_id)
 
+    def write_to_csv(self, output_path, frame_id_to_stamp=None):
+        for i in self.agents:
+            self.agents[i].write_to_csv(f"{output_path}/pgo_{i}.csv", frame_id_to_stamp)
+    
     def read_g2o_single(self, path, update_only=False, cvt_id=False, verbose=False):
         if not update_only:
             self.agents[0] = Agent(0)
@@ -1089,7 +899,24 @@ comm_vol {self.communication_volume()} from path {path}")
             kf = self.keyframes[kf_id]
             yaw, _, _ = quat2eulers(kf.quat)
             kf.quat = quaternion_from_euler(0, 0, yaw)
-
+    
+    def evaluate_cost(self):
+        cost = 0
+        for edge in self.edges:
+            kf_a = self.keyframes[edge.keyframe_ida]
+            kf_b = self.keyframes[edge.keyframe_idb]
+            rel_pos_6d = edge.pos
+            rel_quat_6d = edge.quat
+            pos_a = kf_a.pos
+            quat_a = kf_a.quat
+            pos_b = pos_a + quaternion_rotate(quat_a, rel_pos_6d)
+            quat_b = quaternion_multiply(quat_a, rel_quat_6d)
+            dq = quaternion_multiply(quat_b, quaternion_inverse(kf_b.quat))
+            err = np.concatenate([pos_b - kf_b.pos, 2*dq[1:]])
+            _cost = 0.5 * err @ edge.information_matrix @ err.T
+            cost += _cost
+        return cost
+    
 if __name__ == '__main__':
     pg = PoseGraph()
     pg.read_g2o_folder("/home/xuhao/data/pose_graph/example_2robots")

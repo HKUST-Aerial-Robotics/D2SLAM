@@ -6,6 +6,8 @@ import copy
 import time
 import subprocess
 from pathlib import Path
+import re
+
     
 def compuate_network_topology(cur_positions, comm_range, network_mode):
     agents = []
@@ -82,18 +84,38 @@ def call_SESync(path, path_output, optimizer_path="/home/xuhao/source/SESync/C++
 def call_dslam_opti(g2o_folder,  output_folder, rate=1e-3, tor=1e-4, is_async="true", silent="true", simulate_delay_ms=20, max_solving_time=1000):
     Path(output_folder).mkdir(parents=True, exist_ok=True)
     command = f"roslaunch dslam_pose_graph_opti dpgo_10_g2o.launch g2o_path:={g2o_folder} is_async:={is_async} descent_rate:={rate} tolerance:={tor} silent:={silent} output_folder:={output_folder} simulate_delay_ms:={simulate_delay_ms} max_solve_time:={max_solving_time}"
-    print(command)
     s = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
     start = time.time()
     while s.poll() is None:
         time.sleep(0.1)
         if time.time() - start > max_solving_time + 5:
             s.kill()
-            return call_dslam_opti(g2o_folder,  output_folder, rate=rate, tor=tor, is_async=is_async, silent=silent, simulate_delay_ms=simulate_delay_ms, max_solving_time=max_solving_time)
+            return call_dslam_opti(g2o_folder,  output_folder, rate=rate, tor=tor, is_async=is_async, silent=silent, 
+                                   simulate_delay_ms=simulate_delay_ms, max_solving_time=max_solving_time)
     output = s.stdout.read().decode("utf-8") 
         
     min_it, max_it, initial, final, totalv = pocess_DSLAM_result(output)
     return min_it, max_it, initial, final, totalv, 0.0
+
+def call_d2pgo_opti(g2o_folder,  output_folder, agent_num = 5, ignore_infor = False,
+        simulate_delay_ms=0, max_steps=100, enable_rot_init=True, enable_linear_pose6d_solver=False,
+        eta_k=1.0, rho_frame_theta=1.0, rho_frame_T=0.25):
+    Path(output_folder).mkdir(parents=True, exist_ok=True)
+    command = f"roslaunch d2pgo d2pgo_test_multi.launch agent_num:={agent_num} g2o_path:={g2o_folder} \
+        output_path:={output_folder} enable_rot_init:={enable_rot_init} max_steps:={max_steps} ignore_infor:={ignore_infor} \
+        eta_k:={eta_k} rho_frame_theta:={rho_frame_theta} rho_frame_T:={rho_frame_T} simulate_delay_ms:={simulate_delay_ms} \
+        enable_linear_pose6d_solver:={enable_linear_pose6d_solver}"
+    s = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = s.stdout.read().decode("utf-8")
+    err = s.stderr.read()
+    pg = PoseGraph()
+    pg.read_g2o_folder(output_folder)
+    # Match solve time from output using regex
+    # Sample: [D2PGO1] Solve done. Time: 100.0ms
+    solve_time = []
+    solve_time = re.findall(r"\[D2PGO\d+\] Solve done. Time: (\d+\.\d+)ms", output)
+    solve_time = [float(t) for t in solve_time]
+    return pg, max(solve_time), sum(solve_time)/len(solve_time)
 
 def loadSESyncResult(path, pg: PoseGraph):
     data = np.loadtxt(path)

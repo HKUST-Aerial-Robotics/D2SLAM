@@ -16,6 +16,8 @@ def read_path_from_csv(path, t0=None, delimiter=None,dte=None, reset_orientation
     t = t - t0
     pos = arr[:, 1:4]
     quat = arr[:, 4:8]
+    # Per line normalization
+    quat = np.apply_along_axis(lambda x: x/norm(x), 1, quat)
     if dte is not None:
         mask = (t < dte) & (t > 0)
     else:
@@ -369,6 +371,65 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
         import tabulate
         return tabulate.tabulate(output_table, tablefmt='html')
 
+def relative_pose_err(node_ids, poses_fused, poses_gt, outlier_thres=100, 
+        outlier_yaw_thres=10, dte=1000000, common_time_dt=0.2):
+    output_table = [["Relative", "EST RMSE: Pos (XYZ)", "POS", "Ang", "BIAS: Pos", "Ang"]]
+    avg_rmse = 0
+    avg_rmse_yaw = 0.0
+    num = 0
+    for main_id in node_ids:
+        for target_id in node_ids:
+            if main_id > target_id:
+                ts = find_common_times(poses_gt[main_id].t, poses_gt[target_id].t, dt=common_time_dt) #We need to find the common time period of these two
+                ts = find_common_times(ts, poses_fused[main_id].t, dt=common_time_dt)
+                ts = find_common_times(ts, poses_fused[target_id].t, dt=common_time_dt)
+                ts = ts[ts<dte]
+                posa_fused = poses_fused[main_id].resample_pos(ts)
+                yawa_fused = poses_fused[main_id].resample_ypr(ts)[:,0]
+                
+                posb_fused = poses_fused[target_id].resample_pos(ts)
+                yawb_fused = poses_fused[target_id].resample_ypr(ts)[:, 0]
+                dp_fused = posb_fused - posa_fused
+                dyaw_fused = wrap_pi(yawb_fused - yawa_fused)
+                if poses_gt is not None:
+                    posa_gt =  poses_gt[main_id].resample_pos(ts)
+                    yawa_gt = poses_gt[main_id].resample_ypr(ts)[:, 0]
+                    posb_gt =  poses_gt[target_id].resample_pos(ts)
+                    yawb_gt = poses_gt[target_id].resample_ypr(ts)[:, 0]
+                    dp_gt = posb_gt - posa_gt
+                    dyaw_gt = wrap_pi(yawb_gt - yawa_gt)
+                
+                for i in range(len(yawa_fused)):
+                    yaw = yawa_fused[i]
+                    dp_fused[i] = yaw_rotate_vec(-yaw, dp_fused[i])
+
+                if poses_gt is not None:
+                    for i in range(len(yawa_fused)):
+                        yaw = yawa_gt[i]
+                        dp_gt[i] = yaw_rotate_vec(-yaw, dp_gt[i])
+                mask = np.linalg.norm(dp_gt - dp_fused, axis=1) < outlier_thres
+                maskyaw = np.abs(wrap_pi(dyaw_gt - dyaw_fused)) < outlier_yaw_thres
+                mask = np.logical_and(mask, maskyaw)
+                if poses_gt is not None:
+                    rmse_yaw = RMSE(wrap_pi(dyaw_fused[mask] - dyaw_gt[mask]), 0)
+                    rmse_x = RMSE(dp_gt[mask,0] , dp_fused[mask,0])
+                    rmse_y = RMSE(dp_gt[mask,1] , dp_fused[mask,1])
+                    rmse_z = RMSE(dp_gt[mask,2] , dp_fused[mask,2])
+                    rmse_pos = ATE_POS(dp_gt[mask], dp_fused[mask])
+                    avg_rmse += rmse_pos
+                    avg_rmse_yaw += rmse_yaw
+                    num += 1
+
+                    output_table.append([
+                        f"{main_id}->{target_id}", f"{rmse_x:3.3f},{rmse_y:3.3f},{rmse_z:3.3f}", f"{rmse_pos:3.3f}", f"{rmse_yaw*180/pi:3.2f}°", 
+                        f"{np.mean(dp_gt[mask,0] - dp_fused[mask,0]):3.3f},{np.mean(dp_gt[mask,1] - dp_fused[mask,1]):+3.3f},{np.mean(dp_gt[mask,2] - dp_fused[mask,2]):+3.3f}", 
+                        f"{np.mean(dyaw_gt - dyaw_fused)*180/3.14:+3.2f}°"
+                    ])
+    output_table.append([
+        "Avg:", f"", f"{avg_rmse/num:3.3f}", f"{avg_rmse_yaw/num*180/pi:3.2f}°", "", ""])
+    import tabulate
+    return tabulate.tabulate(output_table, tablefmt='html')
+        
 def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,main_id=1,dte=100000,show=True, 
     outlier_thres=100, outlier_thres_yaw=100, verbose=True):
     #Plot Fused Vs GT absolute error
@@ -428,13 +489,13 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
         rmse_fused_ang_sum += rmse_angular_fused
         
         if poses_pgo is not None:
-            t_pgo = poses_pgo[i].t
+            t_pgo = find_common_times(poses_gt[i].t, poses_pgo[i].t)
             pos_path_gt =  poses_gt[i].resample_pos(t_pgo)
-            pos_path = poses_pgo[i].pos
+            pos_path = poses_pgo[i].resample_pos(t_pgo)
             ypr_path_gt =  poses_gt[i].resample_ypr(t_pgo)
-            ypr_path = poses_pgo[i].ypr
+            ypr_path = poses_pgo[i].resample_ypr(t_pgo)
             mask_path = np.linalg.norm(pos_path_gt - pos_path, axis=1) < outlier_thres
-            t_path = poses_pgo[i].t[mask_path]
+            t_path = t_pgo[mask_path]
             pos_path_gt, pos_path, ypr_path_gt, ypr_path = pos_path_gt[mask_path], pos_path[mask_path], ypr_path_gt[mask_path], ypr_path[mask_path]
 
             ate_path = ATE_POS(pos_path, pos_path_gt)
@@ -475,7 +536,7 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
         length_sum += traj_len
         num += 1
         output_table.append([
-            f"{i}by{main_id}",f"{traj_len:.1f}m", f"{ate_fused:3.3f}", f"{rmse_angular_fused*180/pi:3.3f}", 
+            f"{i}",f"{traj_len:.1f}m", f"{ate_fused:3.3f}", f"{rmse_angular_fused*180/pi:3.3f}", 
             f"{fused_cov_x:.1e}",f"{fused_cov_y:.1e}",f"{fused_cov_z:.1e}",
             f"{fused_yaw_cov_per_meter*180/pi:.2e}",
             f"{ate_path:3.3f}",f"{rmse_angular_path*180/pi:3.3f}°"

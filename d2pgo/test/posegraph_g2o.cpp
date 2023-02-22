@@ -119,7 +119,7 @@ bool match_edge_se3(std::string line, int & agent_ida, FrameIdType & ida, int & 
 
 
 void read_g2o_agent( std::string path, std::map<FrameIdType, D2BaseFrame> & keyframeid_agent_pose,
-        std::vector<Swarm::LoopEdge> & edges, bool is_4dof, int drone_id) {
+        std::vector<Swarm::LoopEdge> & edges, bool is_4dof, int drone_id, bool ignore_infor) {
     std::ifstream infile(path);
     std::string line;
     while (std::getline(infile, line)) {
@@ -141,6 +141,9 @@ void read_g2o_agent( std::string path, std::map<FrameIdType, D2BaseFrame> & keyf
             Eigen::Matrix6d information;
             int agent_id_b;
             success = match_edge_se3(line, agent_id, id_a, agent_id_b, id_b, pose, information);
+            if (ignore_infor) {
+                information = Eigen::Matrix6d::Identity();
+            }
             if (success) {
                 Swarm::LoopEdge edge(id_a, id_b, pose, information);
                 edge.id_a = agent_id;

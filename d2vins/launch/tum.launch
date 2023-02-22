@@ -44,7 +44,8 @@
             min_match_per_dir: 20
             output_raw_superpoint_desc: false
             depth_far_thres: 100
-            loop_cov_pos: 0.1
+            loop_cov_pos: 0.02
+            loop_cov_ang: 0.01
             odometry_consistency_threshold: 3.0
             pos_covariance_per_meter: 0.01
             yaw_covariance_per_meter: 0.003
@@ -77,7 +78,7 @@
     </include>
     <include file="$(find d2comm)/launch/d2comm.launch" if="$(arg enable_pgo)" >
         <arg name="self_id" value="$(arg self_id)" />
-        <arg name="output" value="log" />
+        <arg name="output" value="screen" />
     </include>
     <include file="$(find quadcam_depth_est)/launch/depth-node.launch" if="$(arg depth_gen)" >
         <arg name="output" value="screen" />

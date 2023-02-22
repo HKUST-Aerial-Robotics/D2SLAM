@@ -23,16 +23,20 @@ class D2PGOTester {
     ros::Publisher dpgo_data_pub, dpgo_signal_pub;
     ros::Subscriber dpgo_data_sub, dpgo_signal_sub;
     bool is_4dof;
-    std::thread th;
+    std::thread th, th_process_delay;
     std::string output_path;
     ros::NodeHandle & _nh;
     bool multi = false;
     int max_steps = 100;
     int drone_num = 1;
 
+    double simulate_delay_ms = 0;
+    bool enable_simulate_delay = false;
+
     std::map<int, ros::Publisher> path_pubs;
     std::vector<Swarm::LoopEdge> edges;
     std::map<FrameIdType, D2BaseFrame> keyframeid_agent_pose;
+    std::map<double, D2Common::DPGOData> buf_for_simulate_delay;
 public:
     int self_id;
     void initSubandPub(ros::NodeHandle & nh) {
@@ -49,13 +53,22 @@ public:
         nh.param<int>("self_id", self_id, -1);
         nh.param<bool>("is_4dof", is_4dof, true);
         nh.param<bool>("is_multi", multi, false);
+        bool ignore_infor;
+        nh.param<bool>("ignore_infor", ignore_infor, false);
         nh.param<std::string>("solver_type", solver_type, "arock");
+        nh.param<double>("simulate_delay_ms", simulate_delay_ms, 0.0);
+        if (simulate_delay_ms > 0) {
+            enable_simulate_delay = true;
+            th_process_delay = std::thread([&] {
+                this->process_simulate_delay();
+            });
+        }
 
         if (g2o_path != "")
             ROS_INFO("[D2PGO] agent %d parse g2o file: %s\n", self_id, g2o_path.c_str());
         else
             ROS_INFO("[D2PGO@%d] Need to indicate g2o path\n", self_id);
-        read_g2o_agent(g2o_path, keyframeid_agent_pose, edges, is_4dof, self_id);
+        read_g2o_agent(g2o_path, keyframeid_agent_pose, edges, is_4dof, self_id, ignore_infor);
         ROS_INFO("[D2PGO@%d] Read %ld keyframes and %ld edges\n", self_id, keyframeid_agent_pose.size(), edges.size());
 
         D2PGOConfig config;
@@ -77,13 +90,13 @@ public:
         config.arock_config.ceres_options = config.ceres_options;
         config.arock_config.max_steps = 1;
         config.g2o_output_path = output_path;
-        config.write_g2o = true;
+        config.write_g2o = false;
         nh.param<int>("max_steps", max_steps, 10);
         nh.param<double>("rho_frame_T", config.arock_config.rho_frame_T, 0.1);
         nh.param<double>("rho_frame_theta", config.arock_config.rho_frame_theta, 0.1);
         nh.param<double>("rho_rot_mat", config.arock_config.rho_rot_mat, 0.1);
         nh.param<double>("eta_k", config.arock_config.eta_k, 0.9);
-        nh.param<bool>("enable_rot_int", config.enable_rotation_initialization, true);
+        nh.param<bool>("enable_rot_init", config.enable_rotation_initialization, true);
         nh.param<bool>("rot_init_enable_gravity_prior", config.rot_init_config.enable_gravity_prior, true);
         nh.param<double>("rot_init_gravity_sqrt_info", config.rot_init_config.gravity_sqrt_info, 10);
         nh.param<bool>("rot_init_enable_float32", config.rot_init_config.enable_float32, false);
@@ -138,7 +151,12 @@ public:
     void processDPGOData(const swarm_msgs::DPGOData & data) {
         if (data.drone_id != self_id) {
             // ROS_INFO("[D2PGONode@%d] processDPGOData from drone %d", self_id, data.drone_id);
-            pgo->inputDPGOData(DPGOData(data));
+            if (enable_simulate_delay) {
+                ros::Time now = ros::Time::now();
+                buf_for_simulate_delay[now.toSec()] = data;
+            } else {
+                pgo->inputDPGOData(DPGOData(data));
+            }
         }
     }
 
@@ -187,6 +205,7 @@ public:
 
     void startSolve() {
         th = std::thread([&]() {
+            Utility::TicToc t_solve;
             for (int i = 0; i < max_steps; i ++) {
                 if (multi) {
                     pgo->solve_multi(true);
@@ -195,6 +214,8 @@ public:
                 }
                 usleep(20*1000);
             }
+            printf("[D2PGO%d] Solve done. Time: %fms\n", self_id, t_solve.toc());
+            fflush(stdout);
             //Write data
             if (multi) {
                 pgo->postPerturbSolve();
@@ -211,7 +232,21 @@ public:
         printf("[D2PGO@%d] Write result to %s\n", self_id, output_path.c_str());
     }
 
-
+    void process_simulate_delay() {
+        while(ros::ok()) {
+            ros::Time now = ros::Time::now();
+            double now_sec = now.toSec();
+            for (auto it = buf_for_simulate_delay.begin(); it != buf_for_simulate_delay.end();) {
+                if (now_sec - it->first > simulate_delay_ms / 1000.0) {
+                    pgo->inputDPGOData(DPGOData(it->second));
+                    it = buf_for_simulate_delay.erase(it);
+                } else {
+                    it++;
+                }
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
 };
 
 int main(int argc, char ** argv) {
