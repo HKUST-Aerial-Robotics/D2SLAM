@@ -172,14 +172,6 @@ class RotationInitARock : public RotationInitialization<T>, public ARockBase {
                         dual_states_remote[drone_id][ptr] = dual;
                         if (create) 
                             dual_states_local[drone_id][ptr] = dual;
-                        auto frame = state->getFramebyId(frame_id);
-                        if (frame->drone_id == drone_id) {
-                            auto pose = data.frame_poses.at(frame_id);
-                            frame->odom.pose() = pose;
-                            RotationInitialization<T>::state->setAttitudeInit(
-                                frame_id, pose.att());
-                            pose.to_vector(state->getPoseState(frame_id));
-                        }
                     }
                 } else {
                     ROS_WARN("[ARockPGO@%d]process DPGOData from %d, frame_id %ld not found\n", self_id, data.drone_id, frame_id);
@@ -225,6 +217,20 @@ public:
         // data.drone_id);
         std::lock_guard<std::recursive_mutex> lock(pgo_data_mutex);
         pgo_data.push_back(data);
+        for (auto it : data.frame_duals) {
+            auto frame_id = it.first;
+            if (RotationInitialization<T>::state->hasFrame(frame_id)) {
+                auto frame = state->getFramebyId(frame_id);
+                if (frame->drone_id == data.drone_id) {
+                    auto pose = data.frame_poses.at(frame_id);
+                    frame->odom.pose() = pose;
+                    RotationInitialization<T>::state->setAttitudeInit(
+                        frame_id, pose.att());
+                    pose.to_vector(state->getPoseState(frame_id));
+                    // printf("Frame %d pose updated from drone %d\n", frame_id, data.drone_id);
+                }
+            }
+        }
     }
 };
 

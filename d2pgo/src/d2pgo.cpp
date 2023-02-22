@@ -73,17 +73,20 @@ void D2PGO::addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop) {
 
 void D2PGO::inputDPGOData(const DPGOData & data) {
     if (config.mode == PGO_MODE_DISTRIBUTED_AROCK) {
+        // printf("[D2PGO@%d]input pgo data from drone %d type %d\n", self_id, data.drone_id, data.type);
         if (data.type == DPGODataType::DPGO_POSE_DUAL && solver!=nullptr) {
             static_cast<ARockPGO*>(solver)->inputDPGOData(data);
         } else {
             if (data.type == DPGO_DELTA_POSE_DUAL) {
-                if (pose6d_init != nullptr) 
+                if (pose6d_init != nullptr) {
                     pose6d_init->inputDPGOData(data);
+                }
                 else {
                     // printf("[D2PGO@%d]input pgo data from drone %d\n", self_id, data.drone_id);
                     static_cast<ARockPGO*>(solver)->inputDPGOData(data);
                 }
             } else if (rot_init!=nullptr) {
+                // printf("Input to rot_init\n");   
                 rot_init->inputDPGOData(data);
             }
         }
