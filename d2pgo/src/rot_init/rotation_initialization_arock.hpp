@@ -25,6 +25,7 @@ class RotationInitARock : public RotationInitialization<T>, public ARockBase {
         report.total_iterations = 1;
         report.succ = true;
         report.message = "";
+        // printf("[RotationInitARock::solveLocalStep%d] local solve time: %.3f ms state changes %f\n", self_id, report.total_time * 1000, report.state_changes);
         return report;
     }
 

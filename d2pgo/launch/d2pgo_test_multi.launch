@@ -7,7 +7,7 @@
     <arg name="ceres_max_solver_time" default="0.5" />
     <arg name="max_steps" default="10" />
     <arg name="agent_num" default="2" />
-    <arg name="delay_launch" default="0.5" />
+    <arg name="delay_launch" default="5.0" />
     <arg name="rho_frame_T" default="0.006" />
     <arg name="rho_frame_theta" default="0.00001" />
     <arg name="rho_rot_mat" default="0.16" />
@@ -19,6 +19,7 @@
     <arg name="enable_linear_pose6d_solver" default="false" />
     <arg name="ignore_infor" default="false" />
     <arg name="simulate_delay_ms" default="0.0" />
+    <arg name="max_solving_time" default="10.0" />
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 0)" >
         <arg name="self_id" value="0" />
@@ -41,6 +42,7 @@
         <arg name="enable_linear_pose6d_solver" value="$(arg enable_linear_pose6d_solver)" />
         <arg name="ignore_infor" value="$(arg ignore_infor)" />
         <arg name="simulate_delay_ms" value="$(arg simulate_delay_ms)" />
+        <arg name="max_solving_time" value="$(arg max_solving_time)" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 1)" >
@@ -64,6 +66,7 @@
         <arg name="enable_linear_pose6d_solver" value="$(arg enable_linear_pose6d_solver)" />
         <arg name="ignore_infor" value="$(arg ignore_infor)" />
         <arg name="simulate_delay_ms" value="$(arg simulate_delay_ms)" />
+        <arg name="max_solving_time" value="$(arg max_solving_time)" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 2)" >
@@ -87,6 +90,7 @@
         <arg name="enable_linear_pose6d_solver" value="$(arg enable_linear_pose6d_solver)" />
         <arg name="ignore_infor" value="$(arg ignore_infor)" />
         <arg name="simulate_delay_ms" value="$(arg simulate_delay_ms)" />
+        <arg name="max_solving_time" value="$(arg max_solving_time)" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 3)" >
@@ -110,6 +114,7 @@
         <arg name="enable_linear_pose6d_solver" value="$(arg enable_linear_pose6d_solver)" />
         <arg name="ignore_infor" value="$(arg ignore_infor)" />
         <arg name="simulate_delay_ms" value="$(arg simulate_delay_ms)" />
+        <arg name="max_solving_time" value="$(arg max_solving_time)" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 4)" >
@@ -133,6 +138,7 @@
         <arg name="enable_linear_pose6d_solver" value="$(arg enable_linear_pose6d_solver)" />
         <arg name="ignore_infor" value="$(arg ignore_infor)" />
         <arg name="simulate_delay_ms" value="$(arg simulate_delay_ms)" />
+        <arg name="max_solving_time" value="$(arg max_solving_time)" />
     </include>
 
     <include file="$(find d2pgo)/launch/d2pgo_test_single.launch" if="$(eval arg('agent_num') > 5)" >
@@ -156,6 +162,7 @@
         <arg name="enable_linear_pose6d_solver" value="$(arg enable_linear_pose6d_solver)" />
         <arg name="ignore_infor" value="$(arg ignore_infor)" />
         <arg name="simulate_delay_ms" value="$(arg simulate_delay_ms)" />
+        <arg name="max_solving_time" value="$(arg max_solving_time)" />
     </include>
     <node name="d2pgo" pkg="d2pgo" type="delay_launch_dpgo.sh" args="$(arg delay_launch)" if="$(arg wait_for_start)" />
     <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2pgo.rviz" if="$(arg rviz)" />

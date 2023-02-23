@@ -32,6 +32,7 @@ class D2PGOTester {
 
     double simulate_delay_ms = 0;
     bool enable_simulate_delay = false;
+    double max_solving_time = 10.0;
 
     std::map<int, ros::Publisher> path_pubs;
     std::vector<Swarm::LoopEdge> edges;
@@ -57,6 +58,7 @@ public:
         nh.param<bool>("ignore_infor", ignore_infor, false);
         nh.param<std::string>("solver_type", solver_type, "arock");
         nh.param<double>("simulate_delay_ms", simulate_delay_ms, 0.0);
+        nh.param<double>("max_solving_time", max_solving_time, 0.0);
         if (simulate_delay_ms > 0) {
             enable_simulate_delay = true;
             th_process_delay = std::thread([&] {
@@ -103,6 +105,7 @@ public:
         nh.param<bool>("enable_linear_pose6d_solver", config.rot_init_config.enable_pose6d_solver, false);
         nh.param<int>("linear_pose6d_iterations", config.rot_init_config.pose6d_iterations, 10);
         nh.param<bool>("debug_rot_init_only", config.debug_rot_init_only, true);
+        nh.param<double>("rot_init_state_eps", config.rot_init_state_eps, 0.01);
         nh.param<int>("drone_num", drone_num, 1);
         config.rot_init_config.self_id = self_id;
         if (solver_type == "ceres") {
@@ -206,23 +209,30 @@ public:
     void startSolve() {
         th = std::thread([&]() {
             Utility::TicToc t_solve;
+            int iter = 0;
             for (int i = 0; i < max_steps; i ++) {
+                iter ++;
                 if (multi) {
                     pgo->solve_multi(true);
                 } else {
                     pgo->solve_single();
                 }
-                usleep(20*1000);
+                // usleep(20*1000);
+                if (t_solve.toc()/1000.0 > max_solving_time) {
+                    printf("[D2PGO%d] Solve timeout. Time: %fms\n", self_id, t_solve.toc());
+                    break;
+                }
             }
-            printf("[D2PGO%d] Solve done. Time: %fms\n", self_id, t_solve.toc());
-            fflush(stdout);
+            printf("[D2PGO%d] Solve done. Time: %fms iters %d\n", self_id, t_solve.toc(), iter);
             //Write data
             if (multi) {
                 pgo->postPerturbSolve();
             }
             writeDataG2o();
-            ROS_WARN("[D2PGO%d] Write data done. Finish solve.\n", self_id);
-            ros::shutdown();
+            printf("[D2PGO%d] Write data done. Finish solve.\n", self_id);
+            fflush(stdout);
+            // ros::shutdown();
+            exit(0);
         });
     }
 

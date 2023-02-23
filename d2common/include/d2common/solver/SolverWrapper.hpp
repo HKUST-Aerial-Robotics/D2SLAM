@@ -25,6 +25,7 @@ struct SolverReport {
         succ = succ && other.succ;
         message += other.message;
         summary = other.summary;
+        state_changes += other.state_changes;
     }
 
     double costChanges() {

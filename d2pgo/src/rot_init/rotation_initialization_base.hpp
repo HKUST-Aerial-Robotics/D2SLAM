@@ -205,8 +205,8 @@ protected:
         double dt_solve = tic_solve.toc();
         TicToc tic2;
         auto state_changes = recoverRotationLLT(X);
-        printf("[RotInit%d] RotInit %.2fms setup %.2fms LLT %.2fms Recover %.2fms state_changes %.1f%% Poses %ld EffPoses %d Loops %ld Priors %ld F32: %d g_prior: %d\n", self_id,
-            tic.toc(), dt_setup, dt_solve, tic2.toc(), state_changes*100,
+        printf("[RotInit%d] RotInit %.2fms setup %.2fms LLT %.2fms Recover %.2fms state_changes %.1f%% Poses %ld EffPoses %d Loops %ld Priors %ld F32: %d g_prior: %d\n", 
+            self_id, tic.toc(), dt_setup, dt_solve, tic2.toc(), state_changes*100,
             frame_id_to_idx.size(), eff_frame_num, loops.size(), pose_priors.size(),
             typeid(T) == typeid(float), config.enable_gravity_prior);
         return state_changes;

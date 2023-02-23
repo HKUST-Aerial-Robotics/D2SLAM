@@ -1,4 +1,5 @@
 
+import numpy as np
 class Agent():
     def __init__(self, agent_id):
         self.agent_id = agent_id
@@ -90,3 +91,12 @@ class Agent():
         return False, clusters
 
 
+    def evaluate_trajectory_length(self):
+        length = 0
+        pos_old = None
+        for kf in self.keyframes:
+            pos = kf.pos
+            if pos_old is not None:
+                length += np.linalg.norm(pos - pos_old)
+            pos_old = pos
+        return length

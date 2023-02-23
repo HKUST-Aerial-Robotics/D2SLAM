@@ -812,6 +812,12 @@ class PoseGraph():
         _, inter_edge = self.update_edges()
         if prt:
             print(f"Total agents {len(self.agents)} keyframes {len(self.keyframes)} edges {len(self.edges)} inter edge {inter_edge} comm_vol {self.communication_volume()} keyframes {min_keyframes}<->{max_keyframes}")
+    def evaluate_trajectory_length(self):
+        # self.update_edges()
+        total_length = 0
+        for agent in self.agents.values():
+            total_length += agent.evaluate_trajectory_length()
+        return total_length/len(self.agents)
 
     def rename_keyframes_by_index(self):
         for kf_id in self.keyframes:

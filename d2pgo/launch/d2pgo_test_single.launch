@@ -22,6 +22,8 @@
     <arg name="drone_num" default="1" />
     <arg name="ignore_infor" default="false" />
     <arg name="simulate_delay_ms" default="0.0" />
+    <arg name="max_solving_time" default="10.0" />
+    <arg name="rot_init_state_eps" default="0.1" />
 
     <node name="d2pgo_test_$(arg self_id)" pkg="d2pgo" type="d2pgo_test" output="screen" >
         <param name="self_id" value="$(arg self_id)" type="int" />
@@ -47,5 +49,7 @@
         <param name="drone_num" value="$(arg drone_num)" type="int" />
         <param name="ignore_infor" value="$(arg ignore_infor)" type="bool" />
         <param name="simulate_delay_ms" value="$(arg simulate_delay_ms)" type="double" />
+        <param name="max_solving_time" value="$(arg max_solving_time)" type="double" />
+        <param name="rot_init_state_eps" value="$(arg rot_init_state_eps)" type="double" />
     </node>
 </launch>
