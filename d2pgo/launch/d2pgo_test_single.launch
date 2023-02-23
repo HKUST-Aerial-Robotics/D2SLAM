@@ -5,8 +5,8 @@
     <arg name="g2o_path" default="" />
     <arg name="output_path" default="" />
     <arg name="wait_for_start" default="false" />
-    <arg name="ceres_max_solver_time" default="0.5" />
-    <arg name="ceres_max_num_iterations" default="50" />
+    <arg name="ceres_max_solver_time" default="100.0" />
+    <arg name="ceres_max_num_iterations" default="1000" />
     <arg name="max_steps" default="10" />
     <arg name="rho_frame_T" default="0.006" />
     <arg name="rho_frame_theta" default="0.02" />

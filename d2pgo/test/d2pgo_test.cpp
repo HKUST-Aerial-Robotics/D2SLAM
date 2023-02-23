@@ -33,6 +33,7 @@ class D2PGOTester {
     double simulate_delay_ms = 0;
     bool enable_simulate_delay = false;
     double max_solving_time = 10.0;
+    D2PGOConfig config;
 
     std::map<int, ros::Publisher> path_pubs;
     std::vector<Swarm::LoopEdge> edges;
@@ -73,7 +74,6 @@ public:
         read_g2o_agent(g2o_path, keyframeid_agent_pose, edges, is_4dof, self_id, ignore_infor);
         ROS_INFO("[D2PGO@%d] Read %ld keyframes and %ld edges\n", self_id, keyframeid_agent_pose.size(), edges.size());
 
-        D2PGOConfig config;
         config.self_id = self_id;
         if (is_4dof)
             config.pgo_pose_dof = PGO_POSE_4D;
@@ -225,7 +225,7 @@ public:
             }
             printf("[D2PGO%d] Solve done. Time: %fms iters %d\n", self_id, t_solve.toc(), iter);
             //Write data
-            if (multi) {
+            if (config.perturb_mode) {
                 pgo->postPerturbSolve();
             }
             writeDataG2o();

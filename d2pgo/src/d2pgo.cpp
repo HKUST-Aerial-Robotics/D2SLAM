@@ -500,12 +500,14 @@ void D2PGO::setStateProperties(ceres::Problem & problem) {
     if (config.pgo_pose_dof == PGO_POSE_4D) {
         manifold = PosAngleManifold::Create();
     } else {
-        if (config.pgo_use_autodiff) {
-            ceres::EigenQuaternionManifold quat_manifold;
-            ceres::EuclideanManifold<3> euc_manifold;
-            manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
-        } else {
-            local_parameterization = new PoseLocalParameterization;
+        if (!config.perturb_mode) {
+            if (config.pgo_use_autodiff) {
+                ceres::EigenQuaternionManifold quat_manifold;
+                ceres::EuclideanManifold<3> euc_manifold;
+                manifold = new ceres::ProductManifold<ceres::EuclideanManifold<3>, ceres::EigenQuaternionManifold>(euc_manifold, quat_manifold);
+            } else {
+                local_parameterization = new PoseLocalParameterization;
+            }
         }
     }
     if (!config.perturb_mode) {
@@ -543,7 +545,7 @@ void D2PGO::postPerturbSolve() {
         Quaterniond q_perturb = Utility::quatfromRotationVector(perturb_theta);
         Swarm::Pose optimized_pose(pos, state.getAttitudeInit(frame_id)*q_perturb);
         state.getFramebyId(frame_id)->odom.pose() = optimized_pose;
-        perturb_theta.setZero();
+        // perturb_theta.setZero();
     }
 }
 

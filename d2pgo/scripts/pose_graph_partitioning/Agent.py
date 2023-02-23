@@ -33,8 +33,11 @@ class Agent():
         for kfid in self.kfs:
             self.kfs[kfid].clear_edges()
     
-    def write_to_g2o(self, path, cvt_id=False, addition_edges = [], force_ids=None):
-        with open(path, 'w') as f:
+    def write_to_g2o(self, path, cvt_id=False, addition_edges = [], force_ids=None, add=False):
+        mode = "w"
+        if add:
+            mode = "a"
+        with open(path, mode) as f:
             for keyframe in self.keyframes:
                 print(keyframe.g2o(cvt_id,force_ids), file=f)
             

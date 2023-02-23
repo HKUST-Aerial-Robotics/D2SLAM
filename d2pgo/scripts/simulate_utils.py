@@ -99,13 +99,19 @@ def call_dslam_opti(g2o_folder,  output_folder, rate=1e-3, tor=1e-4, is_async="t
 
 def call_d2pgo_opti(g2o_folder,  output_folder, agent_num = 5, ignore_infor = False,
         simulate_delay_ms=0, max_steps=100, enable_rot_init=True, enable_linear_pose6d_solver=False,
-        eta_k=1.0, rho_frame_theta=1.0, rho_frame_T=0.25, max_solving_time=10.0, rho_rot_mat=0.09):
+        eta_k=1.0, rho_frame_theta=1.0, rho_frame_T=0.25, max_solving_time=10.0, rho_rot_mat=0.09, is_single_mode=False):
     Path(output_folder).mkdir(parents=True, exist_ok=True)
-    command = f"roslaunch d2pgo d2pgo_test_multi.launch agent_num:={agent_num} g2o_path:={g2o_folder} \
-        output_path:={output_folder} enable_rot_init:={enable_rot_init} max_steps:={max_steps} ignore_infor:={ignore_infor} \
-        eta_k:={eta_k} rho_frame_theta:={rho_frame_theta} rho_frame_T:={rho_frame_T} simulate_delay_ms:={simulate_delay_ms} \
-        enable_linear_pose6d_solver:={enable_linear_pose6d_solver} debug_rot_init_only:=false \
-        rho_rot_mat:={rho_rot_mat} max_solving_time:={max_solving_time}"
+    if is_single_mode:
+        command = f"roslaunch d2pgo d2pgo_test_single.launch g2o_path:={g2o_folder} \
+            output_path:={output_folder} enable_rot_init:={enable_rot_init} ignore_infor:={ignore_infor} \
+            enable_linear_pose6d_solver:={enable_linear_pose6d_solver} solver_type:='ceres'"
+        print(command)
+    else:
+        command = f"roslaunch d2pgo d2pgo_test_multi.launch agent_num:={agent_num} g2o_path:={g2o_folder} \
+            output_path:={output_folder} enable_rot_init:={enable_rot_init} max_steps:={max_steps} ignore_infor:={ignore_infor} \
+            eta_k:={eta_k} rho_frame_theta:={rho_frame_theta} rho_frame_T:={rho_frame_T} simulate_delay_ms:={simulate_delay_ms} \
+            enable_linear_pose6d_solver:={enable_linear_pose6d_solver} debug_rot_init_only:=false \
+            rho_rot_mat:={rho_rot_mat} max_solving_time:={max_solving_time}"
     s = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = s.stdout.read().decode("utf-8")
     err = s.stderr.read()

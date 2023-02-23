@@ -40,7 +40,7 @@ class PoseGraph():
             if single:
                 self.read_g2o_single(path)
             else:
-                self.read_g2o_folder(path)
+                self.read_g2o_folder(path, prt=False)
 
     def agent_num(self):
         return len(self.agents)
@@ -850,8 +850,12 @@ class PoseGraph():
             self.agents[agent_id].write_to_g2o(f"{path}/{agent_id}.g2o", cvt_id)
         # print(f"Wrote {c} edges total {len(self.edges)}")
 
-    def write_to_g2o(self, path, cvt_id=False, agent_id=0):
-        self.agents[agent_id].write_to_g2o(path, cvt_id)
+    def write_to_g2o(self, path, cvt_id=False, agent_id=-1):
+        if agent_id < 0:
+            for agent_id in self.agents:
+                self.agents[agent_id].write_to_g2o(path, cvt_id, add=True)
+        else:
+            self.agents[agent_id].write_to_g2o(path, cvt_id)
 
     def write_to_csv(self, output_path, frame_id_to_stamp=None):
         for i in self.agents:
