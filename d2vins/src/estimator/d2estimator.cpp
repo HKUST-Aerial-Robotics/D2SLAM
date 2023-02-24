@@ -864,7 +864,7 @@ std::pair<Swarm::Odometry, std::pair<IMUBuffer, int>> D2Estimator::getMotionPred
     return std::make_pair(_imu.propagation(last_frame), ret);
 }
 
-bool D2Estimator::updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win) {
+void D2Estimator::updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win) {
     state.updateSldwin(drone_id, sld_win);
 }
 

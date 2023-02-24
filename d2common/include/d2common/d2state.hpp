@@ -109,5 +109,13 @@ public:
     int getSelfId() const {
         return self_id;
     }
+
+    void lock_state() {
+        state_lock.lock();
+    }
+
+    void unlock_state() {
+        state_lock.unlock();
+    }
 };
 }

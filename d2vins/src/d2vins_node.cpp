@@ -53,10 +53,14 @@ protected:
 
     void processRemoteImage(VisualImageDescArray & frame_desc, bool succ_track) override {
         {
-            if (params->estimation_mode != D2VINSConfig::SINGLE_DRONE_MODE &&
-                    !frame_desc.is_lazy_frame && frame_desc.matched_frame < 0 && succ_track) {
+            if (params->estimation_mode != D2VINSConfig::SINGLE_DRONE_MODE && succ_track &&
+                    !frame_desc.is_lazy_frame && frame_desc.matched_frame < 0) {
                 estimator->inputRemoteImage(frame_desc);
             } else {
+                if (params->estimation_mode != D2VINSConfig::SINGLE_DRONE_MODE && 
+                        frame_desc.sld_win_status.size() > 0) {
+                    estimator->updateSldwin(frame_desc.drone_id, frame_desc.sld_win_status);
+                }
                 if (frame_desc.matched_frame < 0) {
                     VINSFrame frame(frame_desc);
                     estimator->getVisualizer().pubFrame(&frame);

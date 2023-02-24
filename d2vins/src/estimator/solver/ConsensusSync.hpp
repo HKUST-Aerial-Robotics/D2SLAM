@@ -20,8 +20,6 @@ struct DistributedVinsData {
     std::vector<Swarm::Pose> frame_poses;
     std::vector<CamIdType> cam_ids;
     std::vector<Swarm::Pose> extrinsic;
-    std::vector<int> remote_drone_ids;
-    std::vector<Swarm::Pose> relative_coordinates;
     DistributedVinsData() {}
     DistributedVinsData(const DistributedVinsData_t & msg);
     DistributedVinsData_t toLCM() const;

@@ -72,10 +72,10 @@ void ARockPGO::receiveAll() {
 void ARockPGO::broadcastData() {
     // printf("ARockPGO::broadcastData\n");
     const std::lock_guard<std::recursive_mutex> lock(pgo_data_mutex);
-    DPGOData data;
-    data.type = DPGO_DELTA_POSE_DUAL;
     //broadcast the data.
     for (auto it : dual_states_local) {
+        DPGOData data;
+        data.type = DPGO_DELTA_POSE_DUAL;
         data.stamp = ros::Time::now().toSec();
         data.drone_id = self_id;
         data.target_id = it.first;
@@ -96,7 +96,7 @@ void ARockPGO::broadcastData() {
             data.frame_duals[param.id] = dual_state;
             data.frame_poses[param.id] = pose;
         }
-        // printf("[Drone %d] DPGO broadcast poses %ld\n", self_id, data.frame_poses.size());
+        printf("[Drone %d] DPGO broadcast poses %ld\n", self_id, data.frame_poses.size());
         pgo->broadcastData(data);
     }
 }

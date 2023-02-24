@@ -72,6 +72,7 @@ void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
 void D2Visualization::postSolve() {
     D2Common::Utility::TicToc tic;
     auto & state = _estimator->getState();
+    state.lock_state();
     auto pcl = state.getInitializedLandmarks();
     pcl_pub.publish(toPointCloud(pcl));
     margined_pcl.publish(toPointCloud(_estimator->getMarginedLandmarks(), true));
@@ -79,6 +80,9 @@ void D2Visualization::postSolve() {
     CameraPoseVisualization camera_visual;
     YAML::Node output_params;
     for (auto drone_id: state.availableDrones()) {
+        if (state.size(drone_id) == 0) {
+            continue;
+        }
         auto odom = _estimator->getOdometry(drone_id);
         auto odom_ros = odom.toRos();
         if (paths.find(drone_id) != paths.end() && (odom_ros.header.stamp - paths[drone_id].header.stamp).toSec() < 1e-3) {
@@ -155,6 +159,7 @@ void D2Visualization::postSolve() {
     header.stamp = ros::Time::now();
     sld_win_visual.publishBy(sld_win_pub, header);
     camera_visual.publishBy(cam_pub, header);
+    state.unlock_state();
     // printf("[D2VIZ::postSolve] time cost %.1fms\n", tic.toc());
 }
 

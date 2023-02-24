@@ -26,8 +26,8 @@ DPGOData::DPGOData(const DistributedPGOData_t & msg) {
     reference_frame_id = msg.reference_frame_id;
     for (size_t i = 0; i < msg.frame_ids.size(); i ++ ) {
         frame_poses[msg.frame_ids[i]] = Swarm::Pose(msg.frame_poses[i]);
-        frame_duals[msg.frame_ids[i]] = Map<const VectorXd>(msg.frame_duals[i].data.data(),
-                msg.frame_duals[i].data.size());
+        Map<const VectorXf> dual(msg.frame_duals[i].data.data(),msg.frame_duals[i].data.size());
+        frame_duals[msg.frame_ids[i]] = dual.template cast<double>();
     }
     solver_token = msg.solver_token;
     iteration_count = msg.iteration_count;
@@ -77,7 +77,9 @@ DistributedPGOData_t DPGOData::toLCM() const {
         VectorXd dual = frame_duals.at(i);
         Vector_t dual_vec;
         dual_vec.size = dual.size();
-        dual_vec.data = std::vector<double>(dual.data(), dual.data()+dual.size());
+        dual_vec.data.resize(dual.size());
+        Map<VectorXf> _dual(dual_vec.data.data(), dual_vec.data.size());
+        _dual = dual.template cast<float>();
         msg.frame_duals.emplace_back(dual_vec);
     }
     msg.frame_num = frame_poses.size();
