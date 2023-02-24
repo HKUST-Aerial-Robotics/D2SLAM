@@ -118,14 +118,14 @@ void D2Frontend::addToLoopQueue(const VisualImageDescArray & viokf) {
 
 void D2Frontend::onRemoteImage(VisualImageDescArray frame_desc) {
     if (frame_desc.is_lazy_frame || frame_desc.matched_frame >= 0) {
-        processRemoteImage(frame_desc);
+        processRemoteImage(frame_desc, false);
     } else {
-        feature_tracker->trackRemoteFrames(frame_desc);
-        processRemoteImage(frame_desc);
+        bool succ = feature_tracker->trackRemoteFrames(frame_desc);
+        processRemoteImage(frame_desc, succ);
     }
 }
 
-void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc) {
+void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc, bool succ_track) {
     if (params->enable_loop) {
         if (frame_desc.matched_frame < 0) {
             // printf("[D2Frontend Remote image %d is not matched, directly pass to detector\n", frame_desc.frame_id);

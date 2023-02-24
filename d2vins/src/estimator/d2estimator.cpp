@@ -276,7 +276,7 @@ void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
     }
     if (frame.sld_win_status.size() > 0) {
         //We need to update the sliding window.
-        state.updateSldwin(frame.drone_id, frame.sld_win_status);
+        updateSldwin(frame.drone_id, frame.sld_win_status);
     }
     auto frame_ptr = addFrameRemote(frame);
     if (params->estimation_mode == D2VINSConfig::SERVER_MODE && state.size(frame.drone_id) >= params->min_solve_frames) {
@@ -862,6 +862,10 @@ std::pair<Swarm::Odometry, std::pair<IMUBuffer, int>> D2Estimator::getMotionPred
             last_frame.stamp + state.td, _imu[0].t, stamp + state.td, _imu[_imu.size()-1].t);
     }
     return std::make_pair(_imu.propagation(last_frame), ret);
+}
+
+bool D2Estimator::updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win) {
+    state.updateSldwin(drone_id, sld_win);
 }
 
 }

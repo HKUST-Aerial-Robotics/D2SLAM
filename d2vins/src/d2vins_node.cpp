@@ -51,10 +51,10 @@ protected:
         frame_count ++;
     };
 
-    void processRemoteImage(VisualImageDescArray & frame_desc) override {
+    void processRemoteImage(VisualImageDescArray & frame_desc, bool succ_track) override {
         {
             if (params->estimation_mode != D2VINSConfig::SINGLE_DRONE_MODE &&
-                    !frame_desc.is_lazy_frame && frame_desc.matched_frame < 0) {
+                    !frame_desc.is_lazy_frame && frame_desc.matched_frame < 0 && succ_track) {
                 estimator->inputRemoteImage(frame_desc);
             } else {
                 if (frame_desc.matched_frame < 0) {
@@ -63,7 +63,7 @@ protected:
                 }
             }
         }
-        D2Frontend::processRemoteImage(frame_desc);
+        D2Frontend::processRemoteImage(frame_desc, succ_track);
         if (params->pub_visual_frame) {
             visual_array_pub.publish(frame_desc.toROS());
         }

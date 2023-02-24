@@ -86,6 +86,7 @@ public:
     void init(ros::NodeHandle & nh, D2VINSNet * net);
     D2EstimatorState & getState();
     std::vector<LandmarkPerId> getMarginedLandmarks() const;
+    bool updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
 
     //Multi-drone comm protocol
     void sendDistributedVinsData(DistributedVinsData data);
