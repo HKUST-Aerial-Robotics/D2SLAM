@@ -107,6 +107,7 @@ struct D2VINSConfig {
     int main_id = 0; // This main id is whom will be base reference frame so has a huge prior.
     double nearby_drone_dist = 5.0;
     double nearby_drone_yaw_dist = 1000; //Degree
+    bool lazy_broadcast_keyframe = false;
 
     //Debug
     bool debug_print_states = false;

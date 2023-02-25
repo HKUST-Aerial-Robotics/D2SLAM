@@ -175,7 +175,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId & lm, const D2Estimat
             memcpy(landmark_state[lm_id], lm.position.data(), sizeof(state_type)*POS_SIZE);
         }
         lm.flag = LandmarkFlag::INITIALIZED;
-    } else if (lm.track.size() >= params->landmark_estimate_tracks) {
+    } else if (lm.track.size() >= params->landmark_estimate_tracks || lm.isMultiCamera()) {
         //Initialize by motion.
         std::vector<Swarm::Pose> poses;
         std::vector<Vector3d> points;

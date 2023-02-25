@@ -60,10 +60,10 @@ class LoopNet {
     std::map<int64_t, double> msg_header_recv_time;
     std::map<int64_t, double> frame_header_recv_time;
     
-    std::set<int64_t> active_receving_msg;
-    std::set<int64_t> active_receving_frames;
+    std::set<int64_t> active_receving_image_msg_idx;
+    std::set<int64_t> active_receving_image_array_idx;
     std::set<int64_t> blacklist;
-    std::map<int64_t, ImageArrayDescriptor_t> received_framearrays;
+    std::map<int64_t, ImageArrayDescriptor_t> received_image_arrays;
 
 
     void setupNetwork(std::string _lcm_uri);

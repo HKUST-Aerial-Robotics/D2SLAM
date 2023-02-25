@@ -128,24 +128,33 @@ void D2Frontend::onRemoteImage(VisualImageDescArray frame_desc) {
 void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc, bool succ_track) {
     if (params->enable_loop) {
         if (frame_desc.matched_frame < 0) {
-            // printf("[D2Frontend Remote image %d is not matched, directly pass to detector\n", frame_desc.frame_id);
+            if (params->verbose)
+                printf("[D2Frontend] Remote image %d is not matched, directly pass to detector\n", frame_desc.frame_id);
             addToLoopQueue(frame_desc);
         } else {
             //We need to wait the matched frame is added to loop detector.
-            VisualImageDescArray _frame_desc = frame_desc;
-            new std::thread([&](VisualImageDescArray frame) {
-                int count = 0;
-                while (count < 1000) {
-                    if (loop_detector->hasFrame(frame.matched_frame)) {
-                        printf("[D2Frontend] frame %ld waited %d us for matched frame %d\n", frame.frame_id, count * 1000, 
-                                frame.matched_frame);
-                        addToLoopQueue(frame);
-                        break;
+            if (loop_detector->hasFrame(frame_desc.matched_frame)) {
+                if (params->verbose)
+                    printf("[D2Frontend] Remote image %d is matched with %d add to loop queue\n", frame_desc.frame_id, frame_desc.matched_frame);
+                addToLoopQueue(frame_desc);
+            } else {
+                VisualImageDescArray _frame_desc = frame_desc;
+                if (params->verbose)
+                    printf("[D2Frontend] Remote image %d is matched with %d, waiting for matched frame\n", frame_desc.frame_id, frame_desc.matched_frame);
+                new std::thread([&](VisualImageDescArray frame) {
+                    int count = 0;
+                    while (count < 1000) {
+                        if (loop_detector->hasFrame(frame.matched_frame)) {
+                            printf("[D2Frontend] frame %ld waited %d us for matched frame %d\n", frame.frame_id, count * 1000, 
+                                    frame.matched_frame);
+                            addToLoopQueue(frame);
+                            break;
+                        }
+                        usleep(1000);
+                        count += 1;
                     }
-                    usleep(1000);
-                    count += 1;
-                }
-            }, (_frame_desc));
+                }, (_frame_desc));
+            }
         }
     }
 }

@@ -10,6 +10,7 @@
 #include <opengv/sac/Ransac.hpp>
 #include <opengv/sac/Lmeds.hpp>
 #include <d2frontend/utils.h>
+#include <algorithm>
 
 using namespace std::chrono; 
 using namespace D2Common;
@@ -33,7 +34,7 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
     }
 
     if (image_array.images.size() == 0) {
-        ROS_WARN("[SWARM_LOOP] FlattenDesc must carry more than zero images");
+        ROS_WARN("[LoopDetector] FlattenDesc must carry more than zero images");
         return;
     }
 
@@ -43,10 +44,10 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
     int images_num = image_array.images.size();
 
     if (drone_id!= this->self_id && databaseSize() == 0) {
-        ROS_INFO("[SWARM_LOOP] Empty local database, will giveup remote image");
+        ROS_INFO("[LoopDetector] Empty local database, will giveup remote image");
         return;
     } else {
-        printf("[SWARM_LOOP@%d] Recv KF %ld from drone %d images: %d landmark: %d lazy: %d matched_to %d\n", self_id, image_array.frame_id,
+        printf("[LoopDetector@%d] Recv KF %ld from drone %d images: %d landmark: %d lazy: %d matched_to %d\n", self_id, image_array.frame_id,
             drone_id, image_array.images.size(), image_array.spLandmarkNum(), image_array.is_lazy_frame, image_array.matched_frame);
     }
 
@@ -62,7 +63,7 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
     }
 
     if (dir_count < _config.MIN_DIRECTION_LOOP) {
-        ROS_INFO("[SWARM_LOOP@%d] Give up image_array %ld with less than %d(%d) available images",
+        ROS_INFO("[LoopDetector@%d] Give up image_array %ld with less than %d(%d) available images",
             self_id, image_array.frame_id, _config.MIN_DIRECTION_LOOP, dir_count);
         return;
     }
@@ -95,9 +96,9 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
         if (image_array.matched_drone == self_id && image_array.matched_frame != -1) {
             if (!hasFrame(image_array.matched_frame)) {
                 success = false;
-                printf("[SWARM_LOOP] frame %ld is matched to local frame %ld but not in db\n", image_array.frame_id, image_array.matched_frame);
+                printf("[LoopDetector] frame %ld is matched to local frame %ld but not in db\n", image_array.frame_id, image_array.matched_frame);
             } else {
-                printf("[SWARM_LOOP] frame %ld is matched to local frame %ld in db\n", image_array.frame_id, image_array.matched_frame);
+                printf("[LoopDetector] frame %ld is matched to local frame %ld in db\n", image_array.frame_id, image_array.matched_frame);
                 success = true;
                 const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
                 _old_fisheye_img = keyframe_database.at(image_array.matched_frame);
@@ -105,7 +106,7 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
                 camera_index_old = 0;
             }
         } else {
-            if (databaseSize() > _config.MATCH_INDEX_DIST || drone_id != self_id) {
+            if (databaseSize() > _config.match_index_dist || drone_id != self_id && databaseSize() > _config.match_index_dist_remote) {
                 success = queryDescArrayFromDatabase(image_array, _old_fisheye_img, camera_index, camera_index_old);
                 auto stop = high_resolution_clock::now(); 
             }
@@ -115,7 +116,7 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
                 _old_fisheye_img.matched_drone = image_array.drone_id;
                 _old_fisheye_img.matched_frame = image_array.frame_id;
 
-                printf("[SWARM_LOOP@%d] Lazy frame %d is matched with %d try to broadcast this frame\n", self_id, image_array.frame_id, _old_fisheye_img.frame_id);
+                printf("[LoopDetector@%d] Lazy frame %d is matched with %d try to broadcast this frame\n", self_id, image_array.frame_id, _old_fisheye_img.frame_id);
                 if (broadcast_keyframe_cb) {
                     broadcast_keyframe_cb(_old_fisheye_img);
                 }
@@ -126,7 +127,7 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
                 } else if (image_array.drone_id == self_id) {
                     success = computeLoop(image_array, _old_fisheye_img, camera_index, camera_index_old, ret);
                 } else {
-                    ROS_WARN("[SWARM_LOOP%d] Will not compute loop, drone id is %d", self_id, image_array.drone_id);
+                    ROS_WARN("[LoopDetector%d] Will not compute loop, drone id is %d", self_id, image_array.drone_id);
                 }
                 if (success) {
                     onLoopConnection(ret);
@@ -134,7 +135,7 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
             }
         } else {
             if (params->verbose)
-                printf("[SWARM_LOOP@%d] No matched image for frame %ld\n", self_id, image_array.frame_id);
+                printf("[LoopDetector@%d] No matched image for frame %ld\n", self_id, image_array.frame_id);
         }     
         if (!image_array.is_lazy_frame && image_array.matched_frame < 0 && (!image_array.prevent_adding_db || new_node)) {
             if (image_array.drone_id == self_id) { 
@@ -142,17 +143,17 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
                 addToDatabase(image_array);
             }
         } else {
-            ROS_DEBUG("[SWARM_LOOP] This image is prevent to adding to DB");
+            ROS_DEBUG("[LoopDetector] This image is prevent to adding to DB");
         }
         // std::cout << "LOOP Detector cost" << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 <<"ms" << std::endl;
     } else {
-        ROS_WARN("[SWARM_LOOP] Frame contain too less landmark %d, give up", image_array.spLandmarkNum());
+        ROS_WARN("[LoopDetector] Frame contain too less landmark %d, give up", image_array.spLandmarkNum());
     }
 
     t_sum += tt.toc();
     t_count += 1;
     if (params->verbose || params->enable_perf_output)
-        printf("[SWARM_LOOP] Full LoopDetect avg %.1fms cur %.1fms\n", t_sum/t_count, tt.toc());
+        printf("[LoopDetector] Full LoopDetect avg %.1fms cur %.1fms\n", t_sum/t_count, tt.toc());
 }
 
 
@@ -173,7 +174,7 @@ int LoopDetector::addToDatabase(VisualImageDescArray & new_fisheye_desc) {
             int index = addToDatabase(img_desc);
             index_to_frame_id[index] = new_fisheye_desc.frame_id;
             imgid2dir[index] = i;
-            // ROS_INFO("[SWARM_LOOP] Add keyframe from %d(dir %d) to local keyframe database index: %d", img_desc.drone_id, i, index);
+            // ROS_INFO("[LoopDetector] Add keyframe from %d(dir %d) to local keyframe database index: %d", img_desc.drone_id, i, index);
         }
         if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             break;
@@ -181,7 +182,7 @@ int LoopDetector::addToDatabase(VisualImageDescArray & new_fisheye_desc) {
         const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
         keyframe_database[new_fisheye_desc.frame_id] = new_fisheye_desc;
     }
-    printf("[SWARM_LOOP] Add keyframe with %d images from %d to local keyframe database. Total frames: %ld\n", 
+    printf("[LoopDetector] Add keyframe with %d images from %d to local keyframe database. Total frames: %ld\n", 
         new_fisheye_desc.images.size(), new_fisheye_desc.drone_id, keyframe_database.size());
     // new_fisheye_desc.printSize();
     return new_fisheye_desc.frame_id;
@@ -205,8 +206,8 @@ int LoopDetector::queryFrameIndexFromDatabase(const VisualImageDesc & img_desc, 
     if (img_desc.drone_id == self_id) {
         //Then this is self drone
         double similarity_local, similarity_remote;
-        int ret_remote = queryIndexFromDatabase(img_desc, remote_index, true, thres, _config.MATCH_INDEX_DIST, similarity_remote);
-        int ret_local = queryIndexFromDatabase(img_desc, local_index, false, thres, _config.MATCH_INDEX_DIST, similarity_local);
+        int ret_remote = queryIndexFromDatabase(img_desc, remote_index, true, thres, _config.match_index_dist, similarity_remote);
+        int ret_local = queryIndexFromDatabase(img_desc, local_index, false, thres, _config.match_index_dist, similarity_local);
         if (ret_remote >=0 && ret_local >= 0) {
             if (similarity_local > similarity_remote) {
                 similarity = similarity_local;
@@ -223,7 +224,7 @@ int LoopDetector::queryFrameIndexFromDatabase(const VisualImageDesc & img_desc, 
             return ret_local;
         }
     } else {
-        ret = queryIndexFromDatabase(img_desc, local_index, false, thres, _config.MATCH_INDEX_DIST, similarity);
+        ret = queryIndexFromDatabase(img_desc, local_index, false, thres, _config.match_index_dist_remote, similarity);
     }
     return ret;
 }
@@ -240,8 +241,7 @@ int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss
     for (int i = 0; i < 1000; i++) {
         labels[i] = -1;
     }
-    int search_num = SEARCH_NEAREST_NUM + max_index;
-    // printf("Searching for frame %ld desc size %ld\n", img_desc.frame_id, img_desc.image_desc.size());
+    int search_num = std::min(SEARCH_NEAREST_NUM + max_index, (int) index.ntotal);
     index.search(1, img_desc.image_desc.data(), search_num, similiarity, labels);
     int return_frame_id = -1, return_drone_id = -1;
     int k = -1;
@@ -250,7 +250,7 @@ int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss
             continue;
         }
         if (index_to_frame_id.find(labels[i] + index_offset) == index_to_frame_id.end()) {
-            ROS_WARN("[SWARM_LOOP] Can't find image %d; skipping", labels[i] + index_offset);
+            ROS_WARN("[LoopDetector] Can't find image %d; skipping", labels[i] + index_offset);
             continue;
         }
         // int return_frame_id = index_to_frame_id.at(labels[i] + index_offset);
@@ -285,7 +285,7 @@ bool LoopDetector::queryDescArrayFromDatabase(const VisualImageDescArray & img_d
         loop_cam->getCameraConfiguration() == CameraConfig::PINHOLE_DEPTH) {
         camera_index_new = 0;
     } else {
-        ROS_ERROR("[SWARM_LOOP] Camera configuration %d not support yet in queryDescArrayFromDatabase", loop_cam->getCameraConfiguration());
+        ROS_ERROR("[LoopDetector] Camera configuration %d not support yet in queryDescArrayFromDatabase", loop_cam->getCameraConfiguration());
         exit(-1);
     }
 
@@ -301,7 +301,7 @@ bool LoopDetector::queryDescArrayFromDatabase(const VisualImageDescArray & img_d
             const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
             int frame_id = index_to_frame_id[best_image_index];
             camera_index_old = imgid2dir[best_image_index];
-            printf("[SWARM_LOOP] Query image for %ld: ret frame_id %d index %d drone %d with camera %d similarity %f\n", 
+            printf("[LoopDetector] Query image for %ld: ret frame_id %d index %d drone %d with camera %d similarity %f\n", 
                 img_desc_a.frame_id, frame_id, best_image_index, keyframe_database.at(frame_id).drone_id, camera_index_old, best_similarity);
             ret = keyframe_database.at(frame_id);
             return true;
@@ -331,12 +331,12 @@ bool LoopDetector::checkLoopOdometryConsistency(LoopEdge & loop_conn) const {
     auto dp = Swarm::Pose::DeltaPose(edge.relative_pose, odom.first);
     auto md = Swarm::computeSquaredMahalanobisDistance(dp.log_map(), cov_vec);
     if (md >  _config.odometry_consistency_threshold) {
-        printf("[SWARM_LOOP] LoopEdge-Odometry consistency check failed %.1f, odom %s loop %s dp %s.\n", 
+        printf("[LoopDetector] LoopEdge-Odometry consistency check failed %.1f, odom %s loop %s dp %s.\n", 
             md, odom.first.toStr().c_str(), edge.relative_pose.toStr().c_str(), dp.toStr().c_str());
         return false;
     }
 
-    printf("[SWARM_LOOP] LoopEdge-Odometry consistency OK %.1f odom %s loop %s dp %s.\n", md, 
+    printf("[LoopDetector] LoopEdge-Odometry consistency OK %.1f odom %s loop %s dp %s.\n", md, 
         odom.first.toStr().c_str(), edge.relative_pose.toStr().c_str(), dp.toStr().c_str());
     return true;
 }
@@ -387,7 +387,7 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
         if (dir_a < frame_array_a.images.size() && dir_b < frame_array_b.images.size() && dir_a >= 0 && dir_b >= 0) {
             bool succ = computeCorrespondFeatures(frame_array_a.images[dir_a],frame_array_b.images[dir_b],
                 _lm_pos_a, _idx_a, _lm_norm_3d_b, _idx_b, _camera_indices);
-            // ROS_INFO("[SWARM_LOOP] computeCorrespondFeatures on camera_index %d:%d gives %d common features", dir_b, dir_a, _lm_pos_a.size());
+            // ROS_INFO("[LoopDetector] computeCorrespondFeatures on camera_index %d:%d gives %d common features", dir_b, dir_a, _lm_pos_a.size());
             if (!succ) {
                 continue;
             }
@@ -412,7 +412,7 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
     if(lm_norm_3d_b.size() > _config.loop_inlier_feature_num && matched_dir_count >= _config.MIN_DIRECTION_LOOP) {
         return true;
     } else {
-        printf("[LoopDetector::computeCorrImageArray@%d] Failed: features %d/%d dirs %d/%d\n", 
+        ROS_WARN("[LoopDetector::computeCorrImageArray@%d] Failed: features %d/%d dirs %d/%d", 
                 self_id, lm_norm_3d_b.size(), _config.loop_inlier_feature_num,
                 matched_dir_count, _config.MIN_DIRECTION_LOOP);
         return false;
@@ -460,7 +460,8 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
         }
         if (landmark_db.at(landmark_id).flag == LandmarkFlag::UNINITIALIZED || 
                 landmark_db.at(landmark_id).flag == LandmarkFlag::OUTLIER) {
-                // ROS_WARN("Landmark %ld is not estimated", landmark_id);
+                // ROS_WARN("Landmark %ld is not estimated or is outlier tracks %ld multi %ld", landmark_id, 
+                //     landmark_db.at(landmark_id).track.size(), landmark_db.at(landmark_id).isMultiCamera());
             continue;
         }
         Vector3d pt3d_norm_b = _b_lms[index_b].pt3d_norm;
@@ -556,7 +557,7 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
 
         if (checkLoopOdometryConsistency(ret)) {
             loop_count ++;
-            printf("[SWARM_LOOP] Loop %ld Detected %d->%d dt %3.3fs DPose %s inliers %d. Will publish\n",
+            printf("[LoopDetector] Loop %ld Detected %d->%d dt %3.3fs DPose %s inliers %d. Will publish\n",
                 ret.id, ret.drone_id_a, ret.drone_id_b, (ret.ts_b - ret.ts_a).toSec(),
                 DP_old_to_new.toStr().c_str(), ret.pnp_inlier_num);
 
@@ -566,7 +567,7 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
             inter_drone_loop_count[old_d_id][new_d_id] = inter_drone_loop_count[old_d_id][new_d_id] +1;
         } else {
             success = false;
-            printf("[SWARM_LOOP] Loop not consistency with odometry, give up.\n");
+            printf("[LoopDetector] Loop not consistency with odometry, give up.\n");
         }
     }
 

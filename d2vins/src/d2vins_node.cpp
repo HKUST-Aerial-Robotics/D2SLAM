@@ -38,6 +38,9 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     bool has_received_imu = false;
     double last_imu_ts = 0;
     bool need_solve = false;
+    std::set<int> ready_drones;
+    std::map<int, Swarm::Pose> pgo_poses;
+    std::map<int, std::pair<int, Swarm::Pose>> vins_poses;
 protected:
     Swarm::Pose getMotionPredict(double stamp) const override {
         return estimator->getMotionPredict(stamp).first.pose();
@@ -53,6 +56,8 @@ protected:
 
     void processRemoteImage(VisualImageDescArray & frame_desc, bool succ_track) override {
         {
+            ready_drones.insert(frame_desc.drone_id);
+            vins_poses[frame_desc.drone_id] = std::make_pair(frame_desc.reference_frame_id, frame_desc.pose_drone);
             if (params->estimation_mode != D2VINSConfig::SINGLE_DRONE_MODE && succ_track &&
                     !frame_desc.is_lazy_frame && frame_desc.matched_frame < 0) {
                 estimator->inputRemoteImage(frame_desc);
@@ -71,6 +76,19 @@ protected:
         if (params->pub_visual_frame) {
             visual_array_pub.publish(frame_desc.toROS());
         }
+    }
+
+    void updateOutModuleSldWinAndLandmarkDB() {
+        //Frame related operations. Need to be protected by frame_mutex
+        const std::lock_guard<std::recursive_mutex> lock(estimator->frame_mutex);
+        auto sld_win = estimator->getSelfSldWin();
+        auto landmark_db = estimator->getLandmarkDB();
+        if (params->enable_loop) {
+            loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
+            loop_detector->updatebySldWin(sld_win);
+        }
+        feature_tracker->updatebySldWin(sld_win);
+        feature_tracker->updatebyLandmarkDB(estimator->getLandmarkDB());
     }
 
     void processVIOKFThread() {
@@ -95,26 +113,30 @@ protected:
                     if (viokf.is_keyframe) {
                         addToLoopQueue(viokf);
                     }
-                    {
-                        //Frame related operations. Need to be protected by frame_mutex
-                        const std::lock_guard<std::recursive_mutex> lock(estimator->frame_mutex);
-                        auto sld_win = estimator->getSelfSldWin();
-                        auto landmark_db = estimator->getLandmarkDB();
-                        if (params->enable_loop) {
-                            loop_detector->updatebyLandmarkDB(estimator->getLandmarkDB());
-                            loop_detector->updatebySldWin(sld_win);
-                        }
-                        feature_tracker->updatebySldWin(sld_win);
-                        feature_tracker->updatebyLandmarkDB(estimator->getLandmarkDB());
-                    }
+                    updateOutModuleSldWinAndLandmarkDB();
                     need_solve = true;
                     if (params->verbose || params->enable_perf_output)
                         printf("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
                 }
-                if (ret && D2FrontEnd::params->enable_network) {
-                    // printf("[D2VINS] Send image to network frame_id %ld: %s\n", viokf.frame_id, viokf.pose_drone.toStr().c_str());
-                    std::set<int> nearbydrones = estimator->getNearbyDronesbyPGOData(); 
-                    bool force_landmarks = false;
+
+                if (params->pub_visual_frame) {
+                    visual_array_pub.publish(viokf.toROS());
+                }
+                if (params->verbose || params->enable_perf_output)
+                    printf("[D2VINS] estimator_timer_callback takes %.1f ms\n", estimator_timer.toc());
+                bool discover_mode = false;
+                for (auto & id : ready_drones) {
+                    if (pgo_poses.find(id) == pgo_poses.end() && !estimator->getState().hasDrone(id)) {
+                        discover_mode = true;
+                        break;
+                    }
+                }
+                if (ret && D2FrontEnd::params->enable_network) { //Only send keyframes
+                    if (params->lazy_broadcast_keyframe && !viokf.is_keyframe && !discover_mode) {
+                        continue;
+                    }
+                    std::set<int> nearbydrones = estimator->getNearbyDronesbyPGOData(vins_poses); 
+                    bool force_landmarks = false || discover_mode;
                     if (nearbydrones.size() > 0) {
                         force_landmarks = true;
                         if (params->verbose) {
@@ -125,16 +147,13 @@ protected:
                             printf("\n");
                         }
                     }
+                    printf("[D2VINS] force landmarks %d to broadcast\n", force_landmarks);
                     Utility::TicToc broadcast_timer;
                     loop_net->broadcastVisualImageDescArray(viokf, force_landmarks);
-                    if (params->verbose || params->enable_perf_output)
+                    if (params->verbose || params->enable_perf_output) {
                         printf("[D2VINS] broadcastVisualImageDescArray takes %.1f ms\n", broadcast_timer.toc());
+                    }
                 }
-                if (params->pub_visual_frame) {
-                    visual_array_pub.publish(viokf.toROS());
-                }
-                if (params->verbose || params->enable_perf_output)
-                    printf("[D2VINS] estimator_timer_callback takes %.1f ms\n", estimator_timer.toc());
             } else {
                 usleep(1000);
             }
@@ -156,24 +175,25 @@ protected:
         if (params->estimation_mode == D2VINSConfig::SINGLE_DRONE_MODE) {
             return;
         }
-        std::map<int, Swarm::Pose> poses;
         for (size_t i = 0; i < fused.ids.size(); i++) {
             Swarm::Pose pose(fused.local_drone_position[i], fused.local_drone_rotation[i]);
-            poses[fused.ids[i]] = pose;
+            pgo_poses[fused.ids[i]] = pose;
             if (params->verbose)
                 printf("[D2VINS] PGO fused drone %d: %s\n", fused.ids[i], pose.toStr().c_str());
         }
-        estimator->setPGOPoses(poses);
+        estimator->setPGOPoses(pgo_poses);
     }
     
     void distriburedTimerCallback(const ros::TimerEvent & e) {
         estimator->solveinDistributedMode();
+        updateOutModuleSldWinAndLandmarkDB();
     }
 
     void solverThread() {
         while (ros::ok()) {
             if (need_solve) {
                 estimator->solveinDistributedMode();
+                updateOutModuleSldWinAndLandmarkDB();
                 if (!params->consensus_sync_to_start) {
                     need_solve = false;
                 } else {

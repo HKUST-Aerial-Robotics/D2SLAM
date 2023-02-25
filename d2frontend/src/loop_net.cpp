@@ -21,7 +21,8 @@ void LoopNet::setupNetwork(std::string _lcm_uri) {
 void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array, bool force_features) {
     bool need_send_features = force_features || !params->lazy_broadcast_keyframe; //TODO: need to consider for D2VINS.
     ImageArrayDescriptor_t fisheye_desc = image_array.toLCM(need_send_features, compress_int8_desc);
-    // printf("[LoopNet@%d] broadcast image array: %ld size %d\n", params->self_id, fisheye_desc.frame_id, fisheye_desc.getEncodedSize());
+    printf("[LoopNet@%d] broadcast image array: %ld lazy: %d size %d need_send_features %d\n", params->self_id, fisheye_desc.frame_id, 
+            params->lazy_broadcast_keyframe, fisheye_desc.getEncodedSize(), need_send_features);
     if (send_whole_img_desc) {
         sent_message.insert(fisheye_desc.msg_id);
         lcm.publish("VIOKF_IMG_ARRAY", &fisheye_desc);
@@ -35,10 +36,16 @@ void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array, 
                 fisheye_desc.frame_id, feature_num, byte_sent, ceil(sum_byte_sent/count_img_desc_sent), sum_byte_sent/1000, ceil(sum_features/count_img_desc_sent), force_features);
         }
     } else {
-        for (auto & img : fisheye_desc.images) {
-            if (img.landmark_num > 0) {
-                img.header.is_keyframe = fisheye_desc.is_keyframe;
-                broadcastImgDesc(img, fisheye_desc.sld_win_status, need_send_features);
+        if (!need_send_features && params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
+            auto & img = fisheye_desc.images[0];
+            img.header.is_keyframe = fisheye_desc.is_keyframe;
+            broadcastImgDesc(img, fisheye_desc.sld_win_status, need_send_features);
+        } else {
+            for (auto & img : fisheye_desc.images) {
+                if (img.landmark_num > 0) {
+                    img.header.is_keyframe = fisheye_desc.is_keyframe;
+                    broadcastImgDesc(img, fisheye_desc.sld_win_status, need_send_features);
+                }
             }
         }
     }
@@ -156,6 +163,8 @@ void LoopNet::onLandmarkRecevied(const lcm::ReceiveBuffer* rbuf,
         new_lm.timestamp = tmp.header.timestamp;
         new_lm.cur_td = tmp.header.cur_td;
     }
+    // printf("[LoopNet] Recv LMPack: msg_id %ld attached to frame %ldc%d current lms %ld\n", msg->header_id, tmp.header.frame_id, tmp.header.camera_index, 
+    //         tmp.landmarks.size());
 
     if (msg->landmark_descriptor_int8.size() > 0) {
         tmp.landmark_descriptor_int8.insert(tmp.landmark_descriptor_int8.end(), msg->landmark_descriptor_int8.begin(), msg->landmark_descriptor_int8.end());
@@ -173,12 +182,16 @@ void LoopNet::onLandmarkRecevied(const lcm::ReceiveBuffer* rbuf,
 void LoopNet::processRecvImageDesc(const ImageDescriptor_t & image, const SlidingWindow_t & sld_win_status) {
     std::lock_guard<std::recursive_mutex> Guard(recv_lock);
     int64_t frame_id = image.header.frame_id;
-    if (received_framearrays.find(frame_id) == received_framearrays.end()) {
+    if (received_image_arrays.find(frame_id) == received_image_arrays.end()) {
         ImageArrayDescriptor_t frame_desc;
         if (params->camera_configuration == CameraConfig::STEREO_FISHEYE) {
             frame_desc.image_num = 4;
         } else if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
-            frame_desc.image_num = 2;
+            if (image.header.is_lazy_frame) {
+                frame_desc.image_num = 1;
+            } else {
+                frame_desc.image_num = 2;
+            }
         } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
             frame_desc.image_num = 1;
         } else if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
@@ -213,15 +226,15 @@ void LoopNet::processRecvImageDesc(const ImageDescriptor_t & image, const Slidin
         frame_desc.Bg.z = 0;
         frame_desc.is_keyframe = image.header.is_keyframe;
         frame_desc.cur_td = image.header.cur_td;
-        received_framearrays[image.header.frame_id] = frame_desc;
+        received_image_arrays[image.header.frame_id] = frame_desc;
         frame_header_recv_time[image.header.frame_id] = msg_header_recv_time[image.header.msg_id];
-        active_receving_frames.insert(image.header.frame_id);
+        active_receving_image_array_idx.insert(image.header.frame_id);
         if (params->print_network_status) {
             printf("[LoopNet::processRecvImageDesc] Create frame %dc%d from D%d \n", frame_id, 
                     image.header.camera_index, frame_desc.drone_id);
         }
     } else {
-        auto & frame_desc = received_framearrays[frame_id];
+        auto & frame_desc = received_image_arrays[frame_id];
         frame_desc.images[image.header.camera_index] = image;
         if (params->print_network_status) {
             printf("[LoopNet::processRecvImageDesc] Adding subframe %dc%d D%d to current\n", frame_id, 
@@ -252,15 +265,20 @@ void LoopNet::onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
         return;
     }
     if (msg->matched_drone >= 0 && msg->matched_drone != params->self_id) {
-        printf("[LoopNet@%d] Received image desc from %d but matched to %d. Skip\n", params->self_id, msg->drone_id, msg->matched_drone);
+        if (params->print_network_status) {
+            printf("[LoopNet@%d] Received ImageHeader from %d but matched to %d. Skip\n", params->self_id, msg->drone_id, msg->matched_drone);
+        }
         return;
     } else if (msg->matched_drone >= 0) {
-        printf("[LoopNet@%d] Received image desc from %d matched to frame %ld\n", params->self_id, msg->drone_id, msg->frame_id);
+        if (params->print_network_status) {
+            printf("[LoopNet@%d] Received ImageHeader %ld from %d matched to frame %ld msg_id\n", params->self_id, msg->frame_id, msg->drone_id, msg->matched_frame, msg->msg_id);
+        }
     }
 
     if (params->print_network_status) {
         double delay = (ros::Time::now() - toROSTime(msg->timestamp_sent)).toSec();
-        printf("[LoopNet]ImageDescriptorHeader %ldc%ld from D%d delay %.1fms msg_id %ld: feature num %d gdesc %d:%d\n", msg->frame_id, msg->camera_index, msg->drone_id, 
+        printf("[LoopNet]RecvImageHeader %ldc%ld lazy %d from D%d delay %.1fms msg_id %ld: feature num %d gdesc %d:%d\n", 
+            msg->frame_id, msg->camera_index, msg->is_lazy_frame, msg->drone_id, 
             delay*1000.0, msg->msg_id, msg->feature_num, msg->image_desc_size_int8, msg->image_desc_size);
     }
     updateRecvImgDescTs(msg->msg_id, true);
@@ -270,7 +288,7 @@ void LoopNet::onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
         tmp.landmark_descriptor_size_int8 = 0;
         tmp.landmark_descriptor_size = 0;
         tmp.landmark_scores_size = 0;
-        active_receving_msg.insert(msg->msg_id);
+        active_receving_image_msg_idx.insert(msg->msg_id);
         received_images[msg->msg_id] = tmp; 
     }
     received_sld_win_status[msg->msg_id] = msg->sld_win_status;
@@ -281,14 +299,15 @@ void LoopNet::onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
 void LoopNet::scanRecvPackets() {
     std::lock_guard<std::recursive_mutex> Guard(recv_lock);
     double tnow = ros::Time::now().toSec();
-    std::vector<int64_t> finish_recv;
+    std::vector<int64_t> finish_recv_image_id;
     static double sum_feature_num = 0;
     static double sum_feature_num_all = 0;
     static int sum_packets = 0;
-    for (auto msg_id : active_receving_msg) {
+    //Processing per view
+    for (auto msg_id : active_receving_image_msg_idx) {
         auto & _frame = received_images[msg_id];
         if (tnow - msg_header_recv_time[msg_id] > recv_period ||
-            _frame.landmark_num == _frame.landmarks.size()) {
+            _frame.landmark_num == _frame.landmarks.size() || _frame.header.is_lazy_frame) {
             sum_feature_num_all+=_frame.landmark_num;
             sum_feature_num+=_frame.landmarks.size();
             float cur_recv_rate = ((float)_frame.landmarks.size())/((float) _frame.landmark_num);
@@ -300,7 +319,7 @@ void LoopNet::scanRecvPackets() {
                     _frame.landmark_descriptor_size_int8,  _frame.landmark_descriptor_size);
             }
             _frame.landmark_num = _frame.landmarks.size();
-            finish_recv.push_back(msg_id);
+            finish_recv_image_id.push_back(msg_id);
             images_finish_recv.insert(msg_id);
 
             sum_packets += 1;
@@ -308,44 +327,41 @@ void LoopNet::scanRecvPackets() {
         }
     }
 
-    for (auto msg_id : finish_recv) {
-        blacklist.insert(msg_id);
-        active_receving_msg.erase(msg_id);
-    }
-
-
-    for (auto _id : finish_recv) {
-        auto & msg = received_images[_id];
+    for (auto msg_id : finish_recv_image_id) {
+        auto & msg = received_images[msg_id];
         //Processed recevied message
         msg.landmark_num = msg.landmarks.size();
-        if (msg.landmarks.size() > 0) {
-            this->processRecvImageDesc(msg, received_sld_win_status[_id]);
+        if (msg.landmarks.size() > 0 || msg.header.is_lazy_frame) {
+            this->processRecvImageDesc(msg, received_sld_win_status[msg_id]);
         }
-        received_images.erase(_id);
-        received_sld_win_status.erase(_id);
+        received_images.erase(msg_id);
+        received_sld_win_status.erase(msg_id);
+        blacklist.insert(msg_id);
+        active_receving_image_msg_idx.erase(msg_id);
     }
 
     //Scan finish image array
-    std::vector<int64_t> finish_recv_frames;
-    for (auto frame_id : active_receving_frames) {
+    std::vector<int64_t> finish_recv_image_array_idx;
+    for (auto image_array_idx : active_receving_image_array_idx) {
         int count_images = 0;
-        auto & frame_desc = received_framearrays[frame_id];
+        auto & frame_desc = received_image_arrays[image_array_idx];
         for (size_t i = 0; i < frame_desc.images.size(); i++) {
-            if (frame_desc.images[i].landmark_num > 0 && 
+            if ((frame_desc.images[i].landmark_num > 0 || frame_desc.is_lazy_frame) && 
                     images_finish_recv.find(frame_desc.images[i].header.msg_id) != images_finish_recv.end()) {
                 count_images ++;
             }
         }
-
-        if(frame_header_recv_time.find(frame_id) != frame_header_recv_time.end() &&
-                (tnow - frame_header_recv_time[frame_id] > recv_period || count_images >= params->min_receive_images)) {
-            finish_recv_frames.push_back(frame_id);
+        if(frame_header_recv_time.find(image_array_idx) != frame_header_recv_time.end() &&
+                (tnow - frame_header_recv_time[image_array_idx] > recv_period || count_images >= params->min_receive_images ||
+                (count_images == 1 && frame_desc.is_lazy_frame && params->camera_configuration == CameraConfig::STEREO_PINHOLE))) {
+            //When stereo and lazy frame, only one image is enough
+            finish_recv_image_array_idx.push_back(image_array_idx);
         }
     }
 
-    for (auto & frame_id :finish_recv_frames) {
-        auto & frame_desc = received_framearrays[frame_id];
-        active_receving_frames.erase(frame_id);
+    for (auto & image_array_idx: finish_recv_image_array_idx) {
+        auto & frame_desc = received_image_arrays[image_array_idx];
+        active_receving_image_array_idx.erase(image_array_idx);
 
         frame_desc.landmark_num = 0;
         for (size_t i = 0; i < frame_desc.images.size(); i ++) {
@@ -369,7 +385,7 @@ void LoopNet::scanRecvPackets() {
         }
 
         frame_desc_callback(frame_desc);
-        received_framearrays.erase(frame_id);
+        received_image_arrays.erase(image_array_idx);
     }
 }
 

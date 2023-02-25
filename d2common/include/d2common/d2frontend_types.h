@@ -306,6 +306,10 @@ struct VisualImageDesc {
             for (int i = 0; i < desc.landmark_num; i++) {
                 desc0.segment(i * 32, 32).normalize();
             }
+        } else {
+            landmark_descriptor = desc.landmark_descriptor;
+        }
+        if (desc.header.image_desc_size_int8 > 0) {
             image_desc.resize(desc.header.image_desc_size_int8);
             Eigen::Map<VectorXf> gdesc(image_desc.data(), image_desc.size());
             for (int i = 0; i < image_desc.size(); i++) {
@@ -313,7 +317,6 @@ struct VisualImageDesc {
             }
             gdesc.normalize();
         } else {
-            landmark_descriptor = desc.landmark_descriptor;
             image_desc = desc.header.image_desc;
         }
         landmark_scores = desc.landmark_scores;
@@ -356,11 +359,11 @@ struct VisualImageDescArray {
     }
 
     void printSize() {
-        printf("Frame id %d landmark num %d image num %d:\n", frame_id, landmarkNum(), images.size());
+        printf("Frame id %ld landmark num %d image num %ld:\n", frame_id, landmarkNum(), images.size());
         for (auto & image : images) {
             image.printSize();
         }
-        printf("========================================\n", landmarkNum());
+        printf("========================================\n");
     }
     
     int landmarkNum() const {
@@ -463,7 +466,7 @@ struct VisualImageDescArray {
             ret.images.emplace_back(_img.toLCM(send_features, compress_int8));
             ret.images.back().header.matched_frame = matched_frame;
             ret.images.back().header.matched_drone = matched_drone;
-            ret.images.back().header.is_lazy_frame = is_lazy_frame;
+            ret.images.back().header.is_lazy_frame = !send_features;
             ret.images.back().header.pose_drone = ret.pose_drone;
             ret.images.back().header.reference_frame_id = reference_frame_id;
             ret.images.back().header.cur_td = cur_td;
@@ -481,7 +484,6 @@ struct VisualImageDescArray {
         ret.sld_win_status.drone_id = ret.drone_id;
         ret.sld_win_status.frame_ids = sld_win_status;
         ret.reference_frame_id = reference_frame_id;
-        ret.is_lazy_frame = is_lazy_frame;
         ret.matched_frame = matched_frame;
         ret.matched_drone = matched_drone;
         ret.cur_td = cur_td;

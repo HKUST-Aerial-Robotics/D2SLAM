@@ -826,7 +826,7 @@ void D2Estimator::setPGOPoses(const std::map<int, Swarm::Pose> & poses) {
     last_pgo_poses = poses;
 }
 
-std::set<int> D2Estimator::getNearbyDronesbyPGOData() const {
+std::set<int> D2Estimator::getNearbyDronesbyPGOData(const std::map<int, std::pair<int, Swarm::Pose>> & vins_poses) {
     std::set<int> nearby_drones;
     if (last_pgo_poses.find(self_id) == last_pgo_poses.end()) {
         return nearby_drones;
@@ -842,8 +842,30 @@ std::set<int> D2Estimator::getNearbyDronesbyPGOData() const {
         if (dist < params->nearby_drone_dist && dist_yaw < params->nearby_drone_yaw_dist/57.3) {
             nearby_drones.insert(p.first);
         }
+        //Check using D2VINS pose
+        state.lock_state();
+        if (state.size(p.first) > 0) {
+            auto d2vins_pose = state.lastFrame(p.first).odom.pose();
+            dist = (d2vins_pose.pos() - self_pose.pos()).norm();
+            dist_yaw = std::abs(d2vins_pose.yaw() -self_pose.yaw());
+        }
+        state.unlock_state();
+        if (dist < params->nearby_drone_dist && dist_yaw < params->nearby_drone_yaw_dist/57.3) {
+            nearby_drones.insert(p.first);
+        }
         if (params->verbose) {
             printf("[D2Estimator::getNearbyDronesbyPGOData] drone %d dist %.1f yaw %.1fdeg\n", p.first, dist, dist_yaw*57.3);
+        }
+    }
+    for (auto it: vins_poses) {
+        auto & pose = it.second.second;
+        auto dist = (pose.pos() - self_pose.pos()).norm();
+        auto dist_yaw = std::abs(pose.yaw() -self_pose.yaw());
+        if (dist < params->nearby_drone_dist && dist_yaw < params->nearby_drone_yaw_dist/57.3) {
+            nearby_drones.insert(it.first);
+        }
+        if (params->verbose) {
+            printf("[D2Estimator::getNearbyDronesbyPGOData] VINS Pose drone %d dist %.1f yaw %.1fdeg\n", it.first, dist, dist_yaw*57.3);
         }
     }
     return nearby_drones;

@@ -253,6 +253,14 @@ struct LandmarkPerId {
         }
         return score - num_outlier_tracks*2;  
     }
+
+    bool isMultiCamera() const {
+        std::set<int> cam_set;
+        for (auto & it: track) {
+            cam_set.insert(it.camera_index);
+        }
+        return cam_set.size() > 1;
+    }
 };
 
 }

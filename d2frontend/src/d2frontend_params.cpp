@@ -127,7 +127,8 @@ namespace D2FrontEnd {
         loopdetectorconfig->gravity_check_thres = fsSettings["gravity_check_thres"];
         nh.param<bool>("enable_loop", enable_loop, true);
         nh.param<bool>("is_4dof", loopdetectorconfig->is_4dof, true);
-        nh.param<int>("match_index_dist", loopdetectorconfig->MATCH_INDEX_DIST, 10);
+        nh.param<int>("match_index_dist", loopdetectorconfig->match_index_dist, 10);
+        nh.param<int>("match_index_dist_remote", loopdetectorconfig->match_index_dist_remote, 10);
         nh.param<int>("min_match_per_dir", loopdetectorconfig->MIN_MATCH_PRE_DIR, 15);
         nh.param<int>("inter_drone_init_frames", loopdetectorconfig->inter_drone_init_frames, 50);
         nh.param<double>("detector_match_thres", loopdetectorconfig->DETECTOR_MATCH_THRES, 0.9);

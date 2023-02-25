@@ -85,6 +85,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     min_measurements_per_keyframe = fsSettings["min_measurements_per_keyframe"];
     //Multi-drone
     estimation_mode = (ESTIMATION_MODE) (int) fsSettings["estimation_mode"];
+    lazy_broadcast_keyframe = (int) fsSettings["lazy_broadcast_keyframe"];
 
     //Initialiazation
     init_method = (InitialMethod) (int)fsSettings["init_method"];

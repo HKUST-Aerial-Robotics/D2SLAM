@@ -54,6 +54,71 @@ void D2Visualization::pubIMUProp(const Swarm::Odometry & odom) {
     imu_prop_pub.publish(odom.toRos());
 }
 
+void D2Visualization::pubOdometry(int drone_id, const Swarm::Odometry & odom) {
+    auto odom_ros = odom.toRos();
+    if (paths.find(drone_id) != paths.end() && (odom_ros.header.stamp - paths[drone_id].header.stamp).toSec() < 1e-3) {
+        return;
+    }
+    auto & path = paths[drone_id];
+    if (odom_pubs.find(drone_id) == odom_pubs.end()) {
+        odom_pubs[drone_id] = _nh->advertise<nav_msgs::Odometry>("odometry_" + std::to_string(drone_id), 1000);
+        path_pubs[drone_id] = _nh->advertise<nav_msgs::Path>("path_" + std::to_string(drone_id), 1000);
+        csv_output_files[drone_id] = std::ofstream(params->output_folder + "/d2vins_" + std::to_string(drone_id) + ".csv", std::ios::out);
+    }
+    geometry_msgs::PoseStamped pose_stamped;
+    pose_stamped.header = odom_ros.header;
+    pose_stamped.header.frame_id = "world";
+    pose_stamped.pose = odom_ros.pose.pose;
+    path.header = odom_ros.header;
+    path.header.frame_id = "world";
+    path.poses.push_back(pose_stamped);
+    
+    if (drone_id == params->self_id) {
+        CameraPoseVisualization camera_visual;
+        YAML::Node output_params;
+        path_pub.publish(path);
+        odom_pub.publish(odom_ros);
+        tf::Transform transform = odom.toTF();
+        br.sendTransform(tf::StampedTransform(transform, odom_ros.header.stamp, "world", "imu"));
+        auto & state = _estimator->getState();
+        auto exts = state.localCameraExtrinsics();
+        for (int i = 0; i < exts.size(); i ++) {
+            auto camera_pose = exts[i];
+            auto pose = odom.pose()*camera_pose;
+            geometry_msgs::PoseStamped camera_pose_ros;
+            camera_pose_ros.header = odom_ros.header;
+            camera_pose_ros.header.frame_id = "world";
+            camera_pose_ros.pose = pose.toROS();
+            camera_pose_pubs[i].publish(camera_pose_ros);
+            camera_visual.addPose(pose.pos(), pose.att(), Vector3d(0.1, 0.1, 0.5), display_alpha);
+            Eigen::Matrix4d eigen_T = camera_pose.toMatrix();
+            cv::Mat cv_T;
+            cv::eigen2cv(eigen_T, cv_T);
+            std::ofstream ofs(params->output_folder + "/extrinsic" + std::to_string(i) + ".csv", std::ios::out);
+            ofs << "body_T_cam" <<  std::to_string(i) << std::endl << cv_T ;
+            ofs.close();
+            std::vector<std::vector<double>> output_data;
+            for (auto k  = 0; k < 4; k++) {
+                std::vector<double> row;
+                for (auto j = 0; j < 4; j++) {
+                    row.push_back(cv_T.at<double>(k, j));
+                }
+                output_data.push_back(row);
+            }
+            output_params["body_T_cam" + std::to_string(i)] = output_data;
+        }
+        output_params["drone_id"] = drone_id;
+        output_params["td"] = state.getTd(drone_id);
+        std::ofstream ofs(params->output_folder + "/extrinsic.yaml", std::ios::out);
+        ofs << output_params << std::endl;
+        camera_visual.publishBy(cam_pub, odom_ros.header);
+    }
+    //Write output_params to yaml
+    csv_output_files[drone_id] << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << odom.stamp << " " << odom.pose().toStr(true) << std::endl;
+    odom_pubs[drone_id].publish(odom_ros);
+    path_pubs[drone_id].publish(path);
+}
+
 void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
     if (frame == nullptr) {
         return;
@@ -67,6 +132,7 @@ void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
         swarm_msgs::VIOFrame msg = frame->toROS();
         frame_pub_remote.publish(msg);
     }
+    pubOdometry(frame->drone_id, frame->odom);
 }
 
 void D2Visualization::postSolve() {
@@ -77,71 +143,12 @@ void D2Visualization::postSolve() {
     pcl_pub.publish(toPointCloud(pcl));
     margined_pcl.publish(toPointCloud(_estimator->getMarginedLandmarks(), true));
 
-    CameraPoseVisualization camera_visual;
-    YAML::Node output_params;
     for (auto drone_id: state.availableDrones()) {
         if (state.size(drone_id) == 0) {
             continue;
         }
         auto odom = _estimator->getOdometry(drone_id);
-        auto odom_ros = odom.toRos();
-        if (paths.find(drone_id) != paths.end() && (odom_ros.header.stamp - paths[drone_id].header.stamp).toSec() < 1e-3) {
-            continue;
-        }
-        auto & path = paths[drone_id];
-        if (odom_pubs.find(drone_id) == odom_pubs.end()) {
-            odom_pubs[drone_id] = _nh->advertise<nav_msgs::Odometry>("odometry_" + std::to_string(drone_id), 1000);
-            path_pubs[drone_id] = _nh->advertise<nav_msgs::Path>("path_" + std::to_string(drone_id), 1000);
-            csv_output_files[drone_id] = std::ofstream(params->output_folder + "/d2vins_" + std::to_string(drone_id) + ".csv", std::ios::out);
-        }
-        geometry_msgs::PoseStamped pose_stamped;
-        pose_stamped.header = odom_ros.header;
-        pose_stamped.header.frame_id = "world";
-        pose_stamped.pose = odom_ros.pose.pose;
-        path.header = odom_ros.header;
-        path.header.frame_id = "world";
-        path.poses.push_back(pose_stamped);
-        
-        if (drone_id == params->self_id) {
-            path_pub.publish(path);
-            odom_pub.publish(odom_ros);
-            tf::Transform transform = odom.toTF();
-            br.sendTransform(tf::StampedTransform(transform, odom_ros.header.stamp, "world", "imu"));
-            auto exts = state.localCameraExtrinsics();
-            for (int i = 0; i < exts.size(); i ++) {
-                auto camera_pose = exts[i];
-                auto pose = odom.pose()*camera_pose;
-                geometry_msgs::PoseStamped camera_pose_ros;
-                camera_pose_ros.header = odom_ros.header;
-                camera_pose_ros.header.frame_id = "world";
-                camera_pose_ros.pose = pose.toROS();
-                camera_pose_pubs[i].publish(camera_pose_ros);
-                camera_visual.addPose(pose.pos(), pose.att(), Vector3d(0.1, 0.1, 0.5), display_alpha);
-                Eigen::Matrix4d eigen_T = camera_pose.toMatrix();
-                cv::Mat cv_T;
-                cv::eigen2cv(eigen_T, cv_T);
-                std::ofstream ofs(params->output_folder + "/extrinsic" + std::to_string(i) + ".csv", std::ios::out);
-                ofs << "body_T_cam" <<  std::to_string(i) << std::endl << cv_T ;
-                ofs.close();
-                std::vector<std::vector<double>> output_data;
-                for (auto k  = 0; k < 4; k++) {
-                    std::vector<double> row;
-                    for (auto j = 0; j < 4; j++) {
-                        row.push_back(cv_T.at<double>(k, j));
-                    }
-                    output_data.push_back(row);
-                }
-                output_params["body_T_cam" + std::to_string(i)] = output_data;
-            }
-            output_params["drone_id"] = drone_id;
-            output_params["td"] = state.getTd(drone_id);
-            std::ofstream ofs(params->output_folder + "/extrinsic.yaml", std::ios::out);
-            ofs << output_params << std::endl;
-        }
-        //Write output_params to yaml
-        csv_output_files[drone_id] << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << odom.stamp << " " << odom.pose().toStr(true) << std::endl;
-        odom_pubs[drone_id].publish(odom_ros);
-        path_pubs[drone_id].publish(path);
+        pubOdometry(drone_id, odom);
     }
 
     CameraPoseVisualization sld_win_visual;
@@ -158,7 +165,6 @@ void D2Visualization::postSolve() {
     header.frame_id = "world";
     header.stamp = ros::Time::now();
     sld_win_visual.publishBy(sld_win_pub, header);
-    camera_visual.publishBy(cam_pub, header);
     state.unlock_state();
     // printf("[D2VIZ::postSolve] time cost %.1fms\n", tic.toc());
 }

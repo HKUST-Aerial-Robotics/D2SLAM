@@ -96,7 +96,7 @@ public:
     const std::vector<VINSFrame*> & getSelfSldWin() const;
     D2Visualization & getVisualizer();
     void setPGOPoses(const std::map<int, Swarm::Pose> & poses);
-    std::set<int> getNearbyDronesbyPGOData() const;
+    std::set<int> getNearbyDronesbyPGOData(const std::map<int, std::pair<int, Swarm::Pose>> & vins_poses);
     void setStateProperties();
     virtual std::pair<Swarm::Odometry, std::pair<IMUBuffer, int>> getMotionPredict(double stamp) const;
 };

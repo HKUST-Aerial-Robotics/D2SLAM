@@ -33,7 +33,8 @@ using D2Common::Point2fVector;
 class LoopCam;
 
 struct LoopDetectorConfig {
-    int MATCH_INDEX_DIST;
+    int match_index_dist;
+    int match_index_dist_remote;
     int MAX_DIRS;
     int MIN_DIRECTION_LOOP;
     int MIN_MATCH_PRE_DIR;
