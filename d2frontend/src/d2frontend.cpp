@@ -130,7 +130,10 @@ void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc, bool succ
         if (frame_desc.matched_frame < 0) {
             if (params->verbose)
                 printf("[D2Frontend] Remote image %d is not matched, directly pass to detector\n", frame_desc.frame_id);
-            addToLoopQueue(frame_desc);
+            //Check if keyframe!!!
+            if (frame_desc.is_keyframe) {
+                addToLoopQueue(frame_desc);
+            }
         } else {
             //We need to wait the matched frame is added to loop detector.
             if (loop_detector->hasFrame(frame_desc.matched_frame)) {
