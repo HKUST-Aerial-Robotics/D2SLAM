@@ -201,7 +201,7 @@ struct VisualImageDesc {
         return img_desc;
     }
 
-    ImageDescriptor_t toLCM(bool send_features=true, bool compress_int8=true) const {
+    ImageDescriptor_t toLCM(bool send_features=true, bool compress_int8=true, bool send_netvlad=true) const {
         ImageDescriptor_t img_desc;
         img_desc.header.timestamp = toLCMTime(ros::Time(stamp));
         img_desc.header.drone_id = drone_id;
@@ -242,17 +242,22 @@ struct VisualImageDesc {
             img_desc.landmark_scores_size = 0;
             img_desc.header.is_lazy_frame = true;
         }
-        if (compress_int8 && image_desc.size() > 0) {
-            img_desc.header.image_desc_size_int8 = image_desc.size();
-            img_desc.header.image_desc_int8.resize(image_desc.size());
-            img_desc.header.image_desc_size = 0;
-            double max = Eigen::Map<const VectorXf>(image_desc.data(), image_desc.size()).cwiseAbs().maxCoeff();
-            for (int i = 0; i < image_desc.size(); i++) {
-                img_desc.header.image_desc_int8[i] = (int8_t)(image_desc[i] / max * 127);
+        if (send_netvlad) {
+            if (compress_int8 && image_desc.size() > 0) {
+                img_desc.header.image_desc_size_int8 = image_desc.size();
+                img_desc.header.image_desc_int8.resize(image_desc.size());
+                img_desc.header.image_desc_size = 0;
+                double max = Eigen::Map<const VectorXf>(image_desc.data(), image_desc.size()).cwiseAbs().maxCoeff();
+                for (int i = 0; i < image_desc.size(); i++) {
+                    img_desc.header.image_desc_int8[i] = (int8_t)(image_desc[i] / max * 127);
+                }
+            } else {
+                img_desc.header.image_desc = image_desc;
+                img_desc.header.image_desc_size = image_desc.size();
+                img_desc.header.image_desc_size_int8 = 0;
             }
         } else {
-            img_desc.header.image_desc = image_desc;
-            img_desc.header.image_desc_size = image_desc.size();
+            img_desc.header.image_desc_size = 0;
             img_desc.header.image_desc_size_int8 = 0;
         }
 
@@ -395,6 +400,10 @@ struct VisualImageDescArray {
         }
     }
 
+    bool isMatchedFrame() {
+        return matched_frame >= 0;
+    }
+
     VisualImageDescArray() {}
     
     VisualImageDescArray(const swarm_msgs::ImageArrayDescriptor & img_desc):
@@ -452,7 +461,7 @@ struct VisualImageDescArray {
         return ret;
     }
 
-    ImageArrayDescriptor_t toLCM(bool send_features=true, bool compress_int8=true) const {
+    ImageArrayDescriptor_t toLCM(bool send_features=true, bool compress_int8=true, bool send_netvlad=true) const {
         ImageArrayDescriptor_t ret;
         ret.msg_id = frame_id;
         ret.frame_id = frame_id;
@@ -463,7 +472,7 @@ struct VisualImageDescArray {
         ret.pose_drone = pose_drone.toLCM();
         ret.is_keyframe = is_keyframe;
         for (auto & _img: images) {
-            ret.images.emplace_back(_img.toLCM(send_features, compress_int8));
+            ret.images.emplace_back(_img.toLCM(send_features, compress_int8, send_netvlad));
             ret.images.back().header.matched_frame = matched_frame;
             ret.images.back().header.matched_drone = matched_drone;
             ret.images.back().header.is_lazy_frame = !send_features;

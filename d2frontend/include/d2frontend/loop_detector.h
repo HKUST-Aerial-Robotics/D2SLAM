@@ -96,9 +96,9 @@ protected:
             std::vector<Vector3d> &lm_pos_a, std::vector<Vector3d> &lm_norm_3d_b, std::vector<int> & cam_indices,
             std::vector<std::pair<int, int>> &index2dirindex_a, std::vector<std::pair<int, int>> &index2dirindex_b);
 
-    int addToDatabase(VisualImageDescArray & new_fisheye_desc);
-    int addToDatabase(VisualImageDesc & new_img_desc);
-    bool queryDescArrayFromDatabase(const VisualImageDescArray & new_img_desc, VisualImageDescArray & ret, int & camera_index_new, int & camera_index_old);
+    int addImageArrayToDatabase(VisualImageDescArray & new_fisheye_desc, bool add_to_faiss = true);
+    int addImageDescToDatabase(VisualImageDesc & new_img_desc);
+    bool queryImageArrayFromDatabase(const VisualImageDescArray & new_img_desc, VisualImageDescArray & ret, int & camera_index_new, int & camera_index_old);
     int queryFrameIndexFromDatabase(const VisualImageDesc & new_img_desc, double & similarity);
     int queryIndexFromDatabase(const VisualImageDesc & new_img_desc, faiss::IndexFlatIP & index, bool remote_db, double thres, int max_index, double & similarity);
 

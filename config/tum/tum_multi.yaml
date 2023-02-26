@@ -42,7 +42,7 @@ estimate_td: 0                      # online estimate time offset between camera
 td: 0.00                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 estimation_mode: 2 #0:single; 1:solve all; 2: distributed; 3:server
 double_counting_common_feature: 0
-min_inv_dep: 0.1 #10 meter away.
+min_inv_dep: 0.05 #10 meter away.
 #0:single; 1:solve all; 2: distributed; 3:server
 
 #optimization parameters
@@ -117,6 +117,8 @@ cnn_use_onnx: 1
 enable_pca_superpoint: 1
 superpoint_pca_dims: 64
 cnn_enable_tensorrt: 0
+enable_pca_netvlad: 1
+netvlad_pca_dims: 1024
 
 acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2   0.04
 gyr_n: 0.05         # gyroscope measurement noise standard deviation.     #0.05  0.004
@@ -130,7 +132,7 @@ enable_homography_test: 0
 loop_inlier_feature_num: 60
 accept_loop_max_yaw: 10
 accept_loop_max_pos: 1.0
-lazy_broadcast_keyframe: 0
+lazy_broadcast_keyframe: 0 # 0: greedy broadcast; 1: compact mode broadcast 
 gravity_check_thres: 0.03
 enable_pcm: 1
 pcm_thres: 3.5
@@ -139,9 +141,9 @@ pcm_thres: 3.5
 pgo_solver_time: 1.0
 solver_timer_freq: 0.2
 pgo_mode: 1
-pgo_rho_frame_T: 0.84
-pgo_rho_frame_theta: 0.25
-pgo_eta_k: 0.1
+pgo_rho_frame_T: 0.01
+pgo_rho_frame_theta: 2.0 
+pgo_eta_k: 1.0
 write_g2o: 1
 g2o_output_path: "output.g2o"
 write_pgo_to_file: 1

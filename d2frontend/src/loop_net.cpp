@@ -20,7 +20,16 @@ void LoopNet::setupNetwork(std::string _lcm_uri) {
 
 void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array, bool force_features) {
     bool need_send_features = force_features || !params->lazy_broadcast_keyframe; //TODO: need to consider for D2VINS.
-    ImageArrayDescriptor_t fisheye_desc = image_array.toLCM(need_send_features, compress_int8_desc);
+    bool need_send_netvlad = true;
+    bool only_match_relationship = false;
+    if (sent_image_arrays.find(image_array.frame_id) != sent_image_arrays.end()) {
+        printf("[LoopNet@%d] image array %ld already sent, will only send the matching relationship\n", params->self_id, image_array.frame_id);
+        need_send_features = false;
+        need_send_netvlad = false;
+        only_match_relationship = true;
+    }
+    ImageArrayDescriptor_t fisheye_desc = image_array.toLCM(need_send_features, compress_int8_desc, need_send_netvlad);
+    sent_image_arrays.insert(image_array.frame_id);
     printf("[LoopNet@%d] broadcast image array: %ld lazy: %d size %d need_send_features %d\n", params->self_id, fisheye_desc.frame_id, 
             params->lazy_broadcast_keyframe, fisheye_desc.getEncodedSize(), need_send_features);
     if (send_whole_img_desc) {
@@ -45,6 +54,9 @@ void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array, 
                 if (img.landmark_num > 0) {
                     img.header.is_keyframe = fisheye_desc.is_keyframe;
                     broadcastImgDesc(img, fisheye_desc.sld_win_status, need_send_features);
+                    if (only_match_relationship) {
+                        break;
+                    }
                 }
             }
         }
@@ -264,15 +276,8 @@ void LoopNet::onImgDescHeaderRecevied(const lcm::ReceiveBuffer* rbuf,
     if(msgBlocked(msg->msg_id)) {
         return;
     }
-    if (msg->matched_drone >= 0 && msg->matched_drone != params->self_id) {
-        if (params->print_network_status) {
-            printf("[LoopNet@%d] Received ImageHeader from %d but matched to %d. Skip\n", params->self_id, msg->drone_id, msg->matched_drone);
-        }
-        return;
-    } else if (msg->matched_drone >= 0) {
-        if (params->print_network_status) {
-            printf("[LoopNet@%d] Received ImageHeader %ld from %d matched to frame %ld msg_id\n", params->self_id, msg->frame_id, msg->drone_id, msg->matched_frame, msg->msg_id);
-        }
+    if (msg->matched_drone >= 0 && params->print_network_status) {
+        printf("[LoopNet@%d] Received ImageHeader %ld from %d matched to frame %ld msg_id\n", params->self_id, msg->frame_id, msg->drone_id, msg->matched_frame, msg->msg_id);
     }
 
     if (params->print_network_status) {

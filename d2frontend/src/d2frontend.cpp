@@ -127,7 +127,7 @@ void D2Frontend::onRemoteImage(VisualImageDescArray frame_desc) {
 
 void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc, bool succ_track) {
     if (params->enable_loop) {
-        if (frame_desc.matched_frame < 0) {
+        if (!frame_desc.isMatchedFrame()) {
             if (params->verbose)
                 printf("[D2Frontend] Remote image %d is not matched, directly pass to detector\n", frame_desc.frame_id);
             //Check if keyframe!!!
@@ -136,9 +136,11 @@ void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc, bool succ
             }
         } else {
             //We need to wait the matched frame is added to loop detector.
-            if (loop_detector->hasFrame(frame_desc.matched_frame)) {
-                if (params->verbose)
-                    printf("[D2Frontend] Remote image %d is matched with %d add to loop queue\n", frame_desc.frame_id, frame_desc.matched_frame);
+            if (loop_detector->hasFrame(frame_desc.matched_frame) || frame_desc.matched_drone != params->self_id) {
+                if (params->verbose) {
+                    printf("[D2Frontend] Remote image %d is matched with %d drone %d add to loop queue\n", 
+                            frame_desc.frame_id, frame_desc.matched_frame, frame_desc.drone_id);
+                }
                 addToLoopQueue(frame_desc);
             } else {
                 VisualImageDescArray _frame_desc = frame_desc;

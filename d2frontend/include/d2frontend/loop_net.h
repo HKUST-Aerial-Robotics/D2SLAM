@@ -64,6 +64,7 @@ class LoopNet {
     std::set<int64_t> active_receving_image_array_idx;
     std::set<int64_t> blacklist;
     std::map<int64_t, ImageArrayDescriptor_t> received_image_arrays;
+    std::set<int64_t> sent_image_arrays;
 
 
     void setupNetwork(std::string _lcm_uri);

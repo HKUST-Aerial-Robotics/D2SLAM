@@ -33,6 +33,9 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
         t0 = image_array.stamp;
     }
 
+    printf("[LoopDetector] processImageArray %ld from drone %d images: %d landmark: %d lazy: %d matched_to %d@D%d\n", image_array.frame_id,
+        image_array.drone_id, image_array.images.size(), image_array.spLandmarkNum(), image_array.is_lazy_frame, image_array.matched_frame, image_array.matched_drone);
+
     if (image_array.images.size() == 0) {
         ROS_WARN("[LoopDetector] FlattenDesc must carry more than zero images");
         return;
@@ -42,17 +45,25 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
 
     int drone_id = image_array.drone_id;
     int images_num = image_array.images.size();
+    bool is_matched_frame = image_array.isMatchedFrame();
+    bool is_lazy_frame = image_array.is_lazy_frame;
+    if (is_matched_frame && image_array.matched_drone != self_id) {
+        if(!image_array.is_lazy_frame) {
+            //Will be cache to databse
+            addImageArrayToDatabase(image_array, false);
+            printf("[LoopDetector@%d] Add KF %ld from drone %d images: %d landmark: %d lazy: %d matched_to %d",
+                self_id, image_array.frame_id, drone_id, image_array.images.size(), image_array.spLandmarkNum(), image_array.is_lazy_frame, image_array.matched_frame);
+        }
+        // printf("[LoopDetector@%d] Frame %ld matched to drone %ld, giveup\n", self_id, image_array.frame_id, image_array.matched_drone);
+        return;
+    }
 
     if (drone_id!= this->self_id && databaseSize() == 0) {
         ROS_INFO("[LoopDetector] Empty local database, will giveup remote image");
         return;
-    } else {
-        printf("[LoopDetector@%d] Recv KF %ld from drone %d images: %d landmark: %d lazy: %d matched_to %d\n", self_id, image_array.frame_id,
-            drone_id, image_array.images.size(), image_array.spLandmarkNum(), image_array.is_lazy_frame, image_array.matched_frame);
     }
 
     bool new_node = all_nodes.find(image_array.drone_id) == all_nodes.end();
-
     all_nodes.insert(image_array.drone_id);
 
     int dir_count = 0;
@@ -61,14 +72,13 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
             dir_count ++;
         }
     }
-
     if (dir_count < _config.MIN_DIRECTION_LOOP) {
         ROS_INFO("[LoopDetector@%d] Give up image_array %ld with less than %d(%d) available images",
             self_id, image_array.frame_id, _config.MIN_DIRECTION_LOOP, dir_count);
         return;
     }
 
-    if (image_array.spLandmarkNum() >= _config.loop_inlier_feature_num || image_array.is_lazy_frame) {
+    if (image_array.spLandmarkNum() >= _config.loop_inlier_feature_num || is_lazy_frame) {
         //Initialize images for visualization
         if (params->show) {
             std::vector<cv::Mat> imgs;
@@ -93,34 +103,48 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
         VisualImageDescArray _old_fisheye_img;
         int camera_index = 1;
         int camera_index_old = -1;
-        if (image_array.matched_drone == self_id && image_array.matched_frame != -1) {
+        if (is_matched_frame) {
             if (!hasFrame(image_array.matched_frame)) {
                 success = false;
                 printf("[LoopDetector] frame %ld is matched to local frame %ld but not in db\n", image_array.frame_id, image_array.matched_frame);
             } else {
-                printf("[LoopDetector] frame %ld is matched to local frame %ld in db\n", image_array.frame_id, image_array.matched_frame);
+                // printf("[LoopDetector] frame %ld is matched to local frame %ld in db\n", image_array.frame_id, image_array.matched_frame);
                 success = true;
                 const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
                 _old_fisheye_img = keyframe_database.at(image_array.matched_frame);
                 camera_index = 0; //TODO: this is a hack
                 camera_index_old = 0;
+                if (is_lazy_frame) {
+                    //In this case, it's a keyframe that has been broadcasted and should be recorded in database
+                    printf("[LoopDetector] frame %ld is matched to local frame %ld in db and we find it in cache\n", 
+                            image_array.frame_id, image_array.matched_frame);
+                    if (keyframe_database.find(image_array.frame_id) == keyframe_database.end()) {
+                        ROS_WARN("[LoopDetector] Lazy frame %ld is matched to local frame %ld in db, but is not in cache", image_array.frame_id, image_array.matched_frame);
+                        success = false;
+                    } else {
+                        printf("[LoopDetector] frame %ld is found in database\n", image_array.frame_id);
+                        image_array = keyframe_database.at(image_array.frame_id);
+                    }
+                }
             }
         } else {
             if (databaseSize() > _config.match_index_dist || drone_id != self_id && databaseSize() > _config.match_index_dist_remote) {
-                success = queryDescArrayFromDatabase(image_array, _old_fisheye_img, camera_index, camera_index_old);
+                success = queryImageArrayFromDatabase(image_array, _old_fisheye_img, camera_index, camera_index_old);
                 auto stop = high_resolution_clock::now(); 
             }
         }
         if (success) {
-            if (image_array.is_lazy_frame) {
+            if (!is_matched_frame && is_lazy_frame) {
+                //In this case, we need to send the matched frame to the drone
                 _old_fisheye_img.matched_drone = image_array.drone_id;
                 _old_fisheye_img.matched_frame = image_array.frame_id;
-
-                printf("[LoopDetector@%d] Lazy frame %d is matched with %d try to broadcast this frame\n", self_id, image_array.frame_id, _old_fisheye_img.frame_id);
+                printf("[LoopDetector@%d] Lazy frame %d is matched with %d try to broadcast this frame\n", 
+                        self_id, image_array.frame_id, _old_fisheye_img.frame_id);
                 if (broadcast_keyframe_cb) {
                     broadcast_keyframe_cb(_old_fisheye_img);
                 }
             } else {
+                printf("Compute loop connection %ld and %ld\n", image_array.frame_id, _old_fisheye_img.frame_id);
                 swarm_msgs::LoopEdge ret;
                 if (_old_fisheye_img.drone_id == self_id) {
                     success = computeLoop(_old_fisheye_img, image_array, camera_index_old, camera_index, ret);
@@ -137,17 +161,14 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
             if (params->verbose)
                 printf("[LoopDetector@%d] No matched image for frame %ld\n", self_id, image_array.frame_id);
         }     
-        if (!image_array.is_lazy_frame && image_array.matched_frame < 0 && (!image_array.prevent_adding_db || new_node)) {
+        if (!is_lazy_frame && (!image_array.prevent_adding_db || new_node)) {
             if (image_array.drone_id == self_id) { 
                 //Only add local frame to database
-                addToDatabase(image_array);
+                addImageArrayToDatabase(image_array, true);
+            } else {
+                addImageArrayToDatabase(image_array, false);
             }
-        } else {
-            ROS_DEBUG("[LoopDetector] This image is prevent to adding to DB");
         }
-        // std::cout << "LOOP Detector cost" << duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000.0 <<"ms" << std::endl;
-    } else {
-        ROS_WARN("[LoopDetector] Frame contain too less landmark %d, give up", image_array.spLandmarkNum());
     }
 
     t_sum += tt.toc();
@@ -167,28 +188,30 @@ cv::Mat LoopDetector::decode_image(const VisualImageDesc & _img_desc) {
     return ret;
 }
 
-int LoopDetector::addToDatabase(VisualImageDescArray & new_fisheye_desc) {
-    for (size_t i = 0; i < new_fisheye_desc.images.size(); i++) {
-        auto & img_desc = new_fisheye_desc.images[i];
-        if (img_desc.spLandmarkNum() > 0 && img_desc.image_desc.size() > 0) {
-            int index = addToDatabase(img_desc);
-            index_to_frame_id[index] = new_fisheye_desc.frame_id;
-            imgid2dir[index] = i;
-            // ROS_INFO("[LoopDetector] Add keyframe from %d(dir %d) to local keyframe database index: %d", img_desc.drone_id, i, index);
+int LoopDetector::addImageArrayToDatabase(VisualImageDescArray & new_fisheye_desc, bool add_to_faiss) {
+    if (add_to_faiss) {
+        for (size_t i = 0; i < new_fisheye_desc.images.size(); i++) {
+            auto & img_desc = new_fisheye_desc.images[i];
+            if (img_desc.spLandmarkNum() > 0 && img_desc.image_desc.size() > 0) {
+                int index = addImageDescToDatabase(img_desc);
+                index_to_frame_id[index] = new_fisheye_desc.frame_id;
+                imgid2dir[index] = i;
+                // ROS_INFO("[LoopDetector] Add keyframe from %d(dir %d) to local keyframe database index: %d", img_desc.drone_id, i, index);
+            }
+            if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+                break;
+            }
+            const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
         }
-        if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
-            break;
-        }
-        const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
-        keyframe_database[new_fisheye_desc.frame_id] = new_fisheye_desc;
     }
-    printf("[LoopDetector] Add keyframe with %d images from %d to local keyframe database. Total frames: %ld\n", 
-        new_fisheye_desc.images.size(), new_fisheye_desc.drone_id, keyframe_database.size());
+    keyframe_database[new_fisheye_desc.frame_id] = new_fisheye_desc;
+    printf("[LoopDetector] Add KF %ld with %d images from %d to local keyframe database. Total frames: %ld\n", 
+            new_fisheye_desc.frame_id, new_fisheye_desc.images.size(), new_fisheye_desc.drone_id, keyframe_database.size());
     // new_fisheye_desc.printSize();
     return new_fisheye_desc.frame_id;
 }
 
-int LoopDetector::addToDatabase(VisualImageDesc & img_desc_a) {
+int LoopDetector::addImageDescToDatabase(VisualImageDesc & img_desc_a) {
     if (img_desc_a.drone_id == self_id) {
         local_index.add(1, img_desc_a.image_desc.data());
         return local_index.ntotal - 1;
@@ -270,7 +293,7 @@ int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss
 }
 
 
-bool LoopDetector::queryDescArrayFromDatabase(const VisualImageDescArray & img_desc_a,
+bool LoopDetector::queryImageArrayFromDatabase(const VisualImageDescArray & img_desc_a,
     VisualImageDescArray & ret, int & camera_index_new, int & camera_index_old) {
     double best_similarity = -1;
     int best_image_index = -1;
@@ -285,7 +308,7 @@ bool LoopDetector::queryDescArrayFromDatabase(const VisualImageDescArray & img_d
         loop_cam->getCameraConfiguration() == CameraConfig::PINHOLE_DEPTH) {
         camera_index_new = 0;
     } else {
-        ROS_ERROR("[LoopDetector] Camera configuration %d not support yet in queryDescArrayFromDatabase", loop_cam->getCameraConfiguration());
+        ROS_ERROR("[LoopDetector] Camera configuration %d not support yet in queryImageArrayFromDatabase", loop_cam->getCameraConfiguration());
         exit(-1);
     }
 
