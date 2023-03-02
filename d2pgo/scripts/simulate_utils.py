@@ -68,12 +68,13 @@ def call_DGS_solver(path, agent_num, optimizer_path=OPTIM_PATH, rthresh=1e-2, pt
 --rthresh {rthresh} --pthresh {pthresh} --useBetweenNoise {between_noise}"
     s = os.popen(command)
     output = s.read()
+    # print(output)
     try:
         iterations, min_time, max_time, initial, final, util_rate, total_optim = pocess_DGS_result(output)
         return iterations, min_time, max_time, initial, final, util_rate, total_optim
     except:
         # print("DGS Error!", command, "RET:", output, "\n")
-        return -1, 0, 0, 0, 0, 0
+        return -1, 0, 0, 0, 0, 0, 0
         
 def call_SESync(path, path_output, optimizer_path="/home/xuhao/source/SESync/C++/build/bin/SE-Sync"):
     command = f"{optimizer_path} {path} {path_output}"
@@ -112,6 +113,7 @@ def call_d2pgo_opti(g2o_folder,  output_folder, agent_num = 5, ignore_infor = Fa
             eta_k:={eta_k} rho_frame_theta:={rho_frame_theta} rho_frame_T:={rho_frame_T} simulate_delay_ms:={simulate_delay_ms} \
             enable_linear_pose6d_solver:={enable_linear_pose6d_solver} debug_rot_init_only:=false \
             rho_rot_mat:={rho_rot_mat} max_solving_time:={max_solving_time}"
+        print(command)
     s = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = s.stdout.read().decode("utf-8")
     err = s.stderr.read()

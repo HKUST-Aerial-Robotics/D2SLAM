@@ -29,7 +29,10 @@ void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array, 
         only_match_relationship = true;
     }
     ImageArrayDescriptor_t fisheye_desc = image_array.toLCM(need_send_features, compress_int8_desc, need_send_netvlad);
-    sent_image_arrays.insert(image_array.frame_id);
+    if (need_send_features) {
+        //Only label the image array as sent if we are sending the features.
+        sent_image_arrays.insert(image_array.frame_id);
+    }
     printf("[LoopNet@%d] broadcast image array: %ld lazy: %d size %d need_send_features %d\n", params->self_id, fisheye_desc.frame_id, 
             params->lazy_broadcast_keyframe, fisheye_desc.getEncodedSize(), need_send_features);
     if (send_whole_img_desc) {
@@ -51,7 +54,7 @@ void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array, 
             broadcastImgDesc(img, fisheye_desc.sld_win_status, need_send_features);
         } else {
             for (auto & img : fisheye_desc.images) {
-                if (img.landmark_num > 0) {
+                if (img.landmark_num > 0 || !need_send_features) {
                     img.header.is_keyframe = fisheye_desc.is_keyframe;
                     broadcastImgDesc(img, fisheye_desc.sld_win_status, need_send_features);
                     if (only_match_relationship) {

@@ -83,7 +83,8 @@ void D2PGO::inputDPGOData(const DPGOData & data) {
                 }
                 else {
                     // printf("[D2PGO@%d]input pgo data from drone %d\n", self_id, data.drone_id);
-                    static_cast<ARockPGO*>(solver)->inputDPGOData(data);
+                    if (solver!=nullptr)
+                        static_cast<ARockPGO*>(solver)->inputDPGOData(data);
                 }
             } else if (rot_init!=nullptr) {
                 // printf("Input to rot_init\n");   
@@ -250,6 +251,7 @@ bool D2PGO::solve_single() {
         }
         //Simply return here, we do solve ceres in.
         delete solver;
+        solver = nullptr;
         return solve_single();
     }
 

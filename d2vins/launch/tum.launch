@@ -10,6 +10,7 @@
     <arg name="config" default="$(find d2vins)/../config/tum/tum_single.yaml" />
     <arg name="dep_config" default="$(find d2vins)/../config/tum/tum_depth_gen.yaml" />
     <arg name="match_index_dist" default="200" />
+    <arg name="match_index_dist_remote" default="20" />
     <arg name="output_path" default="/home/dji/output/" />
     <arg name="nonkeyframe_waitsec" default="5.0" />
     <arg name="inter_drone_init_frames" default="3" />
@@ -64,6 +65,7 @@
         <param name="send_whole_img_desc" value="$(arg send_whole_img_desc)" type="bool" />
         <param name="self_id" value="$(arg self_id)" type="int" />
         <param name="match_index_dist" value="$(arg match_index_dist)" type="int" />
+        <param name="match_index_dist_remote" value="$(arg match_index_dist_remote)" type="int" />
         <param name="nonkeyframe_waitsec" value="$(arg nonkeyframe_waitsec)" type="double" />
         <param name="inter_drone_init_frames" value="$(arg inter_drone_init_frames)" type="int" />
         <param name="vins_config_path" value="$(arg config)" type="string" />
