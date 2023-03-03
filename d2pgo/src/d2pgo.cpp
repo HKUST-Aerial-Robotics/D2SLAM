@@ -311,6 +311,8 @@ void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge> & good_loops) {
     if (config.mode == PGO_MODE_NON_DIST || (report.state_changes < config.rot_init_state_eps && solve_count > 10)) {
         is_rot_init_convergence = true;
         printf("[D2PGO@%d]rotInitial: rot init convergence: %.1f%%\n", self_id, report.state_changes*100);
+    } else {
+        printf("[D2PGO@%d]rotInitial: rot init not convergence: %.1f%% solve_count %d\n", self_id, report.state_changes*100, solve_count);
     }
 }
 

@@ -53,7 +53,7 @@ std::vector<std::pair<int, std::string>>  get_all(fs::path const & root, std::st
 }   
 
 
-bool match_vertex_se3(std::string line, int & agent_id, FrameIdType & kf_id, Swarm::Pose & pose) {
+bool match_vertex_se3(std::string line, int & agent_id, FrameIdType & kf_id, Swarm::Pose & pose, int max_agent_id) {
     Eigen::Vector3d pos;
     Eigen::Quaterniond quat;
     std::smatch sm;
@@ -67,6 +67,9 @@ bool match_vertex_se3(std::string line, int & agent_id, FrameIdType & kf_id, Swa
         auto ret = extrackKeyframeId(std::stoll(sm[1].str()));
         kf_id = ret.second;
         agent_id = ret.first;
+        if (agent_id > max_agent_id) {
+            return false;
+        }
 
         pos.x() = std::stod(sm[2].str());
         pos.y() = std::stod(sm[3].str());
@@ -83,7 +86,7 @@ bool match_vertex_se3(std::string line, int & agent_id, FrameIdType & kf_id, Swa
     return false;
 }
 
-bool match_edge_se3(std::string line, int & agent_ida, FrameIdType & ida, int & agent_idb, FrameIdType & idb, Swarm::Pose & pose, Eigen::Matrix6d & information) {
+bool match_edge_se3(std::string line, int & agent_ida, FrameIdType & ida, int & agent_idb, FrameIdType & idb, Swarm::Pose & pose, Eigen::Matrix6d & information, int max_agent_id) {
     Eigen::Vector3d pos;
     Eigen::Quaterniond quat;
     std::smatch sm;
@@ -103,6 +106,9 @@ bool match_edge_se3(std::string line, int & agent_ida, FrameIdType & ida, int & 
         auto ret_b = extrackKeyframeId(tmp_b);
         agent_idb = ret_b.first;
         idb = ret_b.second;
+        if (agent_ida > max_agent_id || agent_idb > max_agent_id) {
+            return false;
+        }
         stream >> pose;
         for (int i = 0; i < 6 && stream.good(); ++i) {
             for (int j = i; j < 6 && stream.good(); ++j) {
@@ -119,7 +125,7 @@ bool match_edge_se3(std::string line, int & agent_ida, FrameIdType & ida, int & 
 
 
 void read_g2o_agent( std::string path, std::map<FrameIdType, D2BaseFrame> & keyframeid_agent_pose,
-        std::vector<Swarm::LoopEdge> & edges, bool is_4dof, int drone_id, bool ignore_infor) {
+        std::vector<Swarm::LoopEdge> & edges, bool is_4dof, int max_agent_id, int drone_id, bool ignore_infor) {
     std::ifstream infile(path);
     std::string line;
     while (std::getline(infile, line)) {
@@ -127,7 +133,7 @@ void read_g2o_agent( std::string path, std::map<FrameIdType, D2BaseFrame> & keyf
         Swarm::Pose pose;
         FrameIdType id_a, id_b;
         int agent_id;
-        auto success = match_vertex_se3(line, agent_id, id_a, pose);
+        auto success = match_vertex_se3(line, agent_id, id_a, pose, max_agent_id);
         if (success) {
             //Add new vertex here
             D2BaseFrame frame;
@@ -140,7 +146,7 @@ void read_g2o_agent( std::string path, std::map<FrameIdType, D2BaseFrame> & keyf
         } else {
             Eigen::Matrix6d information;
             int agent_id_b;
-            success = match_edge_se3(line, agent_id, id_a, agent_id_b, id_b, pose, information);
+            success = match_edge_se3(line, agent_id, id_a, agent_id_b, id_b, pose, information, max_agent_id);
             if (ignore_infor) {
                 information = Eigen::Matrix6d::Identity();
             }
@@ -164,10 +170,13 @@ void read_g2o_multi_agents(std::string path,
     std::sort(files.begin(), files.end());
     int agent_num = files.size();
     for (unsigned int i = 0; i < files.size(); i++) {
+        if (i >= param.agents_num) {
+            break;
+        }
         auto file = files[i].second;
         keyframeid_agent_pose[i] = std::map<FrameIdType, D2BaseFrame>();
         edges[i] = std::vector<Swarm::LoopEdge>();
-        read_g2o_agent(file, keyframeid_agent_pose[i], edges[i], param.is_4dof);
+        read_g2o_agent(file, keyframeid_agent_pose[i], edges[i], param.is_4dof, param.agents_num-1);
     }
     printf("g2o files %ld in path %s keyframe: %ld edges %ld\n", files.size(), path.c_str(), 
         keyframeid_agent_pose.size(), edges.size());

@@ -45,10 +45,9 @@ def read_paths(folder, nodes, prefix="d2vins_", suffix=".csv", t0=None, dte=None
             print(f"Failed to read {folder}/{prefix}{drone_id}{suffix}")
     return ret, t0
 
-def read_multi_folder(folder, nodes, enable_pgo=True):
+def read_multi_folder(folder, nodes, enable_pgo=True, t0=None):
     paths = {}
     paths_pgo = {}
-    t0 = None
     for i in nodes:
         output_folder = folder + str(i) + "/"
         _paths, t0 = read_paths(output_folder, [i], t0=t0)
@@ -371,7 +370,7 @@ def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=
         return tabulate.tabulate(output_table, tablefmt='html')
 
 def relative_pose_err(node_ids, poses_fused, poses_gt, outlier_thres=100, 
-        outlier_yaw_thres=10, dte=1000000, common_time_dt=0.2):
+        outlier_yaw_thres=10, dte=1000000, common_time_dt=0.2, output_RE=False):
     output_table = [["Relative", "EST RMSE: Pos (XYZ)", "POS", "Ang", "BIAS: Pos", "Ang"]]
     avg_rmse = 0
     avg_rmse_yaw = 0.0
@@ -424,13 +423,15 @@ def relative_pose_err(node_ids, poses_fused, poses_gt, outlier_thres=100,
                         f"{np.mean(dp_gt[mask,0] - dp_fused[mask,0]):3.3f},{np.mean(dp_gt[mask,1] - dp_fused[mask,1]):+3.3f},{np.mean(dp_gt[mask,2] - dp_fused[mask,2]):+3.3f}", 
                         f"{np.mean(dyaw_gt - dyaw_fused)*180/3.14:+3.2f}°"
                     ])
+    if output_RE:
+        return avg_rmse/num, avg_rmse_yaw/num
     output_table.append([
         "Avg:", f"", f"{avg_rmse/num:3.3f}", f"{avg_rmse_yaw/num*180/pi:3.2f}°", "", ""])
     import tabulate
     return tabulate.tabulate(output_table, tablefmt='html')
         
 def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,main_id=1,dte=100000,show=True, 
-    outlier_thres=100, outlier_thres_yaw=100, verbose=True):
+    outlier_thres=100, outlier_thres_yaw=100, verbose=True, output_ATE=False):
     #Plot Fused Vs GT absolute error
     ate_vo_sum = 0
     rmse_vo_ang_sum = 0
@@ -623,6 +624,8 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
     if poses_pgo is None:
         #Remove the last two columns of output table
         output_table = [row[:-2] for row in output_table]
+    if output_ATE:
+        return ate_fused_sum/num, ate_ang_sum/num
     if verbose:
         import tabulate
         return tabulate.tabulate(output_table, tablefmt='html')

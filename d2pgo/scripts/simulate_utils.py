@@ -106,14 +106,14 @@ def call_d2pgo_opti(g2o_folder,  output_folder, agent_num = 5, ignore_infor = Fa
         command = f"roslaunch d2pgo d2pgo_test_single.launch g2o_path:={g2o_folder} \
             output_path:={output_folder} enable_rot_init:={enable_rot_init} ignore_infor:={ignore_infor} \
             enable_linear_pose6d_solver:={enable_linear_pose6d_solver} solver_type:='ceres'"
-        print(command)
+        # print(command)
     else:
         command = f"roslaunch d2pgo d2pgo_test_multi.launch agent_num:={agent_num} g2o_path:={g2o_folder} \
             output_path:={output_folder} enable_rot_init:={enable_rot_init} max_steps:={max_steps} ignore_infor:={ignore_infor} \
             eta_k:={eta_k} rho_frame_theta:={rho_frame_theta} rho_frame_T:={rho_frame_T} simulate_delay_ms:={simulate_delay_ms} \
             enable_linear_pose6d_solver:={enable_linear_pose6d_solver} debug_rot_init_only:=false \
             rho_rot_mat:={rho_rot_mat} max_solving_time:={max_solving_time}"
-        print(command)
+        # print(command)
     s = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = s.stdout.read().decode("utf-8")
     err = s.stderr.read()
@@ -127,7 +127,27 @@ def call_d2pgo_opti(g2o_folder,  output_folder, agent_num = 5, ignore_infor = Fa
     for data in datas:
         solve_time.append(float(data[0]))
         iters.append(int(data[1]))
-    return pg, max(solve_time), np.mean(iters)
+    # Extract RotInit time of each iteration
+    # Sample: [RotInit2] RotInit 5.48ms setup 1.30ms LLT 3.94ms Recover 0.24ms state_changes 100.0% Poses 677 EffPoses 677 Loops 709 Priors 5 F32: 1 g_prior: 0
+    datas = re.findall(r"\[RotInit\d+\] RotInit (\d+\.\d+)ms", output)
+    rot_init_time = np.array([float(data) for data in datas]).astype(float)
+    
+    # Extract ceres solve time of each iteration
+    # [D2PGO::solve@1] solve_count 14 mode [multi,1] total frames 1439 loops 1603 opti_time 36.8ms iters 5 initial cost 6.44e+01 final cost 2.81e+01
+    datas = re.findall(r"\[D2PGO::solve@\d+\] solve_count \d+ mode \[multi,\d+\] total frames \d+ loops \d+ opti_time (\d+\.\d+)ms iters (\d+) initial cost", output)
+    ceres_solve_time = np.array([float(data[0]) for data in datas]).astype(float)
+    ceres_iters = np.array([float(data[1]) for data in datas]).astype(float)
+    cere_per_iter = ceres_solve_time / ceres_iters
+
+    ret = {
+        "max_solve_time": max(solve_time),
+        "mean_iters": np.mean(iters),
+        "rot_init_time": rot_init_time,
+        "ceres_solve_time": ceres_solve_time,
+        "ceres_iters": ceres_iters,
+        "cere_per_iter": cere_per_iter
+    }
+    return pg, ret
 
 def loadSESyncResult(path, pg: PoseGraph):
     data = np.loadtxt(path)

@@ -60,6 +60,7 @@ public:
         nh.param<std::string>("solver_type", solver_type, "arock");
         nh.param<double>("simulate_delay_ms", simulate_delay_ms, 0.0);
         nh.param<double>("max_solving_time", max_solving_time, 0.0);
+        nh.param<int>("drone_num", drone_num, 1);
         if (simulate_delay_ms > 0) {
             enable_simulate_delay = true;
             th_process_delay = std::thread([&] {
@@ -71,7 +72,7 @@ public:
             ROS_INFO("[D2PGO] agent %d parse g2o file: %s\n", self_id, g2o_path.c_str());
         else
             ROS_INFO("[D2PGO@%d] Need to indicate g2o path\n", self_id);
-        read_g2o_agent(g2o_path, keyframeid_agent_pose, edges, is_4dof, self_id, ignore_infor);
+        read_g2o_agent(g2o_path, keyframeid_agent_pose, edges, is_4dof, drone_num-1, self_id, ignore_infor);
         ROS_INFO("[D2PGO@%d] Read %ld keyframes and %ld edges\n", self_id, keyframeid_agent_pose.size(), edges.size());
 
         config.self_id = self_id;
@@ -106,7 +107,6 @@ public:
         nh.param<int>("linear_pose6d_iterations", config.rot_init_config.pose6d_iterations, 10);
         nh.param<bool>("debug_rot_init_only", config.debug_rot_init_only, true);
         nh.param<double>("rot_init_state_eps", config.rot_init_state_eps, 0.01);
-        nh.param<int>("drone_num", drone_num, 1);
         config.rot_init_config.self_id = self_id;
         if (solver_type == "ceres") {
             config.mode = PGO_MODE_NON_DIST;
