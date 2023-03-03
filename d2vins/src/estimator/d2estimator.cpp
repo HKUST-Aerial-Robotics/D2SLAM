@@ -508,9 +508,9 @@ void D2Estimator::solveinDistributedMode() {
     }
 
     auto last_odom = state.lastFrame().odom;
-    printf("[D2VINS::solveDist@%d](%d) odom %s@ref%d landmarks %d/%d drone_num %d opti_time %.1fms steps %d td %.1fms \n",  
+    printf("[D2VINS::solveDist@%d](%d) odom %s@ref%d landmarks %d/%d v_mea %d/%d drone_num %d opti_time %.1fms steps %d td %.1fms \n",  
             self_id, solve_count, last_odom.toStr().c_str(), state.getReferenceFrameId(), used_landmarks.size(), current_landmark_num, 
-            state.availableDrones().size(), report.total_time*1000, report.total_iterations, state.td*1000);
+            current_measurement_num, params->max_solve_measurements, state.availableDrones().size(), report.total_time*1000, report.total_iterations, state.td*1000);
 
     // Reprogation
     for (auto drone_id : state.availableDrones()) {
@@ -640,7 +640,7 @@ void D2Estimator::setupImuFactors() {
 }
 
 bool D2Estimator::hasCommonLandmarkMeasurments() {
-    auto lms = state.availableLandmarkMeasurements(params->max_solve_cnt);
+    auto lms = state.availableLandmarkMeasurements(params->max_solve_cnt, params->max_solve_measurements);
     for (auto lm : lms) {
         if (lm.solver_id == -1 && lm.drone_id != self_id) {
             // This is a internal only remote landmark
@@ -660,10 +660,10 @@ bool D2Estimator::hasCommonLandmarkMeasurments() {
 
 void D2Estimator::setupLandmarkFactors() {
     used_landmarks.clear();
-    auto lms = state.availableLandmarkMeasurements(params->max_solve_cnt);
+    auto lms = state.availableLandmarkMeasurements(params->max_solve_cnt, params->max_solve_measurements);
     current_landmark_num = lms.size();
+    current_measurement_num = 0;
     auto loss_function = new ceres::HuberLoss(1.0);    
-    int residual_count = 0;
     keyframe_measurements.clear();
     if (params->verbose) {
         printf("[D2VINS::setupLandmarkFactors] %d landmarks\n", lms.size());
@@ -712,9 +712,9 @@ void D2Estimator::setupLandmarkFactors() {
             auto info = DepthResInfo::create(f_dep, loss_function, firstObs.frame_id, lm_id);
             marginalizer->addResidualInfo(info);
             solver->addResidual(info);
-            residual_count++;
             used_landmarks.insert(lm_id);
         }
+        current_measurement_num++;
         for (auto i = 1; i < lm.track.size(); i++) {
             auto lm_per_frame = lm.track[i];
             if (ignore_frames.find(lm_per_frame.frame_id) != ignore_frames.end()) {
@@ -756,7 +756,7 @@ void D2Estimator::setupLandmarkFactors() {
                 }
             }
             if (info != nullptr) {
-                residual_count++;
+                current_measurement_num++;
                 solver->addResidual(info);
                 marginalizer->addResidualInfo(info);
                 used_landmarks.insert(lm_id);
@@ -767,7 +767,7 @@ void D2Estimator::setupLandmarkFactors() {
         }
     }
     if (params->verbose) {
-        printf("[D2VINS::setupLandmarkFactors@%d] %d landmarks %d residuals\n", self_id, lms.size(), residual_count);
+        printf("[D2VINS::setupLandmarkFactors@%d] %d landmarks %d measurements \n", self_id, lms.size(), current_measurement_num);
     }
 }
 

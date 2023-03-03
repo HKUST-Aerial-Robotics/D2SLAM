@@ -37,6 +37,7 @@ protected:
     D2VINSNet * vinsnet = nullptr;
     int solve_count = 0;
     int current_landmark_num = 0;
+    int current_measurement_num = 0;
     std::vector<LandmarkPerId> margined_landmarks;
     int self_id;
     int frame_count = 0;

@@ -73,6 +73,7 @@ struct D2VINSConfig {
     } estimation_mode = SOLVE_ALL_MODE;
     double estimate_extrinsic_vel_thres = 0.2;
     int max_solve_cnt = 10000;
+    int max_solve_measurements = -1;
 
     //Fuse depth
     bool fuse_dep = true;

@@ -224,14 +224,14 @@ std::set<CamIdType> D2EstimatorState::getAvailableCameraIds() const {
     return ids;
 }
 
-std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements(int max_pts) const {
+std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements(int max_pts, int max_measurement) const {
     std::set<FrameIdType> current_frames;
     for (auto &it : sld_wins) {
         for (auto &it2 : it.second) {
             current_frames.insert(it2->frame_id);
         }
     }
-    return lmanager.availableMeasurements(max_pts, current_frames);
+    return lmanager.availableMeasurements(max_pts, max_measurement, current_frames);
 }
 
 int D2EstimatorState::getCameraBelonging(CamIdType cam_id) const {

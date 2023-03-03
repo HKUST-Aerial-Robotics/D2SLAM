@@ -82,6 +82,7 @@ void D2VINSConfig::init(const std::string & config_file) {
     always_fixed_first_pose = (int) fsSettings["always_fixed_first_pose"];
     min_inv_dep = fsSettings["min_inv_dep"];
     max_solve_cnt = fsSettings["max_solve_cnt"];
+    max_solve_measurements = fsSettings["max_solve_measurements"];
     min_measurements_per_keyframe = fsSettings["min_measurements_per_keyframe"];
     nearby_drone_dist = fsSettings["nearby_drone_dist"];
     //Multi-drone

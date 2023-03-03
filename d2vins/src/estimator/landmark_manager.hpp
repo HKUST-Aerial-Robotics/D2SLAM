@@ -11,7 +11,7 @@ class D2LandmarkManager : public D2FrontEnd::LandmarkManager {
     void initialLandmarkState(LandmarkPerId & lm, const D2EstimatorState * state);
 public:
     virtual void addKeyframe(const VisualImageDescArray & images, double td);
-    std::vector<LandmarkPerId> availableMeasurements(int max_pts, const std::set<FrameIdType> & current_frames) const;
+    std::vector<LandmarkPerId> availableMeasurements(int max_pts, int max_solve_measurements, const std::set<FrameIdType> & current_frames) const;
     double * getLandmarkState(LandmarkIdType landmark_id) const;
     void initialLandmarks(const D2EstimatorState * state);
     void syncState(const D2EstimatorState * state);

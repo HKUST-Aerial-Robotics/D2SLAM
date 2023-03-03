@@ -27,34 +27,7 @@ void D2LandmarkManager::addKeyframe(const VisualImageDescArray & images, double 
     }
 }
 
-// std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts) const {
-//     //Return all avaiable measurements
-//     const Guard lock(state_lock);
-//     std::vector<std::pair<LandmarkIdType, int>> landmark_scores;
-//     std::vector<LandmarkPerId> ret;
-//     for (auto & it: landmark_db) {
-//         auto & lm = it.second;
-//         if (lm.track.size() >= params->landmark_estimate_tracks && 
-//             lm.flag >= LandmarkFlag::INITIALIZED) {
-//             //Note we also use "outlier" tracks but with a much smaller score
-//             int score = lm.scoreForSolve(params->self_id);
-//             landmark_scores.push_back(std::make_pair(lm.landmark_id, score));
-//         }
-//     }
-//     // sort to get the best max_pts measurements
-//     std::sort(landmark_scores.begin(), landmark_scores.end(), 
-//         [](const std::pair<LandmarkIdType, int> & a, const std::pair<LandmarkIdType, int> & b) {
-//             return a.second > b.second;
-//     });
-//     // return the best max_pts measurements
-//     for (int i = 0; i < landmark_scores.size() && i < max_pts; i++) {
-//         // printf("[D2VINS::D2LandmarkManager] Available landmark %ld score %d\n", landmark_scores[i].first, landmark_scores[i].second);
-//         ret.push_back(landmark_db.at(landmark_scores[i].first));
-//     }
-//     return ret;
-// }
-
-std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts, const std::set<FrameIdType> & current_frames) const {
+std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts, int max_solve_measurements, const std::set<FrameIdType> & current_frames) const {
     std::map<FrameIdType, int> current_landmark_num;
     std::map<FrameIdType, int> result_landmark_num;
     std::map<FrameIdType, std::set<D2Common::LandmarkIdType>> current_assoicated_landmarks;
@@ -64,6 +37,10 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts,
     for (auto frame_id : current_frames) {
         current_landmark_num[frame_id] = 0;
         result_landmark_num[frame_id] = 0;
+    }
+    int count_measurements = 0;
+    if (max_solve_measurements <= 0) {
+        max_solve_measurements = 1000000;
     }
     while (!exit) {
         //found the frame with minimum landmarks in current frames
@@ -105,6 +82,7 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts,
             auto & lm = landmark_db.at(lm_best);
             ret_set.emplace_back(lm);
             ret_ids_set.insert(lm_best);
+            count_measurements += lm.track.size();
             //Add the frame to current_landmark_num
             for (auto track: lm.track) {
                 auto frame_id = track.frame_id;
@@ -113,7 +91,7 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts,
                 current_landmark_num[frame_id] = current_assoicated_landmarks[frame_id].size();
                 result_landmark_num[frame_id] = current_landmark_num[frame_id];
             }
-            if (ret_set.size() >= max_pts) {
+            if (ret_set.size() >= max_pts || count_measurements >= max_solve_measurements) {
                 exit = true;
             }
         } else {
@@ -122,13 +100,9 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(int max_pts,
         }
     }
     if (params->verbose) {
-        printf("[D2VINS::D2LandmarkManager] Found %ld(total %ld) landmarks in %ld frames\n", ret_set.size(), landmark_db.size(), 
-                result_landmark_num.size());
-        //print the number of landmarks in each frame
+        printf("[D2VINS::D2LandmarkManager] Found %ld(total %ld) landmarks measure %d/%d in %ld frames\n", ret_set.size(), landmark_db.size(), 
+                count_measurements, max_solve_measurements, result_landmark_num.size());
     }
-    // for (auto frame_id : current_frames) {
-    //     printf("[D2VINS::D2LandmarkManager] Frame %ld has %d landmarks\n", frame_id, result_landmark_num[frame_id]);
-    // }
     return ret_set;
 }
 
