@@ -1,30 +1,59 @@
-# Docker for D2SLAM
-Our docker including: ros-noetic, ceres-2.1.0, onnxruntime-gpu-1.12.1, libtorch-latest, LCM, faiss, OpenCV4 with CUDA, OPenGV, Backward, and $D^2$SLAM
+# Docker for $D^2$SLAM
 
-## Docker pc
-Build with 
+Our Docker image includes: 
+
+- ros-noetic 
+- ceres-2.1.0 
+- onnxruntime-gpu-1.12.1 
+- libtorch-latest 
+- LCM 
+- faiss 
+- OpenCV4 with CUDA 
+- OpenGV 
+- Backward 
+- $D^2$SLAM
+
+## Docker PC
+
+To build the Docker image for PC, run the following command:
+
 ```
-make pc
+$ make pc
 ```
+
 
 ## Docker for Jetson
-This docker file is recommend to build on PC with [qemu support](https://www.stereolabs.com/docs/docker/building-arm-container-on-x86/), build on Jetson will be extreme slow.
 
-To build docker for $D^2$SLAM
+This Docker file can be built on a MacBook with Apple Silicon (M1 or M2), X86_64 PC with [qemu support](https://www.stereolabs.com/docs/docker/building-arm-container-on-x86/) or on Jetson. However, in our tests, building on Jetson is takes hours and building on Qemu is even more slow.
+
+We highly recommend building the container on a MacBook with M1/M2 Max. This is possibly the fastest way.
+
+To build the Docker image for $D^2$SLAM, run:
+
 ```
-make jetson
+$ make jetson
 ```
-To build the __base__ image for $D^2$SLAM (which contains the environment for those who would like to modify them)
+
+
+### Build Base Container (Optional)
+
+To build the __base__ image for $D^2$SLAM (which contains the environment for those who would like to modify it), run:
 ```
-make jetson_base
+$ make jetson_base
 ```
-And change in __Dockerfile_jetson_D2SLAM__
+
+Then, in __Dockerfile_jetson_D2SLAM__, change:
+
 ```
 FROM xuhao1/d2slam:jetson_base_35.1.0
 ```
-to your own image name
+
+
+to your own image name:
+
 ```
 FROM your-image-name/d2slam:jetson_base_35.1.0
 ```
 
-Currently this docker support Jetpack 5.0.2/35.1.0. Tested on Xaiver NX.
+
+This Docker image has been tested on Jetpack 5.0.2/35.1.0 with Xavier NX.

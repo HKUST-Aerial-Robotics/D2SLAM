@@ -26,3 +26,5 @@ models/
 data_analysis/.ipynb_checkpoints/
 d2pgo/posegraph-graphviz.*
 d2pgo/scripts/notebooks/posegraph-graphviz.*
+*/.DS_Store
+.DS_Store
