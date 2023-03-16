@@ -28,7 +28,7 @@ This Docker file can be built on a MacBook with Apple Silicon (M1 or M2), X86_64
 
 We highly recommend building the image on a MacBook Pro with M1/M2 Max. This is possibly the fastest way.
 
-To build the Docker image for $D^2$SLAM, run:
+To build the Docker image for $D^2$ SLAM, run:
 
 ```
 $ make jetson
