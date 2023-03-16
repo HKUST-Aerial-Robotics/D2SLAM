@@ -1,12 +1,12 @@
 ## Introduction
-This is open-source code for **$D^2$SLAM: Decentralized and Distributed Collaborative Visual-inertial SLAM System for Aerial Swarm**
+This is open-source code for **$D^2$ SLAM: Decentralized and Distributed Collaborative Visual-inertial SLAM System for Aerial Swarm**
 
 <a href="https://www.youtube.com/embed/xbNAJP8EFOU" target="_blank"><img src="./docs/imgs/video_p0.png" 
 alt="cla" border="0" /></a>
 
 A crucial technology in fully autonomous aerial swarms is collaborative SLAM (CSLAM), which enables the estimation of relative pose and global consistent trajectories of aerial robots. 
 However, existing CSLAM systems do not prioritize relative localization accuracy, critical for close collaboration among UAVs.
-This paper and open-source project presents $D^2$SLAM, a novel decentralized and distributed ($D^2$) CSLAM system that covers two scenarios: near-field estimation for high accuracy state estimation in close range and far-field estimation for consistent global trajectory estimation. 
+This paper and open-source project presents $D^2$ SLAM, a novel decentralized and distributed ($D^2$) CSLAM system that covers two scenarios: near-field estimation for high accuracy state estimation in close range and far-field estimation for consistent global trajectory estimation. 
 
 ![Image for $D^2$SLAM](./docs/imgs/d2cslam.png)
 ![Image for $D^2$SLAM](./docs/imgs/dense_ri_2.png)
@@ -19,23 +19,23 @@ Our pre-print paper is currently available at https://arxiv.org/abs/2211.01538
 Citation:
 ```
 @article{xu2022d,
-  title={{$D^2$ SLAM: Decentralized and Distributed Collaborative Visual-inertial SLAM System for Aerial Swarm}},
+  title={{$D^2$SLAM: Decentralized and Distributed Collaborative Visual-inertial SLAM System for Aerial Swarm}},
   author={Xu, Hao and Liu, Peize and Chen, Xinyi and Shen, Shaojie},
   journal={arXiv preprint arXiv:2211.01538},
   year={2022}
 }
 ```
 ## Build
-To run $D^2$SLAM, CUDA support is currently necessary for front-end acceleration. $D^2$SLAM has numerous dependencies, and we recommend compiling $D^2$SLAM using our Docker image. We provide two Docker images, one for PC and one for the embedded platform, Nvidia Jetson. We have evaluated $D^2$SLAM on Nvidia Xavier NX.
+To run $D^2$SLAM, CUDA support is currently necessary for front-end acceleration. $D^2$ SLAM has numerous dependencies, and we recommend compiling $D^2$ SLAM using our Docker image. We provide two Docker images, one for PC and one for the embedded platform, Nvidia Jetson. We have evaluated $D^2$ SLAM on Nvidia Xavier NX.
 
 For details on Docker image compilation, please refer to the [documentation](./docker/README.md).
 
 After building the Docker image, you will also need to [download the CNN models](https://www.dropbox.com/s/gcd0768vcclc9vj/models.zip?dl=0) and put them in the D2SLAM folder.
 
 ## Usage
-$D^2$SLAM supports running as a collaborative or mono-robot SLAM system. To start it, simply run:
+$D^2$ SLAM supports running as a collaborative or mono-robot SLAM system. To start it, simply run:
 ```
-$ roslaunch d2vins quadcam.launch enable_pgo:=true enable_loop:=true # Start with quad-camera omni-directional system, with loop closure detection and $D^2$PGO enabled
+$ roslaunch d2vins quadcam.launch enable_pgo:=true enable_loop:=true # Start with quad-camera omni-directional system, with loop closure detection and $D^2$ PGO enabled
 $ roslaunch d2vins tum.launch # Evaluate on TUM datasets
 $ roslaunch d2vins realsense.launch # Use RealSense stereo camera
 ```
