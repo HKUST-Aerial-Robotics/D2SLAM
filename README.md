@@ -1,9 +1,10 @@
-# $D^2$SLAM: Decentralized and Distributed Collaborative Visual-inertial SLAM System for Aerial Swarm
-
 ## Introduction
-$D^2$SLAM: Decentralized and Distributed Collaborative Visual-inertial SLAM System for Aerial Swarm
+This is open-source code for **$D^2$SLAM: Decentralized and Distributed Collaborative Visual-inertial SLAM System for Aerial Swarm**
 
- A crucial technology in fully autonomous aerial swarms is collaborative SLAM (CSLAM), which enables the estimation of relative pose and global consistent trajectories of aerial robots. 
+<a href="https://www.youtube.com/embed/xbNAJP8EFOU" target="_blank"><img src="./docs/imgs/video_p0.png" 
+alt="cla" border="0" /></a>
+
+A crucial technology in fully autonomous aerial swarms is collaborative SLAM (CSLAM), which enables the estimation of relative pose and global consistent trajectories of aerial robots. 
 However, existing CSLAM systems do not prioritize relative localization accuracy, critical for close collaboration among UAVs.
 This paper and open-source project presents $D^2$SLAM, a novel decentralized and distributed ($D^2$) CSLAM system that covers two scenarios: near-field estimation for high accuracy state estimation in close range and far-field estimation for consistent global trajectory estimation. 
 
@@ -18,7 +19,7 @@ Our pre-print paper is currently available at https://arxiv.org/abs/2211.01538
 Citation:
 ```
 @article{xu2022d,
-  title={{$ D\^{} 2$ SLAM: Decentralized and Distributed Collaborative Visual-inertial SLAM System for Aerial Swarm}},
+  title={{$D^2$ SLAM: Decentralized and Distributed Collaborative Visual-inertial SLAM System for Aerial Swarm}},
   author={Xu, Hao and Liu, Peize and Chen, Xinyi and Shen, Shaojie},
   journal={arXiv preprint arXiv:2211.01538},
   year={2022}
@@ -194,6 +195,7 @@ show_track_id: 0
 ```
 
 ## Evalution on single PC for multi-robot datasets
+To be update
 
 ## Datasets
 
