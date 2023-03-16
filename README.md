@@ -46,7 +46,7 @@ Major configuration files are located in a YAML file. When starting the roslaunc
 roslaunch d2vins quadcam.launch config:=your-path-to-config/realsense_d435/d435_single.yaml
 ```
 
-$D^2$SLAM is highly configurable, which means there are tens of parameters that can be modified. An example is provided below:
+$D^2$ SLAM is highly configurable, which means there are tens of parameters that can be modified. An example is provided below:
 ```
 %YAML:1.0
 
