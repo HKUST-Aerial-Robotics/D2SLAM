@@ -26,7 +26,8 @@ Citation:
 }
 ```
 ## Build
-To run $D^2$SLAM, CUDA support is currently necessary for front-end acceleration. $D^2$ SLAM has numerous dependencies, and we recommend compiling $D^2$ SLAM using our Docker image. We provide two Docker images, one for PC and one for the embedded platform, Nvidia Jetson. We have evaluated $D^2$ SLAM on Nvidia Xavier NX.
+To run $D^2$ SLAM, CUDA support is currently necessary for front-end acceleration. 
+$D^2$ SLAM has numerous dependencies, and we recommend compiling $D^2$ SLAM using our Docker image. We provide two Docker images, one for PC and one for the embedded platform, Nvidia Jetson. We have evaluated $D^2$ SLAM on Nvidia Xavier NX.
 
 For details on Docker image compilation, please refer to the [documentation](./docker/README.md).
 
