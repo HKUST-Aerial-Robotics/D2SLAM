@@ -154,5 +154,5 @@ RUN   apt install python3-pip libopenblas-dev vim -y && \
 #Install Pytorch
 RUN   pip3 install --no-cache https://developer.download.nvidia.com/compute/redist/jp/v50/pytorch/torch-1.12.0a0+84d1cb9.nv22.4-cp38-cp38-linux_aarch64.whl
 
-#Install Taichi
-RUN   pip install taichi transformations numpy lcm matplotlib scipy && apt install ros-${ROS_VERSION}-ros-numpy
+# Install for TaichiSLAM
+RUN   pip install transformations numpy lcm matplotlib scipy && apt install ros-${ROS_VERSION}-ros-numpy # taichi

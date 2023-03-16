@@ -17,7 +17,7 @@ struct ConsensusSolverConfig {
     double rho_frame_T = 0.1;
     double rho_frame_theta = 0.1;
     double relaxation_alpha = 0.6;
-    bool sync_with_main = true;
+    bool sync_for_averaging = true;
     bool verbose = false;
 };
 

@@ -23,7 +23,7 @@ struct D2FTConfig {
     double parallex_thres = 10.0/460.0;
     int min_keyframe_num = 2;
     bool write_to_file = false;
-    bool check_homography = false;
+    bool check_essential = false;
     bool enable_lk_optical_flow = true;
     bool lk_use_fast = false;
     double ransacReprojThreshold = 10;

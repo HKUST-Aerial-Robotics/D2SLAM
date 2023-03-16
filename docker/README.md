@@ -26,7 +26,7 @@ $ make pc
 
 This Docker file can be built on a MacBook with Apple Silicon (M1 or M2), X86_64 PC with [qemu support](https://www.stereolabs.com/docs/docker/building-arm-container-on-x86/) or on Jetson. However, in our tests, building on Jetson is takes hours and building on Qemu is even more slow.
 
-We highly recommend building the container on a MacBook with M1/M2 Max. This is possibly the fastest way.
+We highly recommend building the image on a MacBook Pro with M1/M2 Max. This is possibly the fastest way.
 
 To build the Docker image for $D^2$SLAM, run:
 
