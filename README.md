@@ -241,8 +241,10 @@ entry_point_script: |
  ```
 
 ## Datasets
+Please download Quad-camera omnidirectional datasets at:
+https://www.dropbox.com/s/lgk947s967nu2or/quadcam_7inch_n3_2023_1_14.7z?dl=0
 
-Will be release very soon
+More datastes will be release very soon.
 
 ## License
 LGPL-3
