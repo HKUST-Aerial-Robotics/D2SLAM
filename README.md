@@ -229,7 +229,7 @@ dataset: # Specific datasets use for evaluation.
     bag: "drone3.bag"
 
 output_path: "outputs/fuse_all/" # Output path of logs
-workspace: "/home/xuhao/swarm_ws/" # The workspace to load
+workspace: "/home/xuhao/swarm_ws/" # The workspace to load, leave it to any value if you do NOT compile code on host.
 image_name: "xuhao1/d2slam:pc" # Docker image
 exclude_topics: ["/uwb_node/incoming_broadcast_data"] # Exclude some topic while playing.
 rate: 0.5 # Speed to play. 
@@ -240,7 +240,7 @@ start_latency: 15 # Wait seconds to launch
 # Following is the script in docker, you may change it to test the D2SLAM
 entry_point_script: |
   #!/bin/bash
-  source /root/swarm_ws/devel/setup.bash
+  source /root/swarm_ws/devel/setup.bash # If you compile D2SLAM on host PC, make sure it's equal to __workspace__/devel/setup.bash, else this default value.
   rm -rf /root/output/loop/*
   mkdir -p /root/output/loop
   roslaunch d2vins realsense.launch show:=true self_id:=$DRONE_ID \
