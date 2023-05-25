@@ -196,9 +196,17 @@ show_track_id: 0
 ```
 
 ## Evalution on single PC for multi-robot datasets
-To evaluate multir-robot datasets on single PC, using our open-source tool at [sync_bag_player](https://github.com/HKUST-Swarm/sync_bag_player). This tool is automatically install in our docker. Please install it to your own ros workspace under **host** machine.
-with command:
+To evaluate multir-robot datasets on single PC, using our open-source tool at [sync_bag_player](https://github.com/HKUST-Swarm/sync_bag_player). 
+It helps you to launch multiple docker container with same program. It could play multiple synced datasets to emulate multi-robot scenarios.
+This tool is automatically install in our docker.
 
+Please install it to your own ros workspace under **host** machine by cloning
+```
+cd your~workspace~/src/
+git clone https://github.com/HKUST-Swarm/sync_bag_player
+```
+
+Launching the emulation is simple, just run with command:
 ```
 $rosrun sync_bag_player docker_swarm_test.py path~to~/d2vins.yaml
 ```
@@ -239,6 +247,8 @@ entry_point_script: |
     config:=/root/SwarmConfig/realsense_d435/d435_single.yaml \ 
     enable_loop:=true enable_pgo:=true
  ```
+
+Good examples of yaml is locate in our datasets. We do not suggest you to run very fast even on powerful PC. The dick IO will be the bottleneck.
 
 ## Datasets
 Please download Quad-camera omnidirectional datasets at:
