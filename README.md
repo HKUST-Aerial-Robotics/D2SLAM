@@ -196,7 +196,7 @@ show_track_id: 0
 ```
 
 ## Evalution on single PC for multi-robot datasets
-To evaluate multir-robot datasets on single PC, using our open-source tool at [sync_bag_player](https://github.com/HKUST-Swarm/sync_bag_player).
+To evaluate multir-robot datasets on single PC, using our open-source tool at [sync_bag_player](https://github.com/HKUST-Swarm/sync_bag_player). This tool is automatically install in our docker. Please install it to your own ros workspace under **host** machine.
 with command:
 
 ```
