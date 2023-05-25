@@ -248,7 +248,7 @@ entry_point_script: |
     enable_loop:=true enable_pgo:=true
  ```
 
-Good examples of yaml is locate in our datasets. We do not suggest you to run very fast even on powerful PC. The dick IO will be the bottleneck.
+Good examples with various setups of YAMLs are locate in our datasets. We do not suggest you to run the evaluation very fast even on powerful PC. The dick IO will be the bottleneck.
 
 ## Datasets
 Please download Quad-camera omnidirectional datasets at:
