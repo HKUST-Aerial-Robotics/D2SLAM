@@ -243,9 +243,10 @@ entry_point_script: |
   source /root/swarm_ws/devel/setup.bash # If you compile D2SLAM on host PC, make sure it's equal to __workspace__/devel/setup.bash, else this default value.
   rm -rf /root/output/loop/*
   mkdir -p /root/output/loop
-  roslaunch d2vins realsense.launch show:=true self_id:=$DRONE_ID \
+  roslaunch d2vins realsense.launch self_id:=$DRONE_ID \
     config:=/root/SwarmConfig/realsense_d435/d435_single.yaml \ 
-    enable_loop:=true enable_pgo:=true
+    enable_loop:=true enable_pgo:=true \
+    rviz:=true
  ```
 
 Good examples with various setups of YAMLs are locate in our datasets. We do not suggest you to run the evaluation very fast even on powerful PC. The dick IO will be the bottleneck.
