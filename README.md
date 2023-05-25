@@ -196,7 +196,49 @@ show_track_id: 0
 ```
 
 ## Evalution on single PC for multi-robot datasets
-To be update
+To evaluate multir-robot datasets on single PC, using our open-source tool at [sync_bag_player](https://github.com/HKUST-Swarm/sync_bag_player).
+with command:
+
+```
+$rosrun sync_bag_player docker_swarm_test.py path~to~/d2vins.yaml
+```
+where yaml is defined as 
+```yaml
+dataset: # Specific datasets use for evaluation.
+  swarm1: #drone 1
+    id: 1
+    config_path: "Configs/SwarmConfig1/" # This folder will be plug to /root/SwarmConfig
+    bag: "drone1.bag"
+
+  swarm2: #drone 2
+    id: 2
+    config_path: "Configs/SwarmConfig2/"
+    bag: "drone2.bag"
+
+  swarm3: #drone 3
+    id: 3
+    config_path: "Configs/SwarmConfig2/"
+    bag: "drone3.bag"
+
+output_path: "outputs/fuse_all/" # Output path of logs
+workspace: "/home/xuhao/swarm_ws/" # The workspace to load
+image_name: "xuhao1/d2slam:pc" # Docker image
+exclude_topics: ["/uwb_node/incoming_broadcast_data"] # Exclude some topic while playing.
+rate: 0.5 # Speed to play. 
+t_start: 60 # Time of bag to start
+duration: 1000 # Length of bag to run
+start_latency: 15 # Wait seconds to launch
+
+# Following is the script in docker, you may change it to test the D2SLAM
+entry_point_script: |
+  #!/bin/bash
+  source /root/swarm_ws/devel/setup.bash
+  rm -rf /root/output/loop/*
+  mkdir -p /root/output/loop
+  roslaunch d2vins realsense.launch show:=true self_id:=$DRONE_ID \
+    config:=/root/SwarmConfig/realsense_d435/d435_single.yaml \ 
+    enable_loop:=true enable_pgo:=true
+ ```
 
 ## Datasets
 
