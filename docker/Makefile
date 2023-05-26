@@ -18,10 +18,14 @@ jetson:
 jetson_base:
 	@docker build  -t d2slam:jetson_base_35.1.0 -f ./Dockerfile.jetson_base_35.1.0 --build-arg USE_PROC=20 ..
 
+jetson_orin_base:
+	@docker build  -t d2slam:jetson_orin_base_35.3.1 -f ./Dockerfile.jetson_orin_base_35.3.1 --build-arg USE_PROC=20 ..
+
 clean:
 	@docker rmi -f d2slam:pc
 	@docker rmi -f d2slam:jetson
 	@docker rmi -f d2slam:jetson_base_35.1.0
+	@docker rmi -f d2slam:jetson_orin_base_35.3.1
 
 upload_all: pc jetson_base jetson
 	@docker tag d2slam:pc $(name)/d2slam:pc
