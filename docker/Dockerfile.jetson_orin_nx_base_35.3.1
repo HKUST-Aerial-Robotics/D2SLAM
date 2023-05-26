@@ -5,16 +5,18 @@ ARG CMAKE_VERSION=3.23.1
 ARG ONNX_VERSION=1.12.1
 ENV SWARM_WS=/root/swarm_ws
 ARG CMAKE_VERSION=3.23.1
-ARG ONNX_VERSION=1.12.1
+ARG ONNX_VERSION=1.13.1
 ARG OPENCV_VERSION=4.6.0
 ARG ROS_VERSION=noetic
 #Modified if use PC
-ARG USE_PROC=4
+ARG USE_PROC=8
 ENV SWARM_WS=/root/swarm_ws
 ENV DEBIAN_FRONTEND=noninteractive
 # Only 7.2 for NX
 # 5.3 for Jetson nano and 6.2 for Jetson TX2
-ARG CUDA_ARCH_BIN="6.2,7.2"
+# ARG CUDA_ARCH_BIN="6.2,7.2"
+#jetson Orin
+ARG CUDA_ARCH_BIN="8.7"
 ARG ENABLE_NEON="ON"
 
 #Some basic dependencies
