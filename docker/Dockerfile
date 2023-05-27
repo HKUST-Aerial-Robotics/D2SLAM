@@ -155,7 +155,7 @@ RUN   mkdir -p ${SWARM_WS}/src/ && \
       git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM && \
       git clone https://github.com/HKUST-Swarm/sync_bag_player.git && \
       git clone https://github.com/ros-perception/vision_opencv.git -b ${ROS_VERSION}
-# COPY ./ ${SWARM_WS}/src/D2SLAM
+COPY ./ ${SWARM_WS}/src/D2SLAM
 WORKDIR $SWARM_WS
 RUN   source "/opt/ros/${ROS_VERSION}/setup.bash" && \
       catkin config -DCMAKE_BUILD_TYPE=Release \
