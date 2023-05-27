@@ -208,6 +208,7 @@ git clone https://github.com/HKUST-Swarm/sync_bag_player
 
 Launching the emulation is simple, just run with command:
 ```
+$rosrun sync_bag_player environment_setup.sh
 $rosrun sync_bag_player docker_swarm_test.py path~to~/d2vins.yaml
 ```
 where yaml is defined as 
@@ -229,7 +230,7 @@ dataset: # Specific datasets use for evaluation.
     bag: "drone3.bag"
 
 output_path: "outputs/fuse_all/" # Output path of logs
-workspace: "/home/xuhao/swarm_ws/" # The workspace to load, leave it to any value if you do NOT compile code on host.
+workspace: "" # The workspace to load, leave it to empty if you do NOT compile code on host.
 image_name: "xuhao1/d2slam:pc" # Docker image
 exclude_topics: ["/uwb_node/incoming_broadcast_data"] # Exclude some topic while playing.
 rate: 0.5 # Speed to play. 
