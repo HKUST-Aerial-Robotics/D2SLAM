@@ -178,8 +178,8 @@ std::vector<cv::cuda::GpuMat> VirtualStereo::rectifyImage(const cv::Mat & left, 
             cv::cuda::multiply(img_cuda_r, inv_vingette_r, img_cuda_r);
         }
     } else {
-        auto img_cuda_l = undist_left->undist_id_cuda(left, undist_id_l, true);
-        auto img_cuda_r = undist_right->undist_id_cuda(right, undist_id_r, true);
+        img_cuda_l = undist_left->undist_id_cuda(left, undist_id_l, true);
+        img_cuda_r = undist_right->undist_id_cuda(right, undist_id_r, true);
     }
     cv::cuda::remap(img_cuda_l, leftRectify, cuda_lmap_1, cuda_lmap_2, cv::INTER_LINEAR);
     cv::cuda::remap(img_cuda_r, rightRectify, cuda_rmap_1, cuda_rmap_2, cv::INTER_LINEAR);
