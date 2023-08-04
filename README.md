@@ -26,7 +26,8 @@ Citation:
 }
 ```
 ## Build
-To run $D^2$SLAM, CUDA support is currently necessary for front-end acceleration. $D^2$ SLAM has numerous dependencies, and we recommend compiling $D^2$ SLAM using our Docker image. We provide two Docker images, one for PC and one for the embedded platform, Nvidia Jetson. We have evaluated $D^2$ SLAM on Nvidia Xavier NX.
+To run $D^2$ SLAM, CUDA support is currently necessary for front-end acceleration. 
+$D^2$ SLAM has numerous dependencies, and we recommend compiling $D^2$ SLAM using our Docker image. We provide two Docker images, one for PC and one for the embedded platform, Nvidia Jetson. We have evaluated $D^2$ SLAM on Nvidia Xavier NX.
 
 For details on Docker image compilation, please refer to the [documentation](./docker/README.md).
 
@@ -45,7 +46,7 @@ Major configuration files are located in a YAML file. When starting the roslaunc
 roslaunch d2vins quadcam.launch config:=your-path-to-config/realsense_d435/d435_single.yaml
 ```
 
-$D^2$SLAM is highly configurable, which means there are tens of parameters that can be modified. An example is provided below:
+$D^2$ SLAM is highly configurable, which means there are tens of parameters that can be modified. An example is provided below:
 ```
 %YAML:1.0
 
@@ -195,11 +196,67 @@ show_track_id: 0
 ```
 
 ## Evalution on single PC for multi-robot datasets
-To be update
+To evaluate multir-robot datasets on single PC, using our open-source tool at [sync_bag_player](https://github.com/HKUST-Swarm/sync_bag_player). 
+It helps you to launch multiple docker container with same program. It could play multiple synced datasets to emulate multi-robot scenarios.
+This tool is automatically install in our docker.
+
+Please install it to your own ros workspace under **host** machine by cloning
+```
+cd your~workspace~/src/
+git clone https://github.com/HKUST-Swarm/sync_bag_player
+```
+
+Launching the emulation is simple, just run with command:
+```
+$rosrun sync_bag_player environment_setup.sh
+$rosrun sync_bag_player docker_swarm_test.py path~to~/d2vins.yaml
+```
+where yaml is defined as 
+```yaml
+dataset: # Specific datasets use for evaluation.
+  swarm1: #drone 1
+    id: 1
+    config_path: "Configs/SwarmConfig1/" # This folder will be plug to /root/SwarmConfig
+    bag: "drone1.bag"
+
+  swarm2: #drone 2
+    id: 2
+    config_path: "Configs/SwarmConfig2/"
+    bag: "drone2.bag"
+
+  swarm3: #drone 3
+    id: 3
+    config_path: "Configs/SwarmConfig2/"
+    bag: "drone3.bag"
+
+output_path: "outputs/fuse_all/" # Output path of logs
+workspace: "" # The workspace to load, leave it to empty if you do NOT compile code on host.
+image_name: "xuhao1/d2slam:pc" # Docker image
+exclude_topics: ["/uwb_node/incoming_broadcast_data"] # Exclude some topic while playing.
+rate: 0.5 # Speed to play. 
+t_start: 60 # Time of bag to start
+duration: 1000 # Length of bag to run
+start_latency: 15 # Wait seconds to launch
+
+# Following is the script in docker, you may change it to test the D2SLAM
+entry_point_script: |
+  #!/bin/bash
+  source /root/swarm_ws/devel/setup.bash # If you compile D2SLAM on host PC, make sure it's equal to __workspace__/devel/setup.bash, else this default value.
+  rm -rf /root/output/loop/*
+  mkdir -p /root/output/loop
+  roslaunch d2vins realsense.launch self_id:=$DRONE_ID \
+    config:=/root/SwarmConfig/realsense_d435/d435_single.yaml \ 
+    enable_loop:=true enable_pgo:=true \
+    rviz:=true
+ ```
+
+Good examples with various setups of YAMLs are locate in our datasets. We do not suggest you to run the evaluation very fast even on powerful PC. The dick IO will be the bottleneck.
 
 ## Datasets
+Please download Quad-camera omnidirectional datasets at:
+[link](https://www.dropbox.com/scl/fo/jtiwfx98ms7cty946nmug/h?dl=0&rlkey=n03gf3jqmthzy655ku0ycbny0)
 
-Will be release very soon
+More datastes will be release very soon.
 
 ## License
 LGPL-3
