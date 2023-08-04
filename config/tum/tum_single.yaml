@@ -54,7 +54,7 @@ rho_landmark: 1.0
 rho_frame_T: 100
 rho_frame_theta: 100
 relaxation_alpha: 0.
-consensus_sync_with_main: 0
+consensus_sync_for_averaging: 0
 consensus_sync_to_start: 0 #Is sync on start of the solving..
 consensus_trigger_time_err_us: 100
 
@@ -101,7 +101,7 @@ max_cnt: 150            # max feature number in feature tracking
 max_superpoint_cnt: 150 # max feature extraction by superpoint
 max_solve_cnt: 150
 show_track_id: 0
-check_homography: 1
+check_essential: 1
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
 remote_min_match_num: 40
 ransacReprojThreshold: 10.0

@@ -900,7 +900,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         }
     }
     if (img_desc_a.drone_id != img_desc_b.drone_id &&
-            params->ftconfig->check_homography && !param.enable_superglue) {
+            params->ftconfig->check_essential && !param.enable_superglue) {
         //only perform this for remote
         std::vector<unsigned char> mask;
         if (matched_pts_a_normed.size() < MIN_HOMOGRAPHY) {
@@ -946,7 +946,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         cv::putText(show, name, cv::Point2f(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
         sprintf(name, "matches_CAM@Drone %d@%d_%d@%d", img_desc_a.camera_index,
                 img_desc_a.drone_id, img_desc_b.camera_index, img_desc_b.drone_id);
-        if (params->ftconfig->check_homography) {
+        if (params->ftconfig->check_essential) {
             cv::Mat show_check;
             cv::hconcat(img_desc_a.raw_image, image_b, show_check);
             cv::cvtColor(show_check, show_check, cv::COLOR_GRAY2BGR);
@@ -965,9 +965,9 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     }
 
     if (params->verbose || params->enable_perf_output)
-        printf("[D2FeatureTracker::matchLocalFeatures] match features %d:%d matched %ld frame %d:%d t: %.3f ms enable_knn %d search_dist %.2f check_homography %d sp_dims %d\n", 
+        printf("[D2FeatureTracker::matchLocalFeatures] match features %d:%d matched %ld frame %d:%d t: %.3f ms enable_knn %d search_dist %.2f check_essential %d sp_dims %d\n", 
                 pts_a.size(), pts_b.size(), ids_b.size(), img_desc_a.frame_id, img_desc_b.frame_id, tic.toc(), 
-                params->ftconfig->enable_knn_match, _config.search_local_max_dist*image_width, params->ftconfig->check_homography, params->superpoint_dims);
+                params->ftconfig->enable_knn_match, _config.search_local_max_dist*image_width, params->ftconfig->check_essential, params->superpoint_dims);
     if (ids_b.size() >= params->ftconfig->remote_min_match_num) {
         return true;
     }

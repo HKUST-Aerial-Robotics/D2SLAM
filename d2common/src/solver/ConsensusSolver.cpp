@@ -17,7 +17,7 @@ void ConsensusSolver::reset() {
     all_estimating_params.clear();
     active_params.clear();
     residuals.clear();
-    if (config.sync_with_main) {
+    if (config.sync_for_averaging) {
         remote_params.clear();
     }
 }
@@ -70,7 +70,7 @@ SolverReport ConsensusSolver::solve() {
 
 void ConsensusSolver::syncData() {
     broadcastData();
-    if (config.sync_with_main) {
+    if (config.sync_for_averaging) {
         Utility::TicToc tic_sync;
         waitForSync(); 
         // printf("ConsensusSolver wait for sync time: %.1fms step %d/%d\n", tic_sync.toc(), i, config.max_steps);

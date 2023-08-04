@@ -11,6 +11,7 @@
 #include <opengv/sac/Lmeds.hpp>
 #include <d2frontend/utils.h>
 #include <algorithm>
+#include <faiss/IndexFlat.h>
 
 using namespace std::chrono; 
 using namespace D2Common;
@@ -255,7 +256,7 @@ int LoopDetector::queryFrameIndexFromDatabase(const VisualImageDesc & img_desc, 
 int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss::IndexFlatIP & index, bool remote_db, 
         double thres, int max_index, double & similarity) {
     float similiarity[1024] = {0};
-    faiss::Index::idx_t labels[1024];
+    faiss::idx_t labels[1024];
 
     int index_offset = 0;
     if (remote_db) {
