@@ -266,6 +266,9 @@ int LoopDetector::queryIndexFromDatabase(const VisualImageDesc & img_desc, faiss
         labels[i] = -1;
     }
     int search_num = std::min(SEARCH_NEAREST_NUM + max_index, (int) index.ntotal);
+    if (search_num <= 0) {
+        return -1;
+    }
     index.search(1, img_desc.image_desc.data(), search_num, similiarity, labels);
     int return_frame_id = -1, return_drone_id = -1;
     int k = -1;
