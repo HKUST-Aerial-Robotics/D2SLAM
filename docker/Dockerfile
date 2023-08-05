@@ -6,6 +6,8 @@ ARG ONNX_VERSION=1.12.1
 ARG OPENCV_VERSION=4.6.0
 ENV SWARM_WS=/root/swarm_ws
 ARG ROS_VERSION=noetic
+ARG FAISS_VERSION=1.7.4
+ARG LIBTORCH_VERSION=1.13.0
 
 #Some basic dependencies
 RUN  apt-get -y update && \
@@ -78,9 +80,9 @@ RUN   wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VE
       rm onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz
 
 #Install Libtorch (CUDA)
-RUN   wget https://download.pytorch.org/libtorch/nightly/cpu/libtorch-cxx11-abi-shared-with-deps-latest.zip && \
-      unzip libtorch-cxx11-abi-shared-with-deps-latest.zip && \
-      rm libtorch-cxx11-abi-shared-with-deps-latest.zip && \
+RUN   wget https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-${LIBTORCH_VERSION}%2Bcpu.zip && \
+      unzip libtorch-shared-with-deps-${LIBTORCH_VERSION}+cpu.zip && \
+      rm libtorch-shared-with-deps-${LIBTORCH_VERSION}+cpu.zip && \
       cp -r libtorch/* /usr/local/
 
 #Install LCM
@@ -94,7 +96,7 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
 
 #Install Faiss
 RUN   git clone https://github.com/facebookresearch/faiss.git && \
-      cd faiss && \
+      cd faiss && git checkout tags/v${FAISS_VERSION} && \
       cmake -B build -DCMAKE_BUILD_TYPE=Release -DFAISS_OPT_LEVEL=avx2 -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF -DFAISS_ENABLE_GPU=OFF . && \
       make -C build -j faiss && \
       make -C build install && \
