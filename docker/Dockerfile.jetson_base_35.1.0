@@ -10,6 +10,7 @@ ARG OPENCV_VERSION=4.6.0
 ARG ROS_VERSION=noetic
 #Modified if use PC
 ARG USE_PROC=4
+ARG FAISS_VERSION=1.7.4
 ENV SWARM_WS=/root/swarm_ws
 ENV DEBIAN_FRONTEND=noninteractive
 # Only 7.2 for NX
@@ -122,7 +123,7 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
 
 #Install Faiss
 RUN   git clone https://github.com/facebookresearch/faiss.git && \
-      cd faiss && \
+      cd faiss && git checkout tags/v${FAISS_VERSION} && \
       cmake -B build -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF -DFAISS_ENABLE_GPU=OFF . && \
       make -C build -j faiss && \
       make -C build install && \

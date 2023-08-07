@@ -45,6 +45,7 @@ namespace D2FrontEnd {
         enable_perf_output = (int) fsSettings["enable_perf_output"];
         print_network_status = (int) fsSettings["print_network_status"];
         verbose = (int) fsSettings["verbose"];
+        ftconfig->write_to_file = (int) fsSettings["write_tracking_image_to_file"];
 
         //Loopcam configs
         loopcamconfig->superpoint_max_num = (int) fsSettings["max_superpoint_cnt"];

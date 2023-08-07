@@ -8,8 +8,8 @@ A crucial technology in fully autonomous aerial swarms is collaborative SLAM (CS
 However, existing CSLAM systems do not prioritize relative localization accuracy, critical for close collaboration among UAVs.
 This paper and open-source project presents $D^2$ SLAM, a novel decentralized and distributed ($D^2$) CSLAM system that covers two scenarios: near-field estimation for high accuracy state estimation in close range and far-field estimation for consistent global trajectory estimation. 
 
-![Image for $D^2$SLAM](./docs/imgs/d2cslam.png)
-![Image for $D^2$SLAM](./docs/imgs/dense_ri_2.png)
+![](./docs/imgs/d2cslam.png)
+![](./docs/imgs/dense_ri_2.png)
 
 
 We argue $D^2$SLAM can be applied in a wide range of real-world applications.
@@ -208,6 +208,7 @@ git clone https://github.com/HKUST-Swarm/sync_bag_player
 
 Launching the emulation is simple, just run with command:
 ```
+$rosrun sync_bag_player environment_setup.sh
 $rosrun sync_bag_player docker_swarm_test.py path~to~/d2vins.yaml
 ```
 where yaml is defined as 
@@ -229,7 +230,7 @@ dataset: # Specific datasets use for evaluation.
     bag: "drone3.bag"
 
 output_path: "outputs/fuse_all/" # Output path of logs
-workspace: "/home/xuhao/swarm_ws/" # The workspace to load, leave it to any value if you do NOT compile code on host.
+workspace: "" # The workspace to load, leave it to empty if you do NOT compile code on host.
 image_name: "xuhao1/d2slam:pc" # Docker image
 exclude_topics: ["/uwb_node/incoming_broadcast_data"] # Exclude some topic while playing.
 rate: 0.5 # Speed to play. 
@@ -254,6 +255,12 @@ Good examples with various setups of YAMLs are locate in our datasets. We do not
 ## Datasets
 Please download Quad-camera omnidirectional datasets at:
 [link](https://www.dropbox.com/scl/fo/jtiwfx98ms7cty946nmug/h?dl=0&rlkey=n03gf3jqmthzy655ku0ycbny0)
+or 
+
+[aligned TUM Corr for multi-robot evaluation](https://www.dropbox.com/s/ic0yuxr2xym1m0c/tum_corr.7z?dl=0)
+
+https://pan.baidu.com/s/1qyRUHUeVCvORXM4CrIZCxg?pwd=D2SL
+提取码: D2SL
 
 More datastes will be release very soon.
 

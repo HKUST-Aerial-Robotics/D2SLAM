@@ -195,9 +195,7 @@ std::vector<cv::cuda::GpuMat> VirtualStereo::rectifyImage(const cv::Mat & left, 
             cv::cuda::multiply(img_cuda_r, inv_vingette_r, img_cuda_r);
         }
     } else {
-        // fisheye four corner
-        // printf("[Debug] four corner fisheye\n");
-        img_cuda_l = undist_left->undist_id_cuda(left, undist_id_l, true); //dump
+        img_cuda_l = undist_left->undist_id_cuda(left, undist_id_l, true);
         img_cuda_r = undist_right->undist_id_cuda(right, undist_id_r, true);
     }
     //Bug Here lamp_1 and lmap_2 generation faield

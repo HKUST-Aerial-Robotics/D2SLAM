@@ -158,3 +158,4 @@ enable_perf_output: 0
 print_network_status: 1
 debug_write_margin_matrix: 0
 show_track_id: 0
+write_tracking_image_to_file: 0

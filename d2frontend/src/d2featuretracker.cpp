@@ -766,7 +766,7 @@ void D2FeatureTracker::draw(const VisualImageDescArray & frames, bool is_keyfram
     cv::Mat img1 = drawToImage(frames.images[1], is_keyframe, report);
     cv::Mat img1_r = drawToImage(frames.images[3], is_keyframe, report);
     cv::hconcat(img1, img1_r, img1);
-    cv::hconcat(img, img1, img);
+    cv::vconcat(img, img1, img);
     
     char buf[64] = {0};
     sprintf(buf, "featureTracker @ Drone %d", params->self_id);

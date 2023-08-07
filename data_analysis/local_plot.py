@@ -83,20 +83,20 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
     plt.savefig(output_path+"plot3d.png")
 
     #Plot Fused Vs GT 3D
-    fig = plt.figure("FusedVsGT3D")
+    fig = plt.figure("FusedVsGT3D", figsize=figsize)
     # fig.suptitle("Fused Vs GT 3D")
     k = 0
     for i in nodes:
         _id = id_map[i]
         ax = fig.add_subplot(1, len(nodes), k+1, projection='3d')
-        ax.set_title(f"Traj {_id}, length: {poses_fused[i].length():3.1f}")
+        ax.set_title(f"Drone {_id}")
         if poses_gt is not None:
-            ax.plot(poses_gt[i].pos[:,0], poses_gt[i].pos[:,1],poses_gt[i].pos[:,2], label=f"Ground Truth ${_id}$")
-        ax.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1],poses_fused[i].pos[:,2], label=f"$D^2$VINS ${_id}$")
+            ax.plot(poses_gt[i].pos[:,0], poses_gt[i].pos[:,1],poses_gt[i].pos[:,2], label=f"Ground Truth")
+        ax.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1],poses_fused[i].pos[:,2], label=f"$D^2$VINS")
         if poses_pgo is not None:
-            ax.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1],poses_pgo[i].pos[:,2], label=f"$D^2$PGO ${_id}$")
-        
-        plt.legend()
+            ax.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1],poses_pgo[i].pos[:,2], label=f"$D^2$PGO")
+        if i == nodes[0]:
+            plt.legend()
         ax.set_xlabel('$X$')
         ax.set_ylabel('$Y$')
         ax.set_zlabel('$Z$')
