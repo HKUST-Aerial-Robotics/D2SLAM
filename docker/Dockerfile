@@ -19,7 +19,8 @@ RUN  apt-get -y update && \
       libsuitesparse-dev \
       libglib2.0-dev \
       libyaml-cpp-dev \
-      libdw-dev
+      libdw-dev \
+      vim 
 
 #Install ROS
 # update ros repository
