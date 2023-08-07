@@ -80,10 +80,16 @@ RUN   wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VE
       rm onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz
 
 #Install Libtorch (CUDA)
-RUN   wget https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-${LIBTORCH_VERSION}%2Bcpu.zip && \
-      unzip libtorch-shared-with-deps-${LIBTORCH_VERSION}+cpu.zip && \
-      rm libtorch-shared-with-deps-${LIBTORCH_VERSION}+cpu.zip && \
+# RUN   wget https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-${LIBTORCH_VERSION}%2Bcpu.zip && \
+#       unzip libtorch-shared-with-deps-${LIBTORCH_VERSION}+cpu.zip && \
+#       rm libtorch-shared-with-deps-${LIBTORCH_VERSION}+cpu.zip && \
+#       cp -r libtorch/* /usr/local/
+
+RUN   wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.0.1%2Bcpu.zip && \
+      unzip libtorch-cxx11-abi-shared-with-deps-2.0.1+cpu.zip && \
+      rm libtorch-cxx11-abi-shared-with-deps-2.0.1+cpu.zip && \
       cp -r libtorch/* /usr/local/
+
 
 #Install LCM
 RUN   git clone https://github.com/lcm-proj/lcm && \
