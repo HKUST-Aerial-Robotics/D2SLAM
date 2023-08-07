@@ -1,0 +1,45 @@
+enable_cnn: true
+cnn_int8: false
+cnn_fp16: true
+cnn_use_tensorrt: true
+# cnn_type: "hitnet"
+cnn_type: "crestereo"
+enable_texture: true
+width: 320
+height: 240
+pixel_step: 2
+image_step: 2
+max_z: 2.1
+min_z: 0.3
+calib_file_path: "quad_cam_calib-camchain-imucam-new-3.yaml"
+fov: 180
+photometric_calib_numbers: 4
+photometric_calib_path: /root/swarm_ws/src/D2SLAM/config/new_quadcam/camera_vig_mask/
+photometric_calib: "mask.png"
+avg_brightness: 0.7
+stereos:
+  stereo1_0:
+    cam_idx_l: 0
+    cam_idx_r: 1
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "../new_quadcam/stereo_calib_0_1.yaml"
+  stereo2_1:
+    cam_idx_l: 1
+    cam_idx_r: 2
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "../new_quadcam/stereo_calib_1_2.yaml"
+  stereo3_2:
+    cam_idx_l: 2
+    cam_idx_r: 3
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "../new_quadcam/stereo_calib_2_3.yaml"
+  stereo0_3:
+    cam_idx_l: 3
+    cam_idx_r: 0
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "../new_quadcam/stereo_calib_3_0.yaml"
+camera_configuration: 3

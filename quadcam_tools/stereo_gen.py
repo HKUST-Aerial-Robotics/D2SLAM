@@ -30,7 +30,9 @@ class StereoGen:
         self.R1, self.R2, self.P1, self.P2, self.Q, self.roi_l, self.roi_r = cv.stereoRectify(K1, D1, K2, D2, size, R, T)
         self.mapl0, self.mapl1 = cv.initUndistortRectifyMap(K1, D1, self.R1, self.P1, size, cv.CV_32FC1)
         self.mapr0, self.mapr1 = cv.initUndistortRectifyMap(K2, D2, self.R2, self.P2, size, cv.CV_32FC1)
-    
+        print("mapl0", self.mapl0)
+        print("mapl1", self.mapl1)
+
     def genStereo(self, img_l, img_r):
         img_l = self.undist_l.undist(img_l, self.idx_l)
         img_r = self.undist_r.undist(img_r, self.idx_r)
@@ -48,6 +50,7 @@ class StereoGen:
         s_img_l, s_img_r = self.genStereo(img_l, img_r)
         r_img_l = cv.remap(s_img_l, self.mapl0, self.mapl1, cv.INTER_LINEAR)
         r_img_r = cv.remap(s_img_r, self.mapr0, self.mapr1, cv.INTER_LINEAR)
+        cv.imshow("rectified", cv.hconcat([r_img_l, r_img_r]))
         return r_img_l, r_img_r
     
     def genDisparity(self, img_l, img_r, max_disp=64, block_size=5):
@@ -57,6 +60,8 @@ class StereoGen:
             if len(img_r.shape) > 2 and img_r.shape[2] == 3:
                 img_r = cv.cvtColor(img_r, cv.COLOR_BGR2GRAY)
         img_l, img_r = self.genRectStereo(img_l, img_r)
+        print("img_l shape", img_l.shape[0], img_l.shape[1])
+        cv.imshow("rectified", cv.hconcat([img_l, img_r]))
         if self.enable_hitnet:
             s = time.time()
             disparity = self.hitnet(img_l, img_r)

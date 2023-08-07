@@ -85,3 +85,5 @@ target_link_libraries(${PROJECT_NAME}_node
   lcm
 )
 
+add_definitions("-Wall -g")
+

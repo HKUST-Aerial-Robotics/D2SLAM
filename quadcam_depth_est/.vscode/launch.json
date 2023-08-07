@@ -7,7 +7,7 @@
         "name": "(gdb) quadcam_depth_est_test",
         "type": "cppdbg",
         "request": "launch",
-        "program": "/home/xuhao/d2slam_ws/devel/lib/quadcam_depth_est/quadcam_depth_est_test",
+        "program": "/root/swarm_ws/devel/lib/quadcam_depth_est/quadcam_depth_est_test",
         "MIMode": "gdb",
         "cwd": "${workspaceFolder}",
         "args": ["--calib", "~/d2slam_ws/src/D2SLAM/config/quadcam/quad_cam_calib-camchain-imucam.yaml",
@@ -15,7 +15,7 @@
             "--name0", "cam3", "--name1", "cam2",
             "-l", "/home/xuhao/output/quadvins-output/imgs/fisheye_000900_3.jpg",
             "-r", "/home/xuhao/output/quadvins-output/imgs/fisheye_000900_2.jpg",
-            "--engine", "/home/xuhao/d2slam_ws/src/D2SLAM/quadcam_depth_est/models/model_float32.onnx"],           
+            "--engine", "/root/swarm_ws/src/D2SLAM/quadcam_depth_est/models/model_float32.onnx"],           
             "setupCommands": [
             {
                 "description": "Enable pretty-printing for gdb",
@@ -28,7 +28,7 @@
     "name": "(gdb) quadcam_depth_est_node",
         "type": "cppdbg",
         "request": "launch",
-        "program": "/home/xuhao/d2slam_ws/devel/lib/quadcam_depth_est/quadcam_depth_est_node",
+        "program": "/root/swarm_ws/devel/lib/quadcam_depth_est/quadcam_depth_est_node",
         "MIMode": "gdb",
         "cwd": "${workspaceFolder}",
         "setupCommands": [

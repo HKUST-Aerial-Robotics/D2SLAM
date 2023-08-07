@@ -20,10 +20,14 @@ VirtualStereo::VirtualStereo(int _cam_idx_a, int _cam_idx_b,
         HitnetONNX* _hitnet, CREStereoONNX* _crestereo):
     cam_idx_a(_cam_idx_a), cam_idx_b(_cam_idx_b), undist_left(_undist_left), undist_right(_undist_right),
     undist_id_l(_undist_id_l), undist_id_r(_undist_id_r), hitnet(_hitnet), crestereo(_crestereo) { 
-    auto cam_param = static_cast<const camodocal::PinholeCamera*>(undist_left->cam_side.get())->getParameters();
-    img_size = cv::Size(cam_param.imageWidth(), cam_param.imageHeight());
-    cv::Mat K = (cv::Mat_<double>(3,3) << cam_param.fx(), 0, cam_param.cx(), 0, cam_param.fy(), cam_param.cy(), 0, 0, 1);
-    initRecitfy(baseline, K, cv::Mat(), K, cv::Mat());
+    auto cam_param_left = static_cast<const camodocal::PinholeCamera*>(undist_left->cam_side.get())->getParameters();
+    img_size = cv::Size(cam_param_left.imageWidth(), cam_param_left.imageHeight());
+    cv::Mat K_left = (cv::Mat_<double>(3,3) << cam_param_left.fx(), 0, cam_param_left.cx(), 0, cam_param_left.fy(), cam_param_left.cy(), 0, 0, 1);
+    auto cam_param_right = static_cast<const camodocal::PinholeCamera*>(_undist_right->cam_side.get())->getParameters();
+    // img_size = cv::Size(cam_param.imageWidth(), cam_param.imageHeight());
+    cv::Mat K_right = (cv::Mat_<double>(3,3) << cam_param_right.fx(), 0, cam_param_right.cx(), 0, cam_param_right.fy(), cam_param_right.cy(), 0, 0, 1);
+
+    initRecitfy(baseline, K_left, cv::Mat(), K_right, cv::Mat());
 }
 
 void VirtualStereo::initVingette(const cv::Mat & _inv_vingette_l, const cv::Mat & _inv_vingette_r) {
@@ -76,20 +80,20 @@ VirtualStereo::VirtualStereo(const Swarm::Pose & baseline,
     cuda_rmap_2.upload(rmap_2);
     input_is_stereo = true;
 
-    // std::cout << "img_size" << img_size << std::endl;
-    // std::cout << "K0: " << K0 << std::endl;
-    // std::cout << "K1: " << K1 << std::endl;
-    // std::cout << "D0: " << D0 << std::endl;
-    // std::cout << "D1: " << D1 << std::endl;
-    // std::cout << "xi0: " << xi0 << std::endl;
-    // std::cout << "xi1: " << xi1 << std::endl;
-    // std::cout << "R: " << R << std::endl;
-    // std::cout << "T: " << T << std::endl;
-    // std::cout << "R1: " << R1 << std::endl;
-    // std::cout << "R2: " << R2 << std::endl;
-    // std::cout << "P1: " << P1 << std::endl;
-    // std::cout << "P2: " << P2 << std::endl;
-    // std::cout << "Q: " << Q << std::endl;
+//     std::cout << "img_size" << img_size << std::endl;
+//     std::cout << "K0: " << K0 << std::endl;
+//     std::cout << "K1: " << K1 << std::endl;
+//     std::cout << "D0: " << D0 << std::endl;
+//     std::cout << "D1: " << D1 << std::endl;
+//     std::cout << "xi0: " << xi0 << std::endl;
+//     std::cout << "xi1: " << xi1 << std::endl;
+//     std::cout << "R: " << R << std::endl;
+//     std::cout << "T: " << T << std::endl;
+//     std::cout << "R1: " << R1 << std::endl;
+//     std::cout << "R2: " << R2 << std::endl;
+//     std::cout << "P1: " << P1 << std::endl;
+//     std::cout << "P2: " << P2 << std::endl;
+//     std::cout << "Q: " << Q << std::endl;
 }
 
 void VirtualStereo::initRecitfy(const Swarm::Pose & baseline, cv::Mat K0, cv::Mat D0, cv::Mat K1, cv::Mat D1) {
@@ -98,6 +102,13 @@ void VirtualStereo::initRecitfy(const Swarm::Pose & baseline, cv::Mat K0, cv::Ma
     cv::stereoRectify(K0, D0, K1, D1, img_size, R, T, R1, R2, T1, T2, Q, 1024, -1, cv::Size(), &roi_l, &roi_r);
     initUndistortRectifyMap(K0, D0, R1, T1, img_size, CV_32FC1, lmap_1, lmap_2);
     initUndistortRectifyMap(K1, D1, R2, T2, img_size, CV_32FC1, rmap_1, rmap_2);
+    // printf("[Debug] rmap init\n");
+    // std::cout << "[Debug]K0: " << K0 << std::endl;
+    // std::cout << "[Debug]K1: " << K1 << std::endl;
+    // std::cout << "[Debug]D0: " << D0 << std::endl;
+    // std::cout << "[Debug]D1: " << D1 << std::endl;
+    // std::cout << "[Debug]lmap_1: " << lmap_1 << std::endl;
+    // std::cout << "[Debug]lmap_2: " <<lmap_2 << std::endl;
     cuda_lmap_1.upload(lmap_1);
     cuda_lmap_2.upload(lmap_2);
     cuda_rmap_1.upload(rmap_1);
@@ -116,8 +127,13 @@ std::pair<cv::Mat, cv::Mat> VirtualStereo::estimatePointsViaRaw(const cv::Mat & 
 
 
 std::pair<cv::Mat, cv::Mat>VirtualStereo::estimateDisparityViaRaw(const cv::Mat & left, const cv::Mat & right, const cv::Mat & left_color, bool show) {
+    // printf("[Debug] debug ouput\n");
     auto ret = rectifyImage(left, right);
     cv::Mat limg_rect(ret[0]), rimg_rect(ret[1]);
+    // cv::imshow("raw",left);
+    // cv::imshow("rectify",limg_rect);
+
+    // printf("l_img_shape width %d  hight %d\n",limg_rect.cols,limg_rect.rows);
     auto disp = estimateDisparity(limg_rect, rimg_rect);
     if (show) {
         cv::Mat show;
@@ -169,6 +185,7 @@ std::pair<cv::Mat, cv::Mat>VirtualStereo::estimateDisparityViaRaw(const cv::Mat 
 std::vector<cv::cuda::GpuMat> VirtualStereo::rectifyImage(const cv::Mat & left, const cv::Mat & right) {
     cv::cuda::GpuMat leftRectify, rightRectify, img_cuda_l, img_cuda_r;
     if (input_is_stereo) {
+        // printf("[Debug] stereo rectify\n");
         img_cuda_l.upload(left);
         img_cuda_r.upload(right);
         if (!inv_vingette_l.empty()) {
@@ -178,11 +195,24 @@ std::vector<cv::cuda::GpuMat> VirtualStereo::rectifyImage(const cv::Mat & left, 
             cv::cuda::multiply(img_cuda_r, inv_vingette_r, img_cuda_r);
         }
     } else {
-        auto img_cuda_l = undist_left->undist_id_cuda(left, undist_id_l, true);
-        auto img_cuda_r = undist_right->undist_id_cuda(right, undist_id_r, true);
+        // fisheye four corner
+        // printf("[Debug] four corner fisheye\n");
+        img_cuda_l = undist_left->undist_id_cuda(left, undist_id_l, true); //dump
+        img_cuda_r = undist_right->undist_id_cuda(right, undist_id_r, true);
     }
+    //Bug Here lamp_1 and lmap_2 generation faield
+
+    
+    // cv::Mat rectify_left;
+    // cv::remap(left,rectify_left,this->lmap_1,this->lmap_2,cv::INTER_LINEAR);
+    // cv::Mat new_mat;
+    // // cv::hconcat(left,rectify_left,new_mat);
+    // cv::imshow("cv funciton",rectify_left);
+    // cv::waitKey(1);
+    // Go crash heare with cuda function
     cv::cuda::remap(img_cuda_l, leftRectify, cuda_lmap_1, cuda_lmap_2, cv::INTER_LINEAR);
     cv::cuda::remap(img_cuda_r, rightRectify, cuda_rmap_1, cuda_rmap_2, cv::INTER_LINEAR);
+
     return {leftRectify, rightRectify};
 }
 

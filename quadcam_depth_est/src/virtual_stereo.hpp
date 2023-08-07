@@ -47,7 +47,7 @@ protected:
     cv::Rect roi_l;
     cv::Rect roi_r;
     //Rectify the images from pinhole images.
-    bool input_is_stereo;
+    bool input_is_stereo=false;
     cv::cuda::GpuMat inv_vingette_l, inv_vingette_r;
 public:
     bool enable_texture = true;
