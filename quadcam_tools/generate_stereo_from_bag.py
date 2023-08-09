@@ -66,6 +66,8 @@ EOF"""
     os.rename(results, f"{bagpath}/{output_calib_name}-results.txt")
     results = f"{bagpath}/{calibration_resualt_title}-camchain.yaml"
     os.rename(results, f"{bagpath}/{output_calib_name}.yaml")
+    results = f"{bagpath}/{calibration_resualt_title}-report-cam.pdf"
+    os.rename(results, f"{bagpath}/{output_calib_name}-report-cam.pdf")
     print("Finished calibrate:", output_calib_name)
 
 
