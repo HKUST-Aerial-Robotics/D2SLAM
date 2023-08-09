@@ -44,7 +44,8 @@ class FeatureImage:
 def parseMarkerFromBag(bag):
     feature_imgs = [] #num_frame,num_cam
     bag = rosbag.Bag(args.input)
-    num_imgs = bag.get_message_count("/arducam/image/compressed") + bag.get_message_count("/arducam/image")
+    num_imgs = bag.get_message_count("/arducam/image/compressed") + bag.get_message_count("/arducam/image") \
+          + bag.get_message_count("/oak_ffc_4p/assemble_image/compressed") + bag.get_message_count("/oak_ffc_4p/assemble_image")
     print("Total number of images:", num_imgs)
     bridge = CvBridge()
     pbar = tqdm.tqdm(total=num_imgs/args.step, colour="green")
@@ -52,7 +53,7 @@ def parseMarkerFromBag(bag):
     count = 0
     for topic, msg, t in bag.read_messages():
         try:
-            if topic == "/arducam/image/compressed" or topic == "/arducam/image/raw":
+            if topic == "/arducam/image/compressed" or topic == "/arducam/image/raw" or topic == "oak_ffc_4p/assemble_image/compressed" or topic == "/oak_ffc_4p/assemble_image":
                 if count % args.step != 0:
                     count += 1
                     continue
