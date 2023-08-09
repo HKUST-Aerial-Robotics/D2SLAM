@@ -9,7 +9,7 @@ import rosbag
 import tqdm
 from cv_bridge import CvBridge
 from quad_cam_split import split_image
-from test_depth_estimation import calib_photometric_imgs, loadConfig
+from test_depth_estimation import calib_photometric_imgs , loadConfig, calib_photometric_imgs_individual
 import os
 
 
@@ -106,9 +106,16 @@ def GetKalibrCalibrationCMD(topic_a, topic_b, bagfile, output_calib_name, verbos
 
 def kablirCalibratePinhole(topic_a, topic_b, bagfile, output_calib_name, verbose=False, init_focal_length=400):
     import subprocess
-    print("[DEBUG]bagfile xxxxxx", bagfile)
+    #debug
+    print("topic_a", topic_a)
+    print("topic_b", topic_b)
+    print("bagfile", bagfile)
+    print("output_calib_name", output_calib_name) 
+    print("verbose", verbose)
+    print("init_focal_length", init_focal_length)
+    print("debug end")
+
     bagname = os.path.basename(bagfile)
-    # bagname = bagfile.split(".")[0]
     bagpath = os.path.dirname(bagfile)
     print("[DEBUG]bagpath xxxxxx", bagpath)
     
@@ -122,14 +129,71 @@ source /catkin_ws/devel/setup.bash && \
 rosrun kalibr kalibr_calibrate_cameras --bag /data/{bagname} --target /data/aprilgrid.yaml --models pinhole-radtan pinhole-radtan --approx-sync 0.01 --topics {topic_a} {topic_b}"""
     if not verbose:
         cmd += " --dont-show-report"
-    with open(f"{bagpath}/stereo_calib_.sh", "w") as f:
+    cmd += f"""<<EOF 
+{init_focal_length}
+{init_focal_length}
+EOF"""
+    with open(f"{bagpath}/stereo_calib.sh", "w") as f:
         f.write(cmd)
     os.system(f"chmod +x {bagpath}/stereo_calib.sh")
-    dockercmd = f"""docker run --rm -e "DISPLAY" -e "QT_X11_NO_MITSHM=1" \
+    # dockercmd = f"""docker run  -it --rm -e "DISPLAY" -e "QT_X11_NO_MITSHM=1" \
+    # -v "/tmp/.X11-unix:/tmp/.X11-unix:rw" \
+    # -v "{bagpath}:/data" kalibr:latest /bin/bash /data/stereo_calib.sh"""
+    dockercmd = f"""docker run --rm --name "kalibr_d2slam" -e "DISPLAY" -e "QT_X11_NO_MITSHM=1" --entrypoint="/data/stereo_calib.sh" \
     -v "/tmp/.X11-unix:/tmp/.X11-unix:rw" \
-    -v "{bagpath}:/data" kalibr:latest /data/stereo_calib.sh"""
+    -v "{bagpath}:/data" kalibr:latest  """
     print(dockercmd)
-    print("debug xxxxxxx")
+    p_docker = subprocess.Popen(dockercmd, shell=True, stderr=subprocess.STDOUT)
+    p_docker.wait()
+    calibration_resualt_title = bagname.split(".")[0]
+    print("calibration_resualt_title", calibration_resualt_title)
+    results = f"{bagpath}/{calibration_resualt_title}-results-cam.txt"
+    os.rename(results, f"{bagpath}/{output_calib_name}-results.txt")
+    results = f"{bagpath}/{calibration_resualt_title}-camchain.yaml"
+    os.rename(results, f"{bagpath}/{output_calib_name}.yaml")
+    results = f"{bagpath}/{calibration_resualt_title}-report-cam.pdf"
+    os.rename(results, f"{bagpath}/{output_calib_name}-report-cam.pdf")
+    print("Finished calibrate:", output_calib_name)
+
+
+def kablirCalibratePinholeCMD(topic_a, topic_b, bagfile, output_calib_name, verbose=False, init_focal_length=400):
+    import subprocess
+    #debug
+    print("topic_a", topic_a)
+    print("topic_b", topic_b)
+    print("bagfile", bagfile)
+    print("output_calib_name", output_calib_name)
+    print("verbose", verbose)
+    print("init_focal_length", init_focal_length)
+    print("debug end")
+
+    bagname = os.path.basename(bagfile)
+    bagpath = os.path.dirname(bagfile)
+    if bagpath == "":
+        bagpath = os.getcwd()
+        print("bagpath", bagpath)
+    cmd = f"""#!/bin/bash
+export KALIBR_MANUAL_FOCAL_LENGTH_INIT=1 
+export KALIBR_FOCAL_LENGTH_INIT_VALUE={init_focal_length}
+source /catkin_ws/devel/setup.bash && \
+rosrun kalibr kalibr_calibrate_cameras --bag /data/{bagname} --target /data/aprilgrid.yaml --models pinhole-radtan pinhole-radtan --approx-sync 0.01 --topics {topic_a} {topic_b}"""
+    if not verbose:
+        cmd += " --dont-show-report"
+    topic_a = topic_a.replace("/compressed","") # remvoe /compressed from topic name
+    topic_b = topic_b.replace("/compressed","")
+    file_name_a = topic_a.split("/")[-1]
+    file_name_b = topic_b.split("/")[-1]
+    
+
+    with open(f"{bagpath}/stereo_calib{file_name_a}_{file_name_b}.sh", "w") as f:
+        print("file path is: ", f"{bagpath}/stereo_calib{file_name_a}_{file_name_b}.sh")
+        f.write(cmd)
+    os.system(f"chmod +x {bagpath}/stereo_calib{file_name_a}_{file_name_b}.sh")
+    dockercmd = f"""docker run -it --rm -e "DISPLAY" -e "QT_X11_NO_MITSHM=1" \
+    -v "/tmp/.X11-unix:/tmp/.X11-unix:rw" \
+    -v "{bagpath}:/data" kalibr:latest /data/stereo_calib.sh  /bin/bash"""
+    print(dockercmd)
+    # with new kalibr docker, this cmd can not run properly
     p_docker = subprocess.Popen(dockercmd, shell=True, stderr=subprocess.STDOUT)
     p_docker.wait()
     results = f"{bagpath}/{bagname}-results-cam.txt"
@@ -137,6 +201,8 @@ rosrun kalibr kalibr_calibrate_cameras --bag /data/{bagname} --target /data/apri
     results = f"{bagpath}/{bagname}-camchain.yaml"
     os.rename(results, f"{bagpath}/{output_calib_name}.yaml")
     print("Finished calibrate:", output_calib_name)
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Fisheye undist')
@@ -146,7 +212,7 @@ if __name__ == "__main__":
     parser.add_argument("-o","--output", type=str, default="", help="output path")
     parser.add_argument("-s","--step", type=int, default=1, help="step of stereo pair")
     parser.add_argument("-v","--verbose", action='store_true', help="show image")
-    parser.add_argument("-p","--photometric", type=str, help="photometric calibration image")
+    parser.add_argument("-p","--photometric", type=str, help="photometric calibration images path")
     parser.add_argument("-w","--width", type=int, default=600, help="width of image")
     parser.add_argument("--height", type=int, default=300, help="height of image")
     args = parser.parse_args()
@@ -155,29 +221,42 @@ if __name__ == "__main__":
     else:
         stereo_gens, _ = loadConfig(args.config, fov=args.fov, width=args.width, height=args.height)
     if args.output != "":
-        output_bag = rosbag.Bag(args.output, mode="w")
+        output_path = args.output
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+            print(f"{output_path} created")
+        output_bag_name = output_path + "/stereo_calibration.bag"
+        output_bag = rosbag.Bag(output_bag_name, mode="w")
     else:
         output_bag = None
 
     print("[Debug] ouputbag", args.output)
     #Read photometric
-    # if args.photometric != "":
-    #     print("Loading photometric calibration image")
-    #     photometric = cv.imread(args.photometric, cv.IMREAD_GRAYSCALE)/255.0
-    # else:
-    #     print("Using defualt photoemtric calibration image\n")
-    #     photometric = None
-    
+    photometrics = []
+    if args.photometric != "":
+        print("Loading photometric calibration images from path:", args.photometric)
+        for i in range(4):
+            vig_png_name = args.photometric +  f"/cam_{i}_vig_mask.png"
+            if not os.path.exists(vig_png_name):
+                print(f"vig_png_name {vig_png_name} does not exist")
+                exit(1)
+            vig_cali_pic = cv.imread(vig_png_name, cv.IMREAD_GRAYSCALE)/255.0
+            photometrics.append(vig_cali_pic)
+        # photometrics = cv.imread(args.photometric, cv.IMREAD_GRAYSCALE)/255.0
+    else:
+        photometrics = None
     #Read from bag
     bag = rosbag.Bag(args.input)
-    num_imgs = bag.get_message_count("/oak_ffc_4p/assemble_image/compressed") + bag.get_message_count("/oak_ffc_4p/assemble_image")
+    num_imgs = bag.get_message_count("/arducam/image/compressed") + bag.get_message_count("/arducam/image") + \
+        bag.get_message_count("/oak_ffc_4p/assemble_image/compressed") + bag.get_message_count("/oak_ffc_4p/assemble_image")
     print("Total number of images:", num_imgs)
     bridge = CvBridge()
     pbar = tqdm.tqdm(total=num_imgs//args.step, colour="green")
     count = 0
     for topic, msg, t in bag.read_messages():
         try:
-            if topic == "/oak_ffc_4p/assemble_image/compressed" or topic == "/oak_ffc_4p/assemble_image":
+            if topic == "/arducam/image/compressed" or topic == "/arducam/image/raw" \
+                    or topic == "/oak_ffc_4p/assemble_image/compressed" or topic == "/oak_ffc_4p/assemble_image":
                 if count % args.step != 0:
                     count += 1
                     continue
@@ -186,10 +265,7 @@ if __name__ == "__main__":
                 else:
                     img = bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='passthrough')
                 imgs = split_image(img)
-
-
-                # calibed = calib_photometric_imgs(imgs, photometric, is_rgb=False)
-                calibed = IndividualPhotometricCalibration(imgs,photometric_dir_path, is_rgb=False)
+                calibed = calib_photometric_imgs_individual(imgs, photometrics, is_rgb=False)
                 for gen in stereo_gens:
                     cam_idx_a = gen.cam_idx_a
                     cam_idx_b = gen.cam_idx_b
@@ -221,7 +297,5 @@ if __name__ == "__main__":
         idx_vcam_a = gen.idx_l
         idx_vcam_b = gen.idx_r
         topic_l, topic_r = f"/cam_{cam_idx_a}_{idx_vcam_a}/compressed", f"/cam_{cam_idx_b}_{idx_vcam_b}/compressed"
-        # kablirCalibratePinhole(topic_l, topic_r, args.output, f"stereo_calib_{cam_idx_a}_{cam_idx_b}_{args.height}_{args.width}", verbose = args.verbose, 
-        #         init_focal_length = stereo_gens[0].undist_l.focal_gen)
-        GetKalibrCalibrationCMD(topic_l, topic_r, args.output, f"stereo_calib_{cam_idx_a}_{cam_idx_b}_{args.height}_{args.width}", verbose = args.verbose, 
-                 init_focal_length_left=gen.undist_l.focal_gen, init_focal_length_right = gen.undist_r.focal_gen)
+        kablirCalibratePinhole(topic_l, topic_r, output_bag_name, f"stereo_calib_{cam_idx_a}_{cam_idx_b}_{args.height}_{args.width}", verbose = args.verbose, 
+            init_focal_length = stereo_gens[0].undist_l.focal_gen)
