@@ -89,14 +89,22 @@ def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300, h
                     [0, gamma2, v0],
                     [0, 0, 1]])
             D = np.array(distortion_coeffs)
-            T = np.array(config[v]['T_cam_imu'])
+            try:
+                T = np.array(config[v]['T_cam_imu'])
+            except: 
+                T = np.eye(4)
             undist = FisheyeUndist(K, D, xi, fov=fov, width=width, height=height, extrinsic=T)
             undists.append(undist)
     hitnet_model, is_rgb = loadCRENet() if hitnet else (None, False)
-    gens = [StereoGen(undists[1], undists[0], cam_idx_a=1,  cam_idx_b=0, hitnet_model=hitnet_model, is_rgb=is_rgb),
-            StereoGen(undists[2], undists[1], cam_idx_a=2,  cam_idx_b=1, hitnet_model=hitnet_model, is_rgb=is_rgb),
-            StereoGen(undists[3], undists[2], cam_idx_a=3,  cam_idx_b=2, hitnet_model=hitnet_model, is_rgb=is_rgb),
-            StereoGen(undists[0], undists[3], cam_idx_a=0,  cam_idx_b=3, hitnet_model=hitnet_model, is_rgb=is_rgb)]
+    # gens = [StereoGen(undists[1], undists[0], cam_idx_a=1,  cam_idx_b=0, hitnet_model=hitnet_model, is_rgb=is_rgb),
+    #         StereoGen(undists[2], undists[1], cam_idx_a=2,  cam_idx_b=1, hitnet_model=hitnet_model, is_rgb=is_rgb),
+    #         StereoGen(undists[3], undists[2], cam_idx_a=3,  cam_idx_b=2, hitnet_model=hitnet_model, is_rgb=is_rgb),
+    #         StereoGen(undists[0], undists[3], cam_idx_a=0,  cam_idx_b=3, hitnet_model=hitnet_model, is_rgb=is_rgb)]
+    
+    gens = [StereoGen(undists[0], undists[1], cam_idx_a=0,  cam_idx_b=1, hitnet_model=hitnet_model, is_rgb=is_rgb),
+        StereoGen(undists[1], undists[2], cam_idx_a=1,  cam_idx_b=2, hitnet_model=hitnet_model, is_rgb=is_rgb),
+        StereoGen(undists[2], undists[3], cam_idx_a=2,  cam_idx_b=3, hitnet_model=hitnet_model, is_rgb=is_rgb),
+        StereoGen(undists[3], undists[0], cam_idx_a=3,  cam_idx_b=0, hitnet_model=hitnet_model, is_rgb=is_rgb)]
     for i in range(len(config_stereos)):
         initStereoFromConfig(config_stereos[i], gens[i], force_width=width)
     return gens, is_rgb
@@ -193,6 +201,18 @@ def calib_photometric_imgs(imgs, photometric, is_rgb=True):
         photometric_calibed = imgs
     return photometric_calibed
                     
+def calib_photometric_imgs_individual(imgs, photometrics, is_rgb=True):
+    photometric_calibed = []
+    if photometrics is not None:
+        #Convert to grayscale
+        for i in range(len(imgs)):
+            calibed = calib_photometric(imgs[i], photometrics[i], is_rgb=is_rgb)
+            photometric_calibed.append(calibed)
+    else:
+        photometric_calibed = imgs
+    return photometric_calibed
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Fisheye undist')
     parser.add_argument("-i","--input", type=str, help="input bag file")
