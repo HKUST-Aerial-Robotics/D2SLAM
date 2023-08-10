@@ -27,11 +27,14 @@ QuadCamDepthEst::QuadCamDepthEst(ros::NodeHandle & _nh): nh(_nh) {
     int pn = quadcam_depth_config_file.find_last_of('/');    
     std::string configPath = quadcam_depth_config_file.substr(0, pn);
     YAML::Node config = YAML::LoadFile(quadcam_depth_config_file);
-    enable_texture = config["enable_texture"].as<bool>();
-    pixel_step = config["pixel_step"].as<int>();
-    image_step = config["image_step"].as<int>();
-    min_z = config["min_z"].as<double>();
-    max_z = config["max_z"].as<double>();
+    this->enable_texture = config["enable_texture"].as<bool>();
+    this->pixel_step = config["pixel_step"].as<int>();
+    this->image_step = config["image_step"].as<int>();
+    this->min_z = config["min_z"].as<double>();
+    this->max_z = config["max_z"].as<double>();
+    this->width = config["width"].as<int>();
+    this->height = config["height"].as<int>();
+
     loadCNN(config);
     loadCameraConfig(config, configPath);
     std::string format = "raw"; //TODO: make it configurable
@@ -130,6 +133,7 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
     std::vector<cv::Mat> imgs_gray;
     const int num_imgs = 4;
     cv::imshow("receive",img);
+    printf("[Debug] image size %d %d\n", img.cols, img.rows);
     for (int i = 0; i < 4; i++) {
         imgs.emplace_back(img(cv::Rect(i * img.cols /num_imgs, 0, img.cols /num_imgs, img.rows)));
         if (!cnn_rgb) {
@@ -231,8 +235,10 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
             if(photometric_inv_idx >=4 || photometric_inv_idx < 0){
                 photometric_inv_idx = 0;
             }
+            printf("[Debug ]undistortor matrix init with size width:%d height:%d\n",this->width,this->height);
             undistortors.push_back(new D2Common::FisheyeUndist(ret.first, 0, fov, true,
-                D2Common::FisheyeUndist::UndistortPinhole2, width, height, photometric_inv_vec[photometric_inv_idx]));
+                D2Common::FisheyeUndist::UndistortPinhole2, this->width, this->height, photometric_inv_vec[photometric_inv_idx]));
+            printf("[Debug] undistorter width and height:%d %d\n",this->width,this->height);
             photometric_inv_idx++;
         }
         raw_cam_extrinsics.emplace_back(ret.second);
@@ -287,8 +293,10 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
     }
 }
 
-std::pair<cv::Mat, cv::Mat> intrinsicsFromNode(const YAML::Node & node) {
+std::pair<cv::Mat, cv::Mat> QuadCamDepthEst::intrinsicsFromNode(const YAML::Node & node) {
     cv::Mat K = cv::Mat::eye(3, 3, CV_64FC1);
+    printf("calibration parameters in size  height:%d width:%d\n",node["resolution"][1].as<int>(),node["resolution"][0].as<int>());
+
     K.at<double>(0, 0) = node["intrinsics"][0].as<double>();
     K.at<double>(1, 1) = node["intrinsics"][1].as<double>();
     K.at<double>(0, 2) = node["intrinsics"][2].as<double>();

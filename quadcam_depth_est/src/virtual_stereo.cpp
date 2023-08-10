@@ -21,7 +21,8 @@ VirtualStereo::VirtualStereo(int _cam_idx_a, int _cam_idx_b,
     cam_idx_a(_cam_idx_a), cam_idx_b(_cam_idx_b), undist_left(_undist_left), undist_right(_undist_right),
     undist_id_l(_undist_id_l), undist_id_r(_undist_id_r), hitnet(_hitnet), crestereo(_crestereo) { 
     auto cam_param_left = static_cast<const camodocal::PinholeCamera*>(undist_left->cam_side.get())->getParameters();
-    img_size = cv::Size(cam_param_left.imageWidth(), cam_param_left.imageHeight());
+    printf("[Debug]camera_left size:%d %d\n",cam_param_left.imageWidth(),cam_param_left.imageHeight());
+    this->img_size = cv::Size(cam_param_left.imageWidth(), cam_param_left.imageHeight());
     cv::Mat K_left = (cv::Mat_<double>(3,3) << cam_param_left.fx(), 0, cam_param_left.cx(), 0, cam_param_left.fy(), cam_param_left.cy(), 0, 0, 1);
     auto cam_param_right = static_cast<const camodocal::PinholeCamera*>(_undist_right->cam_side.get())->getParameters();
     // img_size = cv::Size(cam_param.imageWidth(), cam_param.imageHeight());
@@ -103,10 +104,10 @@ void VirtualStereo::initRecitfy(const Swarm::Pose & baseline, cv::Mat K0, cv::Ma
     initUndistortRectifyMap(K0, D0, R1, T1, img_size, CV_32FC1, lmap_1, lmap_2);
     initUndistortRectifyMap(K1, D1, R2, T2, img_size, CV_32FC1, rmap_1, rmap_2);
     // printf("[Debug] rmap init\n");
-    // std::cout << "[Debug]K0: " << K0 << std::endl;
-    // std::cout << "[Debug]K1: " << K1 << std::endl;
-    // std::cout << "[Debug]D0: " << D0 << std::endl;
-    // std::cout << "[Debug]D1: " << D1 << std::endl;
+    std::cout << "[Debug]K0: " << K0 << std::endl;
+    std::cout << "[Debug]K1: " << K1 << std::endl;
+    std::cout << "[Debug]D0: " << D0 << std::endl;
+    std::cout << "[Debug]D1: " << D1 << std::endl;
     // std::cout << "[Debug]lmap_1: " << lmap_1 << std::endl;
     // std::cout << "[Debug]lmap_2: " <<lmap_2 << std::endl;
     cuda_lmap_1.upload(lmap_1);
@@ -130,8 +131,10 @@ std::pair<cv::Mat, cv::Mat>VirtualStereo::estimateDisparityViaRaw(const cv::Mat 
     // printf("[Debug] debug ouput\n");
     auto ret = rectifyImage(left, right);
     cv::Mat limg_rect(ret[0]), rimg_rect(ret[1]);
+
     // cv::imshow("raw",left);
     // cv::imshow("rectify",limg_rect);
+    // cv::waitKey(0);
 
     // printf("l_img_shape width %d  hight %d\n",limg_rect.cols,limg_rect.rows);
     auto disp = estimateDisparity(limg_rect, rimg_rect);
@@ -200,16 +203,14 @@ std::vector<cv::cuda::GpuMat> VirtualStereo::rectifyImage(const cv::Mat & left, 
     }
     //Bug Here lamp_1 and lmap_2 generation faield
 
-    
-    // cv::Mat rectify_left;
-    // cv::remap(left,rectify_left,this->lmap_1,this->lmap_2,cv::INTER_LINEAR);
-    // cv::Mat new_mat;
-    // // cv::hconcat(left,rectify_left,new_mat);
-    // cv::imshow("cv funciton",rectify_left);
-    // cv::waitKey(1);
-    // Go crash heare with cuda function
+    cv::Mat undist_left(img_cuda_l);
+    cv::imshow("undist_left",undist_left);
+    printf("[Debug]undist_left size %d %d\n",undist_left.cols,undist_left.rows);
+
     cv::cuda::remap(img_cuda_l, leftRectify, cuda_lmap_1, cuda_lmap_2, cv::INTER_LINEAR);
     cv::cuda::remap(img_cuda_r, rightRectify, cuda_rmap_1, cuda_rmap_2, cv::INTER_LINEAR);
+    cv::Mat rectify_l(leftRectify);
+    printf("[Debug]rectify image size:%d %d\n",rectify_l.cols,rectify_l.rows);
 
     return {leftRectify, rightRectify};
 }
