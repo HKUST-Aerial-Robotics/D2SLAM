@@ -123,9 +123,9 @@ def kablirCalibratePinhole(topic_a, topic_b, bagfile, output_calib_name, verbose
         bagpath = os.getcwd()
         print("bagpath", bagpath)
     cmd = f"""#!/bin/bash
-export KALIBR_MANUAL_FOCAL_LENGTH_INIT=1 \
-export KALIBR_FOCAL_LENGTH_INIT_VALUE={init_focal_length} \
-source /catkin_ws/devel/setup.bash && \
+export KALIBR_MANUAL_FOCAL_LENGTH_INIT=1
+export KALIBR_FOCAL_LENGTH_INIT_VALUE={init_focal_length}
+source /catkin_ws/devel/setup.bash &&
 rosrun kalibr kalibr_calibrate_cameras --bag /data/{bagname} --target /data/aprilgrid.yaml --models pinhole-radtan pinhole-radtan --approx-sync 0.01 --topics {topic_a} {topic_b}"""
     if not verbose:
         cmd += " --dont-show-report"
