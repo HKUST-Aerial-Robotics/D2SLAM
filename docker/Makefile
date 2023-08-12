@@ -13,13 +13,16 @@ pc:
 	@docker build  -t d2slam:pc -f ./Dockerfile ..
 
 jetson:
-	@docker build  -t d2slam:jetson -f ./Dockerfile.jetson ..
+	@docker build  -t d2slam:jetson_nx -f ./Dockerfile.jetson ..
 
 jetson_base:
-	@docker build  -t d2slam:jetson_base_35.1.0 -f ./Dockerfile.jetson_base_35.1.0 --build-arg USE_PROC=20 ..
+	@docker build  -t d2slam:jetson_nx_base_35.1.0 -f ./Dockerfile.jetson_base_35.1.0 --build-arg USE_PROC=20 ..
 
 jetson_orin_base:
 	@docker build  -t d2slam:jetson_orin_base_35.3.1 -f ./Dockerfile.jetson_orin_base_35.3.1 --build-arg USE_PROC=20 ..
+
+jeston_orin:
+	@docker build  -t d2slam:jetson_orin -f ./Dockerfile.jetson_orin --build-arg USE_PROC=20 ..
 
 clean:
 	@docker rmi -f d2slam:pc

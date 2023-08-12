@@ -3,10 +3,10 @@
 # Usage: ./start_docker.sh  1 to start docker only for image transportation.
 # Please do not move this file to other dir, it will cause the docker container can not find the current dir.
 SWARM_WS=/root/swarm_ws
-DOCKERIMAGE="d2slam:pc"
-DATA_SET=/media/khalil/ssd_data/data_set
-HITNET=/home/khalil/workspace/d2slam_ws/src/ONNX-HITNET-Stereo-Depth-estimation
-CRESTEREO=/home/khalil/workspace/d2slam_ws/src/ONNX-CREStereo-Depth-Estimation
+DOCKERIMAGE="d2slam:jetson_orin"
+DATA_SET=/home/dji/workspace/bag
+HITNET=/home/dji/workspace/d2slam-fusion/d2slam_ws/src/ONNX-HITNET-Stereo-Depth-estimation
+CRESTEREO=/home/dji/workspace/d2slam-fusion/d2slam_ws/src/ONNX-CREStereo-Depth-Estimation
 
 if [ $# -eq 0 ]; then
   echo "[INFO] No start option, will start docker container only for application"
