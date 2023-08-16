@@ -55,6 +55,9 @@ RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` ma
       rosdep init && \
       rosdep update
 
+#Install python env
+RUN pip install onnxruntime-gpu tqdm 
+
 #Replace CMAKE
 RUN   rm /usr/bin/cmake && \
       wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh \
