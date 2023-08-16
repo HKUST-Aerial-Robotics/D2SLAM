@@ -79,7 +79,7 @@ def loadHitnet():
     return HitNet(model_path, ModelType.eth3d), False
 
 def loadCRENet():
-    print("Loading hitnet...")
+    print("Loading CRENET...")
     CRENETPath = '/root/swarm_ws/src/ONNX-CREStereo-Depth-Estimation'
     # CRENETPath = '/home/dji/source/ONNX-CREStereo-Depth-Estimation'
     sys.path.insert(0, CRENETPath)
@@ -91,7 +91,7 @@ def loadCRENet():
     depth_estimator = CREStereo(model_path)
     return depth_estimator, True
 
-def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300, hitnet=False):
+def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300, hitnet=True):
     print("Loading config from", config_file)
     import yaml
     undists = []

@@ -12,18 +12,7 @@ from quad_cam_split import split_image
 from test_depth_estimation import calib_photometric_imgs , loadConfig, calib_photometric_imgs_individual
 import os
 
-
-# def calib_photometric_imgs(imgs, photometric, is_rgb=True):
-#     photometric_calibed = []
-#     if photometric is not None:
-#         #Convert to grayscale
-#         for img in imgs:
-#             calibed = calib_photometric(img, photometric, is_rgb=is_rgb)
-#             photometric_calibed.append(calibed)
-#     else:
-#         photometric_calibed = imgs
-#     return photometric_calibed
-
+# set photometric mask before run this tool
 photometric_dir_path = "/media/khalil/ssd_data/data_set/omni-pinhole/camera_stereo_calib/config/camera_vig_mask/"
 
 

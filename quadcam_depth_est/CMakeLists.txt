@@ -74,6 +74,9 @@ target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
+
+
+
 target_link_libraries(${PROJECT_NAME}_test
   ${catkin_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
@@ -81,4 +84,3 @@ target_link_libraries(${PROJECT_NAME}_test
   ${d2frontend_LIBRARIES}
   onnxruntime
 )
-

@@ -30,7 +30,7 @@ public:
                 input_image_mat = cv::Mat(height*2, width, CV_32FC3);
                 this->input_image_mat_vec.push_back(input_image_mat);
             } else {
-                input_image_mat = cv::Mat(height*2, width, CV_32FC1);
+                input_image_mat = cv::Mat(height*2, width, CV_32F);
                 this->input_image_mat_vec.push_back(input_image_mat);
             }
             //create input_tensor
@@ -38,26 +38,40 @@ public:
                 input_image_mat.ptr<float>() , 2*width*height, 
                 this->input_shape_.data(), this->input_shape_.size()));
             //create output_tensor
-            float* data_ptr = new float[this->width * this->height];
-            if(data_ptr == nullptr){
-                ROS_ERROR("[ONNX HITNET] Failed to allocate memory for output tensor\n");
-                exit(-1);
-            }
-            this->output_data_ptr_vec.push_back(data_ptr);
-            this->output_tensors_.push_back(Ort::Value::CreateTensor<float>(memory_info,
-                data_ptr, this->width* this->height, this->output_shape_.data(), this->output_shape_.size()));
+            // float* data_ptr = new float[this->width * this->height];
+            // if(data_ptr == nullptr){
+            //     ROS_ERROR("[ONNX HITNET] Failed to allocate memory for output tensor\n");
+            //     exit(-1);
+            // }
+            // this->output_data_ptr_vec.push_back(data_ptr);
+            // this->output_tensors_.push_back(Ort::Value::CreateTensor<float>(memory_info,
+            //     data_ptr, this->width* this->height, this->output_shape_.data(), this->output_shape_.size()));
+
         }
         // this->output_tensor_ = Ort::Value::CreateTensor<float>(memory_info,
         //     p_results_, width*height, output_shape_.data(), output_shape_.size());
         printf("[ONNX HITNET] initialized\n");
     }
+    
+    ~HitnetONNX(){
+        if(this->output_data_ptr_vec.size()>0){
+            for(int i = 0 ; i < this->output_data_ptr_vec.size(); i++){
+                free(this->output_data_ptr_vec[i]);
+            }
+        }
+        printf("release molloc\n");
+    }
 
     virtual void doInference() {
         const char* input_names[] = {m_InputBlobName.c_str()};
         const char* output_names[] = {output_name.c_str()};
-        // session_->Run(Ort::RunOptions{nullptr}, input_names, &input_tensor_, 1, output_names, &output_tensor_, 1);
-        session_->Run(Ort::RunOptions{nullptr}, input_names, this->input_tensors_.data(), 
-            this->input_tensors_.size(),output_names,output_name.size());
+        printf("[ONNX HITNET] run intference\n");
+        std::vector<Ort::Value> ouput_tensors_local;
+
+        // session_->Run(Ort::RunOptions{nullptr}, input_names, &this->input_tensors_, 1, output_names, &this->output_tensors_, 1);
+        this->session_->Run(Ort::RunOptions{nullptr}, input_names, this->input_tensors_.data(), 
+            this->input_tensors_.size(), output_names ,ouput_tensors_local.data(), 4);
+        printf("get ouput tensor\n");
     }
 
     cv::Mat inference(const cv::Mat & input_left, const cv::Mat & input_right) {
@@ -77,7 +91,7 @@ public:
         cv::Mat input;
         cv::vconcat(_input_left, _input_right, input);
         input.convertTo(input_image_mat, CV_32F, 1.0/255.0);
-        doInference();
+        // doInference();
         printf("HitnetONNX::inference() took %f ms\n", tic.toc());
         return cv::Mat(this->height, this->width, CV_32F, this->p_results_);
     }

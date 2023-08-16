@@ -6,9 +6,19 @@ import numpy as np
 import onnxruntime
 import cv2 as cv
 
+#modify the path to your own path
+input_data_shape = [240,320]
+mobilenetvlad_net_path = "../models/mobilenetvlad_240x320.onnx"
+superpoint_net_path = "../models/superpoint_240x320.onnx"
+data_set = "../sample_data/fisheye.jpg"
+
+hitnet_path = "../models/hitnet_240x320.onnx"
+crestereo_path = "../models/crestereo_240x320.onnx"
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate the superpoint+mobilenetvlad')
-    parser.add_argument('--model', type=str, help='path to the model', default="../models/mobilenetvlad_240x320.onnx")
+    parser.add_argument('--model', type=str, help='path to the model', default="../models/superpoint_v1_dyn_size.onnx")
     parser.add_argument('--input', type=str, help='path to the input', default="../sample_data/fisheye.jpg")
     parser.add_argument('--enable-int8', action='store_true', help='enable int8')
     parser.add_argument('--enable-fp16', action='store_true', help='enable fp16', default="True")

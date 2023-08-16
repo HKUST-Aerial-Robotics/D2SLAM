@@ -72,6 +72,7 @@ void QuadCamDepthEst::loadCNN(YAML::Node & config) {
         nh.param<std::string>("cnn_model_path", cnn_model_path, "");
         if (cnn_type == "hitnet") {
             hitnet = new HitnetONNX(cnn_model_path, width, height, cnn_use_tensorrt, cnn_fp16, cnn_int8);
+            printf("[DEBUG] Hit NET\n");            
             cnn_rgb = false;
         } 
         if (cnn_type == "crestereo") {
@@ -105,6 +106,7 @@ void QuadCamDepthEst::stereoImagesCallback(const sensor_msgs::ImageConstPtr left
     }
     std::pair<cv::Mat, cv::Mat> ret = virtual_stereos[0]->estimatePointsViaRaw(cv_ptr_l->image, cv_ptr_r->image, cv_ptr_l->image, show);
     if (enable_texture) {
+        printf("[Debug] texture\n");
         addPointsToPCL(ret.first, ret.second, virtual_stereos[0]->extrinsic, *pcl_color, pixel_step, min_z, max_z);
     } else {
         addPointsToPCL(ret.first, ret.second, virtual_stereos[0]->extrinsic, *pcl, pixel_step, min_z, max_z);
