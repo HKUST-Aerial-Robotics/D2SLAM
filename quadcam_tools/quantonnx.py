@@ -1,3 +1,4 @@
+# use this script to calibrate int8 mdoel
 #!/usr/bin/env python3
 from onnxruntime.quantization import CalibrationDataReader, create_calibrator, write_calibration_table, CalibrationMethod
 import os
@@ -94,4 +95,6 @@ if __name__ == "__main__":
     os.rename("calibration.flatbuffers", "../models/mobilenetvlad_calibration.flatbuffers")
     os.rename("calibration.cache", "../models/mobilenetvlad_calibration.cache")
     os.rename("calibration.json", "../models/mobilenetvlad_calibration.json")
+
+
     

@@ -28,8 +28,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Extract png from rosbag')
     parser.add_argument('--bag', type=str, help='path to rosbag')
     parser.add_argument('--output', type=str, help='path to output folder')
-    parser.add_argument('--step', type=str, help='path to calibration file')
-    parser.add_argument('--number', type=int, help='path to calibration file')
+    parser.add_argument('--step', type=int, help='path to calibration file',default=1)
+    parser.add_argument('--number', type=int, help='path to calibration file',default=-1)
     parser.add_argument('--width', type=int, help='path to calibration file')
     parser.add_argument('--height', type=int, help='path to calibration file')
     args = parser.parse_args()
@@ -57,6 +57,8 @@ if __name__ == "__main__":
     for topic in topic_list:
         num_imgs += bag.get_message_count(topic)
     print ("num_imgs: ", num_imgs)
+    if(args.number ==-1 or args.number > num_imgs):
+        args.number = num_imgs
 
     init_topic_counter()
 
@@ -103,6 +105,8 @@ if __name__ == "__main__":
                     print("Can not resize image to define shape\n")
                     exit(1)
             sub_dir_name = topic.replace("/", "_")
+            if sub_dir_name[0] == "_":
+                sub_dir_name = sub_dir_name[1:]
             output_path_dir = ouput_path + "/" + sub_dir_name +"/"
             print("sub_dir_name: ", output_path_dir)
             break
@@ -120,6 +124,8 @@ if __name__ == "__main__":
                     cv_img = CvBridge().compressed_imgmsg_to_cv2(msg, desired_encoding="passthrough")
                     cv_img = cv.cvtColor(cv_img, cv.COLOR_BGR2RGB)
                     sub_dir_name = topic.replace("/", "_")
+                    if sub_dir_name[0] == "_":
+                        sub_dir_name = sub_dir_name[1:]
                     output_path_dir = ouput_path + "/" + sub_dir_name +"/"
                     if os.path.exists(output_path_dir) == False:
                         os.makedirs(output_path_dir)

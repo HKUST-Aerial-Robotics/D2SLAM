@@ -67,6 +67,7 @@ if __name__ == '__main__':
     
     if args.model == "cre":
       model_path = LoadCreNet()
+      # model_path = "/root/swarm_ws/src/D2SLAM/models/cretereo_combined_iter5_240x320/crestereo_combined_iter5_240x320_augmented_model.onnx"
     elif args.model == "hit":
       model_path = LoadHitNet()
 
