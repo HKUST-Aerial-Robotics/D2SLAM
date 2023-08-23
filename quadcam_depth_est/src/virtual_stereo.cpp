@@ -132,8 +132,9 @@ std::pair<cv::Mat, cv::Mat>VirtualStereo::estimateDisparityViaRaw(const cv::Mat 
     auto ret = rectifyImage(left, right);
     cv::Mat limg_rect(ret[0]), rimg_rect(ret[1]);
 
-    // cv::imshow("raw",left);
-    // cv::imshow("rectify",limg_rect);
+    cv::imshow("raw",left);
+    cv::imshow("rectify",limg_rect);
+    cv::waitKey(1);
     // cv::waitKey(0);
 
     // printf("l_img_shape width %d  hight %d\n",limg_rect.cols,limg_rect.rows);

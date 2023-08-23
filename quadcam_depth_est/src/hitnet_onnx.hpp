@@ -12,8 +12,8 @@ protected:
     std::array<int64_t, 4> input_shape_;
     cv::Mat input_image_mat;
 public:
-    HitnetONNX(std::string engine_path, int _width, int _height, bool use_tensorrt = true, bool use_fp16 = true, bool use_int8 = false): 
-            ONNXInferenceGeneric(engine_path, "input", "reference_output_disparity", _width, _height, use_tensorrt, use_fp16, use_int8),
+    HitnetONNX(std::string engine_path, std::string flatbuffer_path,int _width, int _height, bool use_tensorrt = true, bool use_fp16 = true, bool use_int8 = false): 
+            ONNXInferenceGeneric(engine_path, "input", "reference_output_disparity", _width, _height, use_tensorrt, use_fp16, use_int8, flatbuffer_path),
             output_shape_{1, _height, _width, 1},
             input_shape_{1, 2, _height, _width} {
         std::cout << "Trying to init HitnetONNX@" << engine_path << std::endl;

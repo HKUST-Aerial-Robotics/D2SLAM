@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
     cv::imshow("DisparityOCV", disp_show);
 
     if (engine_path != "") {
-        HitnetONNX hitnet_onnx(engine_path, 320, 240);
+        HitnetONNX hitnet_onnx(engine_path, "",320, 240);
         auto disp = hitnet_onnx.inference(rect_l, rect_r);
         TicToc t;
         for (int i = 0 ; i < 100; i ++) {

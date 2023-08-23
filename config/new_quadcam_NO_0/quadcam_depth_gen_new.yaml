@@ -1,10 +1,11 @@
 enable_cnn: true
-cnn_int8: false
+cnn_int8: true
 cnn_fp16: true
 cnn_use_tensorrt: true
-# cnn_type: "hitnet"
-cnn_type: "crestereo"
+cnn_type: "hitnet"
+# cnn_type: "crestereo"
 enable_texture: true
+calib_table: "model_float32_int8.flatbuffers"
 
 # network size 
 width: 320
@@ -16,7 +17,7 @@ min_z: 0.3
 calib_file_path: "./quad_cam_calib-camchain-imucam-new-3.yaml"
 fov: 190
 photometric_calib_numbers: 4
-photometric_calib_path: /root/swarm_ws/src/D2SLAM/config/new_quadcam/camera_vig_mask/
+photometric_calib_path: "/root/swarm_ws/src/D2SLAM/config/new_quadcam_NO_0/camera_vig_mask/"
 photometric_calib: "mask.png"
 avg_brightness: 0.7
 stereos:
@@ -27,22 +28,22 @@ stereos:
     idx_r: 0
     #means 0_1 camera pair with 1_0 camera pair
     stereo_config: "./stereo_calib_0_1_240_320.yaml"
-  # stereo2_1:
-  #   cam_idx_l: 1 
-  #   cam_idx_r: 2
-  #   idx_l: 1
-  #   idx_r: 0
-  #   stereo_config: "./stereo_calib_1_2_256_256.yaml"
-  # stereo3_2:
-  #   cam_idx_l: 2
-  #   cam_idx_r: 3
-  #   idx_l: 1
-  #   idx_r: 0
-  #   stereo_config: "./stereo_calib_2_3_256_256.yaml"
-  # stereo0_3:
-  #   cam_idx_l: 3
-  #   cam_idx_r: 0
-  #   idx_l: 1
-  #   idx_r: 0
-  #   stereo_config: "./stereo_calib_3_0_240_320.yaml"
+  stereo2_1:
+    cam_idx_l: 1 
+    cam_idx_r: 2
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "./stereo_calib_1_2_240_320.yaml"
+  stereo3_2:
+    cam_idx_l: 2
+    cam_idx_r: 3
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "./stereo_calib_2_3_240_320.yaml"
+  stereo0_3:
+    cam_idx_l: 3
+    cam_idx_r: 0
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "./stereo_calib_3_0_240_320.yaml"
 camera_configuration: 3

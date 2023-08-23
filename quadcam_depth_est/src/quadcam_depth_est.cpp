@@ -65,13 +65,14 @@ void QuadCamDepthEst::loadCNN(YAML::Node & config) {
     width = config["width"].as<int>();
     height = config["height"].as<int>();
     if (enable_cnn) {
-        std::string cnn_model_path;
+        std::string cnn_model_path, cnn_calib_table;
         bool cnn_use_tensorrt = config["cnn_use_tensorrt"].as<bool>();
         bool cnn_int8 = config["cnn_int8"].as<bool>();
         bool cnn_fp16 = config["cnn_fp16"].as<bool>();
         nh.param<std::string>("cnn_model_path", cnn_model_path, "");
+        cnn_calib_table = config["calib_table"].as<std::string>();
         if (cnn_type == "hitnet") {
-            hitnet = new HitnetONNX(cnn_model_path, width, height, cnn_use_tensorrt, cnn_fp16, cnn_int8);
+            hitnet = new HitnetONNX(cnn_model_path, cnn_calib_table,width, height, cnn_use_tensorrt, cnn_fp16, cnn_int8);
             cnn_rgb = false;
         } 
         if (cnn_type == "crestereo") {
@@ -132,8 +133,8 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
     std::vector<cv::Mat> imgs;
     std::vector<cv::Mat> imgs_gray;
     const int num_imgs = 4;
-    cv::imshow("receive",img);
-    printf("[Debug] image size %d %d\n", img.cols, img.rows);
+    // cv::imshow("receive",img);
+    // printf("[Debug] image size %d %d\n", img.cols, img.rows);
     for (int i = 0; i < 4; i++) {
         imgs.emplace_back(img(cv::Rect(i * img.cols /num_imgs, 0, img.cols /num_imgs, img.rows)));
         if (!cnn_rgb) {
