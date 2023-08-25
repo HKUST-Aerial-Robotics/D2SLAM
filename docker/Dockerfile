@@ -20,7 +20,7 @@ RUN  apt-get -y update && \
       libglib2.0-dev \
       libyaml-cpp-dev \
       libdw-dev \
-      vim 
+      vim
 
 #Install ROS
 # update ros repository
@@ -72,9 +72,7 @@ RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       cd ceres-solver && \
       mkdir build && cd build && \
       cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
-      #Change to `make -j2 install` if this installation runs failed
-      make -j$(USE_PROC) install && \ 
-      # make -j2 install && \
+      make -j$(nproc) install && \
       rm -rf ../../ceres-solver && \
       apt-get clean all
 
@@ -103,14 +101,14 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
       git checkout tags/v1.4.0 && \
       mkdir build && cd build && \
       cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
-      make -j$(USE_PROC) install && \
+      make -j$(nproc) install && \
       pip install lcm
 
 #Install Faiss
 RUN   git clone https://github.com/facebookresearch/faiss.git && \
       cd faiss && git checkout tags/v${FAISS_VERSION} && \
       cmake -B build -DCMAKE_BUILD_TYPE=Release -DFAISS_OPT_LEVEL=avx2 -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF -DFAISS_ENABLE_GPU=OFF . && \
-      make -C build -j faiss && \
+      make -C build -j$(nproc) faiss && \
       make -C build install && \
       rm -rf ../faiss
 
@@ -143,14 +141,12 @@ RUN   cd opencv-${OPENCV_VERSION} && \
 cudev,cudaoptflow,cudaimgproc,cudalegacy,cudaarithm,cudacodec,cudastereo,\
 cudafeatures2d,xfeatures2d,tracking,stereo,\
 aruco,videoio,ccalib && \
-      # this make comman raises most of failed cases
-      make -j $(USE_PROC) && \
-      # make -j8 install && \
+      make -j$(nproc) && \
       make install 
 
 #Install OpenGV
 RUN git clone https://github.com/HKUST-Swarm/opengv && \
-      mkdir opengv/build && cd opengv/build && cmake .. && make && \
+      mkdir opengv/build && cd opengv/build && cmake .. && make -j$(nproc) && \
       make install
 
 #Install Backward
