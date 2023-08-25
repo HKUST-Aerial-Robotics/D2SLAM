@@ -39,6 +39,8 @@ jobs:
         tags: |
           hkustswarm/d2slam:${{ steps.date.outputs.today }}
           hkustswarm/d2slam:latest
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache
 
   build-ARM64:
 
@@ -71,6 +73,8 @@ jobs:
         tags: |
           hkustswarm/d2slam:jetson_base_35.1.0-${{ steps.date.outputs.today }}
           hkustswarm/d2slam:jetson_base_35.1.0
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache
     -
       name: Build-app and push
       uses: docker/build-push-action@v3
@@ -81,3 +85,5 @@ jobs:
         tags: |
           hkustswarm/d2slam:jetson-${{ steps.date.outputs.today }}
           hkustswarm/d2slam:jetson
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache
