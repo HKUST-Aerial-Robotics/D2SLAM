@@ -24,6 +24,9 @@ struct D2VINSConfig {
     double gyr_w = 0.0004;
     double focal_length = 460.0;
     double initial_pos_sqrt_info = 1000.0;
+    double initial_vel_sqrt_info = 100.0;
+    double initial_ba_sqrt_info = 5.0;
+    double initial_bg_sqrt_info = 10.0;
     double initial_yaw_sqrt_info = 10000.0;
     double initial_cam_pos_sqrt_info = 1000.0;
     double initial_cam_ang_sqrt_info = 10000.0;

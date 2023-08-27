@@ -455,25 +455,31 @@ void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame * frame) {
     //A is a 6x6 matrix, A = diag([a_p, a_p, a_p, 0, 0, a_yaw])
     //b is zero vector
     int local_cam_num = params->camera_num;
-    printf("\033[0;32m[D2VINS::D2Estimator] Add prior for first frame and extrinsic %d: %d\033[0m\n", params->estimate_extrinsic, local_cam_num);
-    int Adim = POSE_EFF_SIZE + (params->estimate_extrinsic?POSE_EFF_SIZE*local_cam_num: 0);
+    printf("\033[0;32m[D2VINS::D2Estimator] Add prior for first frame, extrinsic %d: %d and speed\033[0m\n", params->estimate_extrinsic, local_cam_num);
+    int Adim = POSE_EFF_SIZE + FRAME_SPDBIAS_SIZE + (params->estimate_extrinsic?POSE_EFF_SIZE*local_cam_num: 0);
     printf("Admin %d\n", Adim);
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(Adim, Adim);
     A.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * params->initial_pos_sqrt_info;
     A(5, 5) = params->initial_yaw_sqrt_info;
+    A.block<3, 3>(POSE_EFF_SIZE, POSE_EFF_SIZE) = Eigen::Matrix3d::Identity() * params->initial_vel_sqrt_info;
+    A.block<3, 3>(POSE_EFF_SIZE + 3, POSE_EFF_SIZE + 3) = Eigen::Matrix3d::Identity() * params->initial_ba_sqrt_info;
+    A.block<3, 3>(POSE_EFF_SIZE + 6, POSE_EFF_SIZE + 6) = Eigen::Matrix3d::Identity() * params->initial_bg_sqrt_info;
     if (self_id == params->main_id) {
         A = A * 100;
     }
     VectorXd b = VectorXd::Zero(Adim);
     auto param_info = createFramePose(this, frame->frame_id);
     param_info.index = 0;
-    std::vector<ParamInfo> need_fix_params{param_info};
+    auto param_info_spd_bias = createSpeedBias(this, frame->frame_id);
+    param_info_spd_bias.index = POSE_EFF_SIZE;
+    int extrinsic_start_idx = POSE_EFF_SIZE + FRAME_SPDBIAS_SIZE;
+    std::vector<ParamInfo> need_fix_params{param_info, param_info_spd_bias};
     if (params->estimate_extrinsic) {
         for (int i = 0; i < local_cam_num; i ++) {
-            A.block<3, 3>((i + 1)*POSE_EFF_SIZE, (i + 1)*POSE_EFF_SIZE) = Eigen::Matrix3d::Identity() * params->initial_cam_pos_sqrt_info;
-            A.block<3, 3>((i + 1)*POSE_EFF_SIZE + 3, (i + 1)*POSE_EFF_SIZE + 3) = Eigen::Matrix3d::Identity() * params->initial_cam_ang_sqrt_info;
+            A.block<3, 3>(i*POSE_EFF_SIZE + extrinsic_start_idx, i*POSE_EFF_SIZE + extrinsic_start_idx) = Eigen::Matrix3d::Identity() * params->initial_cam_pos_sqrt_info;
+            A.block<3, 3>(i*POSE_EFF_SIZE + 3 + extrinsic_start_idx, i*POSE_EFF_SIZE + 3 + extrinsic_start_idx) = Eigen::Matrix3d::Identity() * params->initial_cam_ang_sqrt_info;
             auto param_info = createExtrinsic(this, local_camera_ids[i]);
-            param_info.index = need_fix_params.back().index + POSE_EFF_SIZE;
+            param_info.index = need_fix_params.back().index + extrinsic_start_idx;
             need_fix_params.emplace_back(param_info);
         }
     }
