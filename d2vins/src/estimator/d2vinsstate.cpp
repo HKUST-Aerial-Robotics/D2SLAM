@@ -297,7 +297,6 @@ std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames(bool marginaliza
                 }
             }
         }
-        printf("Create prior!!!!!\n");
         if (prior_factor != nullptr) {
             //At this time, non-keyframes is also removed, so add them to remove set to avoid pointer issue.
             std::vector<ParamInfo> keeps = prior_factor->getKeepParams();
@@ -674,5 +673,14 @@ void D2EstimatorState::printLandmarkReport(FrameIdType frame_id) const {
     printf("===============================\n");
 }
 
+void D2EstimatorState::monoInitialization() {
+    // SFM
+    if (sld_wins.at(self_id).size() < 3) {
+        printf("[D2VINS::D2EstimatorState] Not enough frames for mono initialization\n");
+        return;
+    }
+    auto sld_win = sld_wins.at(self_id);
+    auto sfm_poses = lmanager.SFMInitialization(sld_win);
+}
 
 }

@@ -550,13 +550,17 @@ void D2Estimator::solveNonDistrib() {
     {
         printf("numKeyframes too less, skip optimization\n");
         return;
+    } else {
+        if (solve_count == 0) {
+            printf("[D2VINS::D2Estimator] Initializationwith %d keyframes\n", state.numKeyframes());
+            state.monoInitialization();
+        }
     }
     resetMarginalizer();
     state.preSolve(imu_bufs);
     solver->reset();
     setupImuFactors();
     setupLandmarkFactors();
-    state.printSldWin(keyframe_measurements);
     if (current_measurement_num < params->min_solve_cnt)
     {
         printf("Landmark too less, skip optimization\n");

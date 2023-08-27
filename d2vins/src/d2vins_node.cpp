@@ -10,6 +10,7 @@
 #include <chrono>
 #include <d2frontend/d2featuretracker.h>
 #include <swarm_msgs/swarm_fused.h>
+#include <spdlog/spdlog.h>
 
 using namespace std::chrono;
 #define BACKWARD_HAS_DW 1
@@ -241,6 +242,7 @@ public:
 
 int main(int argc, char **argv)
 {
+    spdlog::set_pattern("[%H:%M:%S][%^%l%$]%g:%# %v");
     cv::setNumThreads(1);
     ros::init(argc, argv, "d2vins");
     ros::NodeHandle n("~");

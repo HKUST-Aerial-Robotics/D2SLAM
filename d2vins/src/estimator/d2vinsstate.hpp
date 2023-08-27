@@ -106,5 +106,6 @@ public:
 
     void updateEgoMotion();
     void printLandmarkReport(FrameIdType frame_id) const;
+    void monoInitialization();
 };
 }
