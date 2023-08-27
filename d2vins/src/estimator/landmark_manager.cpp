@@ -4,6 +4,7 @@
 
 #include "../d2vins_params.hpp"
 #include "../utils/solve_5pts.h"
+#include "../factors/reprojection3d.h"
 #include "d2frontend/utils.h"
 #include "d2vinsstate.hpp"
 #include "spdlog/spdlog.h"
@@ -503,15 +504,78 @@ std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
     }
 
     // Now re-triangluation all points
-    std::vector<FrameIdType> frame_ids;
-    std::vector<Swarm::Pose> frame_poses;
-    for (auto frame: frames) {
-        frame_ids.push_back(frame->frame_id);
-        frame_poses.emplace_back(initial.at(frame->frame_id));
-    }
     auto initial_pts = triangulationFrames(initial, camera_idx);
     spdlog::info("{} points initialized. Now start BA", initial_pts.size());
     std::map<FrameIdType, Swarm::Pose> ret;
+
+    std::map<FrameIdType, double*> c_translation, c_rotation;
+    std::map<LandmarkIdType, double*> points;
+
+    ceres::Problem problem;
+	ceres::LocalParameterization* local_parameterization = new ceres::EigenQuaternionParameterization();
+    ceres::HuberLoss * loss = new ceres::HuberLoss(0.02);
+
+    for (auto it: initial) {
+        // Initial states
+        auto frame_id = it.first;
+        c_translation[frame_id] = new double[3]; 
+        c_rotation[frame_id] = new double[4];
+        Eigen::Map<Eigen::Vector3d> pos(c_translation[frame_id]);
+        Eigen::Map<Eigen::Quaterniond> q(c_rotation[frame_id]);
+        pos = it.second.pos();
+        q = it.second.att();
+        problem.AddParameterBlock(c_rotation[frame_id], 4, local_parameterization);
+		problem.AddParameterBlock(c_translation[frame_id], 3);
+        if (frame_id == last_frame->frame_id) {
+			problem.SetParameterBlockConstant(c_rotation[frame_id]);
+		}
+		if (frame_id == last_frame->frame_id || frame_id == second_last->frame_id) {
+            // For scale
+			problem.SetParameterBlockConstant(c_translation[frame_id]);
+		}
+    }
+    for (auto it: initial_pts) {
+        auto landmark_id = it.first;
+        points[landmark_id] = new double[3];
+        Eigen::Map<Eigen::Vector3d> pt3d(points[landmark_id]);
+        pt3d = it.second;
+    }
+    // setup ceres
+
+    for (auto &it : landmark_db) {
+        auto &lm = it.second;
+        auto lm_id = it.first;
+        std::vector<Swarm::Pose> poses;
+        std::vector<Eigen::Vector3d> pt3d_norms;
+        if (initial_pts.count(lm_id) == 0) {
+            continue;
+        }
+        for (auto &it : lm.track) {
+            if (it.camera_index == camera_idx && initial.count(it.frame_id) > 0) {
+                const auto& pt3d_norm = it.pt3d_norm;
+                ceres::CostFunction* cost_function = ReprojectionError3D::Create(pt3d_norm.x()/pt3d_norm.z(),
+												pt3d_norm.y()/pt3d_norm.z());
+    		    problem.AddResidualBlock(cost_function, loss, c_rotation[it.frame_id], c_translation[it.frame_id], 
+    								points.at(lm_id));	 
+            }
+        }
+    }
+
+    ceres::Solver::Options options;
+	options.linear_solver_type = ceres::DENSE_SCHUR;
+	options.max_solver_time_in_seconds = 0.2;
+	ceres::Solver::Summary summary;
+	ceres::Solve(options, &problem, &summary);
+    std::cout << summary.BriefReport() << std::endl;
+    spdlog::debug("Finish solve BA in {:.2f}ms", summary.total_time_in_seconds*1000.0);
+    for (auto it: initial) {
+        // Initial states
+        auto frame_id = it.first;
+        Eigen::Map<Eigen::Vector3d> pos(c_translation[frame_id]);
+        Eigen::Map<Eigen::Quaterniond> quat(c_rotation[frame_id]);
+        ret[frame_id] = Swarm::Pose(pos, quat);
+        spdlog::info("SfM init {}: {}", frame_id, ret[frame_id].toStr());
+     }
     return ret;
 }
 
@@ -601,7 +665,7 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int& camera_idx,
     spdlog::info(
         "[D2VINS::D2LandmarkManager] Frame {} Solve 5 pts with {} pts result: "
         "{}",
-        frame1_id, corres.size(), ret.toStr());
+        frame2_id, corres.size(), ret.toStr());
     return true;
 }
 
@@ -645,7 +709,9 @@ std::map<LandmarkIdType, Vector3d> D2LandmarkManager::triangulationFrames(
         // Perform triangulation
         Vector3d point_3d(0., 0., 0.);
         triangulatePoint3DPts(poses, pt3d_norms, point_3d);
-        ret[lm.landmark_id] = point_3d;
+        if (point_3d.norm() > 1e-2) {
+            ret[lm.landmark_id] = point_3d;
+        }
     }
     return ret;
 }
