@@ -152,7 +152,7 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     auto frame_ret = state.addFrame(_frame, frame);
     //Clear old frames after add
     if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        margined_landmarks = state.clearUselessFrames();
+        margined_landmarks = state.clearUselessFrames(solve_count > 0); // Only marginlization when solved
     }
     _frame.setTd(state.getTd(_frame.drone_id));
     //Assign IMU and initialization to VisualImageDescArray for broadcasting.
@@ -293,6 +293,12 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
         printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imu_bufs[self_id].size());
         initFirstPoseFlag = tryinitFirstPose(_frame);
         return initFirstPoseFlag;
+    }
+
+    if (solve_count == 0 && !_frame.is_keyframe && !_frame.is_stereo)
+    {
+        // Do add when not solved and not keyframe
+        return false;
     }
 
     double t_imu_frame = _frame.stamp + state.td;
@@ -540,11 +546,22 @@ void D2Estimator::solveinDistributedMode() {
 }
 
 void D2Estimator::solveNonDistrib() {
+    if (state.numKeyframes() < params->min_solve_frames)
+    {
+        printf("numKeyframes too less, skip optimization\n");
+        return;
+    }
     resetMarginalizer();
     state.preSolve(imu_bufs);
     solver->reset();
     setupImuFactors();
     setupLandmarkFactors();
+    state.printSldWin(keyframe_measurements);
+    if (current_measurement_num < params->min_solve_cnt)
+    {
+        printf("Landmark too less, skip optimization\n");
+        return;
+    }
     setupPriorFactor();
     setStateProperties();
     SolverReport report = solver->solve();
@@ -589,6 +606,7 @@ void D2Estimator::solveNonDistrib() {
         std::cout << report.message << std::endl;
         exit(1);
     }
+    solve_count ++;
 }
 
 void D2Estimator::addIMUFactor(FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* pre_integrations) {
@@ -600,7 +618,6 @@ void D2Estimator::addIMUFactor(FrameIdType frame_ida, FrameIdType frame_idb, Int
         return;
     }
     marginalizer->addResidualInfo(info);
-    solve_count ++;
 }
 
 void D2Estimator::setupImuFactors() {

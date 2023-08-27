@@ -310,6 +310,28 @@ namespace D2FrontEnd {
                width, height, xi, k1, k2, p1, p2,
                gamma1, gamma2, u0, v0));
         }   
+        else if (config["camera_model"].as<std::string>() == "pinhole" && 
+            config["distortion_model"].as<std::string>() == "radtan" ) {
+            int width = config["resolution"][0].as<int>();
+            int height = config["resolution"][1].as<int>();
+            double fx = config["intrinsics"][0].as<double>();
+            double fy = config["intrinsics"][1].as<double>();
+            double cx = config["intrinsics"][2].as<double>();
+            double cy = config["intrinsics"][3].as<double>();
+
+            double k1 = config["distortion_coeffs"][0].as<double>();
+            double k2 = config["distortion_coeffs"][1].as<double>();
+            double p1 = config["distortion_coeffs"][2].as<double>();
+            double p2 = config["distortion_coeffs"][3].as<double>();
+            printf("Camera %s model pinhole-radtan\n width: %d, height: %d, fx: %f, fy: %f, cx: %f, cy: %f, k1: %f, k2: %f, p1: %f, p2: %f\n", 
+                camera_name.c_str(), width, height, fx, fy, cx, cy, k1, k2, p1, p2);
+            camera = camodocal::PinholeCameraPtr(new camodocal::PinholeCamera(camera_name,
+               width, height, k1, k2, p1, p2, fx, fy, cx, cy));
+        }
+        else {
+            printf("Camera not supported yet, please fillin in src/d2frontend_params.cpp function: readCameraConfig\n");
+            exit(-1);
+        }
         Matrix4d T;
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {

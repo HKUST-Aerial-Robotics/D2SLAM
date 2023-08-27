@@ -29,6 +29,7 @@ struct D2FTConfig {
     double ransacReprojThreshold = 10;
     double max_pts_velocity_time=0.3;
     int remote_min_match_num = 30;
+    int min_stereo_points = 10;
     bool double_counting_common_feature = false;
     bool enable_superglue_local = false;
     bool enable_superglue_remote = false;
@@ -40,8 +41,9 @@ struct D2FTConfig {
     double knn_match_ratio = 0.8;
     std::string output_folder = "/root/output/";
     std::string superglue_model_path;
-    double landmark_distance_assumption = 2.0; // For uninitialized landmark, assume it is 3m away
+    double landmark_distance_assumption = 10.0; // For uninitialized landmark, assume it is 3m away
     int frame_step = 2;
+    bool track_from_keyframe = true;
 };
 
 struct TrackReport {

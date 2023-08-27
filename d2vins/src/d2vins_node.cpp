@@ -147,7 +147,6 @@ protected:
                             printf("\n");
                         }
                     }
-                    printf("[D2VINS] force landmarks %d to broadcast\n", force_landmarks);
                     Utility::TicToc broadcast_timer;
                     loop_net->broadcastVisualImageDescArray(viokf, force_landmarks);
                     if (params->verbose || params->enable_perf_output) {

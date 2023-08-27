@@ -356,6 +356,7 @@ struct VisualImageDescArray {
     double cur_td = 0;
     Swarm::Pose motion_prediction;
     bool send_to_backend = true; //If send to backend
+    bool is_stereo = false;
 
     void sync_landmark_ids() {
         for (auto & image : images) {

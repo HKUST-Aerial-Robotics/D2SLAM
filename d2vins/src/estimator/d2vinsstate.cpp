@@ -238,7 +238,7 @@ int D2EstimatorState::getCameraBelonging(CamIdType cam_id) const {
     return camera_drone.at(cam_id);
 }
 
-std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames() {
+std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames(bool marginalization) {
     //If keyframe_only is true, then only remove keyframes.
     const Guard lock(state_lock);
     std::vector<LandmarkPerId> ret;
@@ -285,25 +285,28 @@ std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames() {
         }
     }
 
-    if (params->enable_marginalization && clear_key_frames.size() > 0) {
-        if (marginalizer != nullptr) {
-            auto prior_return = marginalizer->marginalize(clear_key_frames);
-            if (prior_return!=nullptr) {
-                if (prior_factor!=nullptr) {
-                    delete prior_factor;
+    if (marginalization) {
+        if (params->enable_marginalization && clear_key_frames.size() > 0) {
+            if (marginalizer != nullptr) {
+                auto prior_return = marginalizer->marginalize(clear_key_frames);
+                if (prior_return!=nullptr) {
+                    if (prior_factor!=nullptr) {
+                        delete prior_factor;
+                    }
+                    prior_factor = prior_return;
                 }
-                prior_factor = prior_return;
             }
         }
-    }
-    if (prior_factor != nullptr) {
-        //At this time, non-keyframes is also removed, so add them to remove set to avoid pointer issue.
-        std::vector<ParamInfo> keeps = prior_factor->getKeepParams();
-        for (auto p : keeps) {
-            if (clear_frames.find(p.id)!=clear_frames.end()) {
-                if (params->verbose)
-                    printf("[D2EstimatorState::clearFrame] Removed Frame %ld in prior is removed from prior\n", p.id);
-                prior_factor->removeFrame(p.id);
+        printf("Create prior!!!!!\n");
+        if (prior_factor != nullptr) {
+            //At this time, non-keyframes is also removed, so add them to remove set to avoid pointer issue.
+            std::vector<ParamInfo> keeps = prior_factor->getKeepParams();
+            for (auto p : keeps) {
+                if (clear_frames.find(p.id)!=clear_frames.end()) {
+                    if (params->verbose)
+                        printf("[D2EstimatorState::clearFrame] Removed Frame %ld in prior is removed from prior\n", p.id);
+                    prior_factor->removeFrame(p.id);
+                }
             }
         }
     }
@@ -574,6 +577,18 @@ bool D2EstimatorState::hasCamera(CamIdType frame_id) const {
     return extrinsic.find(frame_id) != extrinsic.end();
 }
 
+int D2EstimatorState::numKeyframes() const {
+    int ret = 0;
+    for (auto it : sld_wins) {
+        for (auto frame : it.second) {
+            if (frame->is_keyframe) {
+                ret ++;
+            }
+        }
+    }
+    return ret;
+}
+
 void D2EstimatorState::printSldWin(const std::map<FrameIdType, int> & keyframe_measurments) const {
     const Guard lock(state_lock);
     for (auto it : sld_wins) {
@@ -583,7 +598,7 @@ void D2EstimatorState::printSldWin(const std::map<FrameIdType, int> & keyframe_m
             if (keyframe_measurments.find(it.second[i]->frame_id) != keyframe_measurments.end()) {
                 num_mea = keyframe_measurments.at(it.second[i]->frame_id);
             }
-            printf("index %d frame_id %ld measurements %d frame: %s\n", i, it.second[i]->frame_id, num_mea, it.second[i]->toStr().c_str());
+            printf("index %d frame_id %ld is_kf %d measurements %d frame: %s\n", i, it.second[i]->frame_id, it.second[i]->is_keyframe, num_mea, it.second[i]->toStr().c_str());
         }
         printf("========================\n");
     }

@@ -64,7 +64,7 @@ public:
     std::vector<Swarm::Pose> localCameraExtrinsics() const;
    
     //Frame operations
-    std::vector<LandmarkPerId> clearUselessFrames();
+    std::vector<LandmarkPerId> clearUselessFrames(bool marginalization=true);
     VINSFrame * addFrame(const VisualImageDescArray & images, const VINSFrame & _frame);
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
     virtual void moveAllPoses(int new_ref_frame_id, const Swarm::Pose & delta_pose) override;
@@ -91,6 +91,8 @@ public:
     void syncFromState(const std::set<LandmarkIdType> & used_landmarks);
     void preSolve(const std::map<int, IMUBuffer> & remote_imu_bufs);
     void repropagateIMU();
+
+    int numKeyframes() const;
 
     //Debug
     void printSldWin(const std::map<FrameIdType, int> & keyframe_measurments) const;

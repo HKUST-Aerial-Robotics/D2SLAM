@@ -43,11 +43,11 @@ enum ResidualType {
     LandmarkTwoFrameTwoCamResidual, // 3
     LandmarkTwoDroneTwoCamResidual, // 4
     LandmarkOneFrameTwoCamResidual, // 5
-    PriorResidual, // 7
-    DepthResidual, // 8
-    RelPoseResidual, //9
-    RelRotResidual, //10
-    GravityPriorResidual //11
+    PriorResidual, // 6
+    DepthResidual, // 7
+    RelPoseResidual, //8
+    RelRotResidual, //9
+    GravityPriorResidual //10
 };
 
 class ResidualInfo {

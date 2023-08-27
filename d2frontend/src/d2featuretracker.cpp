@@ -126,6 +126,10 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
             draw(frames, iskeyframe, report);
         }
     }
+    if (report.stereo_point_num > _config.min_stereo_points)
+    {   
+        frames.is_stereo = true;
+    }
     return iskeyframe;
 }
 
@@ -602,7 +606,10 @@ void D2FeatureTracker::processFrame(VisualImageDescArray & frames, bool is_keyfr
         frame.pose_drone = frames.motion_prediction;
     }
     frames.pose_drone = frames.motion_prediction;
-    current_keyframes.emplace_back(frames);
+    if (is_keyframe || !params->ftconfig->track_from_keyframe)
+    {
+        current_keyframes.emplace_back(frames);
+    }
 }
 
 cv::Mat D2FeatureTracker::drawToImage(const VisualImageDesc & frame, bool is_keyframe, const TrackReport & report, bool is_right, bool is_remote) const {
