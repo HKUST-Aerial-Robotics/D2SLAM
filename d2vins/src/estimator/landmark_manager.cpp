@@ -466,7 +466,10 @@ double triangulatePoint3DPts(const std::vector<Swarm::Pose> poses,
 }
 
 std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
-    const std::vector<VINSFrame *> frames) {
+    const std::vector<VINSFrame *> frames, int camera_idx) {
+    spdlog::info("SFMInitialization with camera {}", camera_idx);
+
+    // TODO: Add camera param? or consider multi-camera case
     // Here we assume we are using mono camera
     // First we init with solve 5 points use last two frames
     std::map<FrameIdType, Swarm::Pose> initial;
@@ -475,7 +478,6 @@ std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
     auto second_last = frames[frames.size() - 2];
     Swarm::Pose relative_pose;
     // Start the scale with solve5pts
-    int camera_idx = -1;
     if (SolveRelativePose5Pts(relative_pose, camera_idx, last_frame->frame_id,
                               second_last->frame_id)) {
         initial[last_frame->frame_id] = Swarm::Pose::Identity();
@@ -551,7 +553,7 @@ std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
             continue;
         }
         for (auto &it : lm.track) {
-            if (it.camera_index == camera_idx && initial.count(it.frame_id) > 0) {
+            if (it.camera_id == camera_idx && initial.count(it.frame_id) > 0) {
                 const auto& pt3d_norm = it.pt3d_norm;
                 ceres::CostFunction* cost_function = ReprojectionError3D::Create(pt3d_norm.x()/pt3d_norm.z(),
 												pt3d_norm.y()/pt3d_norm.z());
@@ -566,16 +568,17 @@ std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
 	options.max_solver_time_in_seconds = 0.2;
 	ceres::Solver::Summary summary;
 	ceres::Solve(options, &problem, &summary);
-    std::cout << summary.BriefReport() << std::endl;
-    spdlog::debug("Finish solve BA in {:.2f}ms", summary.total_time_in_seconds*1000.0);
+    spdlog::debug("Finish solve BA in {:.2f}ms. rpt {}", summary.total_time_in_seconds*1000.0, summary.BriefReport());
     for (auto it: initial) {
         // Initial states
         auto frame_id = it.first;
         Eigen::Map<Eigen::Vector3d> pos(c_translation[frame_id]);
         Eigen::Map<Eigen::Quaterniond> quat(c_rotation[frame_id]);
-        ret[frame_id] = Swarm::Pose(pos, quat);
-        spdlog::info("SfM init {}: {}", frame_id, ret[frame_id].toStr());
-     }
+        Swarm::Pose camera_pose(pos, quat);
+        ret[frame_id] = camera_pose;
+        spdlog::info("SfM init {}: Cam {}", frame_id, camera_pose.toStr());
+    }
+    
     return ret;
 }
 
@@ -630,7 +633,7 @@ bool D2LandmarkManager::InitFramePoseWithPts(
     return true;
 }
 
-bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int& camera_idx,
+bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
                                               FrameIdType frame1_id,
                                               FrameIdType frame2_id) {
     // Get their landmarks and find the common
@@ -638,17 +641,13 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int& camera_idx,
 
     // Solve with 5 pts method
     std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> corres;
-    camera_idx = -1;
     for (auto &it : common_lm) {
         auto &lm1 = it.first;
         auto &lm2 = it.second;
-        if (camera_idx == -1) {
-            camera_idx = lm1.camera_index;
-        }
         // Check if the camera index is the same, if not we will skip this
         // landmark
-        if (lm1.camera_index != camera_idx ||
-            lm2.camera_index != camera_idx) {
+        if (lm1.camera_id != camera_idx ||
+            lm2.camera_id != camera_idx) {
             continue;
         }
         // Use pt3d_norm
@@ -678,7 +677,7 @@ std::map<FrameIdType, Vector3d> D2LandmarkManager::triangulationFrames(
     for (auto &it : common_lm) {
         auto &lm1 = it.first;
         auto &lm2 = it.second;
-        if (lm1.camera_index != camera_idx || lm2.camera_index != camera_idx) {
+        if (lm1.camera_id != camera_idx || lm2.camera_id != camera_idx) {
             continue;
         }
         std::vector<Vector3d> points{lm1.pt3d_norm, lm2.pt3d_norm};
@@ -701,7 +700,7 @@ std::map<LandmarkIdType, Vector3d> D2LandmarkManager::triangulationFrames(
         std::vector<Swarm::Pose> poses;
         std::vector<Eigen::Vector3d> pt3d_norms;
         for (auto &it : lm.track) {
-            if (it.camera_index == camera_idx && frame_poses.count(it.frame_id) > 0) {
+            if (it.camera_id == camera_idx && frame_poses.count(it.frame_id) > 0) {
                 poses.emplace_back(frame_poses.at(it.frame_id));
                 pt3d_norms.emplace_back(it.pt3d_norm);
             }

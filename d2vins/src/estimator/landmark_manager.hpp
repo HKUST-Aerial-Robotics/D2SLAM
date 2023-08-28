@@ -24,13 +24,13 @@ class D2LandmarkManager : public D2FrontEnd::LandmarkManager {
     void moveByPose(const Swarm::Pose& delta_pose);
     virtual void removeLandmark(const LandmarkIdType& id) override;
     std::map<FrameIdType, Swarm::Pose> SFMInitialization(
-        const std::vector<VINSFrame*> frames);
+        const std::vector<VINSFrame*> frames, int camera_idx);
     std::map<LandmarkIdType, Vector3d> triangulationFrames(
         FrameIdType frame1_id, const Swarm::Pose& frame1, FrameIdType frame2_id,
         const Swarm::Pose& frame2, int camera_idx);
     std::map<LandmarkIdType, Vector3d> triangulationFrames(
         const std::map<FrameIdType, Swarm::Pose>& frame_poses, int camera_idx);
-    bool SolveRelativePose5Pts(Swarm::Pose& ret, int& camera_idx, FrameIdType frame1_id,
+    bool SolveRelativePose5Pts(Swarm::Pose& ret, int camera_idx, FrameIdType frame1_id,
                                FrameIdType frame2_id);
     bool InitFramePoseWithPts(Swarm::Pose& ret, const std::map<LandmarkIdType, Vector3d>& last_triangluation_pts, FrameIdType frame_id, int camera_idx);
 };

@@ -34,7 +34,7 @@ protected:
     void outlierRejection(const std::set<LandmarkIdType> & used_landmarks);
     void updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs);
     void createPriorFactor4FirstFrame(VINSFrame * frame);
-    void solveGyroscopeBias();
+    void solveGyroscopeBias(std::vector<VINSFrame * > sld_win, const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic);
 public:
     state_type td = 0.0;
     D2EstimatorState(int _self_id);
