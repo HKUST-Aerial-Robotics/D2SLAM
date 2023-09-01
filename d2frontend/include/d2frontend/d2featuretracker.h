@@ -43,7 +43,7 @@ struct D2FTConfig {
     std::string superglue_model_path;
     double landmark_distance_assumption = 10.0; // For uninitialized landmark, assume it is 3m away
     int frame_step = 2;
-    bool track_from_keyframe = true;
+    bool track_from_keyframe = false;
 };
 
 struct TrackReport {

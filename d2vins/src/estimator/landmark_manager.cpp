@@ -3,8 +3,8 @@
 #include <opencv2/core/eigen.hpp>
 
 #include "../d2vins_params.hpp"
-#include "../utils/solve_5pts.h"
 #include "../factors/reprojection3d.h"
+#include "../utils/solve_5pts.h"
 #include "d2frontend/utils.h"
 #include "d2vinsstate.hpp"
 #include "spdlog/spdlog.h"
@@ -120,11 +120,10 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(
         }
     }
     if (params->verbose) {
-        printf(
-            "[D2VINS::D2LandmarkManager] Found %ld(total %ld) landmarks "
-            "measure %d/%d in %ld frames\n",
-            ret_set.size(), landmark_db.size(), count_measurements,
-            max_solve_measurements, result_landmark_num.size());
+        printf("[D2VINS::D2LandmarkManager] Found %ld(total %ld) landmarks "
+               "measure %d/%d in %ld frames\n",
+               ret_set.size(), landmark_db.size(), count_measurements,
+               max_solve_measurements, result_landmark_num.size());
     }
     return ret_set;
 }
@@ -213,27 +212,25 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
                         lm.flag = LandmarkFlag::INITIALIZED;
                         *landmark_state[lm_id] = inv_dep;
                         if (params->debug_print_states) {
-                            printf(
-                                "[D2VINS::D2LandmarkManager] Landmark %ld "
-                                "tracks %ld baseline %.2f by tri. P %.3f "
-                                "%.3f %.3f inv_dep %.3f err %.3f\n",
-                                lm_id, lm.track.size(), (_max - _min).norm(),
-                                point_3d.x(), point_3d.y(), point_3d.z(),
-                                inv_dep, tri_err);
+                            printf("[D2VINS::D2LandmarkManager] Landmark %ld "
+                                   "tracks %ld baseline %.2f by tri. P %.3f "
+                                   "%.3f %.3f inv_dep %.3f err %.3f\n",
+                                   lm_id, lm.track.size(), (_max - _min).norm(),
+                                   point_3d.x(), point_3d.y(), point_3d.z(),
+                                   inv_dep, tri_err);
                         }
                     } else {
                         lm.flag = LandmarkFlag::INITIALIZED;
                         *landmark_state[lm_id] = params->min_inv_dep;
                         if (params->debug_print_states) {
-                            printf(
-                                "\033[0;31m [D2VINS::D2LandmarkManager] "
-                                "Initialize failed too far away: landmark "
-                                "%ld tracks %ld baseline %.2f by "
-                                "triangulation position %.3f %.3f %.3f "
-                                "inv_dep %.3f \033[0m\n",
-                                lm_id, lm.track.size(), (_max - _min).norm(),
-                                point_3d.x(), point_3d.y(), point_3d.z(),
-                                inv_dep);
+                            printf("\033[0;31m [D2VINS::D2LandmarkManager] "
+                                   "Initialize failed too far away: landmark "
+                                   "%ld tracks %ld baseline %.2f by "
+                                   "triangulation position %.3f %.3f %.3f "
+                                   "inv_dep %.3f \033[0m\n",
+                                   lm_id, lm.track.size(), (_max - _min).norm(),
+                                   point_3d.x(), point_3d.y(), point_3d.z(),
+                                   inv_dep);
                         }
                     }
                     // for (auto & it: lm.track) {
@@ -258,22 +255,20 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
                 // Some debug code
             } else {
                 if (params->debug_print_states) {
-                    printf(
-                        "\033[0;31m [D2VINS::D2LandmarkManager] Initialize "
-                        "failed too large triangle error: landmark %ld "
-                        "tracks %ld baseline %.2f by triangulation position "
-                        "%.3f %.3f %.3f\033[0m\n",
-                        lm_id, lm.track.size(), (_max - _min).norm(),
-                        point_3d.x(), point_3d.y(), point_3d.z());
+                    printf("\033[0;31m [D2VINS::D2LandmarkManager] Initialize "
+                           "failed too large triangle error: landmark %ld "
+                           "tracks %ld baseline %.2f by triangulation position "
+                           "%.3f %.3f %.3f\033[0m\n",
+                           lm_id, lm.track.size(), (_max - _min).norm(),
+                           point_3d.x(), point_3d.y(), point_3d.z());
                 }
             }
         } else {
             if (params->debug_print_states) {
-                printf(
-                    "\033[0;31m [D2VINS::D2LandmarkManager] Initialize "
-                    "failed too short baseline: landmark %ld tracks %ld "
-                    "baseline %.2f\033[0m\n",
-                    lm_id, lm.track.size(), (_max - _min).norm());
+                printf("\033[0;31m [D2VINS::D2LandmarkManager] Initialize "
+                       "failed too short baseline: landmark %ld tracks %ld "
+                       "baseline %.2f\033[0m\n",
+                       lm_id, lm.track.size(), (_max - _min).norm());
             }
         }
     }
@@ -289,7 +284,9 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState *state) {
         lm.solver_flag = LandmarkSolverFlag::UNSOLVED;
         if (lm.flag < LandmarkFlag::ESTIMATED) {
             if (lm.track.size() == 0) {
-                spdlog::error("D2VINS::D2LandmarkManager] Initialize landmark {} failed, no track.", lm_id);
+                spdlog::error("D2VINS::D2LandmarkManager] Initialize landmark "
+                              "{} failed, no track.",
+                              lm_id);
                 continue;
             }
             initialLandmarkState(lm, state);
@@ -311,8 +308,8 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState *state) {
         }
     }
 
-    spdlog::debug("[D2VINS::D2LandmarkManager] Total {} initialized {}",
-                 landmark_db.size(), inited_count);
+    spdlog::info("[D2VINS::D2LandmarkManager] Total {} initialized {}",
+                  landmark_db.size(), inited_count);
 }
 
 void D2LandmarkManager::outlierRejection(
@@ -433,9 +430,10 @@ double triangulatePoint3DPts(const std::vector<Swarm::Pose> poses,
     assert(poses.size() > 0 && poses.size() == points.size() &&
            "We at least have 2 poses and number of pts and poses must equal");
     for (unsigned int i = 0; i < poses.size(); i++) {
-        double p0x = points[i][0];
-        double p0y = points[i][1];
-        double p0z = points[i][2];
+        double norm = points[i].norm();
+        double p0x = points[i][0] / norm;
+        double p0y = points[i][1] / norm;
+        double p0z = points[i][2] / norm;
         Eigen::Matrix<double, 3, 4> pose;
         auto R0 = poses[i].R();
         auto t0 = poses[i].pos();
@@ -465,9 +463,10 @@ double triangulatePoint3DPts(const std::vector<Swarm::Pose> poses,
     return sum_err / points.size() + err_pose_0;
 }
 
-std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
-    const std::vector<VINSFrame *> frames, int camera_idx) {
-    spdlog::info("SFMInitialization with camera {}", camera_idx);
+std::map<FrameIdType, Swarm::Pose>
+D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
+                                     int camera_idx) {
+    spdlog::debug("SFMInitialization with camera {}", camera_idx);
 
     // TODO: Add camera param? or consider multi-camera case
     // Here we assume we are using mono camera
@@ -482,12 +481,14 @@ std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
                               second_last->frame_id)) {
         initial[last_frame->frame_id] = Swarm::Pose::Identity();
         initial[second_last->frame_id] = relative_pose;
+    } else {
+        return initial;
     }
 
     // First triangulation
-    auto last_triangluation_pts =
-        triangulationFrames(last_frame->frame_id, initial[last_frame->frame_id],
-                            second_last->frame_id, initial[second_last->frame_id], camera_idx);
+    auto last_triangluation_pts = triangulationFrames(
+        last_frame->frame_id, initial[last_frame->frame_id],
+        second_last->frame_id, initial[second_last->frame_id], camera_idx);
 
     // Recursive triangluation
     for (int i = frames.size() - 3; i >= 0; i--) {
@@ -499,86 +500,94 @@ std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
                                  frame->frame_id, camera_idx)) {
             // Triangulate all the common points
             initial[frame->frame_id] = pose_next;
-            last_triangluation_pts = triangulationFrames(
-                frame->frame_id, initial[frame->frame_id], frame_next->frame_id,
-                initial[frame_next->frame_id], camera_idx);
+            last_triangluation_pts =
+                triangulationFrames(initial, camera_idx, 2);
+
+        } else {
+            return std::map<FrameIdType, Swarm::Pose>();
         }
     }
 
     // Now re-triangluation all points
-    auto initial_pts = triangulationFrames(initial, camera_idx);
+    auto initial_pts = triangulationFrames(initial, camera_idx, 3);
     spdlog::info("{} points initialized. Now start BA", initial_pts.size());
     std::map<FrameIdType, Swarm::Pose> ret;
 
-    std::map<FrameIdType, double*> c_translation, c_rotation;
-    std::map<LandmarkIdType, double*> points;
+    std::map<FrameIdType, double *> c_translation, c_rotation;
+    std::map<LandmarkIdType, double *> points;
 
     ceres::Problem problem;
-	ceres::LocalParameterization* local_parameterization = new ceres::EigenQuaternionParameterization();
-    ceres::HuberLoss * loss = new ceres::HuberLoss(0.02);
+    ceres::LocalParameterization *local_parameterization =
+        new ceres::EigenQuaternionParameterization();
+    ceres::HuberLoss *loss = new ceres::HuberLoss(0.02);
 
-    for (auto it: initial) {
+    for (auto it : initial) {
         // Initial states
         auto frame_id = it.first;
-        c_translation[frame_id] = new double[3]; 
+        c_translation[frame_id] = new double[3];
         c_rotation[frame_id] = new double[4];
         Eigen::Map<Eigen::Vector3d> pos(c_translation[frame_id]);
         Eigen::Map<Eigen::Quaterniond> q(c_rotation[frame_id]);
         pos = it.second.pos();
         q = it.second.att();
-        problem.AddParameterBlock(c_rotation[frame_id], 4, local_parameterization);
-		problem.AddParameterBlock(c_translation[frame_id], 3);
+        problem.AddParameterBlock(c_rotation[frame_id], 4,
+                                  local_parameterization);
+        problem.AddParameterBlock(c_translation[frame_id], 3);
         if (frame_id == last_frame->frame_id) {
-			problem.SetParameterBlockConstant(c_rotation[frame_id]);
-		}
-		if (frame_id == last_frame->frame_id || frame_id == second_last->frame_id) {
+            problem.SetParameterBlockConstant(c_rotation[frame_id]);
+        }
+        if (frame_id == last_frame->frame_id ||
+            frame_id == second_last->frame_id) {
             // For scale
-			problem.SetParameterBlockConstant(c_translation[frame_id]);
-		}
+            problem.SetParameterBlockConstant(c_translation[frame_id]);
+        }
     }
-    for (auto it: initial_pts) {
-        auto landmark_id = it.first;
-        points[landmark_id] = new double[3];
-        Eigen::Map<Eigen::Vector3d> pt3d(points[landmark_id]);
-        pt3d = it.second;
-    }
-    // setup ceres
 
     for (auto &it : landmark_db) {
         auto &lm = it.second;
         auto lm_id = it.first;
         std::vector<Swarm::Pose> poses;
         std::vector<Eigen::Vector3d> pt3d_norms;
-        if (initial_pts.count(lm_id) == 0) {
+        if (initial_pts.count(lm_id) == 0 ||
+            lm.track.size() < params->landmark_estimate_tracks) {
             continue;
         }
+        points[lm_id] = new double[3];
+        Eigen::Map<Eigen::Vector3d> pt3d(points[lm_id]);
+        pt3d = initial_pts.at(lm_id);
+
         for (auto &it : lm.track) {
+
             if (it.camera_id == camera_idx && initial.count(it.frame_id) > 0) {
-                const auto& pt3d_norm = it.pt3d_norm;
-                ceres::CostFunction* cost_function = ReprojectionError3D::Create(pt3d_norm.x()/pt3d_norm.z(),
-												pt3d_norm.y()/pt3d_norm.z());
-    		    problem.AddResidualBlock(cost_function, loss, c_rotation[it.frame_id], c_translation[it.frame_id], 
-    								points.at(lm_id));	 
+                const auto &pt3d_norm = it.pt3d_norm;
+                ceres::CostFunction *cost_function =
+                    ReprojectionError3D::Create(pt3d_norm.x() / pt3d_norm.z(),
+                                                pt3d_norm.y() / pt3d_norm.z());
+                problem.AddResidualBlock(
+                    cost_function, loss, c_rotation[it.frame_id],
+                    c_translation[it.frame_id], points.at(lm_id));
             }
         }
     }
 
     ceres::Solver::Options options;
-	options.linear_solver_type = ceres::DENSE_SCHUR;
-	options.max_solver_time_in_seconds = 0.2;
-	ceres::Solver::Summary summary;
-	ceres::Solve(options, &problem, &summary);
-    spdlog::debug("Finish solve BA in {:.2f}ms. rpt {}", summary.total_time_in_seconds*1000.0, summary.BriefReport());
-    for (auto it: initial) {
+    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.max_solver_time_in_seconds = 0.2;
+    ceres::Solver::Summary summary;
+    ceres::Solve(options, &problem, &summary);
+    spdlog::debug("Finish solve BA in {:.2f}ms. rpt {}",
+                  summary.total_time_in_seconds * 1000.0,
+                  summary.BriefReport());
+    for (auto it : initial) {
         // Initial states
         auto frame_id = it.first;
         Eigen::Map<Eigen::Vector3d> pos(c_translation[frame_id]);
         Eigen::Map<Eigen::Quaterniond> quat(c_rotation[frame_id]);
         Swarm::Pose camera_pose(pos, quat);
         ret[frame_id] = camera_pose;
-        spdlog::info("SfM init {}: Cam {}", frame_id, camera_pose.toStr());
+        spdlog::debug("SfM init {}: Cam {}", frame_id, camera_pose.toStr());
     }
-    
+
     return ret;
 }
 
@@ -608,13 +617,14 @@ bool D2LandmarkManager::InitFramePoseWithPts(
     // Then use cv::solvePnPRansac to solve the pose of frame
     if (points_undist.size() < 5) {
         spdlog::error(
-            "[D2VINS::D2LandmarkManager] PnP failed in SFMInitialization, "
+            "[D2VINS::D2LandmarkManager] PnP failed in SFMInitialization on {}, "
             "only {} pts",
+            frame_id,
             points_3d.size());
         return false;
     }
     cv::Mat rvec, tvec;
-    cv::Mat K = cv::Mat::eye(3, 3, CV_64F);  // Use undist point, so identity
+    cv::Mat K = cv::Mat::eye(3, 3, CV_64F); // Use undist point, so identity
     std::vector<uint8_t> inliers;
     cv::solvePnPRansac(points_3d, points_undist, K, cv::Mat(), rvec, tvec,
                        false, 100, 0.01, 0.99, inliers);
@@ -627,7 +637,7 @@ bool D2LandmarkManager::InitFramePoseWithPts(
             num_inliers++;
         }
     }
-    spdlog::info(
+    spdlog::debug(
         "[D2VINS::D2LandmarkManager] Frame_id {} PnP result: {} inlier {}/{}",
         frame_id, ret.toStr(), num_inliers, points_undist.size());
     return true;
@@ -646,8 +656,7 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
         auto &lm2 = it.second;
         // Check if the camera index is the same, if not we will skip this
         // landmark
-        if (lm1.camera_id != camera_idx ||
-            lm2.camera_id != camera_idx) {
+        if (lm1.camera_id != camera_idx || lm2.camera_id != camera_idx) {
             continue;
         }
         // Use pt3d_norm
@@ -661,7 +670,7 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
         return false;
     }
     ret = Swarm::Pose(R, T);
-    spdlog::info(
+    spdlog::debug(
         "[D2VINS::D2LandmarkManager] Frame {} Solve 5 pts with {} pts result: "
         "{}",
         frame2_id, corres.size(), ret.toStr());
@@ -690,20 +699,27 @@ std::map<FrameIdType, Vector3d> D2LandmarkManager::triangulationFrames(
     return points3d;
 }
 
-
 std::map<LandmarkIdType, Vector3d> D2LandmarkManager::triangulationFrames(
-        const std::map<FrameIdType, Swarm::Pose>& frame_poses, int camera_idx) {
+    const std::map<FrameIdType, Swarm::Pose> &frame_poses, int camera_idx,
+    int min_tracks) {
     std::map<LandmarkIdType, Vector3d> ret;
     for (auto &it : landmark_db) {
         auto &lm = it.second;
         auto lm_id = it.first;
         std::vector<Swarm::Pose> poses;
         std::vector<Eigen::Vector3d> pt3d_norms;
+        if (lm.track.size() < min_tracks) {
+            continue;
+        }
         for (auto &it : lm.track) {
-            if (it.camera_id == camera_idx && frame_poses.count(it.frame_id) > 0) {
+            if (it.camera_id == camera_idx &&
+                frame_poses.count(it.frame_id) > 0) {
                 poses.emplace_back(frame_poses.at(it.frame_id));
                 pt3d_norms.emplace_back(it.pt3d_norm);
             }
+        }
+        if (poses.size() < min_tracks) {
+            continue;
         }
         // Perform triangulation
         Vector3d point_3d(0., 0., 0.);
@@ -715,4 +731,4 @@ std::map<LandmarkIdType, Vector3d> D2LandmarkManager::triangulationFrames(
     return ret;
 }
 
-}  // namespace D2VINS
+} // namespace D2VINS

@@ -29,7 +29,7 @@ class D2LandmarkManager : public D2FrontEnd::LandmarkManager {
         FrameIdType frame1_id, const Swarm::Pose& frame1, FrameIdType frame2_id,
         const Swarm::Pose& frame2, int camera_idx);
     std::map<LandmarkIdType, Vector3d> triangulationFrames(
-        const std::map<FrameIdType, Swarm::Pose>& frame_poses, int camera_idx);
+        const std::map<FrameIdType, Swarm::Pose>& frame_poses, int camera_idx, int min_tracks);
     bool SolveRelativePose5Pts(Swarm::Pose& ret, int camera_idx, FrameIdType frame1_id,
                                FrameIdType frame2_id);
     bool InitFramePoseWithPts(Swarm::Pose& ret, const std::map<LandmarkIdType, Vector3d>& last_triangluation_pts, FrameIdType frame_id, int camera_idx);

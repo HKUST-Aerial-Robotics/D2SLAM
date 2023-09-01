@@ -34,7 +34,11 @@ protected:
     void outlierRejection(const std::set<LandmarkIdType> & used_landmarks);
     void updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs);
     void createPriorFactor4FirstFrame(VINSFrame * frame);
-    void solveGyroscopeBias(std::vector<VINSFrame * > sld_win, const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic);
+    bool solveGyroscopeBias(std::vector<VINSFrame * > sld_win, const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic);
+    bool LinearAlignment(std::vector<VINSFrame * > sld_win, 
+        const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic);
+    void RefineGravity(std::vector<VINSFrame * > sld_win, 
+        const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic, Vector3d &g, VectorXd &x);
 public:
     state_type td = 0.0;
     D2EstimatorState(int _self_id);
@@ -91,6 +95,9 @@ public:
     void syncFromState(const std::set<LandmarkIdType> & used_landmarks);
     void preSolve(const std::map<int, IMUBuffer> & remote_imu_bufs);
     void repropagateIMU();
+    void setPose(FrameIdType frame_id, const Swarm::Pose & pose);
+    void setVelocity(FrameIdType frame_id, const Vector3d & velocity);
+    void setBias(FrameIdType frame_id, const Vector3d & ba, const Vector3d & bg);
 
     int numKeyframes() const;
 
@@ -106,6 +113,7 @@ public:
 
     void updateEgoMotion();
     void printLandmarkReport(FrameIdType frame_id) const;
-    void monoInitialization();
+    bool monoInitialization();
+
 };
 }

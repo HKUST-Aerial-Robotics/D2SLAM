@@ -13,8 +13,7 @@ struct ReprojectionError3D
 	template <typename T>
 	bool operator()(const T* const camera_R, const T* const camera_T, const T* point, T* residuals) const
 	{
-		T p[3];
-        Eigen::Map<const Eigen::Matrix<T, 3, 1>> p_eigen(p);
+        Eigen::Map<const Eigen::Matrix<T, 3, 1>> p_eigen(camera_T);
         Eigen::Map<const Eigen::Quaternion<T>> q_eigen(camera_R);
         Eigen::Map<const Eigen::Matrix<T, 3, 1>> point_eigen(point);
         Eigen::Matrix<T, 3, 1> pt_cam = q_eigen.inverse()*(point_eigen - p_eigen);

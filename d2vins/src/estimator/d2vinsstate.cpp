@@ -2,6 +2,7 @@
 #include "d2vinsstate.hpp"
 #include "../d2vins_params.hpp"
 #include <d2common/d2vinsframe.h>
+#include <d2common/utils.hpp>
 #include <d2common/integration_base.h>
 #include "marginalization/marginalization.hpp"
 #include "../factors/prior_factor.h"
@@ -454,26 +455,34 @@ void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame * frame) {
     //Prior is in form of A \delta x = b
     //A is a 6x6 matrix, A = diag([a_p, a_p, a_p, 0, 0, a_yaw])
     //b is zero vector
+    bool add_vel_ba_prior = false;
     int local_cam_num = params->camera_num;
-    printf("\033[0;32m[D2VINS::D2Estimator] Add prior for first frame, extrinsic %d: %d and speed\033[0m\n", params->estimate_extrinsic, local_cam_num);
-    int Adim = POSE_EFF_SIZE + FRAME_SPDBIAS_SIZE + (params->estimate_extrinsic?POSE_EFF_SIZE*local_cam_num: 0);
-    printf("Admin %d\n", Adim);
+    spdlog::warn("Add prior for first frame, extrinsic {}, {} and speed", params->estimate_extrinsic, local_cam_num);
+    int Adim = POSE_EFF_SIZE + (params->estimate_extrinsic?POSE_EFF_SIZE*local_cam_num: 0) + (add_vel_ba_prior?FRAME_SPDBIAS_SIZE: 0);
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(Adim, Adim);
     A.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * params->initial_pos_sqrt_info;
     A(5, 5) = params->initial_yaw_sqrt_info;
-    A.block<3, 3>(POSE_EFF_SIZE, POSE_EFF_SIZE) = Eigen::Matrix3d::Identity() * params->initial_vel_sqrt_info;
-    A.block<3, 3>(POSE_EFF_SIZE + 3, POSE_EFF_SIZE + 3) = Eigen::Matrix3d::Identity() * params->initial_ba_sqrt_info;
-    A.block<3, 3>(POSE_EFF_SIZE + 6, POSE_EFF_SIZE + 6) = Eigen::Matrix3d::Identity() * params->initial_bg_sqrt_info;
+    if (add_vel_ba_prior)
+    {
+        A.block<3, 3>(POSE_EFF_SIZE, POSE_EFF_SIZE) = Eigen::Matrix3d::Identity() * params->initial_vel_sqrt_info;
+        A.block<3, 3>(POSE_EFF_SIZE + 3, POSE_EFF_SIZE + 3) = Eigen::Matrix3d::Identity() * params->initial_ba_sqrt_info;
+        A.block<3, 3>(POSE_EFF_SIZE + 6, POSE_EFF_SIZE + 6) = Eigen::Matrix3d::Identity() * params->initial_bg_sqrt_info;
+    }
     if (self_id == params->main_id) {
         A = A * 100;
     }
     VectorXd b = VectorXd::Zero(Adim);
     auto param_info = createFramePose(this, frame->frame_id);
     param_info.index = 0;
-    auto param_info_spd_bias = createSpeedBias(this, frame->frame_id);
-    param_info_spd_bias.index = POSE_EFF_SIZE;
-    int extrinsic_start_idx = POSE_EFF_SIZE + FRAME_SPDBIAS_SIZE;
-    std::vector<ParamInfo> need_fix_params{param_info, param_info_spd_bias};
+    int extrinsic_start_idx = POSE_EFF_SIZE;
+    std::vector<ParamInfo> need_fix_params{param_info};
+    if (add_vel_ba_prior)
+    {
+        auto param_info_spd_bias = createSpeedBias(this, frame->frame_id);
+        param_info_spd_bias.index = POSE_EFF_SIZE;
+        need_fix_params.emplace_back(param_info_spd_bias);
+        extrinsic_start_idx += FRAME_SPDBIAS_SIZE;
+    }
     if (params->estimate_extrinsic) {
         for (int i = 0; i < local_cam_num; i ++) {
             A.block<3, 3>(i*POSE_EFF_SIZE + extrinsic_start_idx, i*POSE_EFF_SIZE + extrinsic_start_idx) = Eigen::Matrix3d::Identity() * params->initial_cam_pos_sqrt_info;
@@ -638,22 +647,65 @@ void D2EstimatorState::printLandmarkReport(FrameIdType frame_id) const {
     printf("===============================\n");
 }
 
-void D2EstimatorState::monoInitialization() {
+void D2EstimatorState::setPose(FrameIdType frame_id, const Swarm::Pose & pose) {
+    const Guard lock(state_lock);
+    auto frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
+    frame->odom.pose() = pose;
+    frame->odom.pose().to_vector(_frame_pose_state.at(frame_id));
+}
+
+void D2EstimatorState::setVelocity(FrameIdType frame_id, const Vector3d & velocity) {
+    const Guard lock(state_lock);
+    auto frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
+    frame->odom.vel() = velocity;
+    frame->toVector(_frame_pose_state.at(frame_id), _frame_spd_Bias_state.at(frame_id));
+}
+
+void D2EstimatorState::setBias(FrameIdType frame_id, const Vector3d & Ba, const Vector3d & Bg) {
+    const Guard lock(state_lock);
+    auto frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
+    frame->Ba = Ba;
+    frame->Bg = Bg;
+    frame->toVector(_frame_pose_state.at(frame_id), _frame_spd_Bias_state.at(frame_id));
+    frame->pre_integrations->repropagate(Ba, Bg);
+}
+
+bool D2EstimatorState::monoInitialization() {
     // SFM
-    if (sld_wins.at(self_id).size() < 3) {
-        printf("[D2VINS::D2EstimatorState] Not enough frames for mono initialization\n");
-        return;
+    std::map<FrameIdType, int> keyframe_measurments;
+    printSldWin(keyframe_measurments);
+
+    if (sld_wins.at(self_id).size() < 5) {
+        spdlog::warn("monoInitialization: Not enough frames for mono initialization");
+        return false;
     }
     auto sld_win = sld_wins.at(self_id);
     const int camera_idx = generateCameraId(self_id, 0); // Default use camera 0 for initialization.
     auto sfm_poses = lmanager.SFMInitialization(sld_win, camera_idx);
+    if (sfm_poses.size() == 0) {
+        spdlog::warn("monoInitialization: SFM initialization failed");
+        return false;
+    }
     
     // Then use these poses to perform gyro bias calibration
-    solveGyroscopeBias(sld_win, sfm_poses, extrinsic.at(camera_idx));
+    if (!solveGyroscopeBias(sld_win, sfm_poses, extrinsic.at(camera_idx))) {
+        spdlog::warn("monoInitialization: Gyroscope bias calibration failed");
+        return false;
+    }
+    // Then use these poses to perform linear alignment
+    if(!LinearAlignment(sld_win, sfm_poses, extrinsic.at(camera_idx))) {
+        spdlog::warn("monoInitialization: Linear alignment failed");
+        return false;
+    }
+
+    spdlog::info("monoInitialization: Finished mono initialization, new SldWin:");
+    printSldWin(keyframe_measurments);
+    return true;
 }
 
-void D2EstimatorState::solveGyroscopeBias(std::vector<VINSFrame * > sld_win, 
+bool D2EstimatorState::solveGyroscopeBias(std::vector<VINSFrame * > sld_win, 
         const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic) {
+    // Migrating from VINS-Mono
     Matrix3d A;
     Vector3d b;
     Vector3d delta_bg;
@@ -682,14 +734,197 @@ void D2EstimatorState::solveGyroscopeBias(std::vector<VINSFrame * > sld_win,
     for (int i = 1; i < sld_win.size(); i++) {
         auto frame_i = sld_win[i];
         auto frame_id = frame_i->frame_id;
-        frame_i->Bg += delta_bg;
-        frame_i->toVector(_frame_pose_state[frame_id], _frame_spd_Bias_state[frame_id]);
+        setBias(frame_id, frame_i->Ba, frame_i->Bg + delta_bg);
     }
-
-    for (int i = 1; i < sld_win.size(); i++) {
-        auto frame_i = sld_win[i];
-        frame_i->pre_integrations->repropagate(frame_i->Ba, frame_i->Bg);
-    }
+    return true;
 }
 
+bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win, 
+        const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic)
+{
+    // Migrating from VINS-Mono
+    int all_frame_count = sld_win.size();
+    int n_state = all_frame_count * 3 + 3 + 1;
+    Eigen::Vector3d g;
+    Eigen::VectorXd x;
+
+    Eigen::MatrixXd A{n_state, n_state};
+    A.setZero();
+    Eigen::VectorXd b{n_state};
+    b.setZero();
+
+    int i = 0;
+    for (int i = 0; i < sld_win.size() - 1; i ++ ) {
+        auto frame_i = sld_win[i];
+        auto frame_j = sld_win[i + 1];
+        Swarm::Pose pose_i = sfm_poses.at(frame_i->frame_id);
+        Swarm::Pose pose_j = sfm_poses.at(frame_j->frame_id);
+        Eigen::Matrix3d R_i = pose_i.R();
+        Eigen::Matrix3d R_j = pose_j.R();
+        Eigen::Vector3d T_i = pose_i.pos();
+        Eigen::Vector3d T_j = pose_j.pos();
+
+        MatrixXd tmp_A(6, 10);
+        tmp_A.setZero();
+        VectorXd tmp_b(6);
+        tmp_b.setZero();
+
+        double dt = frame_j->pre_integrations->sum_dt;
+
+        tmp_A.block<3, 3>(0, 0) = -dt * Matrix3d::Identity();
+        tmp_A.block<3, 3>(0, 6) = R_i.transpose() * dt * dt / 2 * Matrix3d::Identity();
+        tmp_A.block<3, 1>(0, 9) = R_i.transpose() * (T_j - T_i) / 100.0;     
+        tmp_b.block<3, 1>(0, 0) = frame_j->pre_integrations->delta_p + R_i.transpose() * R_j * extrinsic.pos() - extrinsic.pos();
+        tmp_A.block<3, 3>(3, 0) = -Matrix3d::Identity();
+        tmp_A.block<3, 3>(3, 3) = R_i.transpose() * R_j;
+        tmp_A.block<3, 3>(3, 6) = R_i.transpose() * dt * Matrix3d::Identity();
+        tmp_b.block<3, 1>(3, 0) = frame_j->pre_integrations->delta_v;
+
+        Matrix<double, 6, 6> cov_inv = Matrix<double, 6, 6>::Zero();
+        cov_inv.setIdentity();
+
+        MatrixXd r_A = tmp_A.transpose() * cov_inv * tmp_A;
+        VectorXd r_b = tmp_A.transpose() * cov_inv * tmp_b;
+
+        A.block<6, 6>(i * 3, i * 3) += r_A.topLeftCorner<6, 6>();
+        b.segment<6>(i * 3) += r_b.head<6>();
+
+        A.bottomRightCorner<4, 4>() += r_A.bottomRightCorner<4, 4>();
+        b.tail<4>() += r_b.tail<4>();
+
+        A.block<6, 4>(i * 3, n_state - 4) += r_A.topRightCorner<6, 4>();
+        A.block<4, 6>(n_state - 4, i * 3) += r_A.bottomLeftCorner<4, 6>();
+    }
+    A = A * 1000.0;
+    b = b * 1000.0;
+    x = A.ldlt().solve(b);
+    double s = x(n_state - 1) / 100.0;
+    g = x.segment<3>(n_state - 4);
+    spdlog::debug("LinearAlignment: Scale: {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", s, g.norm(), g.x(), g.y(), g.z());
+    if(fabs(g.norm() - IMUData::Gravity.norm()) > 1.0 || s < 0)
+    {
+        spdlog::warn("LinearAlignment Failed. Scale or gnorm wrong");
+        return false;
+    }
+    RefineGravity(sld_win, sfm_poses, extrinsic, g, x);
+    s = (x.tail<1>())(0) / 100.0;
+    (x.tail<1>())(0) = s;
+    if(s < 0.0 )
+    {
+        spdlog::warn("LinearAlignment Failed in RefineGravity. Scale wrong");
+        return false;
+    }
+    
+    // Recover camera poses and IMU poses using the scale
+    Swarm::Pose imu_pose_inv0 = Swarm::Pose::Identity();
+    for (int i = 0; i < sld_win.size(); i++) {
+        auto frame = sld_win[i];
+        Swarm::Pose cam_pose = sfm_poses.at(frame->frame_id);
+        cam_pose.pos() = cam_pose.pos() * s;
+        if (i == 0) {
+            Quaterniond q0 = Utility::g2R(g);
+            Swarm::Pose pose_imu0(q0, Vector3d::Zero());
+            spdlog::info("LinearAlignment: F{} Pose 0 update to {}", frame->frame_id, pose_imu0.toStr());
+            imu_pose_inv0 = pose_imu0*(cam_pose * extrinsic.inverse()).inverse();
+        }
+        Swarm::Pose imu_pose = imu_pose_inv0 * cam_pose * extrinsic.inverse();
+        // Set the pose of the frame
+        Vector3d vel = imu_pose.R()*x.segment<3>(i * 3);
+        setPose(frame->frame_id, imu_pose);
+        setVelocity(frame->frame_id, vel);
+        spdlog::info("LinearAlignment: F{} IMU_pose {} vel {:.4f} {:.4f} {:.4f}", 
+            sld_win[i]->frame_id, imu_pose.toStr(), vel.x(), vel.y(), vel.z());
+    }
+    return true;
+}
+
+MatrixXd TangentBasis(Vector3d &g0)
+{
+    Vector3d b, c;
+    Vector3d a = g0.normalized();
+    Vector3d tmp(0, 0, 1);
+    if(a == tmp)
+        tmp << 1, 0, 0;
+    b = (tmp - a * (a.transpose() * tmp)).normalized();
+    c = a.cross(b);
+    MatrixXd bc(3, 2);
+    bc.block<3, 1>(0, 0) = b;
+    bc.block<3, 1>(0, 1) = c;
+    return bc;
+}
+
+void D2EstimatorState::RefineGravity(std::vector<VINSFrame * > sld_win, 
+        const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic, Vector3d &g, VectorXd &x)
+{
+    Vector3d g0 = g.normalized() * IMUData::Gravity.norm();
+    Vector3d lx, ly;
+    //VectorXd x;
+    int all_frame_count = sld_win.size();
+    int n_state = all_frame_count * 3 + 2 + 1;
+
+    MatrixXd A{n_state, n_state};
+    A.setZero();
+    VectorXd b{n_state};
+    b.setZero();
+
+    for(int k = 0; k < 4; k++)
+    {
+        MatrixXd lxly(3, 2);
+        lxly = TangentBasis(g0);
+        int i = 0;
+        for (int i = 0; i < sld_win.size() - 1; i ++ ) {
+            auto frame_i = sld_win[i];
+            auto frame_j = sld_win[i + 1];
+            Swarm::Pose pose_i = sfm_poses.at(frame_i->frame_id);
+            Swarm::Pose pose_j = sfm_poses.at(frame_j->frame_id);
+            Eigen::Matrix3d R_i = pose_i.R();
+            Eigen::Matrix3d R_j = pose_j.R();
+            Eigen::Vector3d T_i = pose_i.pos();
+            Eigen::Vector3d T_j = pose_j.pos();
+
+            MatrixXd tmp_A(6, 9);
+            tmp_A.setZero();
+            VectorXd tmp_b(6);
+            tmp_b.setZero();
+
+            double dt = frame_j->pre_integrations->sum_dt;
+
+
+            tmp_A.block<3, 3>(0, 0) = -dt * Matrix3d::Identity();
+            tmp_A.block<3, 2>(0, 6) = R_i.transpose() * dt * dt / 2 * Matrix3d::Identity() * lxly;
+            tmp_A.block<3, 1>(0, 8) = R_i.transpose() * (T_j - T_i) / 100.0;     
+            tmp_b.block<3, 1>(0, 0) = frame_j->pre_integrations->delta_p + R_i.transpose() * R_j* extrinsic.pos() - extrinsic.pos() - R_i.transpose() * dt * dt / 2 * g0;
+
+            tmp_A.block<3, 3>(3, 0) = -Matrix3d::Identity();
+            tmp_A.block<3, 3>(3, 3) = R_i.transpose() * R_j;
+            tmp_A.block<3, 2>(3, 6) = R_i.transpose() * dt * Matrix3d::Identity() * lxly;
+            tmp_b.block<3, 1>(3, 0) = frame_j->pre_integrations->delta_v - R_i.transpose() * dt * Matrix3d::Identity() * g0;
+
+
+            Matrix<double, 6, 6> cov_inv = Matrix<double, 6, 6>::Zero();
+            //cov.block<6, 6>(0, 0) = IMU_cov[i + 1];
+            //MatrixXd cov_inv = cov.inverse();
+            cov_inv.setIdentity();
+
+            MatrixXd r_A = tmp_A.transpose() * cov_inv * tmp_A;
+            VectorXd r_b = tmp_A.transpose() * cov_inv * tmp_b;
+
+            A.block<6, 6>(i * 3, i * 3) += r_A.topLeftCorner<6, 6>();
+            b.segment<6>(i * 3) += r_b.head<6>();
+
+            A.bottomRightCorner<3, 3>() += r_A.bottomRightCorner<3, 3>();
+            b.tail<3>() += r_b.tail<3>();
+
+            A.block<6, 3>(i * 3, n_state - 3) += r_A.topRightCorner<6, 3>();
+            A.block<3, 6>(n_state - 3, i * 3) += r_A.bottomLeftCorner<3, 6>();
+        }
+        A = A * 1000.0;
+        b = b * 1000.0;
+        x = A.ldlt().solve(b);
+        VectorXd dg = x.segment<2>(n_state - 3);
+        g0 = (g0 + lxly * dg).normalized() * IMUData::Gravity.norm();
+    }   
+    g = g0;
+    spdlog::info("RefineGravity: scale {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", x(n_state-1)/100.0, g.norm(), g.x(), g.y(), g.z());
+}
 }

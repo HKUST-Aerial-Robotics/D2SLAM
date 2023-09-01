@@ -101,7 +101,7 @@ namespace D2FrontEnd {
         ftconfig->parallex_thres = fsSettings["parallex_thres"];
         ftconfig->knn_match_ratio = fsSettings["knn_match_ratio"];
         ftconfig->frame_step = fsSettings["frame_step"];
-        nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
+        nh.param<int>("long_track_thres", ftconfig->long_track_thres, 0);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
         nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);
         nh.param<int>("min_keyframe_num", ftconfig->min_keyframe_num, 2);
