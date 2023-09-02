@@ -94,7 +94,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
 
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
         report.compose(track(frames.images[0], frames.motion_prediction));
-        // report.compose(track(frames.images[0], frames.images[1]));
+        report.compose(track(frames.images[0], frames.images[1]));
     } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         for (auto & frame : frames.images) {
             report.compose(track(frame));

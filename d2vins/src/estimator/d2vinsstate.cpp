@@ -455,7 +455,7 @@ void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame * frame) {
     //Prior is in form of A \delta x = b
     //A is a 6x6 matrix, A = diag([a_p, a_p, a_p, 0, 0, a_yaw])
     //b is zero vector
-    bool add_vel_ba_prior = false;
+    bool add_vel_ba_prior = params->add_vel_ba_prior;
     int local_cam_num = params->camera_num;
     spdlog::warn("Add prior for first frame, extrinsic {}, {} and speed", params->estimate_extrinsic, local_cam_num);
     int Adim = POSE_EFF_SIZE + (params->estimate_extrinsic?POSE_EFF_SIZE*local_cam_num: 0) + (add_vel_ba_prior?FRAME_SPDBIAS_SIZE: 0);
@@ -802,7 +802,7 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
     spdlog::debug("LinearAlignment: Scale: {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", s, g.norm(), g.x(), g.y(), g.z());
     if(fabs(g.norm() - IMUData::Gravity.norm()) > 1.0 || s < 0)
     {
-        spdlog::warn("LinearAlignment Failed. Scale or gnorm wrong");
+        spdlog::warn("LinearAlignment Failed. Scale or gnorm wrong: g {:.3f} {:.3f} {:.3f} s {:.3f}", g.x(), g.y(), g.z(), s);
         return false;
     }
     RefineGravity(sld_win, sfm_poses, extrinsic, g, x);

@@ -17,7 +17,8 @@ camera_configuration: 0  #STEREO_PINHOLE = 0, STEREO_FISHEYE = 1, PINHOLE_DEPTH 
 num_of_cam: 2
 image_width: 640
 image_height: 440
-calib_file_path: "GRACO_calib.yaml"
+# calib_file_path: "GRACO_calib.yaml"
+calib_file_path: "GRACO_calib_ground.yaml"
 
 #estimation
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -59,15 +60,15 @@ depth_estimate_baseline: 0.03
 #sliding window
 max_sld_win_size: 11
 landmark_estimate_tracks: 4 #when use depth or stereo, 3 is OK.
-min_solve_frames: 9
+min_solve_frames: 10
 
 #solver
 multiple_thread: 1
 
 #outlier rejection
-thres_outlier : 1000.0
-perform_outlier_rejection_num: 100000
-tri_max_err: 0.1
+thres_outlier : 10.0
+perform_outlier_rejection_num: 100
+tri_max_err: 0.2
 
 #Marginalization
 enable_marginalization: 1
@@ -81,19 +82,18 @@ remove_base_when_margin_remote: 2
 
 #feature tracker parameters
 max_cnt: 250            # max feature number in feature tracking
-max_superpoint_cnt: 0 # max feature extraction by superpoint
+max_superpoint_cnt: 250 # max feature extraction by superpoint
 max_solve_cnt: 250
-max_solve_measurements: 10000
 check_essential: 1
-enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
+enable_lk_optical_flow: 0 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
 remote_min_match_num: 40
 enable_superglue_local: 0
 enable_superglue_remote: 0
 ransacReprojThreshold: 10.0
 enable_search_local_aera: 1
-search_local_max_dist: 0.12
+search_local_max_dist: 0.04
 feature_min_dist: 15
-parallex_thres: 0.04
+parallex_thres: 0.02
 knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
 
 #CNN

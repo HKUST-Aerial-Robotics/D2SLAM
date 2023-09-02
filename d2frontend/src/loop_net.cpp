@@ -2,6 +2,7 @@
 #include <time.h> 
 #include "d2frontend/loop_detector.h"
 #include <swarm_msgs/lcm_gen/LandmarkDescriptorPacket_t.hpp>
+#include "spdlog/spdlog.h"
 
 namespace D2FrontEnd {
 void LoopNet::setupNetwork(std::string _lcm_uri) {
@@ -33,7 +34,7 @@ void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray & image_array, 
         //Only label the image array as sent if we are sending the features.
         sent_image_arrays.insert(image_array.frame_id);
     }
-    printf("[LoopNet@%d] broadcast image array: %ld lazy: %d size %d need_send_features %d\n", params->self_id, fisheye_desc.frame_id, 
+    spdlog::debug("[LoopNet@{}] broadcast image array: {} lazy: {} size {} need_send_features {}", params->self_id, fisheye_desc.frame_id, 
             params->lazy_broadcast_keyframe, fisheye_desc.getEncodedSize(), need_send_features);
     if (send_whole_img_desc) {
         sent_message.insert(fisheye_desc.msg_id);

@@ -308,7 +308,7 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState *state) {
         }
     }
 
-    spdlog::info("[D2VINS::D2LandmarkManager] Total {} initialized {}",
+    spdlog::debug("[D2VINS::D2LandmarkManager] Total {} initialized {}",
                   landmark_db.size(), inited_count);
 }
 
@@ -528,7 +528,7 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
     ceres::Problem problem;
     ceres::LocalParameterization *local_parameterization =
         new ceres::EigenQuaternionParameterization();
-    ceres::HuberLoss *loss = new ceres::HuberLoss(0.02);
+    ceres::HuberLoss *loss = new ceres::HuberLoss(1.0);
 
     for (auto it : initial) {
         // Initial states
@@ -584,7 +584,7 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
     options.max_solver_time_in_seconds = 0.2;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
-    spdlog::debug("Finish solve BA in {:.2f}ms. rpt {}",
+    spdlog::info("Finish solve BA in {:.2f}ms. rpt {}",
                   summary.total_time_in_seconds * 1000.0,
                   summary.BriefReport());
     for (auto it : initial) {
@@ -662,6 +662,7 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
     // Get their landmarks and find the common
     auto common_lm = findCommonLandmarkPerFrames(frame1_id, frame2_id);
 
+    cv::Mat img(440, 640, CV_8UC3, cv::Scalar(0, 0, 0));
     // Solve with 5 pts method
     std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> corres;
     for (auto &it : common_lm) {
@@ -674,7 +675,16 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
         }
         // Use pt3d_norm
         corres.emplace_back(lm1.pt3d_norm, lm2.pt3d_norm);
+        // Draw the arrow of the points using pt2d, it's already cv::Point2f
+        cv::arrowedLine(img, lm1.pt2d, lm2.pt2d, cv::Scalar(0, 0, 255), 2);
+        cv::Point2f pt3d_norm1(lm1.pt3d_norm.x() / lm1.pt3d_norm.z()*371 + 324,
+                               lm1.pt3d_norm.y() / lm1.pt3d_norm.z()*371 + 223);
+        cv::Point2f pt3d_norm2(lm2.pt3d_norm.x() / lm2.pt3d_norm.z()*371 + 324,
+                                 lm2.pt3d_norm.y() / lm2.pt3d_norm.z()*371 + 223);
+        cv::arrowedLine(img, pt3d_norm1, pt3d_norm2, cv::Scalar(0, 255, 0), 2);
     }
+    // cv::imshow("5 pts", img);
+    // cv::waitKey(1);
     utils::MotionEstimator estimator;
     Matrix3d R;
     Vector3d T;

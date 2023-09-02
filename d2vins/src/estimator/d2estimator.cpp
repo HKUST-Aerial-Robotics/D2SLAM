@@ -13,6 +13,7 @@
 #include "marginalization/marginalization.hpp"
 #include "solver/VINSConsenusSolver.hpp"
 #include "../network/d2vins_net.hpp"
+#include "spdlog/spdlog.h"
 #include "solver/ConsensusSync.hpp"
 
 namespace D2VINS {
@@ -551,8 +552,11 @@ void D2Estimator::solveNonDistrib() {
         return;
     } else {
         if (solve_count == 0) {
-            printf("[D2VINS::D2Estimator] Initializationwith %d keyframes\n", state.numKeyframes());
-            state.monoInitialization();
+            spdlog::info("[D2VINS::D2Estimator] Initialization with {} keyframes", state.numKeyframes());
+            if(!state.monoInitialization()) {
+                spdlog::error("[D2VINS::D2Estimator] Initialization failed, will try later\n");
+                return;
+            }
         }
     }
     resetMarginalizer();
@@ -579,16 +583,16 @@ void D2Estimator::solveNonDistrib() {
     sum_cost += report.final_cost;
 
     if (params->enable_perf_output) {
-        printf("[D2VINS] average time %.1fms, average time of iter: %.1fms, average iteration %.3f, average cost %.3f\n", 
+        spdlog::info("[D2VINS] average time %.1fms, average time of iter: %.1fms, average iteration %.3f, average cost %.3f\n", 
             sum_time*1000/solve_count, sum_time*1000/sum_iteration, sum_iteration/solve_count, sum_cost/solve_count);
     }
 
     if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
         auto last_odom = state.lastFrame().odom;
-        printf("[D2VINS] solve_count %d landmarks %d odom %s td %.1fms opti_time %.1fms\n", solve_count, 
-            current_landmark_num, last_odom.toStr().c_str(), state.td*1000, report.total_time*1000);
+        spdlog::info("C{} landmarks {} odom {} td {:.1f}ms opti_time {:.1f}ms", solve_count, 
+            current_landmark_num, last_odom.toStr(), state.td*1000, report.total_time*1000);
     } else {
-        printf("[D2VINS] solve_count %d landmarks %d td %.1fms opti_time %.1fms\n", solve_count, 
+        spdlog::info("C{} landmarks {} td {:1.f}ms opti_time {:.1f}ms", solve_count, 
             current_landmark_num, state.td*1000, report.total_time*1000);
     }
 
