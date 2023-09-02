@@ -59,7 +59,7 @@ depth_estimate_baseline: 0.03
 #sliding window
 max_sld_win_size: 11
 landmark_estimate_tracks: 4 #when use depth or stereo, 3 is OK.
-min_solve_frames: 5
+min_solve_frames: 9
 
 #solver
 multiple_thread: 1
@@ -67,7 +67,7 @@ multiple_thread: 1
 #outlier rejection
 thres_outlier : 1000.0
 perform_outlier_rejection_num: 100000
-tri_max_err: 100
+tri_max_err: 0.1
 
 #Marginalization
 enable_marginalization: 1
@@ -81,7 +81,7 @@ remove_base_when_margin_remote: 2
 
 #feature tracker parameters
 max_cnt: 250            # max feature number in feature tracking
-max_superpoint_cnt: 100 # max feature extraction by superpoint
+max_superpoint_cnt: 150 # max feature extraction by superpoint
 max_solve_cnt: 250
 max_solve_measurements: 10000
 check_essential: 1
@@ -91,9 +91,9 @@ enable_superglue_local: 0
 enable_superglue_remote: 0
 ransacReprojThreshold: 10.0
 enable_search_local_aera: 1
-search_local_max_dist: 0.04
+search_local_max_dist: 0.12
 feature_min_dist: 15
-parallex_thres: 0.03
+parallex_thres: 0.01
 knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
 
 #CNN

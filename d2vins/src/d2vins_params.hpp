@@ -55,6 +55,7 @@ struct D2VINSConfig {
     InitialMethod init_method = INIT_POSE_PNP;
     double depth_estimate_baseline = 0.05;
     double tri_max_err = 0.1;
+    double mono_initial_tri_max_err = 0.05;
     
     //Estimation
     bool estimate_td = false;

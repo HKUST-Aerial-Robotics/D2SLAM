@@ -32,7 +32,7 @@ class D2LandmarkManager : public D2FrontEnd::LandmarkManager {
         const std::map<FrameIdType, Swarm::Pose>& frame_poses, int camera_idx, int min_tracks);
     bool SolveRelativePose5Pts(Swarm::Pose& ret, int camera_idx, FrameIdType frame1_id,
                                FrameIdType frame2_id);
-    bool InitFramePoseWithPts(Swarm::Pose& ret, const std::map<LandmarkIdType, Vector3d>& last_triangluation_pts, FrameIdType frame_id, int camera_idx);
+    bool InitFramePoseWithPts(Swarm::Pose& ret, std::map<LandmarkIdType, Vector3d>& last_triangluation_pts, FrameIdType frame_id, int camera_idx);
 };
 
 }  // namespace D2VINS

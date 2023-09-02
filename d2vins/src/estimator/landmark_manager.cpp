@@ -495,7 +495,7 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
         auto frame_next = frames[i + 1];
         auto frame = frames[i];
         // Found the landmarks observerd by frame and in points3d
-        Swarm::Pose pose_next = Swarm::Pose::Identity();
+        Swarm::Pose pose_next = initial.at(frame_next->frame_id);
         if (InitFramePoseWithPts(pose_next, last_triangluation_pts,
                                  frame->frame_id, camera_idx)) {
             // Triangulate all the common points
@@ -510,6 +510,15 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
 
     // Now re-triangluation all points
     auto initial_pts = triangulationFrames(initial, camera_idx, 3);
+    // and only keep the points in last_triangluation_pts
+    for (auto it = initial_pts.begin(); it != initial_pts.end();) {
+        if (last_triangluation_pts.find(it->first) ==
+            last_triangluation_pts.end()) {
+            it = initial_pts.erase(it);
+        } else {
+            ++it;
+        }
+    }
     spdlog::info("{} points initialized. Now start BA", initial_pts.size());
     std::map<FrameIdType, Swarm::Pose> ret;
 
@@ -585,15 +594,14 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
         Eigen::Map<Eigen::Quaterniond> quat(c_rotation[frame_id]);
         Swarm::Pose camera_pose(pos, quat);
         ret[frame_id] = camera_pose;
-        spdlog::debug("SfM init {}: Cam {}", frame_id, camera_pose.toStr());
+        spdlog::info("SfM init {}: Cam {}", frame_id, camera_pose.toStr());
     }
-
     return ret;
 }
 
 bool D2LandmarkManager::InitFramePoseWithPts(
     Swarm::Pose &ret,
-    const std::map<LandmarkIdType, Vector3d> &last_triangluation_pts,
+    std::map<LandmarkIdType, Vector3d> &last_triangluation_pts,
     FrameIdType frame_id, int camera_idx) {
     auto landmark_ids = getRelatedLandmarks(frame_id);
     std::vector<cv::Point3f> points_3d;
@@ -624,20 +632,25 @@ bool D2LandmarkManager::InitFramePoseWithPts(
         return false;
     }
     cv::Mat rvec, tvec;
+    D2FrontEnd::PnPInitialFromCamPose(ret, rvec, tvec);
     cv::Mat K = cv::Mat::eye(3, 3, CV_64F); // Use undist point, so identity
     std::vector<uint8_t> inliers;
     cv::solvePnPRansac(points_3d, points_undist, K, cv::Mat(), rvec, tvec,
-                       false, 100, 0.01, 0.99, inliers);
+                       true, 100, 0.01, 0.99, inliers);
     // Convert to eigen
     ret = D2FrontEnd::PnPRestoCamPose(rvec, tvec);
     // Print result
     int num_inliers = 0;
-    for (auto inlier : inliers) {
-        if (inlier) {
+    for (size_t i = 0; i < inliers.size(); i++)
+    {
+        if (inliers[i]) {
             num_inliers++;
         }
+        else {
+            last_triangluation_pts.erase(landmark_ids_used[i]);
+        }
     }
-    spdlog::debug(
+    spdlog::info(
         "[D2VINS::D2LandmarkManager] Frame_id {} PnP result: {} inlier {}/{}",
         frame_id, ret.toStr(), num_inliers, points_undist.size());
     return true;
@@ -670,7 +683,7 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
         return false;
     }
     ret = Swarm::Pose(R, T);
-    spdlog::debug(
+    spdlog::info(
         "[D2VINS::D2LandmarkManager] Frame {} Solve 5 pts with {} pts result: "
         "{}",
         frame2_id, corres.size(), ret.toStr());
@@ -693,8 +706,9 @@ std::map<FrameIdType, Vector3d> D2LandmarkManager::triangulationFrames(
         std::vector<Swarm::Pose> poses{pose1, pose2};
         // Perform triangulation
         Vector3d point_3d(0., 0., 0.);
-        triangulatePoint3DPts(poses, points, point_3d);
-        points3d[lm1.landmark_id] = point_3d;
+        auto ret = triangulatePoint3DPts(poses, points, point_3d);
+        if (ret < params->mono_initial_tri_max_err)
+            points3d[lm1.landmark_id] = point_3d;
     }
     return points3d;
 }
@@ -723,8 +737,8 @@ std::map<LandmarkIdType, Vector3d> D2LandmarkManager::triangulationFrames(
         }
         // Perform triangulation
         Vector3d point_3d(0., 0., 0.);
-        triangulatePoint3DPts(poses, pt3d_norms, point_3d);
-        if (point_3d.norm() > 1e-2) {
+        auto err = triangulatePoint3DPts(poses, pt3d_norms, point_3d);
+        if (point_3d.norm() > 1e-2 && err < params->mono_initial_tri_max_err) {
             ret[lm.landmark_id] = point_3d;
         }
     }

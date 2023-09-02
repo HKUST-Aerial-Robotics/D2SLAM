@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <d2common/d2frontend_types.h>
+#include <d2frontend/utils.h>
 
 using namespace Eigen;
 
@@ -43,7 +44,7 @@ struct D2FTConfig {
     std::string superglue_model_path;
     double landmark_distance_assumption = 10.0; // For uninitialized landmark, assume it is 3m away
     int frame_step = 2;
-    bool track_from_keyframe = false;
+    bool track_from_keyframe = true;
 };
 
 struct TrackReport {
@@ -68,13 +69,6 @@ struct TrackReport {
     }
 };
 
-struct LKImageInfo {
-    FrameIdType frame_id;
-    std::vector<cv::Point2f> lk_pts;
-    std::vector<LandmarkIdType> lk_ids;
-    cv::Mat image;
-    std::vector<cv::cuda::GpuMat> pyr;
-};
 
 class SuperGlueOnnx;
 
@@ -102,7 +96,7 @@ protected:
     int keyframe_count = 0;
     int frame_count = 0;
     bool inited = false;
-    std::map<int, LKImageInfo> prev_lk_info; //frame.camera_index->image
+    std::map<int, std::map<int, LKImageInfoGPU>> keyframe_lk_infos; //frame.camera_index->image
     std::pair<bool, LandmarkPerFrame> createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id = -1);
     std::recursive_mutex track_lock;
     std::recursive_mutex keyframe_lock;
@@ -121,7 +115,7 @@ protected:
     void processFrame(VisualImageDescArray & frames, bool is_keyframe);
     bool isKeyframe(const TrackReport & reports);
     Vector3d extractPointVelocity(const LandmarkPerFrame & lpf) const;
-    std::pair<bool, LandmarkPerFrame> getPreviousLandmarkFrame(const LandmarkPerFrame & lpf) const;
+    std::pair<bool, LandmarkPerFrame> getPreviousLandmarkFrame(const LandmarkPerFrame & lpf, FrameIdType keyframe_id=-1) const;
 
     void draw(const VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
     void draw(const VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const;

@@ -698,8 +698,7 @@ bool D2EstimatorState::monoInitialization() {
         return false;
     }
 
-    spdlog::info("monoInitialization: Finished mono initialization, new SldWin:");
-    printSldWin(keyframe_measurments);
+    spdlog::info("monoInitialization: Finished mono initialization");
     return true;
 }
 
@@ -822,7 +821,8 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
         Swarm::Pose cam_pose = sfm_poses.at(frame->frame_id);
         cam_pose.pos() = cam_pose.pos() * s;
         if (i == 0) {
-            Quaterniond q0 = Utility::g2R(g);
+            Quaterniond q_last_to_first = cam_pose.att() * sfm_poses.at(sld_win.back()->frame_id).att().inverse();
+            Quaterniond q0 = Utility::g2R(g)*q_last_to_first; // g is in last pose's camera frame.
             Swarm::Pose pose_imu0(q0, Vector3d::Zero());
             spdlog::info("LinearAlignment: F{} Pose 0 update to {}", frame->frame_id, pose_imu0.toStr());
             imu_pose_inv0 = pose_imu0*(cam_pose * extrinsic.inverse()).inverse();
