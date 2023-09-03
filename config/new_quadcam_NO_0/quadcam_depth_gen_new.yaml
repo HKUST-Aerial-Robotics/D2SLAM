@@ -1,6 +1,6 @@
 enable_cnn: true
 cnn_int8: false
-cnn_fp16: true
+cnn_fp16: false 
 cnn_use_tensorrt: true
 cnn_type: "hitnet"
 # cnn_type: "crestereo"
