@@ -55,6 +55,9 @@ RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` ma
       rosdep init && \
       rosdep update
 
+#Install python env
+RUN pip install onnxruntime-gpu tqdm 
+
 #Replace CMAKE
 RUN   rm /usr/bin/cmake && \
       wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh \
@@ -69,7 +72,9 @@ RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       cd ceres-solver && \
       mkdir build && cd build && \
       cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
-      make -j$(USE_PROC) install && \
+      #Change to `make -j2 install` if this installation runs failed
+      make -j$(USE_PROC) install && \ 
+      # make -j2 install && \
       rm -rf ../../ceres-solver && \
       apt-get clean all
 
@@ -138,7 +143,9 @@ RUN   cd opencv-${OPENCV_VERSION} && \
 cudev,cudaoptflow,cudaimgproc,cudalegacy,cudaarithm,cudacodec,cudastereo,\
 cudafeatures2d,xfeatures2d,tracking,stereo,\
 aruco,videoio,ccalib && \
+      # this make comman raises most of failed cases
       make -j $(USE_PROC) && \
+      # make -j8 install && \
       make install 
 
 #Install OpenGV

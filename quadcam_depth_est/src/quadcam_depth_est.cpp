@@ -7,6 +7,9 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+std::string arducam_topic = "/arducam/image";
+std::string oak_ffc_4p_topic = "/oak_ffc_4p/assemble_image";
+
 
 namespace D2FrontEnd {
     std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(const std::string & camera_name, const YAML::Node & config);
@@ -24,18 +27,22 @@ QuadCamDepthEst::QuadCamDepthEst(ros::NodeHandle & _nh): nh(_nh) {
     int pn = quadcam_depth_config_file.find_last_of('/');    
     std::string configPath = quadcam_depth_config_file.substr(0, pn);
     YAML::Node config = YAML::LoadFile(quadcam_depth_config_file);
-    enable_texture = config["enable_texture"].as<bool>();
-    pixel_step = config["pixel_step"].as<int>();
-    image_step = config["image_step"].as<int>();
-    min_z = config["min_z"].as<double>();
-    max_z = config["max_z"].as<double>();
+    this->enable_texture = config["enable_texture"].as<bool>();
+    this->pixel_step = config["pixel_step"].as<int>();
+    this->image_step = config["image_step"].as<int>();
+    this->min_z = config["min_z"].as<double>();
+    this->max_z = config["max_z"].as<double>();
+    this->width = config["width"].as<int>();
+    this->height = config["height"].as<int>();
+
     loadCNN(config);
     loadCameraConfig(config, configPath);
-    std::string format = "compressed"; //TODO: make it configurable
+    std::string format = "raw"; //TODO: make it configurable
     image_transport::TransportHints hints(format, ros::TransportHints().tcpNoDelay(true));
     it_ = new image_transport::ImageTransport(nh);
     if (camera_config == CameraConfig::FOURCORNER_FISHEYE) {
-        image_sub = it_->subscribe("/arducam/image", 1000, &QuadCamDepthEst::imageCallback, this, hints);
+        image_sub = it_->subscribe(oak_ffc_4p_topic, 1000, &QuadCamDepthEst::imageCallback, this, hints);
+        printf("[DEBUG]subscribe to %s\n",oak_ffc_4p_topic.c_str());
     } else {
         left_sub = new ImageSubscriber(*it_, "/cam0/image_raw", 1000, hints);
         right_sub = new ImageSubscriber(*it_, "/cam1/image_raw", 1000, hints);
@@ -65,6 +72,7 @@ void QuadCamDepthEst::loadCNN(YAML::Node & config) {
         nh.param<std::string>("cnn_model_path", cnn_model_path, "");
         if (cnn_type == "hitnet") {
             hitnet = new HitnetONNX(cnn_model_path, width, height, cnn_use_tensorrt, cnn_fp16, cnn_int8);
+            printf("[DEBUG] Hit NET\n");            
             cnn_rgb = false;
         } 
         if (cnn_type == "crestereo") {
@@ -98,6 +106,7 @@ void QuadCamDepthEst::stereoImagesCallback(const sensor_msgs::ImageConstPtr left
     }
     std::pair<cv::Mat, cv::Mat> ret = virtual_stereos[0]->estimatePointsViaRaw(cv_ptr_l->image, cv_ptr_r->image, cv_ptr_l->image, show);
     if (enable_texture) {
+        printf("[Debug] texture\n");
         addPointsToPCL(ret.first, ret.second, virtual_stereos[0]->extrinsic, *pcl_color, pixel_step, min_z, max_z);
     } else {
         addPointsToPCL(ret.first, ret.second, virtual_stereos[0]->extrinsic, *pcl, pixel_step, min_z, max_z);
@@ -125,6 +134,8 @@ void QuadCamDepthEst::imageCallback(const sensor_msgs::ImageConstPtr & left) {
     std::vector<cv::Mat> imgs;
     std::vector<cv::Mat> imgs_gray;
     const int num_imgs = 4;
+    cv::imshow("receive",img);
+    printf("[Debug] image size %d %d\n", img.cols, img.rows);
     for (int i = 0; i < 4; i++) {
         imgs.emplace_back(img(cv::Rect(i * img.cols /num_imgs, 0, img.cols /num_imgs, img.rows)));
         if (!cnn_rgb) {
@@ -184,6 +195,7 @@ cv::Mat readVingette(const std::string & mask_file, double avg_brightness) {
 void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPath) {
     int _camera_config = config["camera_configuration"].as<int>();
     camera_config = (CameraConfig)_camera_config;
+    cv::Mat photometric_inv_vec[4];
     cv::Mat photometric_inv, photometric_inv_1;
     float avg_brightness = config["avg_brightness"].as<float>();
     if (config["photometric_calib"]) {
@@ -192,11 +204,28 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
     if (config["photometric_calib_1"]) {
         photometric_inv_1 = readVingette(configPath + "/" + config["photometric_calib_1"].as<std::string>(), avg_brightness);
     }
+    int num_cemaras = config["photometric_calib_numbers"].as<int>();
+    if (num_cemaras >0 && num_cemaras <= 4){
+        std::string photometric_calib_path = config["photometric_calib_path"].as<std::string>();
+        if( access(photometric_calib_path.c_str(),F_OK) == -1){
+            printf("[QuadCamDepthEst] photometric_calib_path is not exist\n");
+            return;
+        } else {
+            for(int i = 0 ; i< num_cemaras; i++){
+                std::string mask_file = photometric_calib_path + "/" + std::string("cam_") + std::to_string(i) + std::string("_vig_mask.png");//search image "cam_i_vig_mask.png"
+                photometric_inv_vec[i] = readVingette(mask_file, avg_brightness);
+                printf("[Read vingette]:%s\n",mask_file.c_str());
+            }
+        }
+    }
+
     std::string calib_file_path = config["calib_file_path"].as<std::string>();
     printf("[QuadCamDepthEst] Load camera config from %s\n", calib_file_path.c_str());
     calib_file_path = configPath + "/" + calib_file_path;
     YAML::Node config_cams = YAML::LoadFile(calib_file_path); 
+    //read intrinsic and distortion model
 
+    int32_t photometric_inv_idx = 0;
     for (const auto& kv : config_cams) {
         std::string camera_name = kv.first.as<std::string>();
         printf("[QuadCamDepthEst] Load camera %s\n", camera_name.c_str());
@@ -205,8 +234,14 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
         raw_cameras.emplace_back(ret.first);
         if (camera_config == CameraConfig::FOURCORNER_FISHEYE) {
             double fov = config["fov"].as<double>();
+            if(photometric_inv_idx >=4 || photometric_inv_idx < 0){
+                photometric_inv_idx = 0;
+            }
+            printf("[Debug ]undistortor matrix init with size width:%d height:%d\n",this->width,this->height);
             undistortors.push_back(new D2Common::FisheyeUndist(ret.first, 0, fov, true,
-                D2Common::FisheyeUndist::UndistortPinhole2, width, height, photometric_inv));
+                D2Common::FisheyeUndist::UndistortPinhole2, this->width, this->height, photometric_inv_vec[photometric_inv_idx]));
+            printf("[Debug] undistorter width and height:%d %d\n",this->width,this->height);
+            photometric_inv_idx++;
         }
         raw_cam_extrinsics.emplace_back(ret.second);
     }
@@ -226,6 +261,7 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
         stereo->initVingette(photometric_inv, photometric_inv_1);
         virtual_stereos.emplace_back(stereo);
     } else if (camera_config == CameraConfig::FOURCORNER_FISHEYE) {
+        printf("Config fourfisheye\n");
         for (const auto & kv: config["stereos"]) {
             auto node = kv.second;
             std::string stereo_name = kv.first.as<std::string>();
@@ -259,8 +295,10 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
     }
 }
 
-std::pair<cv::Mat, cv::Mat> intrinsicsFromNode(const YAML::Node & node) {
+std::pair<cv::Mat, cv::Mat> QuadCamDepthEst::intrinsicsFromNode(const YAML::Node & node) {
     cv::Mat K = cv::Mat::eye(3, 3, CV_64FC1);
+    printf("calibration parameters in size  height:%d width:%d\n",node["resolution"][1].as<int>(),node["resolution"][0].as<int>());
+
     K.at<double>(0, 0) = node["intrinsics"][0].as<double>();
     K.at<double>(1, 1) = node["intrinsics"][1].as<double>();
     K.at<double>(0, 2) = node["intrinsics"][2].as<double>();

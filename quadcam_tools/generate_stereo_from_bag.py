@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#pinhole   you need to prepare folder 
 from stereo_gen import *
 from fisheye_undist import *
 import cv2 as cv
@@ -11,6 +12,41 @@ from quad_cam_split import split_image
 from test_depth_estimation import calib_photometric_imgs , loadConfig, calib_photometric_imgs_individual
 import os
 
+# set photometric mask before run this tool
+photometric_dir_path = "/media/khalil/ssd_data/data_set/omni-pinhole/camera_stereo_calib/config/camera_vig_mask/"
+
+
+def calib_photometric(img, photometric, is_rgb=True):
+    if not is_rgb:
+        ret = img.copy()
+        if len(img.shape) == 3:
+            ret = cv.cvtColor(ret, cv.COLOR_BGR2GRAY)
+        ret = ret.astype(float)/photometric
+    else:
+        #Divide by photometric per channel
+        ret = img.copy().astype(float)
+        for i in range(img.shape[2]):
+            ret[:,:,i] = ret[:,:,i]/photometric*0.7
+    ret = np.clip(ret, 0, 255).astype(np.uint8)
+    return ret
+
+def IndividualPhotometricCalibration(imgs,photometric_dir_path, is_rgb=True):
+    photometric_calibed = []
+    photometric_imgs = []
+    if os.path.exists(photometric_dir_path):
+        # print("reading photometric calibration images with name cam_x_vig_mask.png")
+        for i in range(len(imgs)):
+            photo_metric_cali_img = cv.imread(photometric_dir_path + "/cam_" + str(i) + "_vig_mask.png", cv.IMREAD_GRAYSCALE)/255.0
+            photometric_imgs.append(photo_metric_cali_img)
+
+        for i in range(len(imgs)):
+            calibed = calib_photometric(imgs[i], photometric_imgs[i], is_rgb=is_rgb)
+            photometric_calibed.append(calibed)
+    else:
+        photometric_calibed = imgs
+    return photometric_calibed
+
+
 def genDefaultConfig():
     K = np.array([[1162.5434300524314, 0, 660.6393183718625],
         [0, 1161.839362615319,  386.1663300322095],
@@ -20,6 +56,42 @@ def genDefaultConfig():
     undist = FisheyeUndist(K, D, xi, fov=args.fov)
     gen = StereoGen(undist, undist, np.eye(3), np.zeros(3))
     return [gen, gen, gen, gen]
+
+def GetKalibrCalibrationCMD(topic_a, topic_b, bagfile, output_calib_name, verbose=False, init_focal_length_left = 400,init_focal_length_right=400):
+    bagname = os.path.basename(bagfile)
+    # bagname = bagfile.split(".")[0]
+    bagpath = os.path.dirname(bagfile)    
+
+    cmd_file_name = topic_a.split("/")[1] + "_" + topic_b.split("/")[1]
+    if bagpath == "":
+        bagpath = os.getcwd()
+        print("bagpath", bagpath)
+    cmd = f"""
+        First focal length:{init_focal_length_left}
+        Second focal length:{init_focal_length_right}
+        source /catkin_ws/devel/setup.bash && \
+        rosrun kalibr kalibr_calibrate_cameras --bag /data/{bagname} --target /data/aprilgrid.yaml\
+            --models pinhole-radtan pinhole-radtan \
+            --approx-sync 0.01 --topics {topic_a} {topic_b}"""
+    if not verbose:
+        cmd += " --dont-show-report"
+    with open(f"{bagpath}/stereo_calib_{cmd_file_name}.sh", "w") as f:
+        f.write(cmd)
+    os.system(f"chmod +x {bagpath}/stereo_calib.sh")
+    dockercmd = f"""docker run --rm -e "DISPLAY" -e "QT_X11_NO_MITSHM=1" \
+    -v "/tmp/.X11-unix:/tmp/.X11-unix:rw" \
+    -v "{bagpath}:/data" kalibr:latest /data/stereo_calib.sh"""
+    print(dockercmd)
+    # print("debug xxxxxxx")
+    # p_docker = subprocess.Popen(dockercmd, shell=True, stderr=subprocess.STDOUT)
+    # p_docker.wait()
+    # results = f"{bagpath}/{bagname}-results-cam.txt"
+    # os.rename(results, f"{bagpath}/{output_calib_name}-results.txt")
+    # results = f"{bagpath}/{bagname}-camchain.yaml"
+    # os.rename(results, f"{bagpath}/{output_calib_name}.yaml")
+    # print("Finished calibrate:", output_calib_name)
+
+
 
 def kablirCalibratePinhole(topic_a, topic_b, bagfile, output_calib_name, verbose=False, init_focal_length=400):
     import subprocess
@@ -34,13 +106,15 @@ def kablirCalibratePinhole(topic_a, topic_b, bagfile, output_calib_name, verbose
 
     bagname = os.path.basename(bagfile)
     bagpath = os.path.dirname(bagfile)
+    print("[DEBUG]bagpath xxxxxx", bagpath)
+    
     if bagpath == "":
         bagpath = os.getcwd()
         print("bagpath", bagpath)
     cmd = f"""#!/bin/bash
-export KALIBR_MANUAL_FOCAL_LENGTH_INIT=1 
+export KALIBR_MANUAL_FOCAL_LENGTH_INIT=1
 export KALIBR_FOCAL_LENGTH_INIT_VALUE={init_focal_length}
-source /catkin_ws/devel/setup.bash && \
+source /catkin_ws/devel/setup.bash &&
 rosrun kalibr kalibr_calibrate_cameras --bag /data/{bagname} --target /data/aprilgrid.yaml --models pinhole-radtan pinhole-radtan --approx-sync 0.01 --topics {topic_a} {topic_b}"""
     if not verbose:
         cmd += " --dont-show-report"
@@ -66,6 +140,8 @@ EOF"""
     os.rename(results, f"{bagpath}/{output_calib_name}-results.txt")
     results = f"{bagpath}/{calibration_resualt_title}-camchain.yaml"
     os.rename(results, f"{bagpath}/{output_calib_name}.yaml")
+    results = f"{bagpath}/{calibration_resualt_title}-report-cam.pdf"
+    os.rename(results, f"{bagpath}/{output_calib_name}-report-cam.pdf")
     print("Finished calibrate:", output_calib_name)
 
 
@@ -142,6 +218,8 @@ if __name__ == "__main__":
         output_bag = rosbag.Bag(output_bag_name, mode="w")
     else:
         output_bag = None
+
+    print("[Debug] ouputbag", args.output)
     #Read photometric
     photometrics = []
     if args.photometric != "":
@@ -200,6 +278,8 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             break
     output_bag.close()
+
+    ### I prefer do it in docker 
     for gen in stereo_gens:
         cam_idx_a = gen.cam_idx_a
         cam_idx_b = gen.cam_idx_b
@@ -208,5 +288,3 @@ if __name__ == "__main__":
         topic_l, topic_r = f"/cam_{cam_idx_a}_{idx_vcam_a}/compressed", f"/cam_{cam_idx_b}_{idx_vcam_b}/compressed"
         kablirCalibratePinhole(topic_l, topic_r, output_bag_name, f"stereo_calib_{cam_idx_a}_{cam_idx_b}_{args.height}_{args.width}", verbose = args.verbose, 
             init_focal_length = stereo_gens[0].undist_l.focal_gen)
-        # kablirCalibratePinhole(topic_l, topic_r, args.output, f"stereo_calib_{cam_idx_a}_{cam_idx_b}_{args.height}_{args.width}", verbose = args.verbose, 
-        #         init_focal_length = stereo_gens[0].undist_l.focal_gen)

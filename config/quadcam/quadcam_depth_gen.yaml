@@ -16,12 +16,12 @@ fov: 180
 photometric_calib: "mask.png"
 avg_brightness: 0.7
 stereos:
-  # stereo1_0:
-  #   cam_idx_l: 1
-  #   cam_idx_r: 0
-  #   idx_l: 1
-  #   idx_r: 0
-  #   stereo_config: "stereo_calib_1_0.yaml"
+  stereo1_0:
+    cam_idx_l: 1
+    cam_idx_r: 0
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "stereo_calib_1_0.yaml"
   stereo2_1:
     cam_idx_l: 2
     cam_idx_r: 1

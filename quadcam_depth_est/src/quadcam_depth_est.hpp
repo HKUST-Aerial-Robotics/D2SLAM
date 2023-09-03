@@ -48,6 +48,7 @@ class QuadCamDepthEst {
     void loadCameraConfig(YAML::Node & config, std::string configPath);
     void imageCallback(const sensor_msgs::ImageConstPtr & left);
     void stereoImagesCallback(const sensor_msgs::ImageConstPtr left, const sensor_msgs::ImageConstPtr right);
+    std::pair<cv::Mat, cv::Mat> intrinsicsFromNode(const YAML::Node & node);
 public:
     QuadCamDepthEst(ros::NodeHandle & _nh);
 };

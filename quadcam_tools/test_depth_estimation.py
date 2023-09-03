@@ -10,8 +10,28 @@ import tqdm
 from cv_bridge import CvBridge
 from quad_cam_split import split_image
 from pathlib import Path
+import os
 
 home = str(Path.home())
+
+photometric_dir_path = "/data/omni-pinhole/camera_stereo_calib/config/camera_vig_mask/"
+
+def IndividualPhotometricCalibration(imgs,photometric_dir_path, is_rgb=True):
+    photometric_calibed = []
+    photometric_imgs = []
+    if os.path.exists(photometric_dir_path):
+        # print("reading photometric calibration images with name cam_x_vig_mask.png")
+        for i in range(len(imgs)):
+            photo_metric_cali_img = cv.imread(photometric_dir_path + "/cam_" + str(i) + "_vig_mask.png", cv.IMREAD_GRAYSCALE)/255.0
+            photometric_imgs.append(photo_metric_cali_img)
+
+        for i in range(len(imgs)):
+            calibed = calib_photometric(imgs[i], photometric_imgs[i], is_rgb=is_rgb)
+            photometric_calibed.append(calibed)
+    else:
+        print("[Debug]xxxxxx photometric calib failed\n")
+        photometric_calibed = imgs
+    return photometric_calibed
 
 def genDefaultConfig():
     K = np.array([[1162.5434300524314, 0, 660.6393183718625],
@@ -37,6 +57,7 @@ def initStereoFromConfig(config_file, stereo_gen, force_width=None):
         size = config["cam0"]["resolution"]
         K0 = pinholeIntrinsicToCameraMatrix(config["cam0"]['intrinsics'])
         K1 = pinholeIntrinsicToCameraMatrix(config["cam1"]['intrinsics'])
+        print("Debug K1",K1)
         if force_width is not None:
             K0 *= force_width/size[0]
             K1 *= force_width/size[0]
@@ -51,16 +72,16 @@ def initStereoFromConfig(config_file, stereo_gen, force_width=None):
 
 def loadHitnet():
     print("Loading hitnet...")
-    HITNET_PATH = '/home/xuhao/source/ONNX-HITNET-Stereo-Depth-estimation/'
+    HITNET_PATH = '/root/swarm_ws/src/ONNX-HITNET-Stereo-Depth-estimation/'
     sys.path.insert(0, HITNET_PATH)
     from hitnet import HitNet, ModelType
     model_path = HITNET_PATH + "/models/eth3d/saved_model_240x320/model_float32.onnx"
     return HitNet(model_path, ModelType.eth3d), False
 
 def loadCRENet():
-    print("Loading hitnet...")
-    CRENETPath = '/home/xuhao/source/ONNX-CREStereo-Depth-Estimation'
-    CRENETPath = '/home/dji/source/ONNX-CREStereo-Depth-Estimation'
+    print("Loading CRENET...")
+    CRENETPath = '/root/swarm_ws/src/ONNX-CREStereo-Depth-Estimation'
+    # CRENETPath = '/home/dji/source/ONNX-CREStereo-Depth-Estimation'
     sys.path.insert(0, CRENETPath)
     from crestereo import CREStereo
     iters = 5            # Lower iterations are faster, but will lower detail. 
@@ -70,7 +91,7 @@ def loadCRENet():
     depth_estimator = CREStereo(model_path)
     return depth_estimator, True
 
-def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300, hitnet=False):
+def loadConfig(config_file, config_stereos=[], fov=190, width=600, height=300, hitnet=True):
     print("Loading config from", config_file)
     import yaml
     undists = []
@@ -168,11 +189,11 @@ def test_depth_gen(gen: StereoGen, imgs_calib, imgs_raw, detailed=False, save_rg
             img_l = cv.cvtColor(img_l, cv.COLOR_GRAY2BGR)
         if len(img_r.shape) == 2:
             img_r = cv.cvtColor(img_r, cv.COLOR_GRAY2BGR)
-        img_show = cv.hconcat([img_l, img_r, disparity])
+        img_show = cv.hconcat([img_l, img_r])
         img_show = drawHorizontalLines(img_show)
         cv.imshow(f"stereoRect {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b} hor", img_show)
-        # cv.imshow(f"disp {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b}", disparity)
-        cv.waitKey(10)
+        cv.imshow(f"disp {cam_idx_a}_{idx_vcam_a} <-> {cam_idx_b}_{idx_vcam_b}", disparity)
+        cv.waitKey(1)
     pcl, texture = gen.genPointCloud(imgs_calib[cam_idx_a], imgs_calib[cam_idx_b], img_raw=imgs_raw[cam_idx_a])
     return pcl, texture
 
@@ -225,30 +246,35 @@ if __name__ == "__main__":
     parser.add_argument("--height", type=int, default=240, help="width of stereo pair")
 
     args = parser.parse_args()
-    stereo_paths = ["/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_1_0.yaml",
-                "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_2_1.yaml",
-                "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_3_2.yaml",
-                "/home/xuhao/Dropbox/data/d2slam/quadcam2/stereo_calib_0_3.yaml"]
+    # stereo_paths = ["/media/khalil/ssd_data/data_set/omni-pinhole/camera_stereo_calib/config/depth_estimation_config/stereo_calib_0_1.yaml",
+    #                 "/media/khalil/ssd_data/data_set/omni-pinhole/camera_stereo_calib/config/depth_estimation_config/stereo_calib_1_2.yaml",
+    #                 "/media/khalil/ssd_data/data_set/omni-pinhole/camera_stereo_calib/config/depth_estimation_config/stereo_calib_2_3.yaml",
+    #                 "/media/khalil/ssd_data/data_set/omni-pinhole/camera_stereo_calib/config/depth_estimation_config/stereo_calib_3_0.yaml"]
+    stereo_paths = ["/data/omni-pinhole/camera_stereo_calib/config/depth_estimation_config/stereo_calib_0_1.yaml",
+                    "/data/omni-pinhole/camera_stereo_calib/config/depth_estimation_config/stereo_calib_1_2.yaml",
+                    "/data/omni-pinhole/camera_stereo_calib/config/depth_estimation_config/stereo_calib_2_3.yaml",
+                    "/data/omni-pinhole/camera_stereo_calib/config/depth_estimation_config/stereo_calib_3_0.yaml"]
     if args.config == "":
         stereo_gens = genDefaultConfig()
     else:
         stereo_gens, is_rgb = loadConfig(args.config, stereo_paths, fov=args.fov, hitnet=True, width=args.width, height=args.height)
+        
     #Read photometric
-    if args.photometric != "":
-        photometric = cv.imread(args.photometric, cv.IMREAD_GRAYSCALE)/255.0
-    else:
-        photometric = None
+    # if args.photometric != "":
+    #     photometric = cv.imread(args.photometric, cv.IMREAD_GRAYSCALE)/255.0
+    # else:
+    #     photometric = None
 
     #Read from bag
     bag = rosbag.Bag(args.input)
-    num_imgs = bag.get_message_count("/arducam/image/compressed") + bag.get_message_count("/arducam/image")
+    num_imgs = bag.get_message_count("/oak_ffc_4p/assemble_image/compressed") + bag.get_message_count("/oak_ffc_4p/assemble_image")
     print("Total number of images:", num_imgs)
     bridge = CvBridge()
     pbar = tqdm.tqdm(total=num_imgs/args.step, colour="green")
     count = 0
     for topic, msg, t in bag.read_messages():
         try:
-            if topic == "/arducam/image/compressed" or topic == "/arducam/image/raw":
+            if topic == "/oak_ffc_4p/assemble_image/compressed" or topic == "/oak_ffc_4p/assemble_image":
                 if count % args.step != 0:
                     count += 1
                     continue
@@ -257,22 +283,24 @@ if __name__ == "__main__":
                 else:
                     img = bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='passthrough')
                 imgs = split_image(img)
-                if photometric is not None:
-                    photometric_calibed = calib_photometric_imgs(imgs, photometric, is_rgb)
-                    if is_rgb:
-                        imgs = photometric_calibed
-                    else:
-                        imgs = calib_photometric_imgs(imgs, photometric, True)
-                else:
-                    photometric_calibed = imgs
+                # if photometric is not None:
+                #     photometric_calibed = calib_photometric_imgs(imgs, photometric, is_rgb)
+                #     if is_rgb:
+                #         imgs = photometric_calibed
+                #     else:
+                #         imgs = calib_photometric_imgs(imgs, photometric, True)
+                # else:
+                photometric_calibed = IndividualPhotometricCalibration(imgs,photometric_dir_path, is_rgb=True)
+                # photometric_calibed = imgs
                 cv.imshow("raw", imgs[2])
                 #Apply inverse of photometric calibration
                 cv.imshow("Photometic calibed", photometric_calibed[2])
                 cv.waitKey(1)
                 for gen in stereo_gens:
-                    test_depth_gen(gen, photometric_calibed, imgs, detailed=True)
+                    [pcl,texture] = test_depth_gen(gen, photometric_calibed, imgs, detailed=True)
+                    # drawPointCloud3d(pcl)
                 pbar.update(1)
-                c = cv.waitKey(0)
+                c = cv.waitKey(1)
                 if c == ord('q'):
                     break
                 count += 1

@@ -100,6 +100,7 @@ class FisheyeUndist {
           cameraRotation(0, 0, 0),
           enable_cuda(_enable_cuda),
           cam_id(_id) {
+        printf("test distortor\n");
         raw_width = cam->imageWidth();
         raw_height = cam->imageHeight();
         fisheye2cam_pt = cv::Mat::zeros(raw_width, raw_height, CV_32FC2);
@@ -125,6 +126,7 @@ class FisheyeUndist {
             }
         }
         if (!photomertic.empty()) {
+            printf("photometric test distortor\n");
             auto _photometics = undist_all(photomertic, true);
             auto _photometics_gpu = undist_all_cuda(photomertic, true);
             photometics = _photometics;
