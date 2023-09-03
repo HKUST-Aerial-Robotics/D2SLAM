@@ -772,7 +772,7 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
 
         tmp_A.block<3, 3>(0, 0) = -dt * Matrix3d::Identity();
         tmp_A.block<3, 3>(0, 6) = R_i.transpose() * dt * dt / 2 * Matrix3d::Identity();
-        tmp_A.block<3, 1>(0, 9) = R_i.transpose() * (T_j - T_i) / 100.0;     
+        tmp_A.block<3, 1>(0, 9) = R_i.transpose() * (T_j - T_i);     
         tmp_b.block<3, 1>(0, 0) = frame_j->pre_integrations->delta_p + R_i.transpose() * R_j * extrinsic.pos() - extrinsic.pos();
         tmp_A.block<3, 3>(3, 0) = -Matrix3d::Identity();
         tmp_A.block<3, 3>(3, 3) = R_i.transpose() * R_j;
@@ -797,7 +797,7 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
     A = A * 1000.0;
     b = b * 1000.0;
     x = A.ldlt().solve(b);
-    double s = x(n_state - 1) / 100.0;
+    double s = x(n_state - 1);
     g = x.segment<3>(n_state - 4);
     spdlog::debug("LinearAlignment: Scale: {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", s, g.norm(), g.x(), g.y(), g.z());
     if(fabs(g.norm() - IMUData::Gravity.norm()) > 1.0 || s < 0)
@@ -806,7 +806,7 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
         return false;
     }
     RefineGravity(sld_win, sfm_poses, extrinsic, g, x);
-    s = (x.tail<1>())(0) / 100.0;
+    s = (x.tail<1>())(0);
     (x.tail<1>())(0) = s;
     if(s < 0.0 )
     {
@@ -892,7 +892,7 @@ void D2EstimatorState::RefineGravity(std::vector<VINSFrame * > sld_win,
 
             tmp_A.block<3, 3>(0, 0) = -dt * Matrix3d::Identity();
             tmp_A.block<3, 2>(0, 6) = R_i.transpose() * dt * dt / 2 * Matrix3d::Identity() * lxly;
-            tmp_A.block<3, 1>(0, 8) = R_i.transpose() * (T_j - T_i) / 100.0;     
+            tmp_A.block<3, 1>(0, 8) = R_i.transpose() * (T_j - T_i);     
             tmp_b.block<3, 1>(0, 0) = frame_j->pre_integrations->delta_p + R_i.transpose() * R_j* extrinsic.pos() - extrinsic.pos() - R_i.transpose() * dt * dt / 2 * g0;
 
             tmp_A.block<3, 3>(3, 0) = -Matrix3d::Identity();
