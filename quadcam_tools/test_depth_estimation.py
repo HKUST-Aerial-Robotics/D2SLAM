@@ -82,6 +82,7 @@ def loadCRENet():
     print("Loading CRENET...")
     CRENETPath = '/root/swarm_ws/src/ONNX-CREStereo-Depth-Estimation'
     # CRENETPath = '/home/dji/source/ONNX-CREStereo-Depth-Estimation'
+    CRENETPath = '/home/khalil/workspace/d2slam_ws/src/ONNX-CREStereo-Depth-Estimation'
     sys.path.insert(0, CRENETPath)
     from crestereo import CREStereo
     iters = 5            # Lower iterations are faster, but will lower detail. 

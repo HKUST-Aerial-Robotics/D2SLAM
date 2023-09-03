@@ -113,8 +113,8 @@ class StereoDataReader(CalibrationDataReader):
         return next(self.enum_data_dicts, None)
 
 
-left_image_path = "./trainning_data/cam_0_1_compressed/"
-right_image_path = "./trainning_data/cam_1_0_compressed/"
+left_image_path = "/media/khalil/ssd_data/data_set/depth_trainning_data/cam_0_1_compressed/"
+right_image_path = "/media/khalil/ssd_data/data_set/depth_trainning_data/cam_1_0_compressed/"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -155,9 +155,9 @@ if __name__ == "__main__":
     
     print(f"Num samples: {len(image_names)} for calib")
     print("Quantization for TensorRT...")
-    stride = 5
+    stride = 10
     calibrator = create_calibrator(model_fp32, [], augmented_model_path=augmented_model_path, calibrate_method = CalibrationMethod.Entropy)
-    calibrator.set_execution_providers(["CPUExecutionProvider"])      
+    calibrator.set_execution_providers(["TensorrtExecutionProvider"])      
     for i in range(0, calib_num, stride):
         print("stride", i)
         dr = StereoDataReader(image_names[i:i+stride],prepare_function, args.type)

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-#pinhole   you need to prepare folder 
+#pinhole   you need to prepare folder  as following structure
+#---data
+#--------calibration_board or tag . yaml
 from stereo_gen import *
 from fisheye_undist import *
 import cv2 as cv

@@ -22,11 +22,16 @@ CRENET_PATH = '/root/swarm_ws/src/ONNX-CREStereo-Depth-Estimation'
 CRENET_ITER = 5            # Lower iterations are faster, but will lower detail. 
 CRENET_VER = "combined" # The combined version does 2 passes, one to get an initial estimation and a second one to refine it.
 
-left_images_path = ["/root/swarm_ws/src/D2SLAM/sample_data/stereo_pinhole/left_0.png",
-              "/root/swarm_ws/src/D2SLAM/sample_data/stereo_pinhole/left_1.png"]
+# left_images_path = ["/root/swarm_ws/src/D2SLAM/sample_data/stereo_pinhole/left_0.png",
+#               "/root/swarm_ws/src/D2SLAM/sample_data/stereo_pinhole/left_1.png"]
 
-right_images_path = ["/root/swarm_ws/src/D2SLAM/sample_data/stereo_pinhole/right_0.png",
-              "/root/swarm_ws/src/D2SLAM/sample_data/stereo_pinhole/right_1.png"]
+# right_images_path = ["/root/swarm_ws/src/D2SLAM/sample_data/stereo_pinhole/right_0.png",
+#               "/root/swarm_ws/src/D2SLAM/sample_data/stereo_pinhole/right_1.png"]
+
+left_images_path = ["/home/khalil/workspace/d2slam_ws/src/D2SLAM/sample_data/stereo_trainning_data/cam_0_1_compressed/0.png"
+             ]
+
+right_images_path = ["/home/khalil/workspace/d2slam_ws/src/D2SLAM/sample_data/stereo_trainning_data/cam_1_0_compressed/0.png",]
 
 def LoadHitNet(): 
     print("Loading hitnet...")
@@ -49,6 +54,7 @@ def LoadCreNet():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate the crestereo or hitnet')
     parser.add_argument('--model', type=str, help='path to the model', default="cre")
+    parser.add_argument('--model-path', type=str, help='path to the input image', default="")
     parser.add_argument('--enable-int8', action='store_true', help='enable int8')
     parser.add_argument('--enable-fp16', action='store_true', help='enable fp16')
     parser.add_argument('--enable-dla', action='store_true', help='enable dla')
@@ -65,11 +71,13 @@ if __name__ == '__main__':
    
     args = parser.parse_args()
     
-    if args.model == "cre":
-      model_path = LoadCreNet()
-      # model_path = "/root/swarm_ws/src/D2SLAM/models/cretereo_combined_iter5_240x320/crestereo_combined_iter5_240x320_augmented_model.onnx"
-    elif args.model == "hit":
-      model_path = LoadHitNet()
+    # if args.model == "cre":
+    #   model_path = LoadCreNet()
+    #   # model_path = "/root/swarm_ws/src/D2SLAM/models/cretereo_combined_iter5_240x320/crestereo_combined_iter5_240x320_augmented_model.onnx"
+    # elif args.model == "hit":
+    #   model_path = LoadHitNet()
+    model_path = args.model_path
+
 
     print(f'Loading model {args.model}')
     print(f'tensorrt {args.enable_tensorrt} enable_fp16 {args.enable_fp16} enable_int8 {args.enable_int8}, enable_dla {args.enable_dla}')
@@ -105,8 +113,8 @@ if __name__ == '__main__':
 
 
     if args.model == "hit":
-        left_grey_img = cv.cvtColor(left_imgs[0],cv.COLOR_BGR2GRAY)
-        right_grey_img = cv.cvtColor(right_imgs[0],cv.COLOR_BGR2GRAY)
+        # left_grey_img = cv.cvtColor(left_imgs[0],cv.COLOR_BGR2GRAY)
+        # right_grey_img = cv.cvtColor(right_imgs[0],cv.COLOR_BGR2GRAY)
         left_grey_img = cv.resize(left_grey_img, (args.width, args.height))
         right_grey_img = cv.resize(right_grey_img, (args.width, args.height))
 
@@ -132,10 +140,11 @@ if __name__ == '__main__':
 
         print("input shape: ", left_grey_img.shape)
         #Run the model
-        outputs = sess.run(None, {sess.get_inputs()[0].name: input})
+        # outputs = sess.run(None, {sess.get_inputs()[0].name: input})
+        outputs = sess.run(None, {sess.get_inputs()[0].name: left_grey_img, sess.get_inputs()[1].name: right_grey_img})
         start = time.time()
         for i in range(args.num_run):
-            outputs = sess.run(None, {sess.get_inputs()[0].name: input})
+            outputs = sess.run(None, {sess.get_inputs()[0].name: left_grey_img, sess.get_inputs()[1].name: right_grey_img})
         end = time.time()
         output = np.squeeze(outputs)
 
@@ -171,5 +180,30 @@ if __name__ == '__main__':
 
         # cv.imshow("output", output)
         # cv.waitKey(0)
+
+    if args.model == "acv":
+        half_size = (int(args.width/2), int(args.height/2))
+        full_size = (args.width,args.height )
+        combine_left_img = cv.resize(left_imgs[0],full_size).astype(np.float32)
+        combine_right_img = cv.resize(right_imgs[0],full_size).astype(np.float32)
+
+        combine_left_img = np.transpose(combine_left_img,(2,0,1))[np.newaxis, :]
+        combine_right_img = np.transpose(combine_right_img,(2,0,1))[np.newaxis, :]
+        input = {
+                  input_names[0]:combine_left_img,
+                  input_names[1]:combine_right_img}
+        
+        #     #Run the model
+        outputs = sess.run(None, input)
+        start = time.time()
+        for i in range(args.num_run):
+            outputs = sess.run(None,input)
+        end = time.time()
+        output_arr = np.array(outputs)
+        output_im = np.squeeze(output_arr)
+        print(output_arr[0])
+        cv_image = cv.fromarray(output_im)
+        cv.imshow("output", cv_image)
+        cv.waitKey(0)
 
         print(f'Averged inference time ({args.num_run} runs): {(end - start)*1000/args.num_run:.2f}ms')
