@@ -56,7 +56,7 @@ struct D2VINSConfig {
     double depth_estimate_baseline = 0.05;
     double tri_max_err = 0.1;
     double mono_initial_tri_max_err = 0.05;
-    bool add_vel_ba_prior = true;
+    bool add_vel_ba_prior = false;
     
     //Estimation
     bool estimate_td = false;

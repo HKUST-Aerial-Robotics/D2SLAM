@@ -100,5 +100,6 @@ public:
     std::set<int> getNearbyDronesbyPGOData(const std::map<int, std::pair<int, Swarm::Pose>> & vins_poses);
     void setStateProperties();
     virtual std::pair<Swarm::Odometry, std::pair<IMUBuffer, int>> getMotionPredict(double stamp) const;
+    bool isInitialized() const;
 };
 }

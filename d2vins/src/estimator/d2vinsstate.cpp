@@ -414,13 +414,13 @@ VINSFrame * D2EstimatorState::addFrame(const VisualImageDescArray & images, cons
     VINSFrame * frame = addVINSFrame(_frame);
     if (_frame.drone_id != self_id) {
         if (sld_wins.find(_frame.drone_id) == sld_wins.end()) {
-            printf("[D2VINS::D2EstimatorState] Add sld_win for remote drone %d\n", _frame.drone_id);
+            spdlog::info("[D2VINS::D2EstimatorState] Add sld_win for remote drone {}", _frame.drone_id);
             sld_wins[_frame.drone_id] = std::vector<VINSFrame *>();
         }
         sld_wins[_frame.drone_id].emplace_back(frame);
         for (auto & img : images.images) {
             if (extrinsic.find(img.camera_id) == extrinsic.end()) {
-                printf("[D2VINS::D2EstimatorState] Adding extrinsic of camera %d from drone@%d\n", img.camera_id, _frame.drone_id);
+                spdlog::info("[D2VINS::D2EstimatorState] Adding extrinsic of camera {} from drone@{}", img.camera_id, _frame.drone_id);
                 addCamera(img.extrinsic, img.camera_index, images.drone_id, img.camera_id);
             }
         }
@@ -436,11 +436,9 @@ VINSFrame * D2EstimatorState::addFrame(const VisualImageDescArray & images, cons
     }
 
     lmanager.addKeyframe(images, td);
-    if (params->verbose) {
-        printf("[D2VINS::D2EstimatorState%d] add frame %ld@%d ref %d iskeyframe %d with %d images, current %ld frame\n", 
-                self_id, images.frame_id, _frame.drone_id, frame->reference_frame_id, frame->is_keyframe, 
-                images.images.size(), sld_wins[self_id].size());
-    }
+    spdlog::debug("[D2VINS::D2EstimatorState{}] add frame {}@{} ref {} iskeyframe {} with {} images, current {} frame\n", 
+            self_id, images.frame_id, _frame.drone_id, frame->reference_frame_id, frame->is_keyframe, 
+            images.images.size(), sld_wins[self_id].size());
     //If first frame we need to add a prior here
     if (size(images.drone_id) == 1 && 
                 (images.drone_id == self_id|| params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || 
@@ -457,7 +455,7 @@ void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame * frame) {
     //b is zero vector
     bool add_vel_ba_prior = params->add_vel_ba_prior;
     int local_cam_num = params->camera_num;
-    spdlog::warn("Add prior for first frame, extrinsic {}, {} and speed", params->estimate_extrinsic, local_cam_num);
+    spdlog::warn("Add prior for first frame, extrinsic {}, {} and speed: {}", params->estimate_extrinsic, local_cam_num, add_vel_ba_prior);
     int Adim = POSE_EFF_SIZE + (params->estimate_extrinsic?POSE_EFF_SIZE*local_cam_num: 0) + (add_vel_ba_prior?FRAME_SPDBIAS_SIZE: 0);
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(Adim, Adim);
     A.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * params->initial_pos_sqrt_info;
@@ -503,7 +501,7 @@ void D2EstimatorState::syncFromState(const std::set<LandmarkIdType> & used_landm
     for (auto it : _frame_pose_state) {
         auto frame_id = it.first;
         if (frame_db.find(frame_id) == frame_db.end()) {
-            printf("[D2VINS::D2EstimatorState] Cannot find frame %ld\033[0m\n", frame_id);
+            spdlog::error("[D2VINS::D2EstimatorState] Cannot find frame {}", frame_id);
         }
         auto frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
         if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
@@ -519,7 +517,7 @@ void D2EstimatorState::syncFromState(const std::set<LandmarkIdType> & used_landm
     lmanager.syncState(this);
     if (size() < params->max_sld_win_size ) {
         //We only repropagte when sld win is smaller than max, means not full initialized.
-        printf("[D2VINS] not fully initialized, will repropagte IMU\n");
+        spdlog::info("[D2VINS] not fully initialized, will repropagte IMU");
         repropagateIMU();
     }
     outlierRejection(used_landmarks);
@@ -772,7 +770,7 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
 
         tmp_A.block<3, 3>(0, 0) = -dt * Matrix3d::Identity();
         tmp_A.block<3, 3>(0, 6) = R_i.transpose() * dt * dt / 2 * Matrix3d::Identity();
-        tmp_A.block<3, 1>(0, 9) = R_i.transpose() * (T_j - T_i);     
+        tmp_A.block<3, 1>(0, 9) = R_i.transpose() * (T_j - T_i)/100.0;
         tmp_b.block<3, 1>(0, 0) = frame_j->pre_integrations->delta_p + R_i.transpose() * R_j * extrinsic.pos() - extrinsic.pos();
         tmp_A.block<3, 3>(3, 0) = -Matrix3d::Identity();
         tmp_A.block<3, 3>(3, 3) = R_i.transpose() * R_j;
@@ -797,7 +795,7 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
     A = A * 1000.0;
     b = b * 1000.0;
     x = A.ldlt().solve(b);
-    double s = x(n_state - 1);
+    double s = x(n_state - 1)/100.0;
     g = x.segment<3>(n_state - 4);
     spdlog::debug("LinearAlignment: Scale: {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", s, g.norm(), g.x(), g.y(), g.z());
     if(fabs(g.norm() - IMUData::Gravity.norm()) > 1.0 || s < 0)
@@ -806,7 +804,7 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
         return false;
     }
     RefineGravity(sld_win, sfm_poses, extrinsic, g, x);
-    s = (x.tail<1>())(0);
+    s = (x.tail<1>())(0)/100.0;
     (x.tail<1>())(0) = s;
     if(s < 0.0 )
     {
@@ -892,7 +890,7 @@ void D2EstimatorState::RefineGravity(std::vector<VINSFrame * > sld_win,
 
             tmp_A.block<3, 3>(0, 0) = -dt * Matrix3d::Identity();
             tmp_A.block<3, 2>(0, 6) = R_i.transpose() * dt * dt / 2 * Matrix3d::Identity() * lxly;
-            tmp_A.block<3, 1>(0, 8) = R_i.transpose() * (T_j - T_i);     
+            tmp_A.block<3, 1>(0, 8) = R_i.transpose() * (T_j - T_i) / 100.0; 
             tmp_b.block<3, 1>(0, 0) = frame_j->pre_integrations->delta_p + R_i.transpose() * R_j* extrinsic.pos() - extrinsic.pos() - R_i.transpose() * dt * dt / 2 * g0;
 
             tmp_A.block<3, 3>(3, 0) = -Matrix3d::Identity();
@@ -925,6 +923,6 @@ void D2EstimatorState::RefineGravity(std::vector<VINSFrame * > sld_win,
         g0 = (g0 + lxly * dg).normalized() * IMUData::Gravity.norm();
     }   
     g = g0;
-    spdlog::info("RefineGravity: scale {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", x(n_state-1)/100.0, g.norm(), g.x(), g.y(), g.z());
+    spdlog::info("RefineGravity: scale {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", x(n_state-1), g.norm(), g.x(), g.y(), g.z());
 }
 }

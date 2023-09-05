@@ -53,7 +53,7 @@ void D2Estimator::inputImu(IMUData data) {
         last = imu_bufs[self_id].buf.back();
     }
     imu_bufs[self_id].add(data);
-    if (!initFirstPoseFlag || solve_count == 0) {
+    if (!initFirstPoseFlag || !isInitialized()) {
         return;
     }
     //Propagation current with last Bias.
@@ -152,7 +152,7 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     auto frame_ret = state.addFrame(_frame, frame);
     //Clear old frames after add
     if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
-        margined_landmarks = state.clearUselessFrames(solve_count > 0); // Only marginlization when solved
+        margined_landmarks = state.clearUselessFrames(isInitialized()); // Only marginlization when solved
     }
     _frame.setTd(state.getTd(_frame.drone_id));
     //Assign IMU and initialization to VisualImageDescArray for broadcasting.
@@ -270,7 +270,7 @@ void D2Estimator::addSldWinToFrame(VisualImageDescArray & frame) {
 
 void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
     const Guard lock(frame_mutex);
-    if (solve_count == 0 && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+    if (!isInitialized() && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
         //In consenus mode, we require first to be local initialized before deal with remote
         return;
     }
@@ -295,7 +295,7 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
         return initFirstPoseFlag;
     }
 
-    if (solve_count == 0 && !_frame.is_keyframe && !_frame.is_stereo)
+    if (!isInitialized() && !_frame.is_keyframe && !_frame.is_stereo)
     {
         // Do add when not solved and not keyframe
         return false;
@@ -551,7 +551,7 @@ void D2Estimator::solveNonDistrib() {
         printf("numKeyframes too less, skip optimization\n");
         return;
     } else {
-        if (solve_count == 0) {
+        if (!isInitialized()) {
             spdlog::info("[D2VINS::D2Estimator] Initialization with {} keyframes", state.numKeyframes());
             if(!state.monoInitialization()) {
                 spdlog::error("[D2VINS::D2Estimator] Initialization failed, will try later\n");
@@ -912,6 +912,11 @@ std::pair<Swarm::Odometry, std::pair<IMUBuffer, int>> D2Estimator::getMotionPred
 
 void D2Estimator::updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win) {
     state.updateSldwin(drone_id, sld_win);
+}
+
+bool D2Estimator::isInitialized() const
+{
+    return solve_count > 0;
 }
 
 }
