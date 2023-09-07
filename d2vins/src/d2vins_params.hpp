@@ -57,6 +57,8 @@ struct D2VINSConfig {
     double tri_max_err = 0.1;
     double mono_initial_tri_max_err = 0.05;
     bool add_vel_ba_prior = false;
+    int solve_relative_pose_min_pts = 20;
+    double solve_relative_pose_min_parallex = 30.0/460.0;
     
     //Estimation
     bool estimate_td = false;

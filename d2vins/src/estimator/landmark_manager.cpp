@@ -474,37 +474,48 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
     std::map<FrameIdType, Swarm::Pose> initial;
     assert(frames.size() > 2);
     auto last_frame = frames[frames.size() - 1];
-    auto second_last = frames[frames.size() - 2];
+    VINSFrame *head_frame_for_match = nullptr;
     Swarm::Pose relative_pose;
     // Start the scale with solve5pts
-    if (SolveRelativePose5Pts(relative_pose, camera_idx, last_frame->frame_id,
-                              second_last->frame_id)) {
-        initial[last_frame->frame_id] = Swarm::Pose::Identity();
-        initial[second_last->frame_id] = relative_pose;
-    } else {
+    for (size_t i = 0; i < frames.size() - 1; i++) {
+        head_frame_for_match = frames[i];
+        if (SolveRelativePose5Pts(relative_pose, camera_idx, last_frame->frame_id,
+                                head_frame_for_match->frame_id)) {
+            initial[last_frame->frame_id] = Swarm::Pose::Identity();
+            initial[head_frame_for_match->frame_id] = relative_pose;
+            break;
+        } else {
+            continue;
+        }
+    }
+    if (initial.size() == 0) {
+        spdlog::warn("SFMInitialization failed");
         return initial;
     }
 
     // First triangulation
     auto last_triangluation_pts = triangulationFrames(
         last_frame->frame_id, initial[last_frame->frame_id],
-        second_last->frame_id, initial[second_last->frame_id], camera_idx);
+        head_frame_for_match->frame_id, initial[head_frame_for_match->frame_id], camera_idx);
 
     // Recursive triangluation
-    for (int i = frames.size() - 3; i >= 0; i--) {
-        auto frame_next = frames[i + 1];
+    for (int i = frames.size() - 2; i >= 0; i--) {
         auto frame = frames[i];
+        if (frame->frame_id == head_frame_for_match->frame_id) {
+            continue;
+        }
+        Swarm::Pose pose = Swarm::Pose::Identity();
         // Found the landmarks observerd by frame and in points3d
-        Swarm::Pose pose_next = initial.at(frame_next->frame_id);
-        if (InitFramePoseWithPts(pose_next, last_triangluation_pts,
+        if (InitFramePoseWithPts(pose, last_triangluation_pts,
                                  frame->frame_id, camera_idx)) {
             // Triangulate all the common points
-            initial[frame->frame_id] = pose_next;
+            initial[frame->frame_id] = pose;
             last_triangluation_pts =
                 triangulationFrames(initial, camera_idx, 2);
-
+            spdlog::info("{} points initialized",
+                          last_triangluation_pts.size());
         } else {
-            return std::map<FrameIdType, Swarm::Pose>();
+            // return false;
         }
     }
 
@@ -546,7 +557,7 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
             problem.SetParameterBlockConstant(c_rotation[frame_id]);
         }
         if (frame_id == last_frame->frame_id ||
-            frame_id == second_last->frame_id) {
+            frame_id == head_frame_for_match->frame_id) {
             // For scale
             problem.SetParameterBlockConstant(c_translation[frame_id]);
         }
@@ -668,9 +679,9 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
     // Get their landmarks and find the common
     auto common_lm = findCommonLandmarkPerFrames(frame1_id, frame2_id);
 
-    cv::Mat img(440, 640, CV_8UC3, cv::Scalar(0, 0, 0));
     // Solve with 5 pts method
     std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> corres;
+    double sum_parallex = 0.0;
     for (auto &it : common_lm) {
         auto &lm1 = it.first;
         auto &lm2 = it.second;
@@ -681,16 +692,15 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
         }
         // Use pt3d_norm
         corres.emplace_back(lm1.pt3d_norm, lm2.pt3d_norm);
+        sum_parallex += (lm1.pt3d_norm - lm2.pt3d_norm).norm();
         // Draw the arrow of the points using pt2d, it's already cv::Point2f
-        cv::arrowedLine(img, lm1.pt2d, lm2.pt2d, cv::Scalar(0, 0, 255), 2);
-        cv::Point2f pt3d_norm1(lm1.pt3d_norm.x() / lm1.pt3d_norm.z()*371 + 324,
-                               lm1.pt3d_norm.y() / lm1.pt3d_norm.z()*371 + 223);
-        cv::Point2f pt3d_norm2(lm2.pt3d_norm.x() / lm2.pt3d_norm.z()*371 + 324,
-                                 lm2.pt3d_norm.y() / lm2.pt3d_norm.z()*371 + 223);
-        cv::arrowedLine(img, pt3d_norm1, pt3d_norm2, cv::Scalar(0, 255, 0), 2);
     }
-    // cv::imshow("5 pts", img);
-    // cv::waitKey(1);
+    if (corres.size() < params->solve_relative_pose_min_pts || sum_parallex/corres.size() < params->solve_relative_pose_min_parallex) {
+        spdlog::warn("[D2VINS::D2LandmarkManager] Solve 5 pts failed, only {} "
+                     "pts, parallex {:.2f}",
+                     corres.size(), sum_parallex/corres.size());
+        return false;
+    }
     utils::MotionEstimator estimator;
     Matrix3d R;
     Vector3d T;

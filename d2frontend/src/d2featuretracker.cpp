@@ -91,7 +91,6 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
         processFrame(frames, true);
         frames.send_to_backend = true;
     }
-
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
         report.compose(track(frames.images[0], frames.motion_prediction));
         report.compose(track(frames.images[0], frames.images[1]));
@@ -655,12 +654,18 @@ cv::Mat D2FeatureTracker::drawToImage(const VisualImageDesc & frame, bool is_key
             auto & pts2d = lmanager->at(_id).track;
             if (pts2d.size() == 0) 
                 continue;
-            if (is_right || is_remote) {
+            if (is_remote) {
                 prev = pts2d.back().pt2d;
                 prev_found = true;
             } else {
                 for (int  index = pts2d.size()-1; index >= 0; index--) {
-                    if (pts2d[index].camera_id == frame.camera_id && pts2d[index].frame_id == last_keyframe) {
+                    if (!is_right && pts2d[index].camera_id == frame.camera_id && pts2d[index].frame_id == last_keyframe) {
+                        prev = lmanager->at(_id).track[index].pt2d;
+                        prev_found = true;
+                        break;
+                    }
+
+                    if (is_right && pts2d[index].frame_id == frame.frame_id && pts2d[index].camera_id != frame.camera_id) {
                         prev = lmanager->at(_id).track[index].pt2d;
                         prev_found = true;
                         break;
