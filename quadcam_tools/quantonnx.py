@@ -95,6 +95,3 @@ if __name__ == "__main__":
     os.rename("calibration.flatbuffers", "../models/mobilenetvlad_calibration.flatbuffers")
     os.rename("calibration.cache", "../models/mobilenetvlad_calibration.cache")
     os.rename("calibration.json", "../models/mobilenetvlad_calibration.json")
-
-
-    

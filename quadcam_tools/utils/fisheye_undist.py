@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 import cv2 as cv
-from transformations import *
 import numpy as np
-
+from transformations import *
 class FisheyeUndist:
     def __init__(self, camera_matrix, dist_coeffs, xi, fov=190, width=1000, height=500, extrinsic=None):
         self.camera_matrix = camera_matrix
@@ -57,6 +56,8 @@ class FisheyeUndist:
     
     def undist(self, img, idx):
         return cv.remap(img, self.maps[idx][0], self.maps[idx][1], cv.INTER_AREA)
+
+#move this outside
 
 if __name__ == "__main__":
     # Test code

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from stereo_gen import *
-from fisheye_undist import *
+from quadcam_tools.utils.fisheye_undist import *
 import cv2 as cv
 import numpy as np
 import argparse
