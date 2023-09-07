@@ -684,14 +684,21 @@ bool D2EstimatorState::monoInitialization() {
         spdlog::warn("monoInitialization: SFM initialization failed");
         return false;
     }
-    
+
+    // Here we rotate the attitude to IMU but not translation
+    Swarm::Pose Tbc = extrinsic.at(camera_idx);
+    for (auto & [frame_id, pose]: sfm_poses)
+    {
+        sfm_poses[frame_id].att() = pose.att() * Tbc.att().inverse();
+    }
+
     // Then use these poses to perform gyro bias calibration
-    if (!solveGyroscopeBias(sld_win, sfm_poses, extrinsic.at(camera_idx))) {
+    if (!solveGyroscopeBias(sld_win, sfm_poses, Tbc)) {
         spdlog::warn("monoInitialization: Gyroscope bias calibration failed");
         return false;
     }
     // Then use these poses to perform linear alignment
-    if(!LinearAlignment(sld_win, sfm_poses, extrinsic.at(camera_idx))) {
+    if(!LinearAlignment(sld_win, sfm_poses, Tbc)) {
         spdlog::warn("monoInitialization: Linear alignment failed");
         return false;
     }
@@ -813,19 +820,22 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
     }
     
     // Recover camera poses and IMU poses using the scale
-    Swarm::Pose imu_pose_inv0 = Swarm::Pose::Identity();
+    Eigen::Vector3d pos0 = Eigen::Vector3d::Zero();
+    Quaterniond q0 = Utility::g2R(g);
+    double yaw = quat2eulers(q0 * sfm_poses.at(sld_win[0]->frame_id).att()).z();
+    q0 = eulers2quat(Eigen::Vector3d{0, 0, -yaw}) * q0;
+    g = q0 * g;
+    spdlog::info("G final {:.4f} {:.4f} {:.4f}", g.x(), g.y(), g.z());
+
     for (int i = 0; i < sld_win.size(); i++) {
         auto frame = sld_win[i];
-        Swarm::Pose cam_pose = sfm_poses.at(frame->frame_id);
-        cam_pose.pos() = cam_pose.pos() * s;
-        if (i == 0) {
-            Quaterniond q_last_to_first = cam_pose.att() * sfm_poses.at(sld_win.back()->frame_id).att().inverse();
-            Quaterniond q0 = Utility::g2R(g)*q_last_to_first; // g is in last pose's camera frame.
-            Swarm::Pose pose_imu0(q0, Vector3d::Zero());
-            spdlog::info("LinearAlignment: F{} Pose 0 update to {}", frame->frame_id, pose_imu0.toStr());
-            imu_pose_inv0 = pose_imu0*(cam_pose * extrinsic.inverse()).inverse();
+        Swarm::Pose imu_pose = sfm_poses.at(frame->frame_id);
+        if (i == 0)
+        {
+            pos0 = s*imu_pose.pos() - imu_pose.att()*extrinsic.pos();
         }
-        Swarm::Pose imu_pose = imu_pose_inv0 * cam_pose * extrinsic.inverse();
+        imu_pose.pos() = q0*(imu_pose.pos() * s - imu_pose.att()*extrinsic.pos() - pos0);
+        imu_pose.att() = q0*imu_pose.att();
         // Set the pose of the frame
         Vector3d vel = imu_pose.R()*x.segment<3>(i * 3);
         setPose(frame->frame_id, imu_pose);

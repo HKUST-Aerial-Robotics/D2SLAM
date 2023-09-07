@@ -587,14 +587,20 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
     spdlog::info("Finish solve BA in {:.2f}ms. rpt {}",
                   summary.total_time_in_seconds * 1000.0,
                   summary.BriefReport());
+    Swarm::Pose pose0_inv = Swarm::Pose::Identity();
+    bool is_pose0_set = false;
     for (auto it : initial) {
         // Initial states
         auto frame_id = it.first;
         Eigen::Map<Eigen::Vector3d> pos(c_translation[frame_id]);
         Eigen::Map<Eigen::Quaterniond> quat(c_rotation[frame_id]);
         Swarm::Pose camera_pose(pos, quat);
-        ret[frame_id] = camera_pose;
-        spdlog::info("SfM init {}: Cam {}", frame_id, camera_pose.toStr());
+        if (!is_pose0_set) {
+            pose0_inv = camera_pose.inverse();
+            is_pose0_set = true;
+        }
+        ret[frame_id] = pose0_inv*camera_pose;
+        spdlog::info("SfM init {}: Cam {}", frame_id, ret[frame_id].toStr());
     }
     return ret;
 }
