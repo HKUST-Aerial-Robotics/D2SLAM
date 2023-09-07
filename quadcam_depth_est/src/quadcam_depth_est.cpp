@@ -20,8 +20,10 @@ std::pair<cv::Mat, cv::Mat> intrinsicsFromNode(const YAML::Node & node);
 
 QuadCamDepthEst::QuadCamDepthEst(ros::NodeHandle & _nh): nh(_nh) {
     std::string quadcam_depth_config_file;
-    nh.param<std::string>("quadcam_depth_config_file", quadcam_depth_config_file, "quadcam_depth_config.yaml");
-    nh.param<bool>("show", show, false);
+    nh.getParam("depth_config", quadcam_depth_config_file);
+    nh.getParam("show", show);
+    // nh.param<bool>("show", show, false);
+    printf("[QuadCamDepthEst] show %d\n", show);
     pub_pcl = nh.advertise<sensor_msgs::PointCloud2>("/depth_estimation/point_cloud", 1);
     printf("[QuadCamDepthEst] readConfig from: %s\n", quadcam_depth_config_file.c_str());
     int pn = quadcam_depth_config_file.find_last_of('/');    
@@ -65,13 +67,13 @@ void QuadCamDepthEst::loadCNN(YAML::Node & config) {
     width = config["width"].as<int>();
     height = config["height"].as<int>();
     if (enable_cnn) {
-        std::string cnn_model_path;
         bool cnn_use_tensorrt = config["cnn_use_tensorrt"].as<bool>();
         bool cnn_int8 = config["cnn_int8"].as<bool>();
         bool cnn_fp16 = config["cnn_fp16"].as<bool>();
-        nh.param<std::string>("cnn_model_path", cnn_model_path, "");
+        std::string cnn_model_path = config["cnn_model_path"].as<std::string>();
+        std::string quantization_file = config["cnn_quant_path"].as<std::string>();
         if (cnn_type == "hitnet") {
-            hitnet = new HitnetONNX(cnn_model_path, width, height, cnn_use_tensorrt, cnn_fp16, cnn_int8);
+            hitnet = new HitnetONNX(cnn_model_path, quantization_file,width, height, cnn_use_tensorrt, cnn_fp16, cnn_int8);
             printf("[DEBUG] Hit NET\n");            
             cnn_rgb = false;
         } 
@@ -195,6 +197,7 @@ cv::Mat readVingette(const std::string & mask_file, double avg_brightness) {
 void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPath) {
     int _camera_config = config["camera_configuration"].as<int>();
     camera_config = (CameraConfig)_camera_config;
+
     cv::Mat photometric_inv_vec[4];
     cv::Mat photometric_inv, photometric_inv_1;
     float avg_brightness = config["avg_brightness"].as<float>();
@@ -219,7 +222,7 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
         }
     }
 
-    std::string calib_file_path = config["calib_file_path"].as<std::string>();
+    std::string calib_file_path = config["cam_calib_file_path"].as<std::string>();
     printf("[QuadCamDepthEst] Load camera config from %s\n", calib_file_path.c_str());
     calib_file_path = configPath + "/" + calib_file_path;
     YAML::Node config_cams = YAML::LoadFile(calib_file_path); 

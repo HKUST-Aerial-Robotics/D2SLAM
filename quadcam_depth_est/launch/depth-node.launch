@@ -1,14 +1,9 @@
 <launch>
-    <arg name="show" default="true" />
-    <arg name="quadcam_depth_config_file"     default="$(find d2frontend)/../models/superpoint_v1.onnx"/>
-    <arg name="config" default="$(find quadcam_depth_est)/../config/new_quadcam_NO_0/quadcam_depth_gen_new.yaml" />
-    <arg name="cnn_model_path" default="/root/swarm_ws/src/ONNX-HITNET-Stereo-Depth-estimation/models/eth3d/saved_model_240x320/model_float32_opt.onnx" />
-    <!-- <arg name="cnn_model_path" default="/root/swarm_ws/src/ONNX-CREStereo-Depth-Estimation/models/crestereo_combined_iter5_240x320.onnx" /> -->
-    <arg name="photometric_calib_path" default="/root/swarm_ws/src/D2SLAM/config/new_quadcam/camera_vig_mask"/>
+    <arg name="show" default="false" />
+    <arg name="depth_config" default="$(find quadcam_depth_est)/../config/new_quadcam/quadcam_depth_generation.yaml"/>
     <arg name="output" default="screen" />
     <node pkg="quadcam_depth_est" type="quadcam_depth_est_node" name="quadcam_depth_est" output="$(arg output)" >
-        <param name="show" value="$(arg show)" type="bool" />
-        <param name="quadcam_depth_config_file" value="$(arg config)" />
-        <param name="cnn_model_path" value="$(arg cnn_model_path)" />
+        <param name="show" value="$(arg show)"/>
+        <param name="depth_config" value="$(arg depth_config)"/>
     </node>
 </launch>

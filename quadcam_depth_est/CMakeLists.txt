@@ -69,18 +69,16 @@ target_link_libraries(
 add_definitions("-Wall -g")
 
 add_executable(${PROJECT_NAME}_node src/quadcam_depth_est_node.cpp)
-add_executable(${PROJECT_NAME}_test src/quadcam_depth_est.cpp test/test_quadcam_depth_est.cpp)
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
 
-
-
-target_link_libraries(${PROJECT_NAME}_test
-  ${catkin_LIBRARIES}
-  ${YAML_CPP_LIBRARIES}
-  ${PROJECT_NAME}
-  ${d2frontend_LIBRARIES}
-  onnxruntime
-)
+# add_executable(${PROJECT_NAME}_test src/quadcam_depth_est.cpp test/test_quadcam_depth_est.cpp)
+# target_link_libraries(${PROJECT_NAME}_test
+#   ${catkin_LIBRARIES}
+#   ${YAML_CPP_LIBRARIES}
+#   ${PROJECT_NAME}
+#   ${d2frontend_LIBRARIES}
+#   onnxruntime
+# )
