@@ -5,15 +5,11 @@ d2vins/build/
 d2vins/cmake-build-debug/
 d2vins/.idea/
 d2common/build/
-data_analysis/__pycache__/
 d2pgo/build/
 d2comm/build/
-d2pgo/scripts/__pycache__/
 d2pgo/scripts/notebooks/.ipynb_checkpoints/
-d2pgo/scripts/pose_graph_partitioning/__pycache__/
 d2pgo/scripts/notebooks/*.png
 quadcam_depth_est/build/
-quadcam_tools/__pycache__/
 models/*.onnx
 models/*.pb
 models/*.trt
@@ -28,3 +24,5 @@ d2pgo/posegraph-graphviz.*
 d2pgo/scripts/notebooks/posegraph-graphviz.*
 */.DS_Store
 .DS_Store
+**/__pycache__
+**/*.py[cod]
