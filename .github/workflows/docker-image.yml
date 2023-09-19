@@ -4,12 +4,14 @@ on:
   push:
     branches: [ "main", "develop" ]
     paths:
+      - '.github/workflows/docker-image.yml'
       - '**.cpp'
       - '**.h'
       - 'docker/**'
   pull_request:
     branches: [ "main", "develop" ]
     paths:
+      - '.github/workflows/docker-image.yml'
       - '**.cpp'
       - '**.h'
       - 'docker/**'
@@ -76,11 +78,11 @@ jobs:
       uses: docker/build-push-action@v3
       with:
         context: .
-        file: docker/Dockerfile.jetson_base_35.1.0
+        file: docker/Dockerfile.jetson_orin_base_35.3.1
         push: true
         tags: |
-          hkustswarm/d2slam:jetson_base_35.1.0-${{ steps.date.outputs.today }}
-          hkustswarm/d2slam:jetson_base_35.1.0
+          hkustswarm/d2slam:jetson_orin_base_35.3.1-${{ steps.date.outputs.today }}
+          hkustswarm/d2slam:jetson_orin_base_35.3.1
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache
     -
