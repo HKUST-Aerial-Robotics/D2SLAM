@@ -17,6 +17,14 @@ class Trajectory:
         self.ypr_func = interp1d(self.t, self.ypr, axis=0,bounds_error=False,fill_value="extrapolate")
         self.ypr[:,0] = wrap_pi(self.ypr[:,0])
 
+        # Compute velocity
+        dp = np.diff(self.pos, axis=0)
+        dt = np.diff(self.t)
+        self.vel = np.concatenate([np.zeros((1,3)), dp/dt[:,None]], axis=0)
+        # Smooth velocity with a moving average filter
+        self.vel = np.apply_along_axis(lambda x: np.convolve(x, np.ones(5)/5, mode='same'), 0, self.vel)
+        self.vel_func = interp1d(self.t, self.vel, axis=0,bounds_error=False,fill_value="extrapolate")
+        
     def length(self, t=10000000):
         mask = self.t < t
         dp = np.diff(self.pos[mask], axis=0)
@@ -210,7 +218,7 @@ def align_path_by_minimize(path, path_gt, inplace=False, align_coor_only=False):
             dyaw = x[3]
             pos_err = np.linalg.norm(pos_gt - yaw_rotate_vec(dyaw, pos) - dpos, axis=1)
             yaw_err = np.abs(wrap_pi(ypr_gt[:,0] - ypr[:,0] - dyaw))
-            return np.sum(pos_err) + np.sum(yaw_err)
+            return np.sum(pos_err) #+ np.sum(yaw_err)
         inital_pos = pos_gt[0] - pos[0]
         inital_yaw = wrap_pi(ypr_gt[0, 0] - ypr[0, 0])
         inital_guess = np.concatenate([inital_pos, [inital_yaw]])
@@ -234,7 +242,7 @@ def align_path_by_minimize(path, path_gt, inplace=False, align_coor_only=False):
             pos_err = np.linalg.norm(pos_gt - yaw_rotate_vec(dyaw, pos) - dpos, axis=1)
             yaw_err = np.abs(wrap_pi(ypr_gt[:,0] - ypr[:,0] - dyaw))
             rp_err = np.abs(wrap_pi(ypr_gt[:,1:] - ypr[:,1:] - d_rp))
-            return np.sum(pos_err) + np.sum(yaw_err) + np.sum(rp_err)
+            return np.sum(pos_err) #+ np.sum(yaw_err) + np.sum(rp_err)
         inital_pos = pos_gt[0] - pos[0]
         inital_yaw = wrap_pi(ypr_gt[0, 0] - ypr[0, 0])
         inital_guess = np.concatenate([inital_pos, [inital_yaw, 0, 0]])

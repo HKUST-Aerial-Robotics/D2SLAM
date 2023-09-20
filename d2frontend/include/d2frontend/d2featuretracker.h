@@ -116,6 +116,7 @@ protected:
     bool isKeyframe(const TrackReport & reports);
     Vector3d extractPointVelocity(const LandmarkPerFrame & lpf) const;
     std::pair<bool, LandmarkPerFrame> getPreviousLandmarkFrame(const LandmarkPerFrame & lpf, FrameIdType keyframe_id=-1) const;
+    const VisualImageDescArray& getLatestKeyframe() const;
 
     void draw(const VisualImageDesc & frame, bool is_keyframe, const TrackReport & report) const;
     void draw(const VisualImageDesc & lframe, VisualImageDesc & rframe, bool is_keyframe, const TrackReport & report) const;

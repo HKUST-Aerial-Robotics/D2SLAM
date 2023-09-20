@@ -93,7 +93,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     }
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
         report.compose(track(frames.images[0], frames.motion_prediction));
-        report.compose(track(frames.images[0], frames.images[1]));
+        // report.compose(track(frames.images[0], frames.images[1]));
     } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         for (auto & frame : frames.images) {
             report.compose(track(frame));
@@ -113,7 +113,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     }
     processFrame(frames, iskeyframe);
     report.ft_time = tic.toc();
-    spdlog::debug("[D2FeatureTracker] frame_id: {} is_kf {}, landmark_num: {}/{}, mean_para {:.2f}%, time_cost: {:.1f}ms ", 
+    spdlog::info("[D2FeatureTracker] frame_id: {} is_kf {}, landmark_num: {}/{}, mean_para {:.2f}%, time_cost: {:.1f}ms ", 
         frames.frame_id, iskeyframe, report.parallex_num, frames.landmarkNum(), report.meanParallex()*100, report.ft_time);
     if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
@@ -374,6 +374,21 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame, const Swarm::Pose &
     return report;
 }
 
+const VisualImageDescArray& D2FeatureTracker::getLatestKeyframe() const
+{
+    // Return the previous keyframe
+    assert(current_keyframes.size() > 0&&"Must have previous keyframe");
+    for (auto it = current_keyframes.rbegin(); it != current_keyframes.rend(); it++) {
+        if (it->is_keyframe) {
+            spdlog::debug("Found previous keyframe {}", it->frame_id);
+            return *it;
+        }
+    }
+    spdlog::debug("Not found previous keyframe {}, returning beginning");
+    return *current_keyframes.begin();
+}
+
+
 TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     //Track LK points
     TrackReport report;
@@ -381,6 +396,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     if (keyframe_lk_infos.size() > 0)
     {
         const auto& prev_frame = current_keyframes.back();
+        const auto& prev_keyframe = getLatestKeyframe();
         const auto& prev_lk = keyframe_lk_infos.at(prev_frame.frame_id).at(frame.camera_index);
         if (!prev_lk.lk_ids.empty()) {
             int prev_lk_num = prev_lk.lk_ids.size();
@@ -397,7 +413,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
                 if (lmanager->at(cur_lk_info.lk_ids[i]).track.size() >= _config.long_track_frames) {
                     report.long_track_num ++;
                 }
-                auto [succ, prev_lm] = getPreviousLandmarkFrame(lm, prev_frame.frame_id);
+                auto [succ, prev_lm] = getPreviousLandmarkFrame(lm, prev_keyframe.frame_id);
                 if (succ) {
                     lm.stamp_discover = prev_lm.stamp_discover;
                 }
@@ -405,8 +421,8 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
                     continue;
                 }
                 report.sum_parallex += (lm.pt3d_norm - prev_lm.pt3d_norm).norm();
-                spdlog::debug("prev_2d {:.1f} {:.1f} cur_2d {:.3f} {:.3f} para_2d {:.1f}%  prev_3d {:.3f} {:.3f} {:.3f} cur_3d {:.3f} {:.3f} {:.3f} para_3d {:.1f}%",
-                        prev_lm.pt2d.x, prev_lm.pt2d.y, lm.pt2d.x, lm.pt2d.y, 
+                spdlog::debug("LM {} prev_2d {:.1f} {:.1f} cur_2d {:.3f} {:.3f} para_2d {:.1f}%  prev_3d {:.3f} {:.3f} {:.3f} cur_3d {:.3f} {:.3f} {:.3f} para_3d {:.1f}%",
+                        prev_lm.landmark_id, prev_lm.pt2d.x, prev_lm.pt2d.y, lm.pt2d.x, lm.pt2d.y, 
                         cv::norm(prev_lm.pt2d - lm.pt2d)*100.0,
                         prev_lm.pt3d_norm.x(), prev_lm.pt3d_norm.y(), prev_lm.pt3d_norm.z(), 
                         lm.pt3d_norm.x(), lm.pt3d_norm.y(), lm.pt3d_norm.z(), 
@@ -545,7 +561,7 @@ bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
         prev_num < _config.last_track_thres ||
         report.unmatched_num > _config.new_feature_thres*prev_num || //Unmatched is assumed to be new
         report.meanParallex() > _config.parallex_thres) { //Attenion, if mismatch this will be big
-        spdlog::debug("[D2FeatureTracker] keyframe_count: {}, long_track_num: {}, prev_num: {}, unmatched_num: {}, parallex: {:.1f}%", 
+        spdlog::debug("[D2FeatureTracker] New KF: keyframe_count: {}, long_track_num: {}, prev_num: {}, unmatched_num: {}, parallex: {:.1f}%", 
             keyframe_count, report.long_track_num, prev_num, report.unmatched_num, report.meanParallex()*100);
         return true;
     }
@@ -578,6 +594,7 @@ void D2FeatureTracker::processFrame(VisualImageDescArray & frames, bool is_keyfr
     if (current_keyframes.size() > 0 && current_keyframes.back().frame_id == frames.frame_id) {
         return;
     }
+    frames.is_keyframe = is_keyframe;
     keyframe_count ++;
     for (auto & frame: frames.images) {
         for (unsigned int i = 0; i < frame.landmarkNum(); i++) {

@@ -479,10 +479,17 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
     // Start the scale with solve5pts
     for (size_t i = 0; i < frames.size() - 1; i++) {
         head_frame_for_match = frames[i];
-        if (SolveRelativePose5Pts(relative_pose, camera_idx, last_frame->frame_id,
-                                head_frame_for_match->frame_id)) {
+        if (SolveRelativePose5Pts(relative_pose, camera_idx,
+                                  last_frame->frame_id,
+                                  head_frame_for_match->frame_id)) {
             initial[last_frame->frame_id] = Swarm::Pose::Identity();
             initial[head_frame_for_match->frame_id] = relative_pose;
+            spdlog::info(
+                "[D2VINS::D2LandmarkManager] Frame_id {} PnP result: {}",
+                    last_frame->frame_id, initial[last_frame->frame_id].toStr());
+            spdlog::info(
+                "[D2VINS::D2LandmarkManager] Frame_id {} PnP result: {}",
+                    head_frame_for_match->frame_id, relative_pose.toStr());
             break;
         } else {
             continue;
@@ -496,7 +503,8 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
     // First triangulation
     auto last_triangluation_pts = triangulationFrames(
         last_frame->frame_id, initial[last_frame->frame_id],
-        head_frame_for_match->frame_id, initial[head_frame_for_match->frame_id], camera_idx);
+        head_frame_for_match->frame_id, initial[head_frame_for_match->frame_id],
+        camera_idx);
 
     // Recursive triangluation
     for (int i = frames.size() - 2; i >= 0; i--) {
@@ -506,14 +514,14 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
         }
         Swarm::Pose pose = Swarm::Pose::Identity();
         // Found the landmarks observerd by frame and in points3d
-        if (InitFramePoseWithPts(pose, last_triangluation_pts,
-                                 frame->frame_id, camera_idx)) {
+        if (InitFramePoseWithPts(pose, last_triangluation_pts, frame->frame_id,
+                                 camera_idx)) {
             // Triangulate all the common points
             initial[frame->frame_id] = pose;
             last_triangluation_pts =
                 triangulationFrames(initial, camera_idx, 2);
             spdlog::info("{} points initialized",
-                          last_triangluation_pts.size());
+                         last_triangluation_pts.size());
         } else {
             // return false;
         }
@@ -521,15 +529,15 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
 
     // Now re-triangluation all points
     auto initial_pts = triangulationFrames(initial, camera_idx, 3);
-    // and only keep the points in last_triangluation_pts
-    for (auto it = initial_pts.begin(); it != initial_pts.end();) {
-        if (last_triangluation_pts.find(it->first) ==
-            last_triangluation_pts.end()) {
-            it = initial_pts.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    auto ret = PerformBA(initial, last_frame, head_frame_for_match, initial_pts, camera_idx);
+    return ret;
+}
+
+const std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::PerformBA(
+    const std::map<FrameIdType, Swarm::Pose> &initial, VINSFrame *last_frame,
+    VINSFrame *head_frame_for_match,
+    std::map<LandmarkIdType, Vector3d> initial_pts, int camera_idx) const {
+
     spdlog::info("{} points initialized. Now start BA", initial_pts.size());
     std::map<FrameIdType, Swarm::Pose> ret;
 
@@ -596,8 +604,7 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
     spdlog::info("Finish solve BA in {:.2f}ms. rpt {}",
-                  summary.total_time_in_seconds * 1000.0,
-                  summary.BriefReport());
+                 summary.total_time_in_seconds * 1000.0, summary.BriefReport());
     Swarm::Pose pose0_inv = Swarm::Pose::Identity();
     bool is_pose0_set = false;
     for (auto it : initial) {
@@ -610,7 +617,7 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
             pose0_inv = camera_pose.inverse();
             is_pose0_set = true;
         }
-        ret[frame_id] = pose0_inv*camera_pose;
+        ret[frame_id] = pose0_inv * camera_pose;
         spdlog::info("SfM init {}: Cam {}", frame_id, ret[frame_id].toStr());
     }
     return ret;
@@ -641,29 +648,26 @@ bool D2LandmarkManager::InitFramePoseWithPts(
 
     // Then use cv::solvePnPRansac to solve the pose of frame
     if (points_undist.size() < 5) {
-        spdlog::error(
-            "[D2VINS::D2LandmarkManager] PnP failed in SFMInitialization on {}, "
-            "only {} pts",
-            frame_id,
-            points_3d.size());
+        spdlog::error("[D2VINS::D2LandmarkManager] PnP failed in "
+                      "SFMInitialization on {}, "
+                      "only {} pts",
+                      frame_id, points_3d.size());
         return false;
     }
     cv::Mat rvec, tvec;
     D2FrontEnd::PnPInitialFromCamPose(ret, rvec, tvec);
     cv::Mat K = cv::Mat::eye(3, 3, CV_64F); // Use undist point, so identity
     std::vector<uint8_t> inliers;
-    cv::solvePnPRansac(points_3d, points_undist, K, cv::Mat(), rvec, tvec,
-                       true, 100, 0.01, 0.99, inliers);
+    cv::solvePnPRansac(points_3d, points_undist, K, cv::Mat(), rvec, tvec, true,
+                       100, 0.01, 0.99, inliers);
     // Convert to eigen
     ret = D2FrontEnd::PnPRestoCamPose(rvec, tvec);
     // Print result
     int num_inliers = 0;
-    for (size_t i = 0; i < inliers.size(); i++)
-    {
+    for (size_t i = 0; i < inliers.size(); i++) {
         if (inliers[i]) {
             num_inliers++;
-        }
-        else {
+        } else {
             last_triangluation_pts.erase(landmark_ids_used[i]);
         }
     }
@@ -695,10 +699,12 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
         sum_parallex += (lm1.pt3d_norm - lm2.pt3d_norm).norm();
         // Draw the arrow of the points using pt2d, it's already cv::Point2f
     }
-    if (corres.size() < params->solve_relative_pose_min_pts || sum_parallex/corres.size() < params->solve_relative_pose_min_parallex) {
+    if (corres.size() < params->solve_relative_pose_min_pts ||
+        sum_parallex / corres.size() <
+            params->solve_relative_pose_min_parallex) {
         spdlog::warn("[D2VINS::D2LandmarkManager] Solve 5 pts failed, only {} "
                      "pts, parallex {:.2f}",
-                     corres.size(), sum_parallex/corres.size());
+                     corres.size(), sum_parallex / corres.size());
         return false;
     }
     utils::MotionEstimator estimator;
@@ -710,9 +716,9 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
     }
     ret = Swarm::Pose(R, T);
     spdlog::info(
-        "[D2VINS::D2LandmarkManager] Frame {} Solve 5 pts with {} pts result: "
+        "[D2VINS::D2LandmarkManager] Frame {}-{} Solve 5 pts with {} pts result: "
         "{}",
-        frame2_id, corres.size(), ret.toStr());
+        frame1_id, frame2_id, corres.size(), ret.toStr());
     return true;
 }
 

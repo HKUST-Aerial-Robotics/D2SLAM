@@ -21,6 +21,7 @@ bool MotionEstimator::solveRelativeRT(
         cv::Mat mask;
         cv::Mat E = cv::findEssentialMat(ll, rr, cameraMatrix, cv::RANSAC, 0.99, 0.3 / 460,
                                            1000, mask);
+        // cv::Mat E = cv::findFundamentalMat(ll, rr, cv::FM_RANSAC, 0.3 / 460, 0.99, mask);        
         cv::Mat rot, trans;
         int inlier_cnt =
             cv::recoverPose(E, ll, rr, cameraMatrix, rot, trans, mask);

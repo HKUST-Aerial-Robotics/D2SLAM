@@ -51,6 +51,7 @@
             yaw_covariance_per_meter: 0.003
             enable_network: true
             ransacReprojThreshold: 10.0
+            long_track_thres: 40
         </rosparam>
         <param name="pca_comp_path" value="$(find d2frontend)/../models/components_.csv" type="string" />
         <param name="pca_mean_path" value="$(find d2frontend)/../models/mean_.csv" type="string" />

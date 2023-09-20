@@ -119,6 +119,7 @@ namespace D2FrontEnd {
         } else {
             printf("[D2FrontendParams] feature_min_dist not found, use default\n");
         }
+        ftconfig->track_from_keyframe = (int) fsSettings["track_from_keyframe"];
         //Loop detector
         loopdetectorconfig->enable_homography_test = (int) fsSettings["enable_homography_test"];
         loopdetectorconfig->accept_loop_max_yaw = (double) fsSettings["accept_loop_max_yaw"];

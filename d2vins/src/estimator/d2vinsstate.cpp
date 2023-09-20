@@ -722,8 +722,8 @@ bool D2EstimatorState::solveGyroscopeBias(std::vector<VINSFrame * > sld_win,
         tmp_A.setZero();
         VectorXd tmp_b(3);
         tmp_b.setZero();
-        Eigen::Quaterniond q0 = sfm_poses.at(frame_i->frame_id).att()*extrinsic.att().inverse();
-        Eigen::Quaterniond q1 = sfm_poses.at(frame_j->frame_id).att()*extrinsic.att().inverse();
+        Eigen::Quaterniond q0 = sfm_poses.at(frame_i->frame_id).att();
+        Eigen::Quaterniond q1 = sfm_poses.at(frame_j->frame_id).att();
 
         Eigen::Quaterniond q_ij(q0.inverse() * q1);
         tmp_A = frame_j->pre_integrations->jacobian.template block<3, 3>(O_R, O_BG);
