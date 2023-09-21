@@ -174,3 +174,6 @@ RUN   source "/opt/ros/${ROS_VERSION}/setup.bash" && \
             --cmake-args -DONNXRUNTIME_LIB_DIR=/usr/local/lib \
             -DONNXRUNTIME_INC_DIR=/usr/local/include && \
       catkin build
+RUN   source "/opt/ros/${ROS_VERSION}/setup.bash" && \
+      source "${SWARM_WS}/devel/setup.bash" &&\
+      echo "source ${SWARM_WS}/devel/setup.bash" >> ~/.bashrc
