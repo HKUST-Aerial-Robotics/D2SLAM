@@ -3,7 +3,9 @@
 # Usage: ./start_docker.sh  1 to start docker only for image transportation.
 # Please do not move this file to other dir, it will cause the docker container can not find the current dir.
 
-source ./docker_files_config_local.sh
+script_path=$(dirname "$(readlink -f "$0")")
+
+source $script_path/docker_files_config_local.sh
 
 if [ $# -eq 0 ]; then
   echo "[INFO] No start option, will start docker container only for application"
@@ -15,7 +17,7 @@ fi
 xhost +
 if [ ${START_OPTION} == 1 ]; then
   echo "[INFO] Start docker container with mapping current dir to docker container"
-  CURRENT_DIR=$(pwd)
+  CURRENT_DIR=$script_path
   echo "${CURRENT_DIR} will be mapped in to docker container with start option 1"
   docker run -it --rm --runtime=nvidia --gpus all  --net=host \
     -v ${CURRENT_DIR}:${SWARM_WS}/src/D2SLAM \
