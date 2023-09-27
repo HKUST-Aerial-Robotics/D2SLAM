@@ -112,7 +112,10 @@ def calibration_task(calibration_gen, stereo_calib_gens, input_bag_path, height,
                 kablirCalibratePinhole(topic_l, topic_r, calib_bag_path, output_calib_name, verbose=verbose,
                                     init_focal_length=stereo_calib_gens[0].undist_l.focal_gen)
                 os.remove(calib_bag_path)
+            else:
+                break
         except KeyboardInterrupt:
+            os.remove(calib_bag_path)
             print("Ctrl+C detected. Exiting.")
             break
         except Exception as e:
