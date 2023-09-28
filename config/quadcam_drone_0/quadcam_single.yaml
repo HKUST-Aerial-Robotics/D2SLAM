@@ -8,17 +8,17 @@ imu_topic: "/mavros/imu/data_raw"
 # TODO::Cannot find the topic for the image
 image0_topic: "/oak_ffc_4p/assemble_image"
 
-is_compressed_images: 1
+is_compressed_images: 0
 
-imu_freq: 400
-image_freq: 16
-frame_step: 2
+imu_freq: 500
+image_freq: 25
+frame_step: 4
 
 #Camera configuration
 camera_configuration: 3  #STEREO_PINHOLE = 0, STEREO_FISHEYE = 1, PINHOLE_DEPTH = 2, FOURCORNER_FISHEYE = 3
-calib_file_path: "quad_cam_calib-camchain-imucam-7-inch-n3.yaml"
+calib_file_path: "fisheye_cams.yaml"
 image_width: 1280
-image_height: 800
+image_height: 720
 enable_undistort_image: 1
 undistort_fov: 200
 width_undistort: 800
@@ -27,9 +27,9 @@ photometric_calib: "mask.png"
 avg_photometric: 0.7
 
 #estimation
-estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
-estimate_td: 0                      # online estimate time offset between camera and imu
-td: -0.186                           # For new datasets with filter
+estimate_extrinsic: 0  # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_td: 1                      # online estimate time offset between camera and imu
+td: -0.05                           # For new datasets with filter
 estimation_mode: 0
 double_counting_common_feature: 0
 min_inv_dep: 0.01 #100 meter away.

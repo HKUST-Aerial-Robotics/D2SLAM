@@ -353,7 +353,8 @@ void D2Estimator::setStateProperties() {
 
     if (!params->estimate_td || state.size() < params->max_sld_win_size || 
                 state.lastFrame().odom.vel().norm() < params->estimate_extrinsic_vel_thres) {
-        // printf("[D2Estimator::setStateProperties@%d] set td to fixed sld_size %d/%d \n", self_id, state.size(), params->max_sld_win_size);
+        printf("[D2Estimator::setStateProperties@%d] set td to fixed sld_size %d/%d \n", self_id, state.size(), params->max_sld_win_size);
+        problem.AddParameterBlock(state.getTdState(self_id), 1);
         problem.SetParameterBlockConstant(state.getTdState(self_id));
     }
 

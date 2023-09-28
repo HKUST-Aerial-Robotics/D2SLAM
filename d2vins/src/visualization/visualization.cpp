@@ -31,6 +31,7 @@ std::vector<Eigen::Vector3d> D2Visualization::drone_colors{
 D2Visualization::D2Visualization()
 {}
 
+//TODO:: decrease the queue size    
 void D2Visualization::init(ros::NodeHandle & nh, D2Estimator * estimator) {
     pcl_pub = nh.advertise<sensor_msgs::PointCloud>("point_cloud", 1000);
     margined_pcl = nh.advertise<sensor_msgs::PointCloud>("margined_cloud", 1000);

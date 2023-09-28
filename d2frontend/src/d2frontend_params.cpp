@@ -182,6 +182,7 @@ namespace D2FrontEnd {
                 ROS_ERROR("[D2Frontend]Failed to read camera from %s", cam_calib_path.c_str());
             }
         }
+        //TODO::Multi calibration results
         std::string photometric_calib_file = fsSettings["photometric_calib"];
         cv::Mat photometric;
         if ( photometric_calib_file != "") {
@@ -316,12 +317,17 @@ namespace D2FrontEnd {
                 T(i, j) = config["T_cam_imu"][i][j].as<double>();
             }
         }
-        Matrix3d R = T.block<3, 3>(0, 0);
-        Vector3d t = T.block<3, 1>(0, 3);
+        Matrix3d R = T.block<3, 3>(0, 0).transpose();
+        Vector3d t = -R*T.block<3, 1>(0, 3);
+        #if 0 //xuhao version
         Swarm::Pose pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
         std::cout << "T_cam_imu:\n" << T << std::endl;
         std::cout << "pose:\n" << pose.toStr() << std::endl;
-
+        #endif
+        Swarm::Pose pose(R, t);
+        std::cout <<"T_cam_imu:\n" << R << std::endl;
+        std::cout << "pose:\n" << pose.toStr() << std::endl;
+        
         return std::make_pair(camera, pose);
     }
 
