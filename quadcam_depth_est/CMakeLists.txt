@@ -13,7 +13,7 @@ SET("OpenCV_DIR"  "/usr/local/share/OpenCV/")
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
-
+find_package(CUDA REQUIRED)
 find_package(d2frontend REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -51,19 +51,26 @@ ${EIGEN3_INCLUDE_DIRS}
 ${d2frontend_INCLUDE_DIRS}
 ${YAML_CPP_INCLUDE_DIRS}
 ${ONNXRUNTIME_INC_DIR}
+${CUDA_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 add_library(${PROJECT_NAME}
   src/quadcam_depth_est.cpp
   src/virtual_stereo.cpp
+  src/hitnet.cpp
+  src/quadcam_depth_est_trt.cpp
 )
 
 target_link_libraries(
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${d2frontend_LIBRARIES}
+  ${CUDA_LIBRARIES}
   onnxruntime
+  nvinfer
+  nvinfer_plugin
+  nvonnxparser
 )
 
 add_definitions("-Wall -g")
@@ -72,6 +79,10 @@ add_executable(${PROJECT_NAME}_node src/quadcam_depth_est_node.cpp)
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
+  ${CUDA_LIBRARIES}
+  nvinfer
+  nvinfer_plugin
+  nvonnxparser
 )
 
 # add_executable(${PROJECT_NAME}_test src/quadcam_depth_est.cpp test/test_quadcam_depth_est.cpp)

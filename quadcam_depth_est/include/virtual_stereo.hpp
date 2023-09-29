@@ -1,5 +1,6 @@
 #include <swarm_msgs/Pose.h>
 #include <opencv2/cudaimgproc.hpp>
+#pragma once
 namespace camodocal {
 class Camera;
 typedef boost::shared_ptr< Camera > CameraPtr;
@@ -30,7 +31,7 @@ struct VirtualStereoConfig {
 
 
 class VirtualStereo {
-protected:
+  protected:
     Swarm::Pose pose_left, pose_right;
     Swarm::Pose rect_pose_left, rect_pose_right;
     double baseline = 0.0;
@@ -49,26 +50,52 @@ protected:
     //Rectify the images from pinhole images.
     bool input_is_stereo = false;
     cv::cuda::GpuMat inv_vingette_l, inv_vingette_r;
-public:
+  public:
     bool enable_texture = true;
     int cam_idx_a = 0;
     int cam_idx_b = 1;
+    int cam_idx_a_right_half_id = 1;
+    int cam_idx_b_left_half_id = 0;
+    int stereo_id = 0;
+
     Swarm::Pose extrinsic;
     std::vector<cv::cuda::GpuMat> rectifyImage(const cv::Mat & left, const cv::Mat & right);
+    int32_t rectifyImage(const cv::Mat & left, const cv::Mat & right,
+        cv::cuda::GpuMat & rect_left, cv::cuda::GpuMat & rect_right);
+
     cv::Mat estimateDisparityOCV(const cv::Mat & left, const cv::Mat & right);
     cv::Mat estimateDisparity(const cv::Mat & left, const cv::Mat & right);
-    std::pair<cv::Mat, cv::Mat> estimateDisparityViaRaw(const cv::Mat & left, const cv::Mat & right, const cv::Mat & left_color, bool show = false);
-    std::pair<cv::Mat, cv::Mat> estimatePointsViaRaw(const cv::Mat & left, const cv::Mat & right, const cv::Mat & left_color, bool show = false);
+    std::pair<cv::Mat, cv::Mat> estimateDisparityViaRaw(const cv::Mat & left, const cv::Mat & right,
+        const cv::Mat & left_color, bool show = false);
+    std::pair<cv::Mat, cv::Mat> estimatePointsViaRaw(const cv::Mat & left, const cv::Mat & right, 
+        const cv::Mat & left_color, bool show = false);
+    
+    cv::Mat getStereoPose(){
+        return this->Q;
+    }
+
+    int32_t showDispartiy(const cv::Mat & disparity,
+        cv::Mat & left_rect_mat, cv::Mat & right_rect_mat);
+
+    
+
     VirtualStereo(int _idx_a, int _idx_b, 
-            const Swarm::Pose & baseline, 
-            D2Common::FisheyeUndist* _undist_left,
-            D2Common::FisheyeUndist* _undist_right,
-            int _undist_id_l, 
-            int _undist_id_r, HitnetONNX* _hitnet, CREStereoONNX * _crestereo);
+        const Swarm::Pose & baseline, 
+        D2Common::FisheyeUndist* _undist_left,
+        D2Common::FisheyeUndist* _undist_right,
+        int _undist_id_l, 
+        int _undist_id_r, HitnetONNX* _hitnet, CREStereoONNX * _crestereo);
+
+    VirtualStereo(int _idx_a, int _idx_b, 
+        const Swarm::Pose & baseline, 
+        D2Common::FisheyeUndist* _undist_left,
+        D2Common::FisheyeUndist* _undist_right,
+        int _undist_id_l, int _undist_id_r);
+
     VirtualStereo(const Swarm::Pose & baseline, 
-            camodocal::CameraPtr cam_left,
-            camodocal::CameraPtr cam_right, 
-            HitnetONNX* _hitnet, CREStereoONNX * _crestereo);
+        camodocal::CameraPtr cam_left,
+        camodocal::CameraPtr cam_right, 
+        HitnetONNX* _hitnet, CREStereoONNX * _crestereo);
     void initVingette(const cv::Mat & _inv_vingette_l, const cv::Mat & _inv_vingette_r);
     void initRecitfy(const Swarm::Pose & baseline, cv::Mat K0, cv::Mat D0, cv::Mat K1, cv::Mat D1);
 };

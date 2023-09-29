@@ -1,11 +1,11 @@
 #pragma once
 #include <swarm_msgs/Pose.h>
 #include <opencv2/cudaimgproc.hpp>
-#include "virtual_stereo.hpp"
+#include "../include/virtual_stereo.hpp"
 #include <ros/ros.h>
 #include <yaml-cpp/yaml.h>
 #include <image_transport/image_transport.h>
-#include "pcl_utils.hpp"
+#include "../include/pcl_utils.hpp"
 #include <d2common/d2basetypes.h>
 #include <image_transport/subscriber_filter.h>
 #include <message_filters/time_synchronizer.h>
