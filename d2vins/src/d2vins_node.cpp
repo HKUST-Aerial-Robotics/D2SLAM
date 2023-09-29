@@ -98,7 +98,7 @@ protected:
                 if (viokf_queue.size() > params->warn_pending_frames) {
                     ROS_WARN("[D2VINS] Low efficient on D2VINS::estimator pending frames: %d", viokf_queue.size());
                 }
-                D2Common::VisualImageDescArray viokf;
+                D2Common::VisualImageDescArray viokf; //TODO: can be write in shared ptr to reduce memory and cpu loading
                 {
                     Guard guard(queue_lock);
                     viokf = viokf_queue.front();
