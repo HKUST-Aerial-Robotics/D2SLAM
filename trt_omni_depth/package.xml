@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>trt_omni_depth</name>
+  <version>0.0.0</version>
+  <description>The trt_omni_depth package</description>
+
+  <!-- One maintainer tag required, multiple allowed, one person per tag -->
+  <!-- Example:  -->
+  <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
+  <maintainer email="mortyl0834@gmail.com">peize</maintainer>
+
+
+  <!-- One license tag required, multiple allowed, one license per tag -->
+  <!-- Commonly used license strings: -->
+  <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
+  <license>TODO</license>
+
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>image_transport</exec_depend>
+  <build_depend>image_transport</build_depend>
+  <build_export_depend>image_transport</build_export_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>swarm_msgs</build_depend>
+  <build_export_depend>swarm_msgs</build_export_depend>
+  <exec_depend>swarm_msgs</exec_depend>
+  <build_depend>rospy</build_depend>
+  <build_export_depend>roscpp</build_export_depend>
+  <build_export_depend>rospy</build_export_depend>
+  <build_export_depend>d2frontend</build_export_depend>
+  <build_export_depend>pcl_ros</build_export_depend>
+  <build_depend>d2frontend</build_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>pcl_ros</exec_depend>
+  <build_depend>pcl_ros</build_depend>
+  <build_depend>camera_models</build_depend>
+  <build_export_depend>camera_models</build_export_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>

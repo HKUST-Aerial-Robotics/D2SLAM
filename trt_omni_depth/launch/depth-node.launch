@@ -1,0 +1,9 @@
+<launch>
+    <arg name="show" default="false" />
+    <arg name="depth_config" default="/root/swarm_ws/src/D2SLAM/config/quadcam_drone_0/quadcam_depth.yaml"/>
+    <arg name="output" default="screen" />
+    <node pkg="trt_omni_depth" type="trt_omni_depth_node" name="trt_omni_depth" output="$(arg output)" >
+        <param name="show" value="$(arg show)"/>
+        <param name="depth_config" value="$(arg depth_config)"/>
+    </node>
+</launch>
