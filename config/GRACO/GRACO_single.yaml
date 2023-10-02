@@ -54,7 +54,7 @@ track_remote_netvlad_thres: 0.8
 
 #Initialization
 init_method: 0 #0 IMU, 1 PnP
-depth_estimate_baseline: 0.03
+depth_estimate_baseline: -1
 add_vel_ba_prior: 0
 
 #sliding window
@@ -82,7 +82,7 @@ remove_base_when_margin_remote: 2
 
 #feature tracker parameters
 max_cnt: 250            # max feature number in feature tracking
-max_superpoint_cnt: 0 # max feature extraction by superpoint
+max_superpoint_cnt: 150 # max feature extraction by superpoint
 max_solve_cnt: 250
 max_solve_measurements: 10000
 check_essential: 1
@@ -92,11 +92,11 @@ enable_superglue_local: 0
 enable_superglue_remote: 0
 ransacReprojThreshold: 10.0
 enable_search_local_aera: 1
-search_local_max_dist: 0.12
+search_local_max_dist: 0.1
 feature_min_dist: 15
-parallex_thres: 0.08
-knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
-track_from_keyframe: 0
+parallex_thres: 0.06
+knn_match_ratio: 0.8 # This apply to superpoint feature track & loop clouse detection.
+track_from_keyframe: 0 # Only apply for LK
 
 #CNN
 cnn_use_onnx: 1

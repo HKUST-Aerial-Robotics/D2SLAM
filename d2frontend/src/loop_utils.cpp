@@ -373,6 +373,8 @@ opticalflowTrackPyr(const cv::Mat &cur_img,
     auto cur_pyr = buildImagePyramid(gpu_cur_img);
     auto ids = prev_lk.lk_ids;
     auto prev_pts = prev_lk.lk_pts;
+    auto prev_types = prev_lk.lk_types;
+    std::vector<Eigen::Vector3d> lk_pts_3d_norm;
     if (prev_pts.size() == 0) {
         return LKImageInfoGPU();
     }
@@ -408,11 +410,12 @@ opticalflowTrackPyr(const cv::Mat &cur_img,
             }
         }
         reduceVector(prev_pts, status);
+        reduceVector(prev_types, status);
         reduceVector(ids, status);
     }
     status.resize(0);
     if (cur_pts.size() == 0) {
-        return {cur_pts, ids, cur_pyr};
+        return LKImageInfoGPU();
     }
     std::vector<float> err;
     std::vector<uchar> reverse_status;
@@ -459,7 +462,8 @@ opticalflowTrackPyr(const cv::Mat &cur_img,
     }
     reduceVector(cur_pts, status);
     reduceVector(ids, status);
-    return {cur_pts, ids, cur_pyr};
+    reduceVector(prev_types, status);
+    return {cur_pts, lk_pts_3d_norm, ids, prev_types, cur_pyr};
 }
 
 void detectPoints(const cv::Mat &img, std::vector<cv::Point2f> &n_pts,

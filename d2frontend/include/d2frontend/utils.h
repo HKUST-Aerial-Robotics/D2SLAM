@@ -5,15 +5,19 @@
 #include <cv_bridge/cv_bridge.h>
 #include <d2common/d2basetypes.h>
 #include <d2frontend/d2frontend_params.h>
+#include <d2common/d2landmarks.h>
 #include <ros/ros.h>
 #include <swarm_msgs/Pose.h>
 
 namespace D2FrontEnd {
 using D2Common::LandmarkIdType;
+using LandmarkType = D2Common::LandmarkType;
 
 template <typename T> struct LKImageInfo {
     std::vector<cv::Point2f> lk_pts;
+    std::vector<Eigen::Vector3d> lk_pts_3d_norm;
     std::vector<LandmarkIdType> lk_ids;
+    std::vector<LandmarkType> lk_types;
     std::vector<T> pyr;
 };
 

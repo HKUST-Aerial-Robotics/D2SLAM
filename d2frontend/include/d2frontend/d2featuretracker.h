@@ -45,6 +45,8 @@ struct D2FTConfig {
     double landmark_distance_assumption = 10.0; // For uninitialized landmark, assume it is 3m away
     int frame_step = 2;
     bool track_from_keyframe = true;
+    bool lr_match_use_lk = true;
+    bool lk_lk_use_pred = true;
 };
 
 struct TrackReport {
@@ -97,7 +99,8 @@ protected:
     int frame_count = 0;
     bool inited = false;
     std::map<int, std::map<int, LKImageInfoGPU>> keyframe_lk_infos; //frame.camera_index->image
-    std::pair<bool, LandmarkPerFrame> createLKLandmark(const VisualImageDesc & frame, cv::Point2f pt, LandmarkIdType landmark_id = -1);
+    std::pair<bool, LandmarkPerFrame> createLKLandmark(const VisualImageDesc & frame,
+        cv::Point2f pt, LandmarkIdType landmark_id = -1, LandmarkType type=LandmarkType::FlowLandmark);
     std::recursive_mutex track_lock;
     std::recursive_mutex keyframe_lock;
     std::recursive_mutex lmanager_lock;
@@ -106,8 +109,9 @@ protected:
     std::map<int, std::vector<cv::Point2f>> landmark_predictions_matched_viz;
 
     TrackReport trackLK(VisualImageDesc & frame);
-    TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, bool enable_lk=true, TrackLRType type=WHOLE_IMG_MATCH);
-    TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame, TrackLRType type=WHOLE_IMG_MATCH);
+    TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, 
+        bool enable_lk=true, TrackLRType type=WHOLE_IMG_MATCH, bool use_lk_for_sp = true);
+    TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame, TrackLRType type=WHOLE_IMG_MATCH, bool use_lk_for_sp = true);
     TrackReport track(VisualImageDesc & frame, const Swarm::Pose & motion_prediction=Swarm::Pose());
     TrackReport trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame, 
             bool use_motion_predict=false, const Swarm::Pose & motion_prediction=Swarm::Pose());
@@ -130,6 +134,8 @@ protected:
     SuperGlueOnnx * superglue = nullptr;
     bool matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, std::vector<int> & ids_down_to_up, 
         const MatchLocalFeatureParams & param);
+    std::vector<cv::Point2f> predictLandmarksWithExtrinsic(int camera_index, 
+            std::vector<Eigen::Vector3d> pts_3d_norm, const Swarm::Pose & cam_pose_a, const Swarm::Pose & cam_pose_b) const;
     std::vector<cv::Point2f> predictLandmarks(const VisualImageDesc & img_desc_a, 
             const Swarm::Pose & cam_pose_a, const Swarm::Pose & cam_pose_b, bool use_extrinsic=false) const;
 public:
