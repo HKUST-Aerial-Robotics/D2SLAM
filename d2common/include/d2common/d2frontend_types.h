@@ -335,6 +335,12 @@ struct VisualImageDesc {
         }
     }
 
+    void clearLandmarks() {
+        landmarks.clear();
+        landmark_descriptor.clear();
+        landmark_scores.clear();
+    }
+
 };
 
 struct VisualImageDescArray {

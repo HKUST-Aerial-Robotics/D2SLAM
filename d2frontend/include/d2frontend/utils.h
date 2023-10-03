@@ -17,6 +17,7 @@ template <typename T> struct LKImageInfo {
     std::vector<cv::Point2f> lk_pts;
     std::vector<Eigen::Vector3d> lk_pts_3d_norm;
     std::vector<LandmarkIdType> lk_ids;
+    std::vector<int> lk_local_index;
     std::vector<LandmarkType> lk_types;
     std::vector<T> pyr;
 };

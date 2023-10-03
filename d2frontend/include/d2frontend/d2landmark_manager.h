@@ -18,6 +18,11 @@ public:
     virtual int addLandmark(const LandmarkPerFrame & lm);
     virtual void updateLandmark(const LandmarkPerFrame & lm);
     LandmarkPerId & at(LandmarkIdType i) {
+        if (landmark_db.find(i) == landmark_db.end()) {
+            // Throw error with i
+            std::cout << "Landmark id " << i << " not found!" << std::endl;
+            throw std::runtime_error("Landmark id not found!");
+        }
         return landmark_db.at(i);
     }
     const LandmarkPerId & at(LandmarkIdType i) const {

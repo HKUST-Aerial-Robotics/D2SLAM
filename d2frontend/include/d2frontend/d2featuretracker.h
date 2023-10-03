@@ -48,6 +48,7 @@ struct D2FTConfig {
     bool track_from_keyframe = true;
     bool lr_match_use_lk = true;
     bool lk_lk_use_pred = true;
+    bool continue_track_use_lk = true;
 };
 
 struct TrackReport {
