@@ -93,12 +93,12 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     }
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
         report.compose(track(frames.images[0], frames.motion_prediction));
-        if (_config.lr_match_use_lk) {
-            frames.images[1].landmarks.clear();
-            frames.images[1].landmark_descriptor.clear();
-            frames.images[1].landmark_scores.clear();
-        }
-        report.compose(track(frames.images[0], frames.images[1], true, WHOLE_IMG_MATCH, _config.lr_match_use_lk));
+        // if (_config.lr_match_use_lk) {
+        //     frames.images[1].landmarks.clear();
+        //     frames.images[1].landmark_descriptor.clear();
+        //     frames.images[1].landmark_scores.clear();
+        // }
+        // report.compose(track(frames.images[0], frames.images[1], true, WHOLE_IMG_MATCH, _config.lr_match_use_lk));
     } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         for (auto & frame : frames.images) {
             report.compose(track(frame));
@@ -516,7 +516,7 @@ TrackReport D2FeatureTracker::track(const VisualImageDesc & left_frame, VisualIm
     if (!use_lk_for_sp) {
         MatchLocalFeatureParams match_param;
         match_param.enable_superglue = _config.enable_superglue_local;
-        match_param.search_radius = search_radius;
+        match_param.search_radius = _config.search_local_max_dist_lr*image_width;
         match_param.type = type;
         match_param.enable_prediction = true;
         match_param.prediction_using_extrinsic = true;
@@ -559,10 +559,10 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
             }
         }
     }
-    std::vector<cv::Point2f> pts_pred_a_on_b;
+    std::map<LandmarkIdType, cv::Point2f> pts_pred_a_on_b;
     if (_config.lk_lk_use_pred)
     {
-        pts_pred_a_on_b = predictLandmarksWithExtrinsic(left_frame.camera_index, left_lk_info.lk_pts_3d_norm, left_frame.extrinsic, right_frame.extrinsic);
+        pts_pred_a_on_b = predictLandmarksWithExtrinsic(left_frame.camera_index, left_lk_info.lk_ids, left_lk_info.lk_pts_3d_norm, left_frame.extrinsic, right_frame.extrinsic);
     }
     if (!left_lk_info.lk_ids.empty()) {
         auto cur_lk_info = opticalflowTrackPyr(right_frame.raw_image, left_lk_info, type);
@@ -577,7 +577,8 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
             lm.stamp_discover = lmanager->at(cur_lk_info.lk_ids[i]).stamp_discover;
             lm.velocity = extractPointVelocity(lm);
             lmanager->updateLandmark(lm);
-            if (!_config.lk_lk_use_pred || cv::norm(pts_pred_a_on_b[i] - cur_lk_info.lk_pts[i]) < _config.search_local_max_dist*image_width)
+            auto pred = pts_pred_a_on_b.at(cur_lk_info.lk_ids[i]);
+            if (!_config.lk_lk_use_pred || cv::norm(pred - cur_lk_info.lk_pts[i]) < _config.search_local_max_dist_lr*image_width)
             {
                 right_frame.landmarks.emplace_back(lm);
             }
@@ -1045,10 +1046,10 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
 }
 
 
-std::vector<cv::Point2f> D2FeatureTracker::predictLandmarksWithExtrinsic(int camera_index, 
-            std::vector<Eigen::Vector3d> pts_3d_norm, const Swarm::Pose & cam_pose_a, const Swarm::Pose & cam_pose_b) const
+std::map<LandmarkIdType, cv::Point2f> D2FeatureTracker::predictLandmarksWithExtrinsic(int camera_index, 
+            std::vector<LandmarkIdType> pts_ids, std::vector<Eigen::Vector3d> pts_3d_norm, const Swarm::Pose & cam_pose_a, const Swarm::Pose & cam_pose_b) const
 {
-    std::vector<cv::Point2f> pts_a_pred_on_b;
+    std::map<LandmarkIdType, cv::Point2f> pts_a_pred_on_b;
     auto cam = cams.at(camera_index);
     for (int i = 0; i < pts_3d_norm.size(); i++) {
         Vector3d landmark_pos_cam = pts_3d_norm[i] * _config.landmark_distance_assumption;
@@ -1056,7 +1057,7 @@ std::vector<cv::Point2f> D2FeatureTracker::predictLandmarksWithExtrinsic(int cam
         Vector2d pt2d_pred;
         Vector3d pos_cam_b_pred = cam_pose_b.inverse() * pt3d;
         cam->spaceToPlane(pos_cam_b_pred, pt2d_pred);
-        pts_a_pred_on_b.emplace_back(pt2d_pred.x(), pt2d_pred.y());
+        pts_a_pred_on_b[pts_ids[i]] = {pt2d_pred.x(), pt2d_pred.y()};
     }
     return pts_a_pred_on_b;
 }

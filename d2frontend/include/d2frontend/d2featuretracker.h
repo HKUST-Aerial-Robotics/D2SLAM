@@ -39,10 +39,11 @@ struct D2FTConfig {
     bool enable_motion_prediction_local = false;
     bool enable_search_local_aera_remote = false; //Enable motion prediction searching for remote drones.
     double search_local_max_dist = 0.04; //To multiply with width
+    double search_local_max_dist_lr = 0.04; //To multiply with width
     double knn_match_ratio = 0.8;
     std::string output_folder = "/root/output/";
     std::string superglue_model_path;
-    double landmark_distance_assumption = 10.0; // For uninitialized landmark, assume it is 3m away
+    double landmark_distance_assumption = 100.0; // For uninitialized landmark, assume it is 100 meter away
     int frame_step = 2;
     bool track_from_keyframe = true;
     bool lr_match_use_lk = true;
@@ -134,8 +135,8 @@ protected:
     SuperGlueOnnx * superglue = nullptr;
     bool matchLocalFeatures(const VisualImageDesc & img_desc_a, const VisualImageDesc & img_desc_b, std::vector<int> & ids_down_to_up, 
         const MatchLocalFeatureParams & param);
-    std::vector<cv::Point2f> predictLandmarksWithExtrinsic(int camera_index, 
-            std::vector<Eigen::Vector3d> pts_3d_norm, const Swarm::Pose & cam_pose_a, const Swarm::Pose & cam_pose_b) const;
+    std::map<LandmarkIdType, cv::Point2f> predictLandmarksWithExtrinsic(int camera_index, 
+            std::vector<LandmarkIdType> pts_ids, std::vector<Eigen::Vector3d> pts_3d_norm, const Swarm::Pose & cam_pose_a, const Swarm::Pose & cam_pose_b) const;
     std::vector<cv::Point2f> predictLandmarks(const VisualImageDesc & img_desc_a, 
             const Swarm::Pose & cam_pose_a, const Swarm::Pose & cam_pose_b, bool use_extrinsic=false) const;
 public:
