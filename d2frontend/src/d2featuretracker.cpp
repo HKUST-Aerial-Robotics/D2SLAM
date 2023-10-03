@@ -97,11 +97,11 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     }
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
         report.compose(track(frames.images[0], frames.motion_prediction));
-        // if (_config.lr_match_use_lk) {
-        //     frames.images[1].landmarks.clear();
-        //     frames.images[1].landmark_descriptor.clear();
-        //     frames.images[1].landmark_scores.clear();
-        // }
+        if (_config.lr_match_use_lk) {
+            frames.images[1].landmarks.clear();
+            frames.images[1].landmark_descriptor.clear();
+            frames.images[1].landmark_scores.clear();
+        }
         // report.compose(track(frames.images[0], frames.images[1], true, WHOLE_IMG_MATCH, _config.lr_match_use_lk));
     } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         for (auto & frame : frames.images) {
@@ -434,9 +434,10 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
                 if (_config.continue_track_use_lk) {
                     // Copy the landmark descriptor from previous frame
                     frame.landmark_descriptor.insert(frame.landmark_descriptor.end(), 
-                        prev_image.landmark_descriptor.begin() + prev_lk.lk_local_index[i] * params->superpoint_dims, 
-                        prev_image.landmark_descriptor.begin() + (prev_lk.lk_local_index[i] + 1) * params->superpoint_dims);
-                    frame.landmark_scores.emplace_back(prev_image.landmark_scores[prev_lk.lk_local_index[i]]);
+                        prev_image.landmark_descriptor.begin() + cur_lk_info.lk_local_index[i] * params->superpoint_dims, 
+                        prev_image.landmark_descriptor.begin() + (cur_lk_info.lk_local_index[i] + 1) * params->superpoint_dims);
+                    frame.landmark_scores.emplace_back(prev_image.landmark_scores[cur_lk_info.lk_local_index[i]]);
+                    cur_lk_info.lk_local_index[i] = frame.landmarks.size();
                 }
                 auto &lm = ret.second;
                 auto track = lmanager->at(cur_lk_info.lk_ids[i]).track;

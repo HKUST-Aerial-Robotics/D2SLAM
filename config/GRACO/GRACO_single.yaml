@@ -54,7 +54,7 @@ track_remote_netvlad_thres: 0.8
 
 #Initialization
 init_method: 0 #0 IMU, 1 PnP
-depth_estimate_baseline: -1
+depth_estimate_baseline: -0.01
 add_vel_ba_prior: 0
 
 #sliding window
@@ -95,8 +95,8 @@ enable_search_local_aera: 1
 search_local_max_dist: 0.1
 feature_min_dist: 15
 parallex_thres: 0.06
-knn_match_ratio: 0.8 # This apply to superpoint feature track & loop clouse detection.
-track_from_keyframe: 0 # Only apply for LK
+knn_match_ratio: 0.9 # This apply to superpoint feature track & loop clouse detection.
+track_from_keyframe: 0
 
 #CNN
 cnn_use_onnx: 1
@@ -115,7 +115,7 @@ g_norm: 9.805         # gravity magnitude
 #Loop Closure Detection
 loop_detection_netvlad_thres: 0.8
 enable_homography_test: 0
-loop_inlier_feature_num: 60
+loop_inlier_feature_num: 30
 accept_loop_max_yaw: 10
 accept_loop_max_pos: 1.0
 lazy_broadcast_keyframe: 0 # 0: greedy broadcast; 1: compact mode broadcast 

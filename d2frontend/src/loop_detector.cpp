@@ -12,6 +12,7 @@
 #include <d2frontend/utils.h>
 #include <algorithm>
 #include <faiss/IndexFlat.h>
+#include <spdlog/spdlog.h>
 
 using namespace std::chrono; 
 using namespace D2Common;
@@ -414,7 +415,7 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
         if (dir_a < frame_array_a.images.size() && dir_b < frame_array_b.images.size() && dir_a >= 0 && dir_b >= 0) {
             bool succ = computeCorrespondFeatures(frame_array_a.images[dir_a],frame_array_b.images[dir_b],
                 _lm_pos_a, _idx_a, _lm_norm_3d_b, _idx_b, _camera_indices);
-            // ROS_INFO("[LoopDetector] computeCorrespondFeatures on camera_index %d:%d gives %d common features", dir_b, dir_a, _lm_pos_a.size());
+            spdlog::info("[LoopDetector] computeCorrespondFeatures on camera_index {}:{} gives {} common features", dir_b, dir_a, _lm_pos_a.size());
             if (!succ) {
                 continue;
             }
@@ -439,7 +440,7 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
     if(lm_norm_3d_b.size() > _config.loop_inlier_feature_num && matched_dir_count >= _config.MIN_DIRECTION_LOOP) {
         return true;
     } else {
-        ROS_WARN("[LoopDetector::computeCorrImageArray@%d] Failed: features %d/%d dirs %d/%d", 
+        spdlog::warn("[LoopDetector::computeCorrImageArray@{}] Failed: features {}/{} dirs {}/{}", 
                 self_id, lm_norm_3d_b.size(), _config.loop_inlier_feature_num,
                 matched_dir_count, _config.MIN_DIRECTION_LOOP);
         return false;
@@ -474,7 +475,6 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
             cv::BFMatcher bfmatcher(cv::NORM_L2, true);
             bfmatcher.match(descriptors_a, descriptors_b, _matches);
         }
-        
     }
     Point2fVector lm_b_2d, lm_a_2d;
     std::lock_guard<std::recursive_mutex> guard(landmark_mutex);

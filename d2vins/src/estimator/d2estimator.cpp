@@ -315,7 +315,10 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     addSldWinToFrame(_frame);
     frame_count ++;
     updated = true;
-    visual.pubFrame(frame);
+    if (isInitialized())
+    {
+        visual.pubFrame(frame);
+    }
     return true;
 }
 
@@ -553,7 +556,11 @@ void D2Estimator::solveNonDistrib() {
     } else {
         if (!isInitialized()) {
             spdlog::info("[D2VINS::D2Estimator] Initialization with {} keyframes", state.numKeyframes());
-            if(!state.monoInitialization()) {
+            if(state.monoInitialization())
+            {
+                
+            }
+            else {
                 spdlog::error("[D2VINS::D2Estimator] Initialization failed, will try later\n");
                 return;
             }
@@ -612,6 +619,13 @@ void D2Estimator::solveNonDistrib() {
     if (!report.succ)  {
         std::cout << report.message << std::endl;
         exit(1);
+    }
+    if (solve_count == 0) {
+        // Publish the initialized frames uisng visual.pubFrame
+        for (auto frame: state.getSldWin(self_id))
+        {
+            visual.pubFrame(frame);
+        }
     }
     solve_count ++;
 }

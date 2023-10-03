@@ -5,6 +5,7 @@
 #include "CameraPoseVisualization.h"
 #include <opencv2/core/eigen.hpp>
 #include <yaml-cpp/yaml.h>
+#include "spdlog/spdlog.h"
 
 namespace D2VINS {
 sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color = false);
@@ -128,6 +129,7 @@ void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
     }
     //Publish the VINSFrame
     if (frame->drone_id == params->self_id) {
+        spdlog::info("[D2VIZ::pubFrame] publish local frame {}", frame->frame_id);
         auto exts = _estimator->getState().localCameraExtrinsics();
         swarm_msgs::VIOFrame msg = frame->toROS(exts);
         frame_pub_local.publish(msg);

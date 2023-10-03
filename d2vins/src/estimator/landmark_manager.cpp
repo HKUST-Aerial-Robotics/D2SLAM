@@ -523,7 +523,7 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
             spdlog::info("{} points initialized",
                          last_triangluation_pts.size());
         } else {
-            // return false;
+            return std::map<FrameIdType, Swarm::Pose>();
         }
     }
 
