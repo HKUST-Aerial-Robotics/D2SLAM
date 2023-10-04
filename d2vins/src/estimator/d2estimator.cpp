@@ -781,10 +781,24 @@ void D2Estimator::setupLandmarkFactors() {
                 info = LandmarkTwoFrameOneCamResInfo::create(f_td, loss_function,
                     firstObs.frame_id, lm_per_frame.frame_id, lm_id, firstObs.camera_id, enable_depth_mea);
             } else {
+                // Eigen::Vector3d landmark_position = state.getLandmarkbyId(lm_id).position;
+                // Eigen::Vector3d landmark_cam_base = (state.getEstimatedPose(lm_per_frame.frame_id)*state.getExtrinsic(base_camera_id)).inverse()
+                //     * landmark_position;
+                // landmark_cam_base.normalize();
+                // Eigen::Vector3d landmark_cam = (state.getEstimatedPose(lm_per_frame.frame_id)*state.getExtrinsic(lm_per_frame.camera_id)).inverse()
+                //     * landmark_position;
+                // landmark_cam.normalize();
+                // Eigen::Vector3d reproject_err0 = mea0 - landmark_cam_base;
+                // Eigen::Vector3d reproject_err1 = mea1 - landmark_cam;
+                // spdlog::info("{} {} Reproj error cam1 {:.2f} {:.2f} {:.2f} cam2 {:.2f} {:.2f} {:.2f}",
+                //     firstObs.frame_id, lm_per_frame.frame_id,
+                //     reproject_err0.x(), reproject_err0.y(), reproject_err0.z(),
+                //     reproject_err1.x(), reproject_err1.y(), reproject_err1.z());
+
                 if (lm_per_frame.frame_id == firstObs.frame_id) {
                     auto f_td = new ProjectionOneFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
                         lm_per_frame.velocity, firstObs.cur_td, lm_per_frame.cur_td);
-                    info = LandmarkOneFrameTwoCamResInfo::create(f_td, nullptr,
+                    info = LandmarkOneFrameTwoCamResInfo::create(f_td, loss_function,
                         firstObs.frame_id, lm_id, firstObs.camera_id, lm_per_frame.camera_id);
                 } else {
                     auto f_td = new ProjectionTwoFrameTwoCamFactor(mea0, mea1, firstObs.velocity, 
