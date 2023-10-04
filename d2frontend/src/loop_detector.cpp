@@ -198,7 +198,6 @@ int LoopDetector::addImageArrayToDatabase(VisualImageDescArray & new_fisheye_des
                 int index = addImageDescToDatabase(img_desc);
                 index_to_frame_id[index] = new_fisheye_desc.frame_id;
                 imgid2dir[index] = i;
-                // ROS_INFO("[LoopDetector] Add keyframe from %d(dir %d) to local keyframe database index: %d", img_desc.drone_id, i, index);
             }
             if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
                 break;
@@ -207,7 +206,7 @@ int LoopDetector::addImageArrayToDatabase(VisualImageDescArray & new_fisheye_des
         }
     }
     keyframe_database[new_fisheye_desc.frame_id] = new_fisheye_desc;
-    printf("[LoopDetector] Add KF %ld with %d images from %d to local keyframe database. Total frames: %ld\n", 
+    spdlog::info("[LoopDetector] Add KF {} with {} images from {} to local keyframe database. Total frames: {}", 
             new_fisheye_desc.frame_id, new_fisheye_desc.images.size(), new_fisheye_desc.drone_id, keyframe_database.size());
     // new_fisheye_desc.printSize();
     return new_fisheye_desc.frame_id;

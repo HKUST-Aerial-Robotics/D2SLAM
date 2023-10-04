@@ -14,6 +14,7 @@
 #include <d2common/utils.hpp>
 #include <image_transport/image_transport.h>
 #include <spdlog/spdlog.h>
+#include <message_filters/sync_policies/approximate_time.h>
 
 // #define BACKWARD_HAS_DW 1
 // #include <backward.hpp>
@@ -242,17 +243,18 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
         format = "compressed";
     }
     image_transport::TransportHints hints(format, ros::TransportHints().tcpNoDelay(true));
+
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || params->camera_configuration == CameraConfig::STEREO_FISHEYE) {
         ROS_INFO("[D2Frontend] Input: images %s and %s", params->image_topics[0].c_str(), params->image_topics[1].c_str());
         image_sub_l = new ImageSubscriber(*it_, params->image_topics[0], 1000, hints);
         image_sub_r = new ImageSubscriber(*it_, params->image_topics[1], 1000, hints);
-        sync = new message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> (*image_sub_l, *image_sub_r, 1000);
+        sync = new message_filters::Synchronizer<ApproSync>(ApproSync(10), *image_sub_l, *image_sub_r);
         sync->registerCallback(boost::bind(&D2Frontend::stereoImagesCallback, this, _1, _2));
     } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         ROS_INFO("[D2Frontend] Input: raw images %s and depth %s", params->image_topics[0].c_str(), params->depth_topics[0].c_str());
         image_sub_l = new ImageSubscriber(*it_, params->image_topics[0], 1000, hints);
         image_sub_r = new ImageSubscriber(*it_, params->depth_topics[0], 1000, hints);
-        sync = new message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> (*image_sub_l, *image_sub_r, 1000);
+        sync = new message_filters::Synchronizer<ApproSync>(ApproSync(10), *image_sub_l, *image_sub_r);
         sync->registerCallback(boost::bind(&D2Frontend::depthImagesCallback, this, _1, _2));
     } else if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
         //Default we accept only horizon-concated image

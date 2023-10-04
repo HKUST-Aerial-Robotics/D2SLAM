@@ -295,7 +295,7 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
         return initFirstPoseFlag;
     }
 
-    if (!isInitialized() && !_frame.is_keyframe && !_frame.is_stereo)
+    if (!isInitialized() && !_frame.is_keyframe && !_frame.is_stereo && params->enable_sfm_initialization)
     {
         // Do add when not solved and not keyframe
         return false;
@@ -338,8 +338,13 @@ void D2Estimator::setStateProperties() {
         }
     }
 
+    bool is_first = true;
     for (auto cam_id: state.getAvailableCameraIds()) {
         auto pointer = state.getExtrinsicState(cam_id);
+        if (is_first && params->not_estimate_first_extrinsic) {
+            problem.SetParameterBlockConstant(pointer);
+            is_first = false;
+        }
         if (!problem.HasParameterBlock(pointer)) {
             continue;
         }
@@ -549,20 +554,23 @@ void D2Estimator::solveinDistributedMode() {
 }
 
 void D2Estimator::solveNonDistrib() {
-    if (state.numKeyframes() < params->min_solve_frames)
+    if (params->enable_sfm_initialization)
     {
-        printf("numKeyframes too less, skip optimization\n");
-        return;
-    } else {
-        if (!isInitialized()) {
-            spdlog::info("[D2VINS::D2Estimator] Initialization with {} keyframes", state.numKeyframes());
-            if(state.monoInitialization())
-            {
-                
-            }
-            else {
-                spdlog::error("[D2VINS::D2Estimator] Initialization failed, will try later\n");
-                return;
+        if (state.numKeyframes() < params->min_solve_frames)
+        {
+            printf("numKeyframes too less, skip optimization\n");
+            return;
+        } else {
+            if (!isInitialized()) {
+                spdlog::info("[D2VINS::D2Estimator] Initialization with {} keyframes", state.numKeyframes());
+                if(state.monoInitialization())
+                {
+                    spdlog::info("Mono initialization is success, turn to solve");
+                }
+                else {
+                    spdlog::error("[D2VINS::D2Estimator] Initialization failed, will try later\n");
+                    return;
+                }
             }
         }
     }

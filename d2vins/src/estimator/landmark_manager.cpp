@@ -199,9 +199,6 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
             // Initialize by triangulation
             Vector3d point_3d(0., 0., 0.);
             double tri_err = triangulatePoint3DPts(poses, points, point_3d);
-            // printf("Lm %ld tri err %.3f thres %.3f\n", lm_id,
-            // tri_err*params->focal_length,
-            // params->tri_max_err*params->focal_length);
             if (tri_err < params->tri_max_err) {
                 lm.position = point_3d;
                 if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
@@ -212,9 +209,9 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
                         lm.flag = LandmarkFlag::INITIALIZED;
                         *landmark_state[lm_id] = inv_dep;
                         if (params->debug_print_states) {
-                            printf("[D2VINS::D2LandmarkManager] Landmark %ld "
-                                   "tracks %ld baseline %.2f by tri. P %.3f "
-                                   "%.3f %.3f inv_dep %.3f err %.3f\n",
+                            spdlog::info("[D2VINS::D2LandmarkManager] Landmark {} "
+                                   "tracks {} baseline {:.2f} by tri. P {:.3f} "
+                                   "{:.3f} {:.3f} inv_dep {:.3f} err {:.3f}\n",
                                    lm_id, lm.track.size(), (_max - _min).norm(),
                                    point_3d.x(), point_3d.y(), point_3d.z(),
                                    inv_dep, tri_err);
@@ -223,30 +220,32 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
                         lm.flag = LandmarkFlag::INITIALIZED;
                         *landmark_state[lm_id] = params->min_inv_dep;
                         if (params->debug_print_states) {
-                            printf("\033[0;31m [D2VINS::D2LandmarkManager] "
+                            spdlog::warn("[D2VINS::D2LandmarkManager] "
                                    "Initialize failed too far away: landmark "
-                                   "%ld tracks %ld baseline %.2f by "
-                                   "triangulation position %.3f %.3f %.3f "
-                                   "inv_dep %.3f \033[0m\n",
+                                   "{} tracks {} baseline {:.2f} by "
+                                   "triangulation position {:.3f} {:.3f} {:.3f} "
+                                   "inv_dep {:.3f}",
                                    lm_id, lm.track.size(), (_max - _min).norm(),
                                    point_3d.x(), point_3d.y(), point_3d.z(),
                                    inv_dep);
                         }
                     }
-                    // for (auto & it: lm.track) {
-                    //     auto frame = *state->getFramebyId(it.frame_id);
-                    //     auto ext = state->getExtrinsic(it.camera_id);
-                    //     auto cam_pose = frame.odom.pose()*ext;
-                    //     auto reproject_pos = cam_pose.inverse()*point_3d;
-                    //     reproject_pos.normalize();
-                    //     printf("Frame %ld camera_id %d index %d cam pose: %s
-                    //     pt3d norm %.3f %.3f %.3f reproject %.3f %.3f %.3f\n",
-                    //             it.frame_id, it.camera_id, it.camera_index,
-                    //             cam_pose.toStr().c_str(), it.pt3d_norm.x(),
-                    //             it.pt3d_norm.y(), it.pt3d_norm.z(),
-                    //             reproject_pos.x(), reproject_pos.y(),
-                    //             reproject_pos.z());
-                    // }
+                    if (params->debug_print_states) {
+                        for (auto & it: lm.track) {
+                            auto frame = *state->getFramebyId(it.frame_id);
+                            auto ext = state->getExtrinsic(it.camera_id);
+                            auto cam_pose = frame.odom.pose()*ext;
+                            auto reproject_pos = cam_pose.inverse()*point_3d;
+                            reproject_pos.normalize();
+                            spdlog::info("Frame {} camera_id {} index {} cam pose: {}"
+                                "pt3d norm {:.3f} {:.3f} {:.3f} reproject {:.3f} {:.3f} {:.3f}",
+                                    it.frame_id, it.camera_id, it.camera_index,
+                                    cam_pose.toStr().c_str(), it.pt3d_norm.x(),
+                                    it.pt3d_norm.y(), it.pt3d_norm.z(),
+                                    reproject_pos.x(), reproject_pos.y(),
+                                    reproject_pos.z());
+                    }
+                    }
                 } else {
                     lm.flag = LandmarkFlag::INITIALIZED;
                     memcpy(landmark_state[lm_id], lm.position.data(),
@@ -255,19 +254,19 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
                 // Some debug code
             } else {
                 if (params->debug_print_states) {
-                    printf("\033[0;31m [D2VINS::D2LandmarkManager] Initialize "
-                           "failed too large triangle error: landmark %ld "
-                           "tracks %ld baseline %.2f by triangulation position "
-                           "%.3f %.3f %.3f\033[0m\n",
+                    spdlog::warn("[D2VINS::D2LandmarkManager] Initialize "
+                           "failed too large triangle error: landmark {} "
+                           "tracks {} baseline {:.2f} by triangulation position "
+                           "{:.3f} {:.3f} {:.3f}",
                            lm_id, lm.track.size(), (_max - _min).norm(),
                            point_3d.x(), point_3d.y(), point_3d.z());
                 }
             }
         } else {
             if (params->debug_print_states) {
-                printf("\033[0;31m [D2VINS::D2LandmarkManager] Initialize "
-                       "failed too short baseline: landmark %ld tracks %ld "
-                       "baseline %.2f\033[0m\n",
+                spdlog::warn("[D2VINS::D2LandmarkManager] Initialize "
+                       "failed too short baseline: landmark {} tracks {} "
+                       "baseline {:.2f}",
                        lm_id, lm.track.size(), (_max - _min).norm());
             }
         }

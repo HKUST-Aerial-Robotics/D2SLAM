@@ -17,6 +17,7 @@
 #include <queue>
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
+#include <message_filters/sync_policies/approximate_time.h>
 
 using namespace std::chrono; 
 using namespace swarm_msgs;
@@ -30,6 +31,8 @@ class LoopDetector;
 class D2Frontend {
     typedef image_transport::SubscriberFilter ImageSubscriber;
 protected:
+    using ApproSync = message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image>;
+
     LoopDetector * loop_detector = nullptr;
     LoopCam * loop_cam = nullptr;
     LoopNet * loop_net = nullptr;
@@ -77,7 +80,7 @@ protected:
     ros::Publisher keyframe_pub;
 
     ImageSubscriber * image_sub_l, *image_sub_r;
-    message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> * sync;
+    message_filters::Synchronizer<ApproSync> * sync;
     image_transport::Subscriber image_sub_single;
 
     std::thread th, th_loop_det;

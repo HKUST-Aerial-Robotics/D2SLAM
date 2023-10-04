@@ -60,6 +60,7 @@ struct D2VINSConfig {
     bool add_vel_ba_prior = false;
     int solve_relative_pose_min_pts = 20;
     double solve_relative_pose_min_parallex = 30.0/460.0;
+    bool enable_sfm_initialization = false;
     
     //Estimation
     bool estimate_td = false;
@@ -78,6 +79,7 @@ struct D2VINSConfig {
     int max_solve_cnt = 10000;
     int max_solve_measurements = -1;
     int min_solve_cnt = 10;
+    bool not_estimate_first_extrinsic = false;
 
     //Fuse depth
     bool fuse_dep = true;
