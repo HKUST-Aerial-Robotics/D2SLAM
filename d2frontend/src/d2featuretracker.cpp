@@ -510,7 +510,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
                     count_new ++;
                 }
             }
-            spdlog::info("{} new points added", cur_lk_info.lk_pts.size(), count_new);
+            spdlog::debug("{} new points added", cur_lk_info.lk_pts.size(), count_new);
         }
         else {
             std::vector<cv::Point2f> n_pts;
@@ -613,7 +613,7 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
     TrackReport report;
     auto left_lk_info = keyframe_lk_infos.at(left_frame.frame_id).at(left_frame.camera_index);
     // Add the SP points to the LK points if use_lk_for_sp is true
-    if (use_lk_for_sp) {
+    if (use_lk_for_sp && !_config.continue_track_use_lk) {
         for (int i = 0; i < left_frame.landmarkNum(); i++) {
             if (left_frame.landmarks[i].landmark_id >= 0 && left_frame.landmarks[i].type == LandmarkType::SuperPointLandmark) {
                 left_lk_info.lk_pts.emplace_back(left_frame.landmarks[i].pt2d);
@@ -631,10 +631,8 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
     }
     if (!left_lk_info.lk_ids.empty()) {
         auto cur_lk_info = opticalflowTrackPyr(right_frame.raw_image, left_lk_info, type);
-        cur_lk_info.lk_pts_3d_norm.resize(cur_lk_info.lk_pts.size());
         for (int i = 0; i < cur_lk_info.lk_pts.size(); i++) {
             auto ret = createLKLandmark(right_frame, cur_lk_info.lk_pts[i], cur_lk_info.lk_ids[i], cur_lk_info.lk_types[i]);
-            cur_lk_info.lk_pts_3d_norm[i] = ret.second.pt3d_norm;
             if (!ret.first) {
                 continue;
             }

@@ -129,7 +129,6 @@ void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
     }
     //Publish the VINSFrame
     if (frame->drone_id == params->self_id) {
-        spdlog::info("[D2VIZ::pubFrame] publish local frame {}", frame->frame_id);
         auto exts = _estimator->getState().localCameraExtrinsics();
         swarm_msgs::VIOFrame msg = frame->toROS(exts);
         frame_pub_local.publish(msg);

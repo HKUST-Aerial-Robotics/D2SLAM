@@ -39,6 +39,7 @@ class FisheyeUndist;
 
 namespace D2FrontEnd {
 using D2Common::CameraConfig;
+using D2Common::ESTIMATION_MODE;
 
 enum TrackLRType {
     WHOLE_IMG_MATCH = 0,
@@ -76,6 +77,7 @@ struct D2FrontendParams {
     int min_receive_images = 2;
 
     D2Common::PGO_MODE pgo_mode;
+    ESTIMATION_MODE estimation_mode;
 
     //Debug params
     bool send_img;
@@ -112,6 +114,7 @@ struct D2FrontendParams {
     std::vector<int> camera_seq;
 
     bool show_raw_image = false;
+
     //Configs of submodules
     LoopCamConfig * loopcamconfig;
     LoopDetectorConfig * loopdetectorconfig;

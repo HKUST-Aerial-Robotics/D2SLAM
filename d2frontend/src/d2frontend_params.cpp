@@ -31,6 +31,7 @@ namespace D2FrontEnd {
         camera_configuration = (CameraConfig) _camconfig;
         nh.param<double>("nonkeyframe_waitsec", ACCEPT_NONKEYFRAME_WAITSEC, 5.0);
         nh.param<double>("min_movement_keyframe", min_movement_keyframe, 0.3);
+        estimation_mode = (ESTIMATION_MODE) (int) fsSettings["estimation_mode"];
 
         //Debug configs
         nh.param<bool>("send_img", send_img, false);

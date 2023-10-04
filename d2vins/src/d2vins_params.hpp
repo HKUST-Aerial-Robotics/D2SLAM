@@ -13,6 +13,7 @@ struct ConsensusSolverConfig;
 };
 namespace D2VINS {
 using D2Common::CameraConfig;
+using D2Common::ESTIMATION_MODE;
 struct D2VINSConfig {
     //Inputs
     std::string imu_topic;
@@ -72,12 +73,7 @@ struct D2VINSConfig {
     double process_input_timer = 100.0;
     double estimator_timer_freq = 10.0;
     int warn_pending_frames = 10;
-    enum ESTIMATION_MODE {
-        SINGLE_DRONE_MODE, //Not accept remote frame
-        SOLVE_ALL_MODE, //Each drone solve all the information
-        DISTRIBUTED_CAMERA_CONSENUS, //Distributed camera consensus
-        SERVER_MODE //In this mode receive all remote and solve them
-    } estimation_mode = SOLVE_ALL_MODE;
+    ESTIMATION_MODE estimation_mode;
     double estimate_extrinsic_vel_thres = 0.2;
     int max_solve_cnt = 10000;
     int max_solve_measurements = -1;

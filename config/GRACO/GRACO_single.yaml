@@ -120,7 +120,7 @@ accept_loop_max_yaw: 10
 accept_loop_max_pos: 1.0
 lazy_broadcast_keyframe: 0 # 0: greedy broadcast; 1: compact mode broadcast 
 nearby_drone_dist: 3.0
-gravity_check_thres: 0.03
+gravity_check_thres: 0.06
 enable_pcm: 1
 pcm_thres: 3.5
 

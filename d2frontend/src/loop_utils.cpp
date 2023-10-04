@@ -15,6 +15,7 @@
 #include <opengv/sac/Lmeds.hpp>
 #include <opengv/sac/Ransac.hpp>
 #include <opengv/sac_problems/absolute_pose/AbsolutePoseSacProblem.hpp>
+#include <spdlog/spdlog.h>
 
 using namespace std::chrono;
 using namespace D2Common;
@@ -749,12 +750,10 @@ int computeRelativePosePnPnonCentral(
         success = pnp_result_verify(true, inliers.size(), RPerr, DP_b_to_a);
     }
 
-    if (params->enable_perf_output) {
-        printf("[SWARM_LOOP@%d] features %d/%d succ %d gPnPRansac time %.2fms "
-               "RP: %s g_err %f\n",
+    spdlog::info("[LoopDetector@{}] features {}/{} succ {} gPnPRansac time {:.2f}ms "
+               "RP: {} g_err P{}\n",
                params->self_id, inliers.size(), lm_3d_norm_b.size(), success,
-               tic.toc(), DP_b_to_a.toStr().c_str(), RPerr);
-    }
+               tic.toc(), DP_b_to_a.toStr(), RPerr);
     return success;
 }
 

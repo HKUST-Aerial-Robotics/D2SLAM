@@ -40,7 +40,7 @@ void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
     };
 
     imu_bufs[self_id] = IMUBuffer();
-    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+    if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
         solver = new D2VINSConsensusSolver(this, &state, sync_data_receiver, *params->consensus_config, solve_token);
     } else {
         solver = new CeresSolver(&state, params->ceres_options);
@@ -151,7 +151,7 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
 
     auto frame_ret = state.addFrame(_frame, frame);
     //Clear old frames after add
-    if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+    if (params->estimation_mode != D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
         margined_landmarks = state.clearUselessFrames(isInitialized()); // Only marginlization when solved
     }
     _frame.setTd(state.getTd(_frame.drone_id));
@@ -192,7 +192,7 @@ void D2Estimator::addRemoteImuBuf(int drone_id, const IMUBuffer & imu_) {
 }
 
 VINSFrame * D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
-    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || params->estimation_mode == D2VINSConfig::SERVER_MODE) {
+    if (params->estimation_mode == D2Common::SOLVE_ALL_MODE || params->estimation_mode == D2Common::SERVER_MODE) {
         addRemoteImuBuf(_frame.drone_id, _frame.imu_buf);
     }
     int r_drone_id = _frame.drone_id;
@@ -200,7 +200,7 @@ VINSFrame * D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
     auto _imu = _frame.imu_buf;
     if (state.size(r_drone_id) > 0 ) {
         auto last_frame = state.lastFrame(r_drone_id);
-        if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || params->estimation_mode == D2VINSConfig::SERVER_MODE) {
+        if (params->estimation_mode == D2Common::SOLVE_ALL_MODE || params->estimation_mode == D2Common::SERVER_MODE) {
             auto & imu_buf = imu_bufs.at(_frame.drone_id);
             auto ret = imu_buf.periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
             auto _imu = ret.first;
@@ -241,7 +241,7 @@ VINSFrame * D2Estimator::addFrameRemote(const VisualImageDescArray & _frame) {
             if (params->verbose) {
                 printf("\033[0;32m[D2VINS::D2Estimator] Initial first remoteframe@drone%d with PnP: %s\033[0m\n", r_drone_id, pnp_init.second.toStr().c_str());
             }
-            if (_frame.reference_frame_id < state.getReferenceFrameId() && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+            if (_frame.reference_frame_id < state.getReferenceFrameId() && params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
                 //In this case, we merge the current map to the remote.
                 auto P_w_ki = _frame.pose_drone * pnp_init.second.inverse();
                 P_w_ki.set_yaw_only();
@@ -270,7 +270,7 @@ void D2Estimator::addSldWinToFrame(VisualImageDescArray & frame) {
 
 void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
     const Guard lock(frame_mutex);
-    if (!isInitialized() && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+    if (!isInitialized() && params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
         //In consenus mode, we require first to be local initialized before deal with remote
         return;
     }
@@ -279,7 +279,7 @@ void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
         updateSldwin(frame.drone_id, frame.sld_win_status);
     }
     auto frame_ptr = addFrameRemote(frame);
-    if (params->estimation_mode == D2VINSConfig::SERVER_MODE && state.size(frame.drone_id) >= params->min_solve_frames) {
+    if (params->estimation_mode == D2Common::SERVER_MODE && state.size(frame.drone_id) >= params->min_solve_frames) {
         state.clearUselessFrames();
         solveNonDistrib();
     }
@@ -309,7 +309,7 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     }
 
     auto frame = addFrame(_frame);
-    if (state.size() >= params->min_solve_frames && params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+    if (state.size() >= params->min_solve_frames && params->estimation_mode != D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
         solveNonDistrib();
     }
     addSldWinToFrame(_frame);
@@ -523,7 +523,7 @@ void D2Estimator::solveinDistributedMode() {
 
     // Reprogation
     for (auto drone_id : state.availableDrones()) {
-        if (drone_id != self_id && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        if (drone_id != self_id && params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
             continue;
         }
         auto _imu = imu_bufs[self_id].tail(state.lastFrame(drone_id).stamp + state.td);
@@ -594,7 +594,7 @@ void D2Estimator::solveNonDistrib() {
             sum_time*1000/solve_count, sum_time*1000/sum_iteration, sum_iteration/solve_count, sum_cost/solve_count);
     }
 
-    if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
+    if (params->estimation_mode < D2Common::SERVER_MODE) {
         auto last_odom = state.lastFrame().odom;
         spdlog::info("C{} landmarks {} odom {} td {:.1f}ms opti_time {:.1f}ms", solve_count, 
             current_landmark_num, last_odom.toStr(), state.td*1000, report.total_time*1000);
@@ -654,7 +654,7 @@ void D2Estimator::setupImuFactors() {
     }
 
     // In non-distributed mode, we add IMU factor for each drone
-    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || params->estimation_mode == D2VINSConfig::SERVER_MODE) {
+    if (params->estimation_mode == D2Common::SOLVE_ALL_MODE || params->estimation_mode == D2Common::SERVER_MODE) {
         for (auto drone_id : state.availableDrones()) {
             if (drone_id == self_id) {
                 continue;
@@ -721,7 +721,7 @@ void D2Estimator::setupLandmarkFactors() {
         auto frame_id = it.first;
         if (it.second < params->min_measurements_per_keyframe) {
             auto frame = state.getFramebyId(frame_id);
-            if (frame->drone_id != self_id && params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+            if (frame->drone_id != self_id && params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
                 ignore_frames.insert(frame_id);
                 printf("\033[0;31m[D2VINS::D2Estimator@%d] frame_id %ld has only %d measurement, will be skip.\033[0m\n", 
                         self_id, frame_id, it.second);
@@ -799,7 +799,7 @@ void D2Estimator::setupLandmarkFactors() {
                 marginalizer->addResidualInfo(info);
                 used_landmarks.insert(lm_id);
             }
-            if (params->estimation_mode != D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+            if (params->estimation_mode != D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
                 solver->getProblem().SetParameterLowerBound(state.getLandmarkState(lm_id), 0, params->min_inv_dep);
             }
         }

@@ -13,6 +13,7 @@
 #include <swarm_msgs/node_frame.h>
 #include <d2common/utils.hpp>
 #include <image_transport/image_transport.h>
+#include <spdlog/spdlog.h>
 
 // #define BACKWARD_HAS_DW 1
 // #include <backward.hpp>
@@ -120,7 +121,11 @@ void D2Frontend::onRemoteImage(VisualImageDescArray frame_desc) {
     if (frame_desc.is_lazy_frame || frame_desc.matched_frame >= 0) {
         processRemoteImage(frame_desc, false);
     } else {
-        bool succ = feature_tracker->trackRemoteFrames(frame_desc);
+        bool succ = false;
+        if (params->estimation_mode != SINGLE_DRONE_MODE)
+        {
+            succ = feature_tracker->trackRemoteFrames(frame_desc);
+        }
         processRemoteImage(frame_desc, succ);
     }
 }

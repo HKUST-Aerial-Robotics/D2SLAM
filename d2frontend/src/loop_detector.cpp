@@ -35,11 +35,11 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
         t0 = image_array.stamp;
     }
 
-    printf("[LoopDetector] processImageArray %ld from drone %d images: %d landmark: %d lazy: %d matched_to %d@D%d\n", image_array.frame_id,
+    spdlog::info("[LoopDetector] processImageArray {} from {} images: {} landmark: {} lazy: {} matched_to {}@D{}\n", image_array.frame_id,
         image_array.drone_id, image_array.images.size(), image_array.spLandmarkNum(), image_array.is_lazy_frame, image_array.matched_frame, image_array.matched_drone);
 
     if (image_array.images.size() == 0) {
-        ROS_WARN("[LoopDetector] FlattenDesc must carry more than zero images");
+        spdlog::warn("[LoopDetector] FlattenDesc must carry more than zero images");
         return;
     }
 
@@ -379,8 +379,8 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
     std::vector<int> dirs_b;
     
     if (params->camera_configuration == STEREO_PINHOLE) {
-        dirs_a = {0, 1};
-        dirs_b = {0, 1};
+        dirs_a = {0};
+        dirs_b = {0};
     } else if (params->camera_configuration == PINHOLE_DEPTH) {
         dirs_a = {0, 1};
         dirs_b = {0};
@@ -552,49 +552,46 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
         }
         success = computeRelativePosePnPnonCentral(lm_pos_a, lm_norm_3d_b,
                 extrinsics, camera_indices, frame_array_a.pose_drone, frame_array_b.pose_drone, DP_old_to_new, inliers, _config.is_4dof);
-        if (!success) {
-            printf("[LoopDetector::computeLoop@%d] Compute relative pose failed!\n", self_id);
-            return false;
-        }
+        if (success) {
+            //setup return loop
+            ret.relative_pose = DP_old_to_new.toROS();
+            ret.drone_id_a = frame_array_b.drone_id;
+            ret.ts_a = ros::Time(frame_array_b.stamp);
 
-        //setup return loop
-        ret.relative_pose = DP_old_to_new.toROS();
-        ret.drone_id_a = frame_array_b.drone_id;
-        ret.ts_a = ros::Time(frame_array_b.stamp);
+            ret.drone_id_b = frame_array_a.drone_id;
+            ret.ts_b = ros::Time(frame_array_a.stamp);
 
-        ret.drone_id_b = frame_array_a.drone_id;
-        ret.ts_b = ros::Time(frame_array_a.stamp);
+            ret.self_pose_a = toROSPose(frame_array_b.pose_drone);
+            ret.self_pose_b = toROSPose(frame_array_a.pose_drone);
 
-        ret.self_pose_a = toROSPose(frame_array_b.pose_drone);
-        ret.self_pose_b = toROSPose(frame_array_a.pose_drone);
+            ret.keyframe_id_a = frame_array_b.frame_id;
+            ret.keyframe_id_b = frame_array_a.frame_id;
 
-        ret.keyframe_id_a = frame_array_b.frame_id;
-        ret.keyframe_id_b = frame_array_a.frame_id;
+            ret.pos_cov.x = _config.loop_cov_pos;
+            ret.pos_cov.y = _config.loop_cov_pos;
+            ret.pos_cov.z = _config.loop_cov_pos;
 
-        ret.pos_cov.x = _config.loop_cov_pos;
-        ret.pos_cov.y = _config.loop_cov_pos;
-        ret.pos_cov.z = _config.loop_cov_pos;
+            ret.ang_cov.x = _config.loop_cov_ang;
+            ret.ang_cov.y = _config.loop_cov_ang;
+            ret.ang_cov.z = _config.loop_cov_ang;
 
-        ret.ang_cov.x = _config.loop_cov_ang;
-        ret.ang_cov.y = _config.loop_cov_ang;
-        ret.ang_cov.z = _config.loop_cov_ang;
+            ret.pnp_inlier_num = inliers.size();
+            ret.id = self_id*MAX_LOOP_ID + loop_count;
 
-        ret.pnp_inlier_num = inliers.size();
-        ret.id = self_id*MAX_LOOP_ID + loop_count;
+            if (checkLoopOdometryConsistency(ret)) {
+                loop_count ++;
+                spdlog::info("[LoopDetector] Loop {} Detected {}->{} dt {:.3f}s DPose {} inliers {}. Will publish\n",
+                    ret.id, ret.drone_id_a, ret.drone_id_b, (ret.ts_b - ret.ts_a).toSec(),
+                    DP_old_to_new.toStr().c_str(), ret.pnp_inlier_num);
 
-        if (checkLoopOdometryConsistency(ret)) {
-            loop_count ++;
-            printf("[LoopDetector] Loop %ld Detected %d->%d dt %3.3fs DPose %s inliers %d. Will publish\n",
-                ret.id, ret.drone_id_a, ret.drone_id_b, (ret.ts_b - ret.ts_a).toSec(),
-                DP_old_to_new.toStr().c_str(), ret.pnp_inlier_num);
-
-            int new_d_id = frame_array_a.drone_id;
-            int old_d_id = frame_array_b.drone_id;
-            inter_drone_loop_count[new_d_id][old_d_id] = inter_drone_loop_count[new_d_id][old_d_id] +1;
-            inter_drone_loop_count[old_d_id][new_d_id] = inter_drone_loop_count[old_d_id][new_d_id] +1;
-        } else {
-            success = false;
-            printf("[LoopDetector] Loop not consistency with odometry, give up.\n");
+                int new_d_id = frame_array_a.drone_id;
+                int old_d_id = frame_array_b.drone_id;
+                inter_drone_loop_count[new_d_id][old_d_id] = inter_drone_loop_count[new_d_id][old_d_id] +1;
+                inter_drone_loop_count[old_d_id][new_d_id] = inter_drone_loop_count[old_d_id][new_d_id] +1;
+            } else {
+                success = false;
+                spdlog::info("[LoopDetector] Loop not consistency with odometry, give up.\n");
+            }
         }
     }
 

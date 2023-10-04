@@ -9,7 +9,7 @@
     <arg name="superglue_model_path"     default="$(find d2frontend)/../models/superglue.onnx" />
     <arg name="config" default="$(find d2vins)/../config/GRACO/GRACO_single.yaml" />
     <arg name="match_index_dist" default="200" />
-    <arg name="match_index_dist_remote" default="20" />
+    <arg name="match_index_dist_remote" default="0" />
     <arg name="output_path" default="/home/dji/output/" />
     <arg name="nonkeyframe_waitsec" default="5.0" />
     <arg name="inter_drone_init_frames" default="3" />

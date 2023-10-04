@@ -195,6 +195,7 @@ protected:
         config.perturb_mode = true;
         //Debugging 
         config.debug_save_g2o_only = (int) fsSettings["debug_save_g2o_only"];
+        config.loop_distance_threshold = (int) fsSettings["accept_loop_max_pos"];
         if (config.mode == PGO_MODE::PGO_MODE_NON_DIST) {
             multi = false;
             printf("[D2PGO] In single mode enable_pcm %d pcm_thres %.1f\n", config.enable_pcm, config.pcm_rej.pcm_thres);

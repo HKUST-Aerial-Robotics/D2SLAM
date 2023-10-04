@@ -384,7 +384,8 @@ void LoopNet::scanRecvPackets() {
             images_finish_recv.erase(frame_desc.images[i].header.msg_id);
             if (frame_desc.images[i].header.frame_id < 0) {
                 //Has empty header frame
-                return;
+                spdlog::info("Has empty header frame, returing..");
+                continue;
             }
         }
 

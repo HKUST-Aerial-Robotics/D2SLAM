@@ -16,7 +16,7 @@ D2EstimatorState::D2EstimatorState(int _self_id):
     D2State(_self_id)
 {
     sld_wins[self_id] = std::vector<VINSFrame*>();
-    if (params->estimation_mode != D2VINSConfig::SERVER_MODE) {
+    if (params->estimation_mode != D2Common::SERVER_MODE) {
         all_drones.insert(self_id);
     }
 }
@@ -356,8 +356,8 @@ void D2EstimatorState::updateSldwin(int drone_id, const std::vector<FrameIdType>
 }
 
 void D2EstimatorState::updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs) {
-    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS || 
-        params->estimation_mode == D2VINSConfig::SINGLE_DRONE_MODE) {
+    if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS || 
+        params->estimation_mode == D2Common::SINGLE_DRONE_MODE) {
         auto & _sld_win = sld_wins[self_id];
         for (size_t i = 0; i < _sld_win.size() - 1; i ++) {
             auto frame_a = _sld_win[i];
@@ -427,7 +427,7 @@ VINSFrame * D2EstimatorState::addFrame(const VisualImageDescArray & images, cons
     } else {
         sld_wins[self_id].emplace_back(frame);
     }
-    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && _frame.drone_id != self_id) {
+    if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS && _frame.drone_id != self_id) {
         //In this mode, the estimate state is always ego-motion and the bias is not been estimated on remote
         _frame.odom.pose().to_vector(_frame_pose_state.at(frame->frame_id));
     } else {
@@ -441,8 +441,8 @@ VINSFrame * D2EstimatorState::addFrame(const VisualImageDescArray & images, cons
             images.images.size(), sld_wins[self_id].size());
     //If first frame we need to add a prior here
     if (size(images.drone_id) == 1 && 
-                (images.drone_id == self_id|| params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || 
-                params->estimation_mode == D2VINSConfig::SERVER_MODE)) {
+                (images.drone_id == self_id|| params->estimation_mode == D2Common::SOLVE_ALL_MODE || 
+                params->estimation_mode == D2Common::SERVER_MODE)) {
         //Add a prior for first frame here
         createPriorFactor4FirstFrame(frame);
     }
@@ -504,7 +504,7 @@ void D2EstimatorState::syncFromState(const std::set<LandmarkIdType> & used_landm
             spdlog::error("[D2VINS::D2EstimatorState] Cannot find frame {}", frame_id);
         }
         auto frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
-        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
+        if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
             frame->odom.pose() = Swarm::Pose(it.second);
         }else {
             frame->fromVector(it.second, _frame_spd_Bias_state.at(frame_id));
@@ -531,7 +531,7 @@ void D2EstimatorState::repropagateIMU() {
             frame_b->pre_integrations->repropagate(frame_a->Ba, frame_a->Bg);
         }
     }
-    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+    if (params->estimation_mode == D2Common::SOLVE_ALL_MODE) {
         for (auto it : sld_wins) {
             if (it.first == self_id) {
                 continue;
@@ -552,7 +552,7 @@ void D2EstimatorState::moveAllPoses(int new_ref_frame_id, const Swarm::Pose & de
         auto frame_id = it.first;
         auto frame = static_cast<VINSFrame*>(it.second);
         frame->moveByPose(new_ref_frame_id, delta_pose);
-        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
+        if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
             frame->odom.pose().to_vector(_frame_pose_state.at(frame_id));
         } else {
             frame->toVector(_frame_pose_state.at(frame_id), _frame_spd_Bias_state.at(frame_id));
