@@ -529,14 +529,14 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
             rmse_angular_path = nan
 
         if poses_vo is not None:
-            pos_gt_vo=  poses_gt[i].resample_pos(poses_vo[i].t)
-            ypr_gt_vo =  poses_gt[i].resample_ypr(poses_vo[i].t)
+            pos_gt_vo=  poses_gt[i].resample_pos(t_)
+            ypr_gt_vo =  poses_gt[i].resample_ypr(t_)
             mask_vo = np.linalg.norm(pos_gt_vo - pos_vo, axis=1) < outlier_thres
             pos_vo = pos_vo[mask_vo]
             pos_gt_vo = pos_gt_vo[mask_vo]
             ypr_vo = ypr_vo[mask_vo]
             ypr_gt_vo = ypr_gt_vo[mask_vo]
-            t_vo = poses_vo[i].t[mask_vo]
+            t_vo = t_[mask_vo]
             rmse_vo_x = RMSE(pos_vo[:,0] , pos_gt_vo[:,0])
             rmse_vo_y = RMSE(pos_vo[:,1] , pos_gt_vo[:,1])
             rmse_vo_z = RMSE(pos_vo[:,2] , pos_gt_vo[:,2])
@@ -645,6 +645,7 @@ def plot_fused_err(nodes, poses_fused, poses_gt, poses_vo=None, poses_pgo=None,m
             "", f"{ate_pgo_sum/num:.3f}",f"{rmse_pgo_ang_sum/num*180/pi:3.2f}"])
     if poses_pgo is None:
         #Remove the last two columns of output table
+        print("no pgo")
         output_table = [row[:-2] for row in output_table]
     if output_ATE:
         return ate_fused_sum/num, ate_ang_sum/num

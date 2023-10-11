@@ -71,7 +71,7 @@ track_remote_netvlad_thres: 0.5
 #Initialization
 init_method: 0 #0 IMU, 1 PnP
 depth_estimate_baseline: -0.05
-enable_sfm_initialization: 1
+enable_sfm_initialization: 0
 
 #sliding window
 max_sld_win_size: 11
@@ -107,7 +107,7 @@ enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-mot
 remote_min_match_num: 40
 ransacReprojThreshold: 10.0
 parallex_thres: 0.022
-knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
+knn_match_ratio: 0.9 #This apply to superpoint feature track & loop clouse detection.
 track_from_keyframe: 0
 
 #CNN
@@ -131,7 +131,7 @@ loop_detection_netvlad_thres: 0.8
 enable_homography_test: 0
 accept_loop_max_yaw: 10
 accept_loop_max_pos: 1.0
-loop_inlier_feature_num: 50
+loop_inlier_feature_num: 40
 gravity_check_thres: 0.03
 pgo_solver_time: 1.0
 solver_timer_freq: 1.0
@@ -140,10 +140,19 @@ pcm_thres: 2.8
 
 
 #PGO
-pgo_solver_time: 0.5
+pgo_solver_time: 1.0
+solver_timer_freq: 0.2
+pgo_mode: 1
+pgo_rho_frame_T: 0.01
+pgo_rho_frame_theta: 2.0 
+pgo_eta_k: 1.0
+write_g2o: 1
+g2o_output_path: "output.g2o"
+write_pgo_to_file: 1
+debug_save_g2o_only: 0
 
 #outputs
-output_path: "/root/output/"
+output_path: "/home/xuhao/output/"
 debug_print_sldwin: 0
 debug_print_states: 0
 enable_perf_output: 0

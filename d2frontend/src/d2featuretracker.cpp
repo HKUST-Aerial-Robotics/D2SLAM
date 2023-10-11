@@ -26,6 +26,8 @@ D2FeatureTracker::D2FeatureTracker(D2FTConfig config):
     }
     search_radius = _config.search_local_max_dist*image_width;
     reference_frame_id = params->self_id;
+    _config.sp_track_use_lk = _config.sp_track_use_lk && params->loopcamconfig->superpoint_max_num > 0;
+    spdlog::info("sp {} _config.sp_track_use_lk {}", params->loopcamconfig->superpoint_max_num, _config.sp_track_use_lk);
 }
 
 void D2FeatureTracker::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
@@ -89,7 +91,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
         inited = true;
         ROS_INFO("[D2FeatureTracker] receive first, will init kf\n");
         iskeyframe = true;
-        if (!_config.continue_track_use_lk)
+        if (!_config.sp_track_use_lk)
         {
             processFrame(frames, true);
         }
@@ -336,7 +338,7 @@ void D2FeatureTracker::cvtRemoteLandmarkId(VisualImageDesc & frame) const {
 
 TrackReport D2FeatureTracker::track(VisualImageDesc & frame, const Swarm::Pose & motion_prediction) {
     TrackReport report;
-    if (!_config.continue_track_use_lk && current_keyframes.size() > 0 && current_keyframes.back().frame_id != frame.frame_id) {
+    if (!_config.sp_track_use_lk && current_keyframes.size() > 0 && current_keyframes.back().frame_id != frame.frame_id) {
         const auto & base_frame = _config.track_from_keyframe? getLatestKeyframe(): current_keyframes.back();
         const auto & base_kfframe = getLatestKeyframe();
         // Then current keyframe has been assigned, feature tracker by LK.
@@ -380,7 +382,7 @@ TrackReport D2FeatureTracker::track(VisualImageDesc & frame, const Swarm::Pose &
             }
         }
     }
-    if (_config.enable_lk_optical_flow || _config.continue_track_use_lk) {
+    if (_config.enable_lk_optical_flow || _config.sp_track_use_lk) {
         //Enable LK optical flow feature tracker also.
         //This is for the case that the superpoint features is not tracked well.
         report.compose(trackLK(frame));
@@ -410,7 +412,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     auto cur_landmarks = frame.landmarks;
     auto cur_landmark_desc = frame.landmark_descriptor;
     auto cur_landmark_scores = frame.landmark_scores;
-    if (_config.continue_track_use_lk)
+    if (_config.sp_track_use_lk)
     {
         frame.clearLandmarks();
     }
@@ -431,28 +433,30 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
                 if (!ret.first) {
                     continue;
                 }
-                if (_config.continue_track_use_lk) {
+                if (_config.sp_track_use_lk) {
                     // Copy the landmark descriptor from previous frame
                     frame.landmark_descriptor.insert(frame.landmark_descriptor.end(), 
                         prev_image.landmark_descriptor.begin() + cur_lk_info.lk_local_index[i] * params->superpoint_dims, 
                         prev_image.landmark_descriptor.begin() + (cur_lk_info.lk_local_index[i] + 1) * params->superpoint_dims);
                     frame.landmark_scores.emplace_back(prev_image.landmark_scores[cur_lk_info.lk_local_index[i]]);
-                    cur_lk_info.lk_local_index[i] = frame.landmarks.size();
                 }
+                cur_lk_info.lk_local_index[i] = frame.landmarks.size();
                 auto &lm = ret.second;
                 auto track = lmanager->at(cur_lk_info.lk_ids[i]).track;
                 lm.velocity = extractPointVelocity(lm);
                 frame.landmarks.emplace_back(lm);
-                if (lmanager->at(cur_lk_info.lk_ids[i]).track.size() >= _config.long_track_frames) {
-                    report.long_track_num ++;
-                }
                 auto [succ, prev_lm] = getPreviousLandmarkFrame(lm, prev_keyframe.frame_id);
                 if (succ) {
                     lm.stamp_discover = prev_lm.stamp_discover;
                 }
                 else {
+                    spdlog::info("getPreviousLandmarkFrame failed");
                     continue;
                 }
+                if (lmanager->at(cur_lk_info.lk_ids[i]).track.size() >= _config.long_track_frames) {
+                    report.long_track_num ++;
+                }
+                
                 report.sum_parallex += (lm.pt3d_norm - prev_lm.pt3d_norm).norm();
                 spdlog::debug("LM {} prev_2d {:.1f} {:.1f} cur_2d {:.3f} {:.3f} para_2d {:.1f}%  prev_3d {:.3f} {:.3f} {:.3f} cur_3d {:.3f} {:.3f} {:.3f} para_3d {:.1f}%",
                         prev_lm.landmark_id, prev_lm.pt2d.x, prev_lm.pt2d.y, lm.pt2d.x, lm.pt2d.y, 
@@ -473,7 +477,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     }
     //Discover new points.
     if (!frame.raw_image.empty()) {
-        if (_config.continue_track_use_lk) {
+        if (_config.sp_track_use_lk) {
             // In this case, select from cur_landmarks
             int count_new = 0;
             for (size_t i = 0; i < cur_landmarks.size(); i++) {
@@ -613,7 +617,7 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
     TrackReport report;
     auto left_lk_info = keyframe_lk_infos.at(left_frame.frame_id).at(left_frame.camera_index);
     // Add the SP points to the LK points if use_lk_for_sp is true
-    if (use_lk_for_sp && !_config.continue_track_use_lk) {
+    if (use_lk_for_sp && !_config.sp_track_use_lk) {
         for (int i = 0; i < left_frame.landmarkNum(); i++) {
             if (left_frame.landmarks[i].landmark_id >= 0 && left_frame.landmarks[i].type == LandmarkType::SuperPointLandmark) {
                 left_lk_info.lk_pts.emplace_back(left_frame.landmarks[i].pt2d);
@@ -657,7 +661,7 @@ bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
     if (report.meanParallex() > 0.5) {
         printf("[D2FeatureTracker] unexcepted mean parallex %f\n", report.meanParallex());
     }
-    if (keyframe_count < _config.min_keyframe_num || 
+    if (report.parallex_num < _config.min_keyframe_num || 
         report.long_track_num < _config.long_track_thres ||
         prev_num < _config.last_track_thres ||
         report.unmatched_num > _config.new_feature_thres*prev_num || //Unmatched is assumed to be new
