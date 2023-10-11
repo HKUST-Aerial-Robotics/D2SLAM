@@ -417,7 +417,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
         frame.clearLandmarks();
     }
 
-    if (keyframe_lk_infos.size() > 0)
+    if (keyframe_lk_infos.size() > 0 && current_keyframes.size() > 0)
     {
         const auto& prev_frame = current_keyframes.back();
         const auto& prev_image = prev_frame.images[frame.camera_index];
@@ -439,8 +439,8 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
                         prev_image.landmark_descriptor.begin() + cur_lk_info.lk_local_index[i] * params->superpoint_dims, 
                         prev_image.landmark_descriptor.begin() + (cur_lk_info.lk_local_index[i] + 1) * params->superpoint_dims);
                     frame.landmark_scores.emplace_back(prev_image.landmark_scores[cur_lk_info.lk_local_index[i]]);
+                    cur_lk_info.lk_local_index[i] = frame.landmarks.size();
                 }
-                cur_lk_info.lk_local_index[i] = frame.landmarks.size();
                 auto &lm = ret.second;
                 auto track = lmanager->at(cur_lk_info.lk_ids[i]).track;
                 lm.velocity = extractPointVelocity(lm);

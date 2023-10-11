@@ -7,7 +7,7 @@
     <arg name="superpoint_model_path"     default="$(find d2frontend)/../models/superpoint_v1_dyn_size.onnx"/>
     <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/mobilenetvlad_dyn_size.onnx" />
     <arg name="superglue_model_path"     default="$(find d2frontend)/../models/superglue.onnx" />
-    <arg name="config" default="$(find d2vins)/../config/quadcam/quadcam_single_ri_sep.yaml" />
+    <arg name="config" default="$(find d2vins)/../config/quadcam/quadcam_single.yaml" />
     <arg name="match_index_dist" default="200" />
     <arg name="match_index_dist_remote" default="20" />
     <arg name="output_path" default="/home/dji/output/" />
