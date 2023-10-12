@@ -112,8 +112,8 @@ protected:
 
     TrackReport trackLK(VisualImageDesc & frame);
     TrackReport track(const VisualImageDesc & left_frame, VisualImageDesc & right_frame, 
-        bool enable_lk=true, TrackLRType type=WHOLE_IMG_MATCH, bool use_lk_for_sp = true);
-    TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame, TrackLRType type=WHOLE_IMG_MATCH, bool use_lk_for_sp = true);
+        bool enable_lk=true, TrackLRType type=WHOLE_IMG_MATCH, bool use_lk_for_left_right_track = true);
+    TrackReport trackLK(const VisualImageDesc & frame, VisualImageDesc & right_frame, TrackLRType type=WHOLE_IMG_MATCH, bool use_lk_for_left_right_track = true);
     TrackReport track(VisualImageDesc & frame, const Swarm::Pose & motion_prediction=Swarm::Pose());
     TrackReport trackRemote(VisualImageDesc & frame, const VisualImageDesc & prev_frame, 
             bool use_motion_predict=false, const Swarm::Pose & motion_prediction=Swarm::Pose());

@@ -378,7 +378,9 @@ opticalflowTrackPyr(const cv::Mat &cur_img,
     std::vector<int> prev_local_index = prev_lk.lk_local_index;
     std::vector<Eigen::Vector3d> lk_pts_3d_norm;
     if (prev_pts.size() == 0) {
-        return LKImageInfoGPU();
+        LKImageInfoGPU ret;
+        ret.pyr = cur_pyr;
+        return ret;
     }
     TicToc tic;
     std::vector<uchar> status;
@@ -417,7 +419,9 @@ opticalflowTrackPyr(const cv::Mat &cur_img,
     }
     status.resize(0);
     if (cur_pts.size() == 0) {
-        return LKImageInfoGPU();
+        LKImageInfoGPU ret;
+        ret.pyr = cur_pyr;
+        return ret;
     }
     std::vector<float> err;
     std::vector<uchar> reverse_status;
