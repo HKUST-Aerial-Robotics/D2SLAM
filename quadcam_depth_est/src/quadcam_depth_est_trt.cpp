@@ -336,6 +336,7 @@ void QuadcamDepthEstTrt::inferrenceThread(){
       this->inference_rate_->sleep();
       continue;
     }
+    this->inference_rate_->sleep();
   }
   return ;
 }
