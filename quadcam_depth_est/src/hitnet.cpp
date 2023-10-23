@@ -1,5 +1,6 @@
 #include "../include/hitnet.hpp"
 #include <iostream>
+#include <unistd.h>
 
 namespace TensorRTHitnet{
 //TODO: refine how we create excutor
@@ -112,6 +113,14 @@ int32_t HitnetTrt::getOutput(cv::Mat output[4]){
 }
 
 HitnetTrt::~HitnetTrt(){
+  for(int32_t i = 0; i < this->stream_number_; i++){
+    this->executors_[i].~HitnetExcutor();
+  }
+  usleep(100);
+  this->nv_engine_ptr_->destroy();  //TODO: deconstruct bug here
+  usleep(100);
+  this->nv_runtime_ptr_->destroy();
+  usleep(100);
 }
 
 int32_t HitnetExcutor::init(std::shared_ptr<nvinfer1::ICudaEngine> engine_ptr, 

@@ -88,6 +88,9 @@ QuadcamDepthEstTrt::~QuadcamDepthEstTrt(){
     delete pcl_color_;
     pcl_color_ = nullptr;
   }
+  if (this->hitnet_ != nullptr){
+    this->hitnet_ = nullptr;
+  }
 };
 
 void QuadcamDepthEstTrt::loadVirtualCameras(YAML::Node & config, std::string configPath){
@@ -247,7 +250,14 @@ void QuadcamDepthEstTrt::rawImageProcessThread(){
       cv::Mat splited_image = raw_image(cv::Rect(i * raw_image_.cols /kCamerasNum, 0, 
         raw_image.cols /kCamerasNum, raw_image.rows));
       if(!this->cnn_input_rgb_){
-        cv::cvtColor(splited_image,split_raw_images_[i],cv::COLOR_BGR2GRAY);
+        
+        if (splited_image.empty()){
+          printf("[QuadcamDepthEstTrt]: splited image is empty\n");
+          this->raw_image_process_rate_->sleep();
+          continue;
+        }
+        
+        cv::cvtColor(splited_image,split_raw_images_[i],cv::COLOR_BGR2GRAY);//TODO: Bug openCV segement fault
         #ifdef DEBUG
         printf("[QuadcamDepthEstTrt]: split raw image to gray\n");
         char window_name[20];
@@ -319,6 +329,13 @@ void QuadcamDepthEstTrt::inferrenceThread(){
   static cv::Mat input_tensors[4];
   while(inference_thread_running_){
     if(input_tensors_mutex_.try_lock()){
+      //if input_tensors_ is empty, wait for next loop
+      if (this->input_tensors_[0].empty()){
+        this->input_tensors_mutex_.unlock();
+        this->inference_rate_->sleep();
+        continue;
+      }
+
       for (auto stereo : this->virtual_stereos_){
         input_tensors[stereo->stereo_id] = input_tensors_[stereo->stereo_id];
       }
@@ -344,10 +361,12 @@ void QuadcamDepthEstTrt::inferrenceThread(){
 void QuadcamDepthEstTrt::publishThread(){
   //TODO: publish pointcloud and do visualization
   while(publish_thread_running_){
-    if (this->output_tensors_->empty()){
+    //if output_tensors_ is empty, wait for next loop
+    if (this->output_tensors_[0].empty()){
       this->publish_rate_->sleep();
       continue;
     }
+
     //copy data to local
     if (output_tensors_mutex_.try_lock()){
       for (auto stereo : this->virtual_stereos_){

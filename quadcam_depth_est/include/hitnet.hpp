@@ -27,7 +27,15 @@ class HitnetLogger: public nvinfer1::ILogger{
 class HitnetExcutor{
  public:
   HitnetExcutor(){};
-  ~HitnetExcutor(){};
+  ~HitnetExcutor(){
+    if(nv_context_ptr_ != nullptr){
+      nv_context_ptr_ = nullptr;
+    }
+    if(buffer_manager_ptr_ != nullptr){
+      buffer_manager_ptr_ = nullptr;
+    }
+  };
+
   int32_t init(std::shared_ptr<nvinfer1::ICudaEngine> engine_ptr, 
     std::string input_tensor_name = "input",
     std::string output_tensor_name = "output");

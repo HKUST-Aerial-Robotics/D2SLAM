@@ -73,6 +73,7 @@ class QuadcamDepthEstTrt{
   double max_z_ = 10;
   int image_count_ = 0;
   bool cnn_input_rgb_ = false;
+
   int32_t fps_ = 10;
   std::string trt_engine_path_;
   
@@ -106,10 +107,7 @@ class QuadcamDepthEstTrt{
   std::mutex output_tensors_mutex_;
 
   cv::Mat recity_images_for_show_and_texture_[kCamerasNum][2];
-
   cv::Mat publish_disparity_[kCamerasNum];
-
-
   cv::Mat photometric_inv_vingette_[kCamerasNum];
 
 };
