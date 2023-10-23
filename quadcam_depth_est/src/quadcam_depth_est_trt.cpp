@@ -244,6 +244,9 @@ void QuadcamDepthEstTrt::rawImageProcessThread(){
         raw_image = raw_image_;
         this->raw_image_mutex_.unlock();
       }
+    } else {
+      this->raw_image_process_rate_->sleep();
+      continue;
     }
 
     for(int32_t i = 0; i< kCamerasNum; i++){
