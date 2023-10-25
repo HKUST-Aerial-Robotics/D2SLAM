@@ -382,6 +382,10 @@ void QuadcamDepthEstTrt::publishThread(){
     }
     //debug show disparity
     if(show_){
+      if (recity_images_for_show_and_texture_[0][0].empty()){
+        this->publish_rate_->sleep();
+        continue;
+      }
       for (auto stereo : this->virtual_stereos_){
         stereo->showDispartiy(publish_disparity_[stereo->stereo_id], 
           recity_images_for_show_and_texture_[stereo->cam_idx_a][stereo->cam_idx_a_right_half_id],
