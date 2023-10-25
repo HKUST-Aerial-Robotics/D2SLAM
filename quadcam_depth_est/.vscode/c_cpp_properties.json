@@ -4,16 +4,16 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/xuhao/d2slam_ws/src/D2SLAM/d2common/include",
                 "/usr/include",
                 "/opt/ros/noetic/include",
-                "/home/xuhao/d2slam_ws/src/swarm_msgs/swarm_msgs/include",
                 "/usr/local/include/eigen3",
                 "/usr/local/include/opencv4",
                 "/usr/local/include",
                 "/usr/include/pcl-1.10",
                 "/root/swarm_ws/src/D2SLAM/camera_models/include",
-                "/root/swarm_ws/src/D2SLAM/d2frontend/include"
+                "/root/swarm_ws/src/D2SLAM/d2frontend/include",
+                "../../d2frontend/include/**",
+                "../../d2common/include/**"
             ],
             "defines": [],
             "compilerPath": "/opt/gcc-arm-none-eabi-9-2020-q2-update/bin/arm-none-eabi-gcc",

@@ -15,7 +15,8 @@
                 "/root/swarm_ws/src/vision_opencv/image_geometry/include/**",
                 "/root/swarm_ws/src/swarm_msgs/swarm_msgs/include/**",
                 "/root/swarm_ws/src/swarm_msgs/swarmcomm_msgs/include/**",
-                "/usr/include/**"
+                "/usr/include/**",
+                "/usr/local/**"
             ],
             "name": "ROS",
             "intelliSenseMode": "gcc-x64",

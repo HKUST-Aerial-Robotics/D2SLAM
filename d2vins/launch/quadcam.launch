@@ -1,5 +1,5 @@
 <launch>
-    <arg name="show" default="false" />
+    <arg name="show" default="true" />
     <arg name="output" default="screen" />
     <arg name="send_img"     default="false"/>
     <arg name="send_whole_img_desc"     default="false"/>

@@ -1,6 +1,6 @@
 <launch>
     <arg name="show" default="false" />
-    <arg name="depth_config" default="$(find quadcam_depth_est)/../config/new_quadcam/quadcam_depth_generation.yaml"/>
+    <arg name="depth_config" default="/root/swarm_ws/src/D2SLAM/config/quadcam_drone_0/quadcam_depth.yaml"/>
     <arg name="output" default="screen" />
     <node pkg="quadcam_depth_est" type="quadcam_depth_est_node" name="quadcam_depth_est" output="$(arg output)" >
         <param name="show" value="$(arg show)"/>

@@ -5,14 +5,13 @@ imu: 1
 imu_topic: "/mavros/imu/data_raw"
 # imu_topic: "/dji_sdk_1/dji_sdk/imu"
 # image0_topic: "/arducam/image"
-# TODO::Cannot find the topic for the image
 image0_topic: "/oak_ffc_4p/assemble_image"
 
 is_compressed_images: 0
 
 imu_freq: 500
 image_freq: 25
-frame_step: 4
+frame_step: 2
 
 #Camera configuration
 camera_configuration: 3  #STEREO_PINHOLE = 0, STEREO_FISHEYE = 1, PINHOLE_DEPTH = 2, FOURCORNER_FISHEYE = 3
@@ -20,15 +19,15 @@ calib_file_path: "fisheye_cams.yaml"
 image_width: 1280
 image_height: 720
 enable_undistort_image: 1
-undistort_fov: 200
-width_undistort: 800
-height_undistort: 400
-photometric_calib: "mask.png"
+undistort_fov: 180
+width_undistort: 600
+height_undistort: 300
+photometric_calib: "mask_1.png"
 avg_photometric: 0.7
 
 #estimation
 estimate_extrinsic: 0  # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
-estimate_td: 1                      # online estimate time offset between camera and imu
+estimate_td: 0                      # online estimate time offset between camera and imu
 td: -0.05                           # For new datasets with filter
 estimation_mode: 0
 double_counting_common_feature: 0
@@ -86,7 +85,7 @@ remove_base_when_margin_remote: 2
 
 #feature tracker parameters
 max_cnt: 150            # max feature number in feature tracking
-max_superpoint_cnt: 100 # max feature extraction by superpoint
+max_superpoint_cnt: 20 # max feature extraction by superpoint //oringal super 150
 max_solve_cnt: 1000
 check_essential: 0
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
@@ -96,7 +95,7 @@ enable_superglue_remote: 0
 ransacReprojThreshold: 10.0
 enable_search_local_aera: 1
 search_local_max_dist: 0.05
-parallex_thres: 0.012
+parallex_thres: 0.006  #original 0.012
 knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
 
 #CNN
@@ -104,11 +103,19 @@ cnn_use_onnx: 1
 enable_pca_superpoint: 1
 superpoint_pca_dims: 64
 
+#xuhao quadcam
 acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2   0.04
 gyr_n: 0.05         # gyroscope measurement noise standard deviation.     #0.05  0.004
 acc_w: 0.002         # accelerometer bias random work noise standard deviation.  #0.002
 gyr_w: 0.0004       # gyroscope bias random work noise standard deviation.     #4.0e-5
 g_norm: 9.805         # gravity magnitude
+
+# X 
+# acc_n: 0.0018445838609014217       # accelerometer measurement noise standard deviation. #0.2   0.04   
+# gyr_n: 0.0001606421844332533       # gyroscope measurement noise standard deviation.     #0.05  0.004
+# acc_w: 9.637244490647607e-05         # accelerometer bias random work noise standard deviation.  #0.002
+# gyr_w: 6.091456992295194e-06      # gyroscope bias random work noise standard deviation.     #4.0e-5
+# g_norm: 9.805         # gravity magnitude
 
 #Loop Closure Detection
 loop_detection_netvlad_thres: 0.8

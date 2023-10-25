@@ -36,9 +36,10 @@ QuadCamDepthEst::QuadCamDepthEst(ros::NodeHandle & _nh): nh(_nh) {
     this->max_z = config["max_z"].as<double>();
     this->width = config["width"].as<int>();
     this->height = config["height"].as<int>();
-
+    printf("caemra config: %s\n",configPath.c_str());
     loadCNN(config);
     loadCameraConfig(config, configPath);
+
     std::string format = "raw"; //TODO: make it configurable
     image_transport::TransportHints hints(format, ros::TransportHints().tcpNoDelay(true));
     it_ = new image_transport::ImageTransport(nh);
@@ -211,8 +212,11 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
     if (num_cemaras >0 && num_cemaras <= 4){
         std::string photometric_calib_path = config["photometric_calib_path"].as<std::string>();
         if( access(photometric_calib_path.c_str(),F_OK) == -1){
-            printf("[QuadCamDepthEst] photometric_calib_path is not exist\n");
-            return;
+            printf("[QuadCamDepthEst] photometric_calib_path is not exist use defualt image\n");
+            for (int i = 0; i < num_cemaras; i++) {
+                photometric_inv_vec[i] = cv::Mat (1280, 720, CV_8UC3, cv::Scalar(255, 255, 255));
+            }
+            printf("[DEBUG] use pure white\n");
         } else {
             for(int i = 0 ; i< num_cemaras; i++){
                 std::string mask_file = photometric_calib_path + "/" + std::string("cam_") + std::to_string(i) + std::string("_vig_mask.png");//search image "cam_i_vig_mask.png"
@@ -224,7 +228,7 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
 
     std::string calib_file_path = config["cam_calib_file_path"].as<std::string>();
     printf("[QuadCamDepthEst] Load camera config from %s\n", calib_file_path.c_str());
-    calib_file_path = configPath + "/" + calib_file_path;
+    // calib_file_path = configPath + "/" + calib_file_path;
     YAML::Node config_cams = YAML::LoadFile(calib_file_path); 
     //read intrinsic and distortion model
 
@@ -272,7 +276,7 @@ void QuadCamDepthEst::loadCameraConfig(YAML::Node & config, std::string configPa
             int cam_idx_r = node["cam_idx_r"].as<int>();
             int idx_l = node["idx_l"].as<int>();
             int idx_r = node["idx_r"].as<int>();
-            std::string stereo_calib_file = configPath + "/" + node["stereo_config"].as<std::string>();
+            std::string stereo_calib_file = node["stereo_config"].as<std::string>();
             Swarm::Pose baseline;
             YAML::Node stereo_calib = YAML::LoadFile(stereo_calib_file);
             Matrix4d T;
