@@ -91,4 +91,28 @@ FrameIdType LandmarkManager::getLandmarkBaseFrame(LandmarkIdType landmark_id) co
     return landmark_db.at(landmark_id).track[0].frame_id;
 }
 
+std::vector<LandmarkIdType>
+LandmarkManager::findCommonLandmarkIds(FrameIdType frame_id1,
+                                       FrameIdType frame_id2) const {
+    auto lm_last = getRelatedLandmarks(frame_id1);
+    auto lm_second_last = getRelatedLandmarks(frame_id2);
+    std::set<LandmarkIdType> common_lm;
+    std::set_intersection(lm_last.begin(), lm_last.end(),
+                          lm_second_last.begin(), lm_second_last.end(),
+                          std::inserter(common_lm, common_lm.begin()));
+    return std::vector<LandmarkIdType>(common_lm.begin(), common_lm.end());
+}
+
+std::vector<std::pair<LandmarkPerFrame,LandmarkPerFrame>> LandmarkManager::findCommonLandmarkPerFrames(FrameIdType frame_id1, FrameIdType frame_id2) const {
+    auto lm_common = findCommonLandmarkIds(frame_id1, frame_id2);
+    std::vector<std::pair<LandmarkPerFrame,LandmarkPerFrame>> ret;
+    for (auto lm_id: lm_common) {
+        auto &lm = landmark_db.at(lm_id);
+        LandmarkPerFrame lm1 = lm.at(frame_id1);
+        LandmarkPerFrame lm2 = lm.at(frame_id2);
+        ret.emplace_back(lm1, lm2);
+    }
+    return ret;
+}
+
 }

@@ -1,6 +1,8 @@
+#include <spdlog/spdlog.h>
 #include "d2vinsstate.hpp"
 #include "../d2vins_params.hpp"
 #include <d2common/d2vinsframe.h>
+#include <d2common/utils.hpp>
 #include <d2common/integration_base.h>
 #include "marginalization/marginalization.hpp"
 #include "../factors/prior_factor.h"
@@ -14,7 +16,7 @@ D2EstimatorState::D2EstimatorState(int _self_id):
     D2State(_self_id)
 {
     sld_wins[self_id] = std::vector<VINSFrame*>();
-    if (params->estimation_mode != D2VINSConfig::SERVER_MODE) {
+    if (params->estimation_mode != D2Common::SERVER_MODE) {
         all_drones.insert(self_id);
     }
 }
@@ -238,7 +240,7 @@ int D2EstimatorState::getCameraBelonging(CamIdType cam_id) const {
     return camera_drone.at(cam_id);
 }
 
-std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames() {
+std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames(bool marginalization) {
     //If keyframe_only is true, then only remove keyframes.
     const Guard lock(state_lock);
     std::vector<LandmarkPerId> ret;
@@ -285,25 +287,27 @@ std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames() {
         }
     }
 
-    if (params->enable_marginalization && clear_key_frames.size() > 0) {
-        if (marginalizer != nullptr) {
-            auto prior_return = marginalizer->marginalize(clear_key_frames);
-            if (prior_return!=nullptr) {
-                if (prior_factor!=nullptr) {
-                    delete prior_factor;
+    if (marginalization) {
+        if (params->enable_marginalization && clear_key_frames.size() > 0) {
+            if (marginalizer != nullptr) {
+                auto prior_return = marginalizer->marginalize(clear_key_frames);
+                if (prior_return!=nullptr) {
+                    if (prior_factor!=nullptr) {
+                        delete prior_factor;
+                    }
+                    prior_factor = prior_return;
                 }
-                prior_factor = prior_return;
             }
         }
-    }
-    if (prior_factor != nullptr) {
-        //At this time, non-keyframes is also removed, so add them to remove set to avoid pointer issue.
-        std::vector<ParamInfo> keeps = prior_factor->getKeepParams();
-        for (auto p : keeps) {
-            if (clear_frames.find(p.id)!=clear_frames.end()) {
-                if (params->verbose)
-                    printf("[D2EstimatorState::clearFrame] Removed Frame %ld in prior is removed from prior\n", p.id);
-                prior_factor->removeFrame(p.id);
+        if (prior_factor != nullptr) {
+            //At this time, non-keyframes is also removed, so add them to remove set to avoid pointer issue.
+            std::vector<ParamInfo> keeps = prior_factor->getKeepParams();
+            for (auto p : keeps) {
+                if (clear_frames.find(p.id)!=clear_frames.end()) {
+                    if (params->verbose)
+                        printf("[D2EstimatorState::clearFrame] Removed Frame %ld in prior is removed from prior\n", p.id);
+                    prior_factor->removeFrame(p.id);
+                }
             }
         }
     }
@@ -352,8 +356,8 @@ void D2EstimatorState::updateSldwin(int drone_id, const std::vector<FrameIdType>
 }
 
 void D2EstimatorState::updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs) {
-    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS || 
-        params->estimation_mode == D2VINSConfig::SINGLE_DRONE_MODE) {
+    if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS || 
+        params->estimation_mode == D2Common::SINGLE_DRONE_MODE) {
         auto & _sld_win = sld_wins[self_id];
         for (size_t i = 0; i < _sld_win.size() - 1; i ++) {
             auto frame_a = _sld_win[i];
@@ -410,20 +414,20 @@ VINSFrame * D2EstimatorState::addFrame(const VisualImageDescArray & images, cons
     VINSFrame * frame = addVINSFrame(_frame);
     if (_frame.drone_id != self_id) {
         if (sld_wins.find(_frame.drone_id) == sld_wins.end()) {
-            printf("[D2VINS::D2EstimatorState] Add sld_win for remote drone %d\n", _frame.drone_id);
+            spdlog::info("[D2VINS::D2EstimatorState] Add sld_win for remote drone {}", _frame.drone_id);
             sld_wins[_frame.drone_id] = std::vector<VINSFrame *>();
         }
         sld_wins[_frame.drone_id].emplace_back(frame);
         for (auto & img : images.images) {
             if (extrinsic.find(img.camera_id) == extrinsic.end()) {
-                printf("[D2VINS::D2EstimatorState] Adding extrinsic of camera %d from drone@%d\n", img.camera_id, _frame.drone_id);
+                spdlog::info("[D2VINS::D2EstimatorState] Adding extrinsic of camera {} from drone@{}", img.camera_id, _frame.drone_id);
                 addCamera(img.extrinsic, img.camera_index, images.drone_id, img.camera_id);
             }
         }
     } else {
         sld_wins[self_id].emplace_back(frame);
     }
-    if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && _frame.drone_id != self_id) {
+    if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS && _frame.drone_id != self_id) {
         //In this mode, the estimate state is always ego-motion and the bias is not been estimated on remote
         _frame.odom.pose().to_vector(_frame_pose_state.at(frame->frame_id));
     } else {
@@ -432,15 +436,13 @@ VINSFrame * D2EstimatorState::addFrame(const VisualImageDescArray & images, cons
     }
 
     lmanager.addKeyframe(images, td);
-    if (params->verbose) {
-        printf("[D2VINS::D2EstimatorState%d] add frame %ld@%d ref %d iskeyframe %d with %d images, current %ld frame\n", 
-                self_id, images.frame_id, _frame.drone_id, frame->reference_frame_id, frame->is_keyframe, 
-                images.images.size(), sld_wins[self_id].size());
-    }
+    spdlog::debug("[D2VINS::D2EstimatorState{}] add frame {}@{} ref {} iskeyframe {} with {} images, current {} frame\n", 
+            self_id, images.frame_id, _frame.drone_id, frame->reference_frame_id, frame->is_keyframe, 
+            images.images.size(), sld_wins[self_id].size());
     //If first frame we need to add a prior here
     if (size(images.drone_id) == 1 && 
-                (images.drone_id == self_id|| params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE || 
-                params->estimation_mode == D2VINSConfig::SERVER_MODE)) {
+                (images.drone_id == self_id|| params->estimation_mode == D2Common::SOLVE_ALL_MODE || 
+                params->estimation_mode == D2Common::SERVER_MODE)) {
         //Add a prior for first frame here
         createPriorFactor4FirstFrame(frame);
     }
@@ -451,26 +453,40 @@ void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame * frame) {
     //Prior is in form of A \delta x = b
     //A is a 6x6 matrix, A = diag([a_p, a_p, a_p, 0, 0, a_yaw])
     //b is zero vector
+    bool add_vel_ba_prior = params->add_vel_ba_prior;
     int local_cam_num = params->camera_num;
-    printf("\033[0;32m[D2VINS::D2Estimator] Add prior for first frame and extrinsic %d: %d\033[0m\n", params->estimate_extrinsic, local_cam_num);
-    int Adim = POSE_EFF_SIZE + (params->estimate_extrinsic?POSE_EFF_SIZE*local_cam_num: 0);
-    printf("Admin %d\n", Adim);
+    spdlog::warn("Add prior for first frame, extrinsic {}, {} and speed: {}", params->estimate_extrinsic, local_cam_num, add_vel_ba_prior);
+    int Adim = POSE_EFF_SIZE + (params->estimate_extrinsic?POSE_EFF_SIZE*local_cam_num: 0) + (add_vel_ba_prior?FRAME_SPDBIAS_SIZE: 0);
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(Adim, Adim);
     A.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * params->initial_pos_sqrt_info;
     A(5, 5) = params->initial_yaw_sqrt_info;
+    if (add_vel_ba_prior)
+    {
+        A.block<3, 3>(POSE_EFF_SIZE, POSE_EFF_SIZE) = Eigen::Matrix3d::Identity() * params->initial_vel_sqrt_info;
+        A.block<3, 3>(POSE_EFF_SIZE + 3, POSE_EFF_SIZE + 3) = Eigen::Matrix3d::Identity() * params->initial_ba_sqrt_info;
+        A.block<3, 3>(POSE_EFF_SIZE + 6, POSE_EFF_SIZE + 6) = Eigen::Matrix3d::Identity() * params->initial_bg_sqrt_info;
+    }
     if (self_id == params->main_id) {
         A = A * 100;
     }
     VectorXd b = VectorXd::Zero(Adim);
     auto param_info = createFramePose(this, frame->frame_id);
     param_info.index = 0;
+    int extrinsic_start_idx = POSE_EFF_SIZE;
     std::vector<ParamInfo> need_fix_params{param_info};
+    if (add_vel_ba_prior)
+    {
+        auto param_info_spd_bias = createSpeedBias(this, frame->frame_id);
+        param_info_spd_bias.index = POSE_EFF_SIZE;
+        need_fix_params.emplace_back(param_info_spd_bias);
+        extrinsic_start_idx += FRAME_SPDBIAS_SIZE;
+    }
     if (params->estimate_extrinsic) {
         for (int i = 0; i < local_cam_num; i ++) {
-            A.block<3, 3>((i + 1)*POSE_EFF_SIZE, (i + 1)*POSE_EFF_SIZE) = Eigen::Matrix3d::Identity() * params->initial_cam_pos_sqrt_info;
-            A.block<3, 3>((i + 1)*POSE_EFF_SIZE + 3, (i + 1)*POSE_EFF_SIZE + 3) = Eigen::Matrix3d::Identity() * params->initial_cam_ang_sqrt_info;
+            A.block<3, 3>(i*POSE_EFF_SIZE + extrinsic_start_idx, i*POSE_EFF_SIZE + extrinsic_start_idx) = Eigen::Matrix3d::Identity() * params->initial_cam_pos_sqrt_info;
+            A.block<3, 3>(i*POSE_EFF_SIZE + 3 + extrinsic_start_idx, i*POSE_EFF_SIZE + 3 + extrinsic_start_idx) = Eigen::Matrix3d::Identity() * params->initial_cam_ang_sqrt_info;
             auto param_info = createExtrinsic(this, local_camera_ids[i]);
-            param_info.index = need_fix_params.back().index + POSE_EFF_SIZE;
+            param_info.index = need_fix_params.back().index + extrinsic_start_idx;
             need_fix_params.emplace_back(param_info);
         }
     }
@@ -485,10 +501,10 @@ void D2EstimatorState::syncFromState(const std::set<LandmarkIdType> & used_landm
     for (auto it : _frame_pose_state) {
         auto frame_id = it.first;
         if (frame_db.find(frame_id) == frame_db.end()) {
-            printf("[D2VINS::D2EstimatorState] Cannot find frame %ld\033[0m\n", frame_id);
+            spdlog::error("[D2VINS::D2EstimatorState] Cannot find frame {}", frame_id);
         }
         auto frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
-        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
+        if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
             frame->odom.pose() = Swarm::Pose(it.second);
         }else {
             frame->fromVector(it.second, _frame_spd_Bias_state.at(frame_id));
@@ -501,7 +517,7 @@ void D2EstimatorState::syncFromState(const std::set<LandmarkIdType> & used_landm
     lmanager.syncState(this);
     if (size() < params->max_sld_win_size ) {
         //We only repropagte when sld win is smaller than max, means not full initialized.
-        printf("[D2VINS] not fully initialized, will repropagte IMU\n");
+        spdlog::info("[D2VINS] not fully initialized, will repropagte IMU");
         repropagateIMU();
     }
     outlierRejection(used_landmarks);
@@ -515,7 +531,7 @@ void D2EstimatorState::repropagateIMU() {
             frame_b->pre_integrations->repropagate(frame_a->Ba, frame_a->Bg);
         }
     }
-    if (params->estimation_mode == D2VINSConfig::SOLVE_ALL_MODE) {
+    if (params->estimation_mode == D2Common::SOLVE_ALL_MODE) {
         for (auto it : sld_wins) {
             if (it.first == self_id) {
                 continue;
@@ -536,7 +552,7 @@ void D2EstimatorState::moveAllPoses(int new_ref_frame_id, const Swarm::Pose & de
         auto frame_id = it.first;
         auto frame = static_cast<VINSFrame*>(it.second);
         frame->moveByPose(new_ref_frame_id, delta_pose);
-        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
+        if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
             frame->odom.pose().to_vector(_frame_pose_state.at(frame_id));
         } else {
             frame->toVector(_frame_pose_state.at(frame_id), _frame_spd_Bias_state.at(frame_id));
@@ -574,6 +590,18 @@ bool D2EstimatorState::hasCamera(CamIdType frame_id) const {
     return extrinsic.find(frame_id) != extrinsic.end();
 }
 
+int D2EstimatorState::numKeyframes() const {
+    int ret = 0;
+    for (auto it : sld_wins) {
+        for (auto frame : it.second) {
+            if (frame->is_keyframe) {
+                ret ++;
+            }
+        }
+    }
+    return ret;
+}
+
 void D2EstimatorState::printSldWin(const std::map<FrameIdType, int> & keyframe_measurments) const {
     const Guard lock(state_lock);
     for (auto it : sld_wins) {
@@ -583,7 +611,7 @@ void D2EstimatorState::printSldWin(const std::map<FrameIdType, int> & keyframe_m
             if (keyframe_measurments.find(it.second[i]->frame_id) != keyframe_measurments.end()) {
                 num_mea = keyframe_measurments.at(it.second[i]->frame_id);
             }
-            printf("index %d frame_id %ld measurements %d frame: %s\n", i, it.second[i]->frame_id, num_mea, it.second[i]->toStr().c_str());
+            printf("index %d frame_id %ld is_kf %d measurements %d frame: %s\n", i, it.second[i]->frame_id, it.second[i]->is_keyframe, num_mea, it.second[i]->toStr().c_str());
         }
         printf("========================\n");
     }
@@ -593,42 +621,6 @@ const std::vector<VINSFrame*> & D2EstimatorState::getSldWin(int drone_id) const 
     return sld_wins.at(self_id);
 }
 
-void D2EstimatorState::solveGyroscopeBias() {
-    Matrix3d A;
-    Vector3d b;
-    Vector3d delta_bg;
-    A.setZero();
-    b.setZero();
-    auto & sld_win = sld_wins[self_id];
-    for (int i = 0; i < sld_win.size() - 1; i ++ ) {
-        auto frame_i = sld_win[i];
-        auto frame_j = sld_win[i + 1];
-        MatrixXd tmp_A(3, 3);
-        tmp_A.setZero();
-        VectorXd tmp_b(3);
-        tmp_b.setZero();
-        Eigen::Quaterniond q_ij(frame_i->R().transpose() * frame_j->R());
-        tmp_A = frame_j->pre_integrations->jacobian.template block<3, 3>(O_R, O_BG);
-        tmp_b = 2 * (frame_j->pre_integrations->delta_q.inverse() * q_ij).vec();
-        A += tmp_A.transpose() * tmp_A;
-        b += tmp_A.transpose() * tmp_b;
-    }
-    delta_bg = A.ldlt().solve(b);
-    printf("[D2EstimatorState] gyroscope bias initial calibration: ");
-    std::cout << delta_bg.transpose() << std::endl;
-
-    for (int i = 0; i < sld_win.size() - 1; i++) {
-        auto frame_i = sld_win[i];
-        auto frame_id = frame_i->frame_id;
-        frame_i->Bg += delta_bg;
-        frame_i->toVector(_frame_pose_state[frame_id], _frame_spd_Bias_state[frame_id]);
-    }
-
-    for (int i = 0; i < sld_win.size() - 1; i++) {
-        auto frame_i = sld_win[i];
-        frame_i->pre_integrations->repropagate(frame_i->Ba, frame_i->Bg);
-    }
-}
 
 void D2EstimatorState::updateEgoMotion() {
     const Guard lock(state_lock);
@@ -653,5 +645,294 @@ void D2EstimatorState::printLandmarkReport(FrameIdType frame_id) const {
     printf("===============================\n");
 }
 
+void D2EstimatorState::setPose(FrameIdType frame_id, const Swarm::Pose & pose) {
+    const Guard lock(state_lock);
+    auto frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
+    frame->odom.pose() = pose;
+    frame->odom.pose().to_vector(_frame_pose_state.at(frame_id));
+}
 
+void D2EstimatorState::setVelocity(FrameIdType frame_id, const Vector3d & velocity) {
+    const Guard lock(state_lock);
+    auto frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
+    frame->odom.vel() = velocity;
+    frame->toVector(_frame_pose_state.at(frame_id), _frame_spd_Bias_state.at(frame_id));
+}
+
+void D2EstimatorState::setBias(FrameIdType frame_id, const Vector3d & Ba, const Vector3d & Bg) {
+    const Guard lock(state_lock);
+    auto frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
+    frame->Ba = Ba;
+    frame->Bg = Bg;
+    frame->toVector(_frame_pose_state.at(frame_id), _frame_spd_Bias_state.at(frame_id));
+    frame->pre_integrations->repropagate(Ba, Bg);
+}
+
+bool D2EstimatorState::monoInitialization() {
+    // SFM
+    std::map<FrameIdType, int> keyframe_measurments;
+    printSldWin(keyframe_measurments);
+
+    if (sld_wins.at(self_id).size() < 5) {
+        spdlog::warn("monoInitialization: Not enough frames for mono initialization");
+        return false;
+    }
+    auto sld_win = sld_wins.at(self_id);
+    const int camera_idx = generateCameraId(self_id, 0); // Default use camera 0 for initialization.
+    auto sfm_poses = lmanager.SFMInitialization(sld_win, camera_idx);
+    if (sfm_poses.size() == 0) {
+        spdlog::warn("monoInitialization: SFM initialization failed");
+        return false;
+    }
+
+    // Here we rotate the attitude to IMU but not translation
+    Swarm::Pose Tbc = extrinsic.at(camera_idx);
+    for (auto & [frame_id, pose]: sfm_poses)
+    {
+        sfm_poses[frame_id].att() = pose.att() * Tbc.att().inverse();
+    }
+
+    // Then use these poses to perform gyro bias calibration
+    if (!solveGyroscopeBias(sld_win, sfm_poses, Tbc)) {
+        spdlog::warn("monoInitialization: Gyroscope bias calibration failed");
+        return false;
+    }
+    // Then use these poses to perform linear alignment
+    if(!LinearAlignment(sld_win, sfm_poses, Tbc)) {
+        spdlog::warn("monoInitialization: Linear alignment failed");
+        return false;
+    }
+
+    spdlog::info("monoInitialization: Finished mono initialization");
+    return true;
+}
+
+bool D2EstimatorState::solveGyroscopeBias(std::vector<VINSFrame * > sld_win, 
+        const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic) {
+    // Migrating from VINS-Mono
+    Matrix3d A;
+    Vector3d b;
+    Vector3d delta_bg;
+    A.setZero();
+    b.setZero();
+    for (int i = 0; i < sld_win.size() - 1; i ++ ) {
+        auto frame_i = sld_win[i];
+        auto frame_j = sld_win[i + 1];
+        MatrixXd tmp_A(3, 3);
+        tmp_A.setZero();
+        VectorXd tmp_b(3);
+        tmp_b.setZero();
+        Eigen::Quaterniond q0 = sfm_poses.at(frame_i->frame_id).att();
+        Eigen::Quaterniond q1 = sfm_poses.at(frame_j->frame_id).att();
+
+        Eigen::Quaterniond q_ij(q0.inverse() * q1);
+        tmp_A = frame_j->pre_integrations->jacobian.template block<3, 3>(O_R, O_BG);
+        tmp_b = 2 * (frame_j->pre_integrations->delta_q.inverse() * q_ij).vec();
+        A += tmp_A.transpose() * tmp_A;
+        b += tmp_A.transpose() * tmp_b;
+    }
+    delta_bg = A.ldlt().solve(b);
+    printf("[D2EstimatorState] gyroscope bias initial calibration: ");
+    std::cout << delta_bg.transpose() << std::endl;
+
+    for (int i = 1; i < sld_win.size(); i++) {
+        auto frame_i = sld_win[i];
+        auto frame_id = frame_i->frame_id;
+        setBias(frame_id, frame_i->Ba, frame_i->Bg + delta_bg);
+    }
+    return true;
+}
+
+bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win, 
+        const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic)
+{
+    // Migrating from VINS-Mono
+    int all_frame_count = sld_win.size();
+    int n_state = all_frame_count * 3 + 3 + 1;
+    Eigen::Vector3d g;
+    Eigen::VectorXd x;
+
+    Eigen::MatrixXd A{n_state, n_state};
+    A.setZero();
+    Eigen::VectorXd b{n_state};
+    b.setZero();
+
+    int i = 0;
+    for (int i = 0; i < sld_win.size() - 1; i ++ ) {
+        auto frame_i = sld_win[i];
+        auto frame_j = sld_win[i + 1];
+        Swarm::Pose pose_i = sfm_poses.at(frame_i->frame_id);
+        Swarm::Pose pose_j = sfm_poses.at(frame_j->frame_id);
+        Eigen::Matrix3d R_i = pose_i.R();
+        Eigen::Matrix3d R_j = pose_j.R();
+        Eigen::Vector3d T_i = pose_i.pos();
+        Eigen::Vector3d T_j = pose_j.pos();
+
+        MatrixXd tmp_A(6, 10);
+        tmp_A.setZero();
+        VectorXd tmp_b(6);
+        tmp_b.setZero();
+
+        double dt = frame_j->pre_integrations->sum_dt;
+
+        tmp_A.block<3, 3>(0, 0) = -dt * Matrix3d::Identity();
+        tmp_A.block<3, 3>(0, 6) = R_i.transpose() * dt * dt / 2 * Matrix3d::Identity();
+        tmp_A.block<3, 1>(0, 9) = R_i.transpose() * (T_j - T_i)/100.0;
+        tmp_b.block<3, 1>(0, 0) = frame_j->pre_integrations->delta_p + R_i.transpose() * R_j * extrinsic.pos() - extrinsic.pos();
+        tmp_A.block<3, 3>(3, 0) = -Matrix3d::Identity();
+        tmp_A.block<3, 3>(3, 3) = R_i.transpose() * R_j;
+        tmp_A.block<3, 3>(3, 6) = R_i.transpose() * dt * Matrix3d::Identity();
+        tmp_b.block<3, 1>(3, 0) = frame_j->pre_integrations->delta_v;
+
+        Matrix<double, 6, 6> cov_inv = Matrix<double, 6, 6>::Zero();
+        cov_inv.setIdentity();
+
+        MatrixXd r_A = tmp_A.transpose() * cov_inv * tmp_A;
+        VectorXd r_b = tmp_A.transpose() * cov_inv * tmp_b;
+
+        A.block<6, 6>(i * 3, i * 3) += r_A.topLeftCorner<6, 6>();
+        b.segment<6>(i * 3) += r_b.head<6>();
+
+        A.bottomRightCorner<4, 4>() += r_A.bottomRightCorner<4, 4>();
+        b.tail<4>() += r_b.tail<4>();
+
+        A.block<6, 4>(i * 3, n_state - 4) += r_A.topRightCorner<6, 4>();
+        A.block<4, 6>(n_state - 4, i * 3) += r_A.bottomLeftCorner<4, 6>();
+    }
+    A = A * 1000.0;
+    b = b * 1000.0;
+    x = A.ldlt().solve(b);
+    double s = x(n_state - 1)/100.0;
+    g = x.segment<3>(n_state - 4);
+    spdlog::debug("LinearAlignment: Scale: {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", s, g.norm(), g.x(), g.y(), g.z());
+    if(fabs(g.norm() - IMUData::Gravity.norm()) > 1.0 || s < 0)
+    {
+        spdlog::warn("LinearAlignment Failed. Scale or gnorm wrong: g {:.3f} {:.3f} {:.3f} s {:.3f}", g.x(), g.y(), g.z(), s);
+        return false;
+    }
+    RefineGravity(sld_win, sfm_poses, extrinsic, g, x);
+    s = (x.tail<1>())(0)/100.0;
+    (x.tail<1>())(0) = s;
+    if(s < 0.0 )
+    {
+        spdlog::warn("LinearAlignment Failed in RefineGravity. Scale wrong");
+        return false;
+    }
+    
+    // Recover camera poses and IMU poses using the scale
+    Eigen::Vector3d pos0 = Eigen::Vector3d::Zero();
+    Quaterniond q0 = Utility::g2R(g);
+    double yaw = quat2eulers(q0 * sfm_poses.at(sld_win[0]->frame_id).att()).z();
+    q0 = eulers2quat(Eigen::Vector3d{0, 0, -yaw}) * q0;
+    g = q0 * g;
+    spdlog::info("G final {:.4f} {:.4f} {:.4f}", g.x(), g.y(), g.z());
+
+    for (int i = 0; i < sld_win.size(); i++) {
+        auto frame = sld_win[i];
+        Swarm::Pose imu_pose = sfm_poses.at(frame->frame_id);
+        if (i == 0)
+        {
+            pos0 = s*imu_pose.pos() - imu_pose.att()*extrinsic.pos();
+        }
+        imu_pose.pos() = q0*(imu_pose.pos() * s - imu_pose.att()*extrinsic.pos() - pos0);
+        imu_pose.att() = q0*imu_pose.att();
+        // Set the pose of the frame
+        Vector3d vel = imu_pose.R()*x.segment<3>(i * 3);
+        setPose(frame->frame_id, imu_pose);
+        setVelocity(frame->frame_id, vel);
+        spdlog::info("LinearAlignment: F{} IMU_pose {} vel {:.4f} {:.4f} {:.4f}", 
+            sld_win[i]->frame_id, imu_pose.toStr(), vel.x(), vel.y(), vel.z());
+    }
+    return true;
+}
+
+MatrixXd TangentBasis(Vector3d &g0)
+{
+    Vector3d b, c;
+    Vector3d a = g0.normalized();
+    Vector3d tmp(0, 0, 1);
+    if(a == tmp)
+        tmp << 1, 0, 0;
+    b = (tmp - a * (a.transpose() * tmp)).normalized();
+    c = a.cross(b);
+    MatrixXd bc(3, 2);
+    bc.block<3, 1>(0, 0) = b;
+    bc.block<3, 1>(0, 1) = c;
+    return bc;
+}
+
+void D2EstimatorState::RefineGravity(std::vector<VINSFrame * > sld_win, 
+        const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic, Vector3d &g, VectorXd &x)
+{
+    Vector3d g0 = g.normalized() * IMUData::Gravity.norm();
+    Vector3d lx, ly;
+    //VectorXd x;
+    int all_frame_count = sld_win.size();
+    int n_state = all_frame_count * 3 + 2 + 1;
+
+    MatrixXd A{n_state, n_state};
+    A.setZero();
+    VectorXd b{n_state};
+    b.setZero();
+
+    for(int k = 0; k < 4; k++)
+    {
+        MatrixXd lxly(3, 2);
+        lxly = TangentBasis(g0);
+        int i = 0;
+        for (int i = 0; i < sld_win.size() - 1; i ++ ) {
+            auto frame_i = sld_win[i];
+            auto frame_j = sld_win[i + 1];
+            Swarm::Pose pose_i = sfm_poses.at(frame_i->frame_id);
+            Swarm::Pose pose_j = sfm_poses.at(frame_j->frame_id);
+            Eigen::Matrix3d R_i = pose_i.R();
+            Eigen::Matrix3d R_j = pose_j.R();
+            Eigen::Vector3d T_i = pose_i.pos();
+            Eigen::Vector3d T_j = pose_j.pos();
+
+            MatrixXd tmp_A(6, 9);
+            tmp_A.setZero();
+            VectorXd tmp_b(6);
+            tmp_b.setZero();
+
+            double dt = frame_j->pre_integrations->sum_dt;
+
+
+            tmp_A.block<3, 3>(0, 0) = -dt * Matrix3d::Identity();
+            tmp_A.block<3, 2>(0, 6) = R_i.transpose() * dt * dt / 2 * Matrix3d::Identity() * lxly;
+            tmp_A.block<3, 1>(0, 8) = R_i.transpose() * (T_j - T_i) / 100.0; 
+            tmp_b.block<3, 1>(0, 0) = frame_j->pre_integrations->delta_p + R_i.transpose() * R_j* extrinsic.pos() - extrinsic.pos() - R_i.transpose() * dt * dt / 2 * g0;
+
+            tmp_A.block<3, 3>(3, 0) = -Matrix3d::Identity();
+            tmp_A.block<3, 3>(3, 3) = R_i.transpose() * R_j;
+            tmp_A.block<3, 2>(3, 6) = R_i.transpose() * dt * Matrix3d::Identity() * lxly;
+            tmp_b.block<3, 1>(3, 0) = frame_j->pre_integrations->delta_v - R_i.transpose() * dt * Matrix3d::Identity() * g0;
+
+
+            Matrix<double, 6, 6> cov_inv = Matrix<double, 6, 6>::Zero();
+            //cov.block<6, 6>(0, 0) = IMU_cov[i + 1];
+            //MatrixXd cov_inv = cov.inverse();
+            cov_inv.setIdentity();
+
+            MatrixXd r_A = tmp_A.transpose() * cov_inv * tmp_A;
+            VectorXd r_b = tmp_A.transpose() * cov_inv * tmp_b;
+
+            A.block<6, 6>(i * 3, i * 3) += r_A.topLeftCorner<6, 6>();
+            b.segment<6>(i * 3) += r_b.head<6>();
+
+            A.bottomRightCorner<3, 3>() += r_A.bottomRightCorner<3, 3>();
+            b.tail<3>() += r_b.tail<3>();
+
+            A.block<6, 3>(i * 3, n_state - 3) += r_A.topRightCorner<6, 3>();
+            A.block<3, 6>(n_state - 3, i * 3) += r_A.bottomLeftCorner<3, 6>();
+        }
+        A = A * 1000.0;
+        b = b * 1000.0;
+        x = A.ldlt().solve(b);
+        VectorXd dg = x.segment<2>(n_state - 3);
+        g0 = (g0 + lxly * dg).normalized() * IMUData::Gravity.norm();
+    }   
+    g = g0;
+    spdlog::info("RefineGravity: scale {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", x(n_state-1), g.norm(), g.x(), g.y(), g.z());
+}
 }

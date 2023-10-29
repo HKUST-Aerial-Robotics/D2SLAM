@@ -261,6 +261,25 @@ struct LandmarkPerId {
         }
         return cam_set.size() > 1;
     }
+
+    LandmarkPerFrame at(FrameIdType frame_id) const {
+        for (auto & it: track) {
+            if (it.frame_id == frame_id) {
+                return it;
+            }
+        }
+        printf("LandmarkPerId::at: Error, cannot find frame_id %d\n", frame_id);
+        return LandmarkPerFrame();
+    }
+
+    bool HasFrame(FrameIdType frame_id) const {
+        for (auto & it: track) {
+            if (it.frame_id == frame_id) {
+                return true;
+            }
+        }
+        return false;
+    }
 };
 
 }

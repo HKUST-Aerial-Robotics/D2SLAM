@@ -12,6 +12,7 @@
 #include <d2frontend/utils.h>
 #include <algorithm>
 #include <faiss/IndexFlat.h>
+#include <spdlog/spdlog.h>
 
 using namespace std::chrono; 
 using namespace D2Common;
@@ -34,11 +35,11 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
         t0 = image_array.stamp;
     }
 
-    printf("[LoopDetector] processImageArray %ld from drone %d images: %d landmark: %d lazy: %d matched_to %d@D%d\n", image_array.frame_id,
+    spdlog::info("[LoopDetector] processImageArray {} from {} images: {} landmark: {} lazy: {} matched_to {}@D{}\n", image_array.frame_id,
         image_array.drone_id, image_array.images.size(), image_array.spLandmarkNum(), image_array.is_lazy_frame, image_array.matched_frame, image_array.matched_drone);
 
     if (image_array.images.size() == 0) {
-        ROS_WARN("[LoopDetector] FlattenDesc must carry more than zero images");
+        spdlog::warn("[LoopDetector] FlattenDesc must carry more than zero images");
         return;
     }
 
@@ -197,7 +198,6 @@ int LoopDetector::addImageArrayToDatabase(VisualImageDescArray & new_fisheye_des
                 int index = addImageDescToDatabase(img_desc);
                 index_to_frame_id[index] = new_fisheye_desc.frame_id;
                 imgid2dir[index] = i;
-                // ROS_INFO("[LoopDetector] Add keyframe from %d(dir %d) to local keyframe database index: %d", img_desc.drone_id, i, index);
             }
             if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
                 break;
@@ -206,7 +206,7 @@ int LoopDetector::addImageArrayToDatabase(VisualImageDescArray & new_fisheye_des
         }
     }
     keyframe_database[new_fisheye_desc.frame_id] = new_fisheye_desc;
-    printf("[LoopDetector] Add KF %ld with %d images from %d to local keyframe database. Total frames: %ld\n", 
+    spdlog::info("[LoopDetector] Add KF {} with {} images from {} to local keyframe database. Total frames: {}", 
             new_fisheye_desc.frame_id, new_fisheye_desc.images.size(), new_fisheye_desc.drone_id, keyframe_database.size());
     // new_fisheye_desc.printSize();
     return new_fisheye_desc.frame_id;
@@ -378,8 +378,8 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
     std::vector<int> dirs_b;
     
     if (params->camera_configuration == STEREO_PINHOLE) {
-        dirs_a = {0, 1};
-        dirs_b = {0, 1};
+        dirs_a = {0};
+        dirs_b = {0};
     } else if (params->camera_configuration == PINHOLE_DEPTH) {
         dirs_a = {0, 1};
         dirs_b = {0};
@@ -414,7 +414,7 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
         if (dir_a < frame_array_a.images.size() && dir_b < frame_array_b.images.size() && dir_a >= 0 && dir_b >= 0) {
             bool succ = computeCorrespondFeatures(frame_array_a.images[dir_a],frame_array_b.images[dir_b],
                 _lm_pos_a, _idx_a, _lm_norm_3d_b, _idx_b, _camera_indices);
-            // ROS_INFO("[LoopDetector] computeCorrespondFeatures on camera_index %d:%d gives %d common features", dir_b, dir_a, _lm_pos_a.size());
+            spdlog::info("[LoopDetector] computeCorrespondFeatures on camera_index {}:{} gives {} common features", dir_b, dir_a, _lm_pos_a.size());
             if (!succ) {
                 continue;
             }
@@ -439,7 +439,7 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
     if(lm_norm_3d_b.size() > _config.loop_inlier_feature_num && matched_dir_count >= _config.MIN_DIRECTION_LOOP) {
         return true;
     } else {
-        ROS_WARN("[LoopDetector::computeCorrImageArray@%d] Failed: features %d/%d dirs %d/%d", 
+        spdlog::warn("[LoopDetector::computeCorrImageArray@{}] Failed: features {}/{} dirs {}/{}", 
                 self_id, lm_norm_3d_b.size(), _config.loop_inlier_feature_num,
                 matched_dir_count, _config.MIN_DIRECTION_LOOP);
         return false;
@@ -474,7 +474,6 @@ bool LoopDetector::computeCorrespondFeatures(const VisualImageDesc & img_desc_a,
             cv::BFMatcher bfmatcher(cv::NORM_L2, true);
             bfmatcher.match(descriptors_a, descriptors_b, _matches);
         }
-        
     }
     Point2fVector lm_b_2d, lm_a_2d;
     std::lock_guard<std::recursive_mutex> guard(landmark_mutex);
@@ -552,49 +551,46 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
         }
         success = computeRelativePosePnPnonCentral(lm_pos_a, lm_norm_3d_b,
                 extrinsics, camera_indices, frame_array_a.pose_drone, frame_array_b.pose_drone, DP_old_to_new, inliers, _config.is_4dof);
-        if (!success) {
-            printf("[LoopDetector::computeLoop@%d] Compute relative pose failed!\n", self_id);
-            return false;
-        }
+        if (success) {
+            //setup return loop
+            ret.relative_pose = DP_old_to_new.toROS();
+            ret.drone_id_a = frame_array_b.drone_id;
+            ret.ts_a = ros::Time(frame_array_b.stamp);
 
-        //setup return loop
-        ret.relative_pose = DP_old_to_new.toROS();
-        ret.drone_id_a = frame_array_b.drone_id;
-        ret.ts_a = ros::Time(frame_array_b.stamp);
+            ret.drone_id_b = frame_array_a.drone_id;
+            ret.ts_b = ros::Time(frame_array_a.stamp);
 
-        ret.drone_id_b = frame_array_a.drone_id;
-        ret.ts_b = ros::Time(frame_array_a.stamp);
+            ret.self_pose_a = toROSPose(frame_array_b.pose_drone);
+            ret.self_pose_b = toROSPose(frame_array_a.pose_drone);
 
-        ret.self_pose_a = toROSPose(frame_array_b.pose_drone);
-        ret.self_pose_b = toROSPose(frame_array_a.pose_drone);
+            ret.keyframe_id_a = frame_array_b.frame_id;
+            ret.keyframe_id_b = frame_array_a.frame_id;
 
-        ret.keyframe_id_a = frame_array_b.frame_id;
-        ret.keyframe_id_b = frame_array_a.frame_id;
+            ret.pos_cov.x = _config.loop_cov_pos;
+            ret.pos_cov.y = _config.loop_cov_pos;
+            ret.pos_cov.z = _config.loop_cov_pos;
 
-        ret.pos_cov.x = _config.loop_cov_pos;
-        ret.pos_cov.y = _config.loop_cov_pos;
-        ret.pos_cov.z = _config.loop_cov_pos;
+            ret.ang_cov.x = _config.loop_cov_ang;
+            ret.ang_cov.y = _config.loop_cov_ang;
+            ret.ang_cov.z = _config.loop_cov_ang;
 
-        ret.ang_cov.x = _config.loop_cov_ang;
-        ret.ang_cov.y = _config.loop_cov_ang;
-        ret.ang_cov.z = _config.loop_cov_ang;
+            ret.pnp_inlier_num = inliers.size();
+            ret.id = self_id*MAX_LOOP_ID + loop_count;
 
-        ret.pnp_inlier_num = inliers.size();
-        ret.id = self_id*MAX_LOOP_ID + loop_count;
+            if (checkLoopOdometryConsistency(ret)) {
+                loop_count ++;
+                spdlog::info("[LoopDetector] Loop {} Detected {}->{} dt {:.3f}s DPose {} inliers {}. Will publish\n",
+                    ret.id, ret.drone_id_a, ret.drone_id_b, (ret.ts_b - ret.ts_a).toSec(),
+                    DP_old_to_new.toStr().c_str(), ret.pnp_inlier_num);
 
-        if (checkLoopOdometryConsistency(ret)) {
-            loop_count ++;
-            printf("[LoopDetector] Loop %ld Detected %d->%d dt %3.3fs DPose %s inliers %d. Will publish\n",
-                ret.id, ret.drone_id_a, ret.drone_id_b, (ret.ts_b - ret.ts_a).toSec(),
-                DP_old_to_new.toStr().c_str(), ret.pnp_inlier_num);
-
-            int new_d_id = frame_array_a.drone_id;
-            int old_d_id = frame_array_b.drone_id;
-            inter_drone_loop_count[new_d_id][old_d_id] = inter_drone_loop_count[new_d_id][old_d_id] +1;
-            inter_drone_loop_count[old_d_id][new_d_id] = inter_drone_loop_count[old_d_id][new_d_id] +1;
-        } else {
-            success = false;
-            printf("[LoopDetector] Loop not consistency with odometry, give up.\n");
+                int new_d_id = frame_array_a.drone_id;
+                int old_d_id = frame_array_b.drone_id;
+                inter_drone_loop_count[new_d_id][old_d_id] = inter_drone_loop_count[new_d_id][old_d_id] +1;
+                inter_drone_loop_count[old_d_id][new_d_id] = inter_drone_loop_count[old_d_id][new_d_id] +1;
+            } else {
+                success = false;
+                spdlog::info("[LoopDetector] Loop not consistency with odometry, give up.\n");
+            }
         }
     }
 

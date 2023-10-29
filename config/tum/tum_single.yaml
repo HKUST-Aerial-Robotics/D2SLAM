@@ -70,7 +70,8 @@ track_remote_netvlad_thres: 0.5
 
 #Initialization
 init_method: 0 #0 IMU, 1 PnP
-depth_estimate_baseline: 0.05
+depth_estimate_baseline: -0.05
+enable_sfm_initialization: 1
 
 #sliding window
 max_sld_win_size: 11
@@ -107,6 +108,7 @@ remote_min_match_num: 40
 ransacReprojThreshold: 10.0
 parallex_thres: 0.022
 knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
+track_from_keyframe: 0
 
 #CNN
 cnn_use_onnx: 1

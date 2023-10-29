@@ -1,0 +1,36 @@
+# General sensor definitions
+cam0:
+  rostopic: /camera_left/image_raw
+  rate_hz: 20
+  camera_model: pinhole
+  distortion_model: radtan
+  # intrinsics: [940.862825677534, 938.554923506332, 799.1626975233576, 559.295406893583] # Raw: fu, fv, cu, cv
+  intrinsics: [376.34513027, 375.4219694 , 319.66507901, 223.71816276] # fu, fv, cu, cv; resize 0.4
+  distortion_coeffs: [-0.1008504099655989, 0.08905706623788286, 0.0007516966627205781,
+    -0.0011958374307601393]  # k1, k2, r1, r2
+  # resolution: [1600, 1100] # Raw
+  resolution: [640, 440] # Resize 0.4
+  sensor_type: Flir-BFS-U3-16S7C
+  T_cam_imu:
+    - [ 0.99985436, -0.00116148, -0.0170267 , -0.11655291]
+    - [     0.01702167, -0.0042153 ,  0.99984624,  0.01614558]
+    - [    -0.00123307, -0.99999044, -0.00419492,  0.07950961]
+    - [     0.        ,  0.        ,  0.        ,  1.        ]
+
+cam1:
+  rostopic: /camera_right/image_raw
+  rate_hz: 20
+  camera_model: pinhole
+  distortion_model: radtan
+  # intrinsics: [934.5190744321391, 932.525429508503, 792.8073165035943, 562.7061769000949] # Raw: fu, fv, cu, cv
+  intrinsics: [373.80762977, 373.0101718 , 317.1229266 , 225.08247076] # fu, fv, cu, cv
+  distortion_coeffs: [-0.10093604150569942, 0.08966460684307566, 0.0006752623328139636,
+    -0.0015031965111152103]  # k1, k2, r1, r2
+  # resolution: [1600, 1100] # Raw
+  resolution: [640, 440] # Resize 0.4
+  sensor_type: Flir-BFS-U3-16S7C
+  T_cam_imu:
+    - [0.99979217, -0.02037659,  0.00063456,  0.11568842]
+    - [-0.0007412 , -0.00522643,  0.99998607,  0.01651153]
+    - [-0.02037299, -0.99977872, -0.00524045,  0.07766165]
+    - [0.        ,  0.        ,  0.        ,  1.        ]

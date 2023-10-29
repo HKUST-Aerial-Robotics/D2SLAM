@@ -158,6 +158,14 @@ RUN   wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo a
       apt update && \
       apt install vulkan-sdk -y
 
+#Install spdlog
+RUN   wget https://github.com/gabime/spdlog/archive/refs/tags/v1.12.0.tar.gz && \
+      tar -zxvf v1.12.0.tar.gz && \
+      cd spdlog-1.12.0 && \
+      mkdir build && cd build && \
+      cmake .. && make -j$(nproc) && \
+      make install
+
 #Install taichi
 RUN    pip install taichi transformations numpy lcm matplotlib scipy && apt install ros-${ROS_VERSION}-ros-numpy
 

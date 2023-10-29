@@ -1,0 +1,145 @@
+%YAML:1.0
+
+#inputs
+imu: 1         
+is_fisheye: 0
+imu_topic: "/gnss/imu"
+image0_topic: "/camera_left/image_raw_resize"
+image1_topic: "/camera_right/image_raw_resize"
+is_compressed_images: 1
+
+imu_freq: 125
+image_freq: 20
+frame_step: 2
+
+#Camera configuration
+camera_configuration: 0  #STEREO_PINHOLE = 0, STEREO_FISHEYE = 1, PINHOLE_DEPTH = 2, FOURCORNER_FISHEYE = 3
+num_of_cam: 2
+image_width: 640
+image_height: 440
+# calib_file_path: "GRACO_calib.yaml"
+calib_file_path: "GRACO_calib_ground.yaml"
+
+#estimation
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_td: 0                      # online estimate time offset between camera and imu
+td: 0.00                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
+estimation_mode: 0 #0:single; 1:solve all; 2: distributed; 3:server
+double_counting_common_feature: 0
+min_inv_dep: 0.01
+#0:single; 1:solve all; 2: distributed; 3:server
+
+#optimization parameters
+max_solver_time: 0.08 # max solver itration time (ms), to guarantee real time
+max_num_iterations: 8   # max solver itrations, to guarantee real time
+consensus_max_steps: 1
+timout_wait_sync: 50
+rho_landmark: 1.0
+rho_frame_T: 100
+rho_frame_theta: 100
+relaxation_alpha: 0.
+#Note these two param must set to 0 when lazy_broadcast_keyframe=1
+consensus_sync_for_averaging: 0
+consensus_sync_to_start: 0 #Is sync on start of the solving..
+consensus_trigger_time_err_us: 100
+
+#depth fusing
+depth_far_thres: 3.0 # The max depth in frontend
+depth_near_thres: 0.3 
+fuse_dep: 0 #if fuse depth measurement
+max_depth_to_fuse: 5.0
+min_depth_to_fuse: 0.3
+
+#Multi-drone
+track_remote_netvlad_thres: 0.8
+
+#Initialization
+init_method: 0 #0 IMU, 1 PnP
+depth_estimate_baseline: 0.03
+
+#sliding window
+max_sld_win_size: 11
+landmark_estimate_tracks: 4 #when use depth or stereo, 3 is OK.
+min_solve_frames: 10
+
+#solver
+multiple_thread: 1
+
+#outlier rejection
+thres_outlier : 10.0
+perform_outlier_rejection_num: 100
+tri_max_err: 0.2
+
+#Marginalization
+enable_marginalization: 1
+margin_sparse_solver: 0
+always_fixed_first_pose: 0
+remove_base_when_margin_remote: 2
+#  When set to 2, will use the all relevant measurements of the removing frames to compute the prior,
+# and the baseFrame (where!=removeID) will not be removed. This may lead to double counting of this baseFrame measurement: but it's stable.
+#  When set to 1, will remove the baseframe's measurements of those measurements which is not base on current frame.
+#  set to 0 those measurements (which on a landmark's baseFrame is not been removed) will be ignore.
+
+#feature tracker parameters
+max_cnt: 250            # max feature number in feature tracking
+max_superpoint_cnt: 250 # max feature extraction by superpoint
+max_solve_cnt: 250
+check_essential: 1
+enable_lk_optical_flow: 0 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
+remote_min_match_num: 40
+enable_superglue_local: 0
+enable_superglue_remote: 0
+ransacReprojThreshold: 10.0
+enable_search_local_aera: 1
+search_local_max_dist: 0.04
+feature_min_dist: 15
+parallex_thres: 0.02
+knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
+
+#CNN
+cnn_use_onnx: 1
+enable_pca_superpoint: 1
+superpoint_pca_dims: 64
+cnn_enable_tensorrt: 0
+enable_pca_netvlad: 1
+netvlad_pca_dims: 1024
+
+acc_n: 1.8744963e-01          # accelerometer measurement noise standard deviation. #0.2   0.04
+gyr_n: 5.4259815e-03         # gyroscope measurement noise standard deviation.     #0.05  0.004
+acc_w: 6.4808910e-03         # accelerometer bias random work noise standard deviation.  #0.002
+gyr_w: 1.0949571e-04       # gyroscope bias random work noise standard deviation.     #4.0e-5
+g_norm: 9.805         # gravity magnitude
+
+#Loop Closure Detection
+loop_detection_netvlad_thres: 0.8
+enable_homography_test: 0
+loop_inlier_feature_num: 60
+accept_loop_max_yaw: 10
+accept_loop_max_pos: 1.0
+lazy_broadcast_keyframe: 0 # 0: greedy broadcast; 1: compact mode broadcast 
+nearby_drone_dist: 3.0
+gravity_check_thres: 0.03
+enable_pcm: 1
+pcm_thres: 3.5
+
+#PGO
+pgo_solver_time: 1.0
+solver_timer_freq: 0.2
+pgo_mode: 1
+pgo_rho_frame_T: 0.01
+pgo_rho_frame_theta: 2.0 
+pgo_eta_k: 1.0
+write_g2o: 1
+g2o_output_path: "output.g2o"
+write_pgo_to_file: 1
+debug_save_g2o_only: 0
+
+#outputs
+output_path: "/root/output/"
+debug_print_sldwin: 0
+debug_print_states: 0
+enable_perf_output: 0
+print_network_status: 0
+debug_write_margin_matrix: 0
+show_track_id: 0
+write_tracking_image_to_file: 0

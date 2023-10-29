@@ -64,8 +64,10 @@ class LoopCam {
     int loop_duration = 10;
     int self_id = 0;
     int kf_count = 0;
+    /*TODO:deprecate*/
     ros::ServiceClient hfnet_client;
     ros::ServiceClient superpoint_client;
+    /*end*/
     CameraConfig camera_configuration;
     std::fstream fsp;
     std::vector<FisheyeUndist*> undistortors;
@@ -73,7 +75,7 @@ class LoopCam {
     SuperPointONNX * superpoint_onnx = nullptr;
 public:
     // LoopDetector * loop_detector = nullptr;
-    LoopCam(LoopCamConfig config, ros::NodeHandle & nh);
+    LoopCam(LoopCamConfig config, ros::NodeHandle & nh); //TODO:there is no need to pass in nh
     
     VisualImageDesc extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, int index, int camera_id, bool superpoint_mode=false);
     std::vector<VisualImageDesc> generateStereoImageDescriptor(const StereoFrame & msg, int i, cv::Mat &_show);

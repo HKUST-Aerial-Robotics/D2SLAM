@@ -27,6 +27,13 @@ enum PGO_MODE {
     PGO_MODE_DISTRIBUTED_AROCK
 };
 
+enum ESTIMATION_MODE {
+    SINGLE_DRONE_MODE, //Not accept remote frame
+    SOLVE_ALL_MODE, //Each drone solve all the information
+    DISTRIBUTED_CAMERA_CONSENUS, //Distributed camera consensus
+    SERVER_MODE //In this mode receive all remote and solve them
+};
+
 enum CameraConfig{
     STEREO_PINHOLE = 0,
     STEREO_FISHEYE = 1,

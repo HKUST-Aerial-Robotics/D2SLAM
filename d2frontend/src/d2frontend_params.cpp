@@ -31,6 +31,7 @@ namespace D2FrontEnd {
         camera_configuration = (CameraConfig) _camconfig;
         nh.param<double>("nonkeyframe_waitsec", ACCEPT_NONKEYFRAME_WAITSEC, 5.0);
         nh.param<double>("min_movement_keyframe", min_movement_keyframe, 0.3);
+        estimation_mode = (ESTIMATION_MODE) (int) fsSettings["estimation_mode"];
 
         //Debug configs
         nh.param<bool>("send_img", send_img, false);
@@ -101,7 +102,7 @@ namespace D2FrontEnd {
         ftconfig->parallex_thres = fsSettings["parallex_thres"];
         ftconfig->knn_match_ratio = fsSettings["knn_match_ratio"];
         ftconfig->frame_step = fsSettings["frame_step"];
-        nh.param<int>("long_track_thres", ftconfig->long_track_thres, 20);
+        nh.param<int>("long_track_thres", ftconfig->long_track_thres, 0);
         nh.param<int>("last_track_thres", ftconfig->last_track_thres, 20);
         nh.param<double>("new_feature_thres", ftconfig->new_feature_thres, 0.5);
         nh.param<int>("min_keyframe_num", ftconfig->min_keyframe_num, 2);
@@ -119,6 +120,7 @@ namespace D2FrontEnd {
         } else {
             printf("[D2FrontendParams] feature_min_dist not found, use default\n");
         }
+        ftconfig->track_from_keyframe = (int) fsSettings["track_from_keyframe"];
         //Loop detector
         loopdetectorconfig->enable_homography_test = (int) fsSettings["enable_homography_test"];
         loopdetectorconfig->accept_loop_max_yaw = (double) fsSettings["accept_loop_max_yaw"];
@@ -311,6 +313,28 @@ namespace D2FrontEnd {
                width, height, xi, k1, k2, p1, p2,
                gamma1, gamma2, u0, v0));
         }   
+        else if (config["camera_model"].as<std::string>() == "pinhole" && 
+            config["distortion_model"].as<std::string>() == "radtan" ) {
+            int width = config["resolution"][0].as<int>();
+            int height = config["resolution"][1].as<int>();
+            double fx = config["intrinsics"][0].as<double>();
+            double fy = config["intrinsics"][1].as<double>();
+            double cx = config["intrinsics"][2].as<double>();
+            double cy = config["intrinsics"][3].as<double>();
+
+            double k1 = config["distortion_coeffs"][0].as<double>();
+            double k2 = config["distortion_coeffs"][1].as<double>();
+            double p1 = config["distortion_coeffs"][2].as<double>();
+            double p2 = config["distortion_coeffs"][3].as<double>();
+            printf("Camera %s model pinhole-radtan\n width: %d, height: %d, fx: %f, fy: %f, cx: %f, cy: %f, k1: %f, k2: %f, p1: %f, p2: %f\n", 
+                camera_name.c_str(), width, height, fx, fy, cx, cy, k1, k2, p1, p2);
+            camera = camodocal::PinholeCameraPtr(new camodocal::PinholeCamera(camera_name,
+               width, height, k1, k2, p1, p2, fx, fy, cx, cy));
+        }
+        else {
+            printf("Camera not supported yet, please fillin in src/d2frontend_params.cpp function: readCameraConfig\n");
+            exit(-1);
+        }
         Matrix4d T;
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {

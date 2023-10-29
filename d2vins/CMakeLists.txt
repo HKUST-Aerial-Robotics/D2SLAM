@@ -60,6 +60,7 @@ add_library(${PROJECT_NAME}_estimator
   src/factors/projectionOneFrameTwoCamFactor.cpp
   src/factors/prior_factor.cpp
   src/network/d2vins_net.cpp
+  src/utils/solve_5pts.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_estimator
@@ -83,6 +84,7 @@ target_link_libraries(${PROJECT_NAME}_node
   ${CERES_LIBRARIES}
   dw
   lcm
+  spdlog
 )
 
 add_definitions("-Wall -g")

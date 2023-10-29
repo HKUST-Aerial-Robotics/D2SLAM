@@ -85,6 +85,7 @@ EOF"""
     -v "/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     -v "{bagpath}:/data" kalibr:latest  """
     print(dockercmd)
+    # with new kalibr docker, this cmd can not run properly
     p_docker = subprocess.Popen(dockercmd, shell=True, stderr=subprocess.STDOUT)
     p_docker.wait()
     calibration_resualt_title = bagname.split(".")[0]

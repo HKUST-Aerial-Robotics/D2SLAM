@@ -5,6 +5,7 @@
 #include "CameraPoseVisualization.h"
 #include <opencv2/core/eigen.hpp>
 #include <yaml-cpp/yaml.h>
+#include "spdlog/spdlog.h"
 
 namespace D2VINS {
 sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color = false);
@@ -56,6 +57,9 @@ void D2Visualization::pubIMUProp(const Swarm::Odometry & odom) {
 }
 
 void D2Visualization::pubOdometry(int drone_id, const Swarm::Odometry & odom) {
+    if (!_estimator->isInitialized()) {
+        return;
+    }
     auto odom_ros = odom.toRos();
     if (paths.find(drone_id) != paths.end() && (odom_ros.header.stamp - paths[drone_id].header.stamp).toSec() < 1e-3) {
         return;
@@ -138,6 +142,9 @@ void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
 
 void D2Visualization::postSolve() {
     D2Common::Utility::TicToc tic;
+    if (!_estimator->isInitialized()) {
+        return;
+    }
     auto & state = _estimator->getState();
     state.lock_state();
     auto pcl = state.getInitializedLandmarks();

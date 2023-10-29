@@ -60,6 +60,9 @@ def read_multi_folder(folder, nodes, enable_pgo=True, t0=None):
     return paths, paths_pgo, t0
     
 def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="/home/xuhao/output/", id_map = None, figsize=(6, 6), plot_each=True):
+    import matplotlib as mpl
+    mpl.style.use('seaborn-whitegrid')
+
     fig = plt.figure("plot3d", figsize=figsize)
     ax = fig.add_subplot(111, projection='3d')
     # ax = fig.gca(projection='3d')
@@ -141,7 +144,8 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
             ax1.plot(poses_pgo[i].t, poses_pgo[i].pos[:,0], '.', label=f"$D^2$PGO Traj{i}")
             ax2.plot(poses_pgo[i].t, poses_pgo[i].pos[:,1], '.', label=f"$D^2$PGO Traj{i}")
             ax3.plot(poses_pgo[i].t, poses_pgo[i].pos[:,2], '.', label=f"$D^2$PGO Traj{i}")
-            
+        
+                    
         ax1.tick_params( axis='x', which='both', bottom=False, top=False, labelbottom=False) 
         ax1.set_ylabel("x")
         ax2.tick_params( axis='x', which='both', bottom=False, top=False, labelbottom=False) 
@@ -149,10 +153,31 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
         ax3.set_ylabel("z")
         ax3.set_xlabel("t")
         ax3.legend()
-        ax1.grid()
-        ax2.grid()
-        ax3.grid()
         plt.savefig(output_path+f"est_by_t{i}_position.png")
+
+        fig = plt.figure(f"Drone {i} fused Vs GT Vel", figsize=figsize)
+        fig.suptitle(f"Drone {i} fused Vs GT 1D")
+        ax1, ax2, ax3 = fig.subplots(3, 1)
+        if poses_gt is not None:
+            # Plot velocity
+            ax1.plot(poses_gt[i].t, poses_gt[i].vel[:,0], label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
+            ax2.plot(poses_gt[i].t, poses_gt[i].vel[:,1], label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
+            ax3.plot(poses_gt[i].t, poses_gt[i].vel[:,2], label=f"Ground Truth ${i}$", marker='.', linestyle = 'None')
+        ax1.plot(poses_fused[i].t, poses_fused[i].vel[:,0], label=f"$D^2$VINS {_id}")
+        ax2.plot(poses_fused[i].t, poses_fused[i].vel[:,1], label=f"$D^2$VINS {_id}")
+        ax3.plot(poses_fused[i].t, poses_fused[i].vel[:,2], label=f"$D^2$VINS {_id}")
+        if poses_pgo is not None:
+            ax1.plot(poses_pgo[i].t, poses_pgo[i].vel[:,0], '.', label=f"$D^2$PGO Traj{i}")
+            ax2.plot(poses_pgo[i].t, poses_pgo[i].vel[:,1], '.', label=f"$D^2$PGO Traj{i}")
+            ax3.plot(poses_pgo[i].t, poses_pgo[i].vel[:,2], '.', label=f"$D^2$PGO Traj{i}")
+        ax1.tick_params( axis='x', which='both', bottom=False, top=False, labelbottom=False)
+        ax1.set_ylabel("vx")
+        ax2.tick_params( axis='x', which='both', bottom=False, top=False, labelbottom=False)
+        ax2.set_ylabel("vy")
+        ax3.set_ylabel("vz")
+        ax3.set_xlabel("t")
+        ax3.legend()
+        plt.savefig(output_path+f"est_by_t{i}_velocity.png")
 
         fig = plt.figure(f"Drone {i} fused Vs GT Att", figsize=figsize)
         ax1, ax2, ax3 = fig.subplots(3, 1)
@@ -173,15 +198,12 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
         ax1.set_ylabel("Yaw (deg)")
         ax1.set_xlabel("t")
         ax1.legend()
-        ax1.grid()
         ax2.set_ylabel("Pitch (deg)")
         ax2.set_xlabel("t")
         ax2.legend()
-        ax2.grid()
         ax3.set_xlabel("t")
         ax2.set_ylabel("Roll (deg)")
         ax3.legend()
-        ax3.grid()
         plt.savefig(output_path+f"est_by_t{i}_attitude.png")
 
 def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=None,outlier_thres=100, 

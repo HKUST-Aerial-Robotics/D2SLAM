@@ -13,6 +13,7 @@ struct ConsensusSolverConfig;
 };
 namespace D2VINS {
 using D2Common::CameraConfig;
+using D2Common::ESTIMATION_MODE;
 struct D2VINSConfig {
     //Inputs
     std::string imu_topic;
@@ -24,6 +25,9 @@ struct D2VINSConfig {
     double gyr_w = 0.0004;
     double focal_length = 460.0;
     double initial_pos_sqrt_info = 1000.0;
+    double initial_vel_sqrt_info = 100.0;
+    double initial_ba_sqrt_info = 5.0;
+    double initial_bg_sqrt_info = 10.0;
     double initial_yaw_sqrt_info = 10000.0;
     double initial_cam_pos_sqrt_info = 1000.0;
     double initial_cam_ang_sqrt_info = 10000.0;
@@ -52,6 +56,11 @@ struct D2VINSConfig {
     InitialMethod init_method = INIT_POSE_PNP;
     double depth_estimate_baseline = 0.05;
     double tri_max_err = 0.1;
+    double mono_initial_tri_max_err = 0.05;
+    bool add_vel_ba_prior = false;
+    int solve_relative_pose_min_pts = 20;
+    double solve_relative_pose_min_parallex = 30.0/460.0;
+    bool enable_sfm_initialization = false;
     
     //Estimation
     bool estimate_td = false;
@@ -65,15 +74,12 @@ struct D2VINSConfig {
     double process_input_timer = 100.0;
     double estimator_timer_freq = 10.0;
     int warn_pending_frames = 10;
-    enum ESTIMATION_MODE {
-        SINGLE_DRONE_MODE, //Not accept remote frame
-        SOLVE_ALL_MODE, //Each drone solve all the information
-        DISTRIBUTED_CAMERA_CONSENUS, //Distributed camera consensus
-        SERVER_MODE //In this mode receive all remote and solve them
-    } estimation_mode = SOLVE_ALL_MODE;
+    ESTIMATION_MODE estimation_mode;
     double estimate_extrinsic_vel_thres = 0.2;
     int max_solve_cnt = 10000;
     int max_solve_measurements = -1;
+    int min_solve_cnt = 10;
+    bool not_estimate_first_extrinsic = false;
 
     //Fuse depth
     bool fuse_dep = true;

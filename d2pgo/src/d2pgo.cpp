@@ -11,6 +11,9 @@ namespace D2PGO {
 
 void D2PGO::addFrame(D2BaseFrame frame) {
     const Guard lock(state_lock);
+    if (state.hasFrame(frame.frame_id)) {
+        return;
+    }
     if (config.is_realtime && state.hasDrone(frame.drone_id)) {
         //Use ego motion and current estimation to predict the frame pose
         auto ego_motion = frame.initial_ego_pose;

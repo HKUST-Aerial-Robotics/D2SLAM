@@ -85,6 +85,8 @@ void D2VINSConfig::init(const std::string & config_file) {
     max_solve_measurements = fsSettings["max_solve_measurements"];
     min_measurements_per_keyframe = fsSettings["min_measurements_per_keyframe"];
     nearby_drone_dist = fsSettings["nearby_drone_dist"];
+    not_estimate_first_extrinsic = (int) fsSettings["not_estimate_first_extrinsic"];
+
     //Multi-drone
     estimation_mode = (ESTIMATION_MODE) (int) fsSettings["estimation_mode"];
     lazy_broadcast_keyframe = (int) fsSettings["lazy_broadcast_keyframe"];
@@ -93,6 +95,8 @@ void D2VINSConfig::init(const std::string & config_file) {
     init_method = (InitialMethod) (int)fsSettings["init_method"];
     depth_estimate_baseline = fsSettings["depth_estimate_baseline"];
     tri_max_err = fsSettings["tri_max_err"];
+    add_vel_ba_prior = (int)fsSettings["add_vel_ba_prior"];
+    enable_sfm_initialization = (int)fsSettings["enable_sfm_initialization"];
     
     //Sliding window
     max_sld_win_size = fsSettings["max_sld_win_size"];

@@ -184,6 +184,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
             }
         } else if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
             auto seq = params->camera_seq[i];
+            // printf("[Debug] fourcorner_fisheye seq %d\n", seq);
             visual_array.images[seq] = generateImageDescriptor(msg, i, tmp);
         }
 
@@ -227,6 +228,12 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vc
     TicToc tt;
     if (_config.enable_undistort_image) {
         undist = cv::Mat(undistortors[vcam_id]->undist_id_cuda(undist, 0, true));
+        char text[100] = {0};
+        #ifdef DEBUG
+        sprintf(text, "Frame %d: %ld Features", kf_count, msg.keyframe_id);
+        cv::imshow(text, undist);
+        cv::waitKey(0);
+        #endif
     }
     if (params->enable_perf_output) {
         printf("[D2Frontend::LoopCam] undist image cost %.1fms\n", tt.toc());
@@ -256,7 +263,7 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vc
     if (_config.send_img) {
         encodeImage(image_left, vframe);
     }
-    if (_config.show) {
+    if (1) {
         cv::Mat img_up = image_left;
         if (!_config.send_img) {
             encodeImage(img_up, vframe);
@@ -530,6 +537,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         //We only inference when superpoint max num > 0
         //otherwise, d2vins only uses LK optical flow feature.
         if (_config.cnn_use_onnx) {
+            //TODO: Change to Tensorrt
             superpoint_onnx->inference(img, landmarks_2d, vframe.landmark_descriptor, vframe.landmark_scores);
         }
     }

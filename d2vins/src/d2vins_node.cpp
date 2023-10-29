@@ -10,6 +10,7 @@
 #include <chrono>
 #include <d2frontend/d2featuretracker.h>
 #include <swarm_msgs/swarm_fused.h>
+#include <spdlog/spdlog.h>
 
 using namespace std::chrono;
 #define BACKWARD_HAS_DW 1
@@ -47,7 +48,7 @@ protected:
     }
 
     virtual void backendFrameCallback(const D2Common::VisualImageDescArray & viokf) override {
-        if (params->estimation_mode < D2VINSConfig::SERVER_MODE) {
+        if (params->estimation_mode < D2Common::SERVER_MODE) {
             Guard guard(queue_lock);
             viokf_queue.emplace(viokf);
         }
@@ -55,21 +56,21 @@ protected:
     };
 
     void processRemoteImage(VisualImageDescArray & frame_desc, bool succ_track) override {
-        {
-            ready_drones.insert(frame_desc.drone_id);
-            vins_poses[frame_desc.drone_id] = std::make_pair(frame_desc.reference_frame_id, frame_desc.pose_drone);
-            if (params->estimation_mode != D2VINSConfig::SINGLE_DRONE_MODE && succ_track &&
-                    !frame_desc.is_lazy_frame && frame_desc.matched_frame < 0) {
-                estimator->inputRemoteImage(frame_desc);
-            } else {
-                if (params->estimation_mode != D2VINSConfig::SINGLE_DRONE_MODE && 
-                        frame_desc.sld_win_status.size() > 0) {
-                    estimator->updateSldwin(frame_desc.drone_id, frame_desc.sld_win_status);
-                }
-                if (frame_desc.matched_frame < 0) {
-                    VINSFrame frame(frame_desc);
-                    estimator->getVisualizer().pubFrame(&frame);
-                }
+        spdlog::debug("[D2VINS] processRemoteImage: frame_id {}, drone_id {}, matched_frame {}, is_keyframe {}, succ_track {}, is_lazy_frame {}, sld_win_status size {}",
+                frame_desc.frame_id, frame_desc.drone_id, frame_desc.matched_frame, frame_desc.is_keyframe, succ_track, frame_desc.is_lazy_frame, frame_desc.sld_win_status.size());
+        ready_drones.insert(frame_desc.drone_id);
+        vins_poses[frame_desc.drone_id] = std::make_pair(frame_desc.reference_frame_id, frame_desc.pose_drone);
+        if (params->estimation_mode != D2Common::SINGLE_DRONE_MODE && succ_track &&
+                !frame_desc.is_lazy_frame && frame_desc.matched_frame < 0) {
+            estimator->inputRemoteImage(frame_desc);
+        } else {
+            if (params->estimation_mode != D2Common::SINGLE_DRONE_MODE && 
+                    frame_desc.sld_win_status.size() > 0) {
+                estimator->updateSldwin(frame_desc.drone_id, frame_desc.sld_win_status);
+            }
+            if (frame_desc.matched_frame < 0) {
+                VINSFrame frame(frame_desc);
+                estimator->getVisualizer().pubFrame(&frame);
             }
         }
         D2Frontend::processRemoteImage(frame_desc, succ_track);
@@ -147,7 +148,6 @@ protected:
                             printf("\n");
                         }
                     }
-                    printf("[D2VINS] force landmarks %d to broadcast\n", force_landmarks);
                     Utility::TicToc broadcast_timer;
                     loop_net->broadcastVisualImageDescArray(viokf, force_landmarks);
                     if (params->verbose || params->enable_perf_output) {
@@ -172,7 +172,7 @@ protected:
     }
 
     void pgoSwarmFusedCallback(const swarm_msgs::swarm_fused & fused) {
-        if (params->estimation_mode == D2VINSConfig::SINGLE_DRONE_MODE) {
+        if (params->estimation_mode == D2Common::SINGLE_DRONE_MODE) {
             return;
         }
         for (size_t i = 0; i < fused.ids.size(); i++) {
@@ -205,7 +205,6 @@ protected:
         }
     }
 
-
     void Init(ros::NodeHandle & nh) {
         D2Frontend::Init(nh);
         initParams(nh);
@@ -219,9 +218,9 @@ protected:
             processVIOKFThread();
             printf("[D2VINS] processVIOKFThread exit.\n");
         });
-        if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS && params->consensus_sync_to_start) {
+        if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS && params->consensus_sync_to_start) {
             solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
-        } else if (params->estimation_mode == D2VINSConfig::DISTRIBUTED_CAMERA_CONSENUS) {
+        } else if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
             thread_solver = std::thread([&] {
                 solverThread();
             });
@@ -240,8 +239,10 @@ public:
     }
 };
 
+//TODO: d2vins destructor bug
 int main(int argc, char **argv)
 {
+    spdlog::set_pattern("[%H:%M:%S][%^%l%$]%g:%# %v");
     cv::setNumThreads(1);
     ros::init(argc, argv, "d2vins");
     ros::NodeHandle n("~");
