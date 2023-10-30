@@ -88,7 +88,7 @@ def get_pose0(bag):
             # ypr = 
             print(f"Will use {t0} as start yaw0 {y0} pos0 {pos0} qcalib {q_calib}")
             return pos0, q_calib, y0
-        elif topic == "/SwarmNode1/pose":
+        elif topic == "/SwarmNode1/pose" or topic=="/leica/pose/relative":
             quat0 = msg.pose.orientation
             pos0 = msg.pose.position
             y0, p0, r0 = quat2eulers(quat0.w, quat0.x, quat0.y, quat0.z)
@@ -100,8 +100,8 @@ def get_pose0(bag):
     return None, None, None
 
 def compress_image_msg(msg):
-    img16 = bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
-    cv_image = (img16/256).astype('uint8')
+    cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+    # cv_image = (img16/256).astype('uint8')
     comp_img = CompressedImage()
     comp_img.header = msg.header
     comp_img.format = "mono8; jpeg compressed"
@@ -183,7 +183,7 @@ if __name__ == "__main__":
                         cv.waitKey(1)
                     continue
                 outbag.write(topic, msg, t + _dt )
-                if topic == "/vrpn_client/raw_transform" or topic == "/SwarmNode1/pose":
+                if topic == "/vrpn_client/raw_transform" or topic == "/SwarmNode1/pose" or topic=="/leica/pose/relative":
                     if topic == "/vrpn_client/raw_transform":
                         posestamp = PoseStamped()
                         posestamp.header = msg.header
@@ -194,7 +194,7 @@ if __name__ == "__main__":
                         quat = msg.transform.rotation
                         quat = np.array([quat.w, quat.x, quat.y, quat.z])
                         quat = quaternion_multiply(q_calib, quat)
-                    elif topic == "/SwarmNode1/pose":
+                    elif topic == "/SwarmNode1/pose" or topic=="/leica/pose/relative":
                         posestamp = PoseStamped()
                         posestamp.header = msg.header
                         posestamp.header.frame_id = "world"

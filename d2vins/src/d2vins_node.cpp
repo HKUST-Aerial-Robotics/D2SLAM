@@ -97,7 +97,7 @@ protected:
             if (!viokf_queue.empty()) {
                 Utility::TicToc estimator_timer;
                 if (viokf_queue.size() > params->warn_pending_frames) {
-                    ROS_WARN("[D2VINS] Low efficient on D2VINS::estimator pending frames: %d", viokf_queue.size());
+                    SPDLOG_WARN("[D2VINS] Low efficient on D2VINS::estimator pending frames: {}", viokf_queue.size());
                 }
                 D2Common::VisualImageDescArray viokf;
                 {
@@ -116,15 +116,15 @@ protected:
                     }
                     updateOutModuleSldWinAndLandmarkDB();
                     need_solve = true;
-                    if (params->verbose || params->enable_perf_output)
-                        printf("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
+                    if (params->enable_perf_output)
+                        SPDLOG_INFO("[D2VINS] input_time {:.1f}ms, loop detector related takes {:.1f} ms", input_time, loop.toc());
                 }
 
                 if (params->pub_visual_frame) {
                     visual_array_pub.publish(viokf.toROS());
                 }
-                if (params->verbose || params->enable_perf_output)
-                    printf("[D2VINS] estimator_timer_callback takes %.1f ms\n", estimator_timer.toc());
+                if (params->enable_perf_output)
+                    SPDLOG_INFO("[D2VINS] estimator_timer_callback takes {:.1f}ms", estimator_timer.toc());
                 bool discover_mode = false;
                 for (auto & id : ready_drones) {
                     if (pgo_poses.find(id) == pgo_poses.end() && !estimator->getState().hasDrone(id)) {
@@ -140,18 +140,15 @@ protected:
                     bool force_landmarks = false || discover_mode;
                     if (nearbydrones.size() > 0) {
                         force_landmarks = true;
-                        if (params->verbose) {
-                            printf("[D2VINS] Nearby drones: ");
-                            for (auto & id : nearbydrones) {
-                                printf("%d ", id);
-                            }
-                            printf("\n");
+                        spdlog::debug("[D2VINS] Nearby drones: ");
+                        for (auto & id : nearbydrones) {
+                            spdlog::debug("{}", id);
                         }
                     }
                     Utility::TicToc broadcast_timer;
                     loop_net->broadcastVisualImageDescArray(viokf, force_landmarks);
-                    if (params->verbose || params->enable_perf_output) {
-                        printf("[D2VINS] broadcastVisualImageDescArray takes %.1f ms\n", broadcast_timer.toc());
+                    if (params->enable_perf_output) {
+                        SPDLOG_INFO("[D2VINS] broadcastVisualImageDescArray takes %.1f ms\n", broadcast_timer.toc());
                     }
                 }
             } else {
@@ -178,8 +175,7 @@ protected:
         for (size_t i = 0; i < fused.ids.size(); i++) {
             Swarm::Pose pose(fused.local_drone_position[i], fused.local_drone_rotation[i]);
             pgo_poses[fused.ids[i]] = pose;
-            if (params->verbose)
-                printf("[D2VINS] PGO fused drone %d: %s\n", fused.ids[i], pose.toStr().c_str());
+            spdlog::debug("[D2VINS] PGO fused drone {}: {}", fused.ids[i], pose.toStr());
         }
         estimator->setPGOPoses(pgo_poses);
     }
@@ -217,7 +213,7 @@ protected:
         pgo_fused_sub = nh.subscribe("/d2pgo/swarm_fused", 1, &D2VINSNode::pgoSwarmFusedCallback, this, ros::TransportHints().tcpNoDelay());
         thread_viokf = std::thread([&] {
             processVIOKFThread();
-            printf("[D2VINS] processVIOKFThread exit.\n");
+            SPDLOG_INFO("[D2VINS] processVIOKFThread exit.");
         });
         if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS && params->consensus_sync_to_start) {
             solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
@@ -227,11 +223,11 @@ protected:
             });
         }
         thread_comm = std::thread([&] {
-            ROS_INFO("Starting d2vins_net lcm.");
+            SPDLOG_INFO("Starting d2vins_net lcm.");
             while(0 == d2vins_net->lcmHandle()) {
             }
         });
-        ROS_INFO("D2VINS node %d initialized. Ready to start.", params->self_id);
+        SPDLOG_INFO("D2VINS node {} initialized. Ready to start.", params->self_id);
     }
 
 public:
@@ -242,7 +238,7 @@ public:
 
 int main(int argc, char **argv)
 {
-    spdlog::set_pattern("[%H:%M:%S][%^%l%$]%g:%# %v");
+    spdlog::set_pattern("[%H:%M:%S][%^%l%$][%s,%!,L%#] %v");
     cv::setNumThreads(1);
     ros::init(argc, argv, "d2vins");
     ros::NodeHandle n("~");

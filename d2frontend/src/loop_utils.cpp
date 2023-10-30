@@ -415,6 +415,7 @@ opticalflowTrackPyr(const cv::Mat &cur_img,
         }
         reduceVector(prev_pts, status);
         reduceVector(prev_types, status);
+        reduceVector(prev_local_index, status);
         reduceVector(ids, status);
     }
     status.resize(0);
@@ -754,7 +755,7 @@ int computeRelativePosePnPnonCentral(
         success = pnp_result_verify(true, inliers.size(), RPerr, DP_b_to_a);
     }
 
-    spdlog::info("[LoopDetector@{}] features {}/{} succ {} gPnPRansac time {:.2f}ms "
+    SPDLOG_INFO("[LoopDetector@{}] features {}/{} succ {} gPnPRansac time {:.2f}ms "
                "RP: {} g_err P{}\n",
                params->self_id, inliers.size(), lm_3d_norm_b.size(), success,
                tic.toc(), DP_b_to_a.toStr(), RPerr);

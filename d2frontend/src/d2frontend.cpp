@@ -134,8 +134,7 @@ void D2Frontend::onRemoteImage(VisualImageDescArray frame_desc) {
 void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc, bool succ_track) {
     if (params->enable_loop) {
         if (!frame_desc.isMatchedFrame()) {
-            if (params->verbose)
-                printf("[D2Frontend] Remote image %d is not matched, directly pass to detector\n", frame_desc.frame_id);
+            SPDLOG_DEBUG("Remote image {} is not matched, directly pass to detector", frame_desc.frame_id);
             //Check if keyframe!!!
             if (frame_desc.is_keyframe) {
                 addToLoopQueue(frame_desc);
@@ -143,20 +142,17 @@ void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc, bool succ
         } else {
             //We need to wait the matched frame is added to loop detector.
             if (loop_detector->hasFrame(frame_desc.matched_frame) || frame_desc.matched_drone != params->self_id) {
-                if (params->verbose) {
-                    printf("[D2Frontend] Remote image %d is matched with %d drone %d add to loop queue\n", 
+                SPDLOG_DEBUG("Remote image {} is matched with {} drone {} add to loop queue",
                             frame_desc.frame_id, frame_desc.matched_frame, frame_desc.drone_id);
-                }
                 addToLoopQueue(frame_desc);
             } else {
                 VisualImageDescArray _frame_desc = frame_desc;
-                if (params->verbose)
-                    printf("[D2Frontend] Remote image %d is matched with %d, waiting for matched frame\n", frame_desc.frame_id, frame_desc.matched_frame);
+                SPDLOG_DEBUG("Remote image {} is matched with {}, waiting for matched frame", frame_desc.frame_id, frame_desc.matched_frame);
                 new std::thread([&](VisualImageDescArray frame) {
                     int count = 0;
                     while (count < 1000) {
                         if (loop_detector->hasFrame(frame.matched_frame)) {
-                            printf("[D2Frontend] frame %ld waited %d us for matched frame %d\n", frame.frame_id, count * 1000, 
+                            SPDLOG_INFO("Frame {} waited {} us for matched frame {}", frame.frame_id, count * 1000, 
                                     frame.matched_frame);
                             addToLoopQueue(frame);
                             break;
@@ -181,7 +177,7 @@ void D2Frontend::loopDetectionThread() {
                 loop_queue.pop();
             }
             if (loop_queue.size() > 10) {
-                ROS_WARN("[D2Frontend] Loop queue size is %d", loop_queue.size());
+                SPDLOG_WARN("Loop queue size is {}", loop_queue.size());
             }
             loop_detector->processImageArray(vframearry);
         }
@@ -245,13 +241,13 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     image_transport::TransportHints hints(format, ros::TransportHints().tcpNoDelay(true));
 
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || params->camera_configuration == CameraConfig::STEREO_FISHEYE) {
-        ROS_INFO("[D2Frontend] Input: images %s and %s", params->image_topics[0].c_str(), params->image_topics[1].c_str());
+        SPDLOG_INFO("Input: images {} and {}", params->image_topics[0], params->image_topics[1]);
         image_sub_l = new ImageSubscriber(*it_, params->image_topics[0], 1000, hints);
         image_sub_r = new ImageSubscriber(*it_, params->image_topics[1], 1000, hints);
         sync = new message_filters::Synchronizer<ApproSync>(ApproSync(10), *image_sub_l, *image_sub_r);
         sync->registerCallback(boost::bind(&D2Frontend::stereoImagesCallback, this, _1, _2));
     } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
-        ROS_INFO("[D2Frontend] Input: raw images %s and depth %s", params->image_topics[0].c_str(), params->depth_topics[0].c_str());
+        SPDLOG_INFO("Input: raw images {} and depth {}", params->image_topics[0], params->depth_topics[0]);
         image_sub_l = new ImageSubscriber(*it_, params->image_topics[0], 1000, hints);
         image_sub_r = new ImageSubscriber(*it_, params->depth_topics[0], 1000, hints);
         sync = new message_filters::Synchronizer<ApproSync>(ApproSync(10), *image_sub_l, *image_sub_r);
@@ -266,7 +262,7 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
     loopconn_pub = nh.advertise<swarm_msgs::LoopEdge>("loop", 10);
     
     if (params->enable_sub_remote_frame) {
-        ROS_INFO("[SWARM_LOOP] Subscribing remote image from bag");
+        SPDLOG_INFO("Subscribing remote image from bag");
         remote_img_sub = nh.subscribe("/swarm_loop/remote_frame_desc", 1, &D2Frontend::onRemoteFrameROS, this, ros::TransportHints().tcpNoDelay());
     }
 

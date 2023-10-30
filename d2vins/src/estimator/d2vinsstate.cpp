@@ -414,13 +414,13 @@ VINSFrame * D2EstimatorState::addFrame(const VisualImageDescArray & images, cons
     VINSFrame * frame = addVINSFrame(_frame);
     if (_frame.drone_id != self_id) {
         if (sld_wins.find(_frame.drone_id) == sld_wins.end()) {
-            spdlog::info("[D2VINS::D2EstimatorState] Add sld_win for remote drone {}", _frame.drone_id);
+            SPDLOG_INFO("[D2VINS::D2EstimatorState] Add sld_win for remote drone {}", _frame.drone_id);
             sld_wins[_frame.drone_id] = std::vector<VINSFrame *>();
         }
         sld_wins[_frame.drone_id].emplace_back(frame);
         for (auto & img : images.images) {
             if (extrinsic.find(img.camera_id) == extrinsic.end()) {
-                spdlog::info("[D2VINS::D2EstimatorState] Adding extrinsic of camera {} from drone@{}", img.camera_id, _frame.drone_id);
+                SPDLOG_INFO("[D2VINS::D2EstimatorState] Adding extrinsic of camera {} from drone@{}", img.camera_id, _frame.drone_id);
                 addCamera(img.extrinsic, img.camera_index, images.drone_id, img.camera_id);
             }
         }
@@ -455,7 +455,7 @@ void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame * frame) {
     //b is zero vector
     bool add_vel_ba_prior = params->add_vel_ba_prior;
     int local_cam_num = params->camera_num;
-    spdlog::warn("Add prior for first frame, extrinsic {}, {} and speed: {}", params->estimate_extrinsic, local_cam_num, add_vel_ba_prior);
+    SPDLOG_WARN("Add prior for first frame, extrinsic {}, {} and speed: {}", params->estimate_extrinsic, local_cam_num, add_vel_ba_prior);
     int Adim = POSE_EFF_SIZE + (params->estimate_extrinsic?POSE_EFF_SIZE*local_cam_num: 0) + (add_vel_ba_prior?FRAME_SPDBIAS_SIZE: 0);
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(Adim, Adim);
     A.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * params->initial_pos_sqrt_info;
@@ -501,7 +501,7 @@ void D2EstimatorState::syncFromState(const std::set<LandmarkIdType> & used_landm
     for (auto it : _frame_pose_state) {
         auto frame_id = it.first;
         if (frame_db.find(frame_id) == frame_db.end()) {
-            spdlog::error("[D2VINS::D2EstimatorState] Cannot find frame {}", frame_id);
+            SPDLOG_ERROR("[D2VINS::D2EstimatorState] Cannot find frame {}", frame_id);
         }
         auto frame = static_cast<VINSFrame*>(frame_db.at(frame_id));
         if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS && frame->drone_id != self_id) {
@@ -517,7 +517,7 @@ void D2EstimatorState::syncFromState(const std::set<LandmarkIdType> & used_landm
     lmanager.syncState(this);
     if (size() < params->max_sld_win_size ) {
         //We only repropagte when sld win is smaller than max, means not full initialized.
-        spdlog::info("[D2VINS] not fully initialized, will repropagte IMU");
+        SPDLOG_INFO("[D2VINS] not fully initialized, will repropagte IMU");
         repropagateIMU();
     }
     outlierRejection(used_landmarks);
@@ -674,14 +674,14 @@ bool D2EstimatorState::monoInitialization() {
     printSldWin(keyframe_measurments);
 
     if (sld_wins.at(self_id).size() < 5) {
-        spdlog::warn("monoInitialization: Not enough frames for mono initialization");
+        SPDLOG_WARN("monoInitialization: Not enough frames for mono initialization");
         return false;
     }
     auto sld_win = sld_wins.at(self_id);
     const int camera_idx = generateCameraId(self_id, 0); // Default use camera 0 for initialization.
     auto sfm_poses = lmanager.SFMInitialization(sld_win, camera_idx);
     if (sfm_poses.size() == 0) {
-        spdlog::warn("monoInitialization: SFM initialization failed");
+        SPDLOG_WARN("monoInitialization: SFM initialization failed");
         return false;
     }
 
@@ -694,16 +694,16 @@ bool D2EstimatorState::monoInitialization() {
 
     // Then use these poses to perform gyro bias calibration
     if (!solveGyroscopeBias(sld_win, sfm_poses, Tbc)) {
-        spdlog::warn("monoInitialization: Gyroscope bias calibration failed");
+        SPDLOG_WARN("monoInitialization: Gyroscope bias calibration failed");
         return false;
     }
     // Then use these poses to perform linear alignment
     if(!LinearAlignment(sld_win, sfm_poses, Tbc)) {
-        spdlog::warn("monoInitialization: Linear alignment failed");
+        SPDLOG_WARN("monoInitialization: Linear alignment failed");
         return false;
     }
 
-    spdlog::info("monoInitialization: Finished mono initialization");
+    SPDLOG_INFO("monoInitialization: Finished mono initialization");
     return true;
 }
 
@@ -807,7 +807,7 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
     spdlog::debug("LinearAlignment: Scale: {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", s, g.norm(), g.x(), g.y(), g.z());
     if(fabs(g.norm() - IMUData::Gravity.norm()) > 1.0 || s < 0)
     {
-        spdlog::warn("LinearAlignment Failed. Scale or gnorm wrong: g {:.3f} {:.3f} {:.3f} s {:.3f}", g.x(), g.y(), g.z(), s);
+        SPDLOG_WARN("LinearAlignment Failed. Scale or gnorm wrong: g {:.3f} {:.3f} {:.3f} s {:.3f}", g.x(), g.y(), g.z(), s);
         return false;
     }
     RefineGravity(sld_win, sfm_poses, extrinsic, g, x);
@@ -815,7 +815,7 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
     (x.tail<1>())(0) = s;
     if(s < 0.0 )
     {
-        spdlog::warn("LinearAlignment Failed in RefineGravity. Scale wrong");
+        SPDLOG_WARN("LinearAlignment Failed in RefineGravity. Scale wrong");
         return false;
     }
     
@@ -825,7 +825,7 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
     double yaw = quat2eulers(q0 * sfm_poses.at(sld_win[0]->frame_id).att()).z();
     q0 = eulers2quat(Eigen::Vector3d{0, 0, -yaw}) * q0;
     g = q0 * g;
-    spdlog::info("G final {:.4f} {:.4f} {:.4f}", g.x(), g.y(), g.z());
+    SPDLOG_INFO("G final {:.4f} {:.4f} {:.4f}", g.x(), g.y(), g.z());
 
     for (int i = 0; i < sld_win.size(); i++) {
         auto frame = sld_win[i];
@@ -840,7 +840,7 @@ bool D2EstimatorState::LinearAlignment(std::vector<VINSFrame * > sld_win,
         Vector3d vel = imu_pose.R()*x.segment<3>(i * 3);
         setPose(frame->frame_id, imu_pose);
         setVelocity(frame->frame_id, vel);
-        spdlog::info("LinearAlignment: F{} IMU_pose {} vel {:.4f} {:.4f} {:.4f}", 
+        SPDLOG_INFO("LinearAlignment: F{} IMU_pose {} vel {:.4f} {:.4f} {:.4f}", 
             sld_win[i]->frame_id, imu_pose.toStr(), vel.x(), vel.y(), vel.z());
     }
     return true;
@@ -933,6 +933,6 @@ void D2EstimatorState::RefineGravity(std::vector<VINSFrame * > sld_win,
         g0 = (g0 + lxly * dg).normalized() * IMUData::Gravity.norm();
     }   
     g = g0;
-    spdlog::info("RefineGravity: scale {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", x(n_state-1), g.norm(), g.x(), g.y(), g.z());
+    SPDLOG_INFO("RefineGravity: scale {:.3f} g_norm: {:.3f} g {:.3f} {:.3f} {:.3f}", x(n_state-1), g.norm(), g.x(), g.y(), g.z());
 }
 }

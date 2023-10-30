@@ -35,11 +35,11 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
         t0 = image_array.stamp;
     }
 
-    spdlog::info("[LoopDetector] processImageArray {} from {} images: {} landmark: {} lazy: {} matched_to {}@D{}\n", image_array.frame_id,
+    SPDLOG_INFO("[LoopDetector] processImageArray {} from {} images: {} landmark: {} lazy: {} matched_to {}@D{}", image_array.frame_id,
         image_array.drone_id, image_array.images.size(), image_array.spLandmarkNum(), image_array.is_lazy_frame, image_array.matched_frame, image_array.matched_drone);
 
     if (image_array.images.size() == 0) {
-        spdlog::warn("[LoopDetector] FlattenDesc must carry more than zero images");
+        SPDLOG_WARN("[LoopDetector] FlattenDesc must carry more than zero images");
         return;
     }
 
@@ -206,7 +206,7 @@ int LoopDetector::addImageArrayToDatabase(VisualImageDescArray & new_fisheye_des
         }
     }
     keyframe_database[new_fisheye_desc.frame_id] = new_fisheye_desc;
-    spdlog::info("[LoopDetector] Add KF {} with {} images from {} to local keyframe database. Total frames: {}", 
+    SPDLOG_INFO("[LoopDetector] Add KF {} with {} images from {} to local keyframe database. Total frames: {}", 
             new_fisheye_desc.frame_id, new_fisheye_desc.images.size(), new_fisheye_desc.drone_id, keyframe_database.size());
     // new_fisheye_desc.printSize();
     return new_fisheye_desc.frame_id;
@@ -414,7 +414,7 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
         if (dir_a < frame_array_a.images.size() && dir_b < frame_array_b.images.size() && dir_a >= 0 && dir_b >= 0) {
             bool succ = computeCorrespondFeatures(frame_array_a.images[dir_a],frame_array_b.images[dir_b],
                 _lm_pos_a, _idx_a, _lm_norm_3d_b, _idx_b, _camera_indices);
-            spdlog::info("[LoopDetector] computeCorrespondFeatures on camera_index {}:{} gives {} common features", dir_b, dir_a, _lm_pos_a.size());
+            SPDLOG_INFO("[LoopDetector] computeCorrespondFeatures on camera_index {}:{} gives {} common features", dir_b, dir_a, _lm_pos_a.size());
             if (!succ) {
                 continue;
             }
@@ -439,7 +439,7 @@ bool LoopDetector::computeCorrespondFeaturesOnImageArray(const VisualImageDescAr
     if(lm_norm_3d_b.size() > _config.loop_inlier_feature_num && matched_dir_count >= _config.MIN_DIRECTION_LOOP) {
         return true;
     } else {
-        spdlog::warn("[LoopDetector::computeCorrImageArray@{}] Failed: features {}/{} dirs {}/{}", 
+        SPDLOG_WARN("[LoopDetector::computeCorrImageArray@{}] Failed: features {}/{} dirs {}/{}", 
                 self_id, lm_norm_3d_b.size(), _config.loop_inlier_feature_num,
                 matched_dir_count, _config.MIN_DIRECTION_LOOP);
         return false;
@@ -579,7 +579,7 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
 
             if (checkLoopOdometryConsistency(ret)) {
                 loop_count ++;
-                spdlog::info("[LoopDetector] Loop {} Detected {}->{} dt {:.3f}s DPose {} inliers {}. Will publish\n",
+                SPDLOG_INFO("[LoopDetector] Loop {} Detected {}->{} dt {:.3f}s DPose {} inliers {}. Will publish\n",
                     ret.id, ret.drone_id_a, ret.drone_id_b, (ret.ts_b - ret.ts_a).toSec(),
                     DP_old_to_new.toStr().c_str(), ret.pnp_inlier_num);
 
@@ -589,7 +589,7 @@ bool LoopDetector::computeLoop(const VisualImageDescArray & frame_array_a, const
                 inter_drone_loop_count[old_d_id][new_d_id] = inter_drone_loop_count[old_d_id][new_d_id] +1;
             } else {
                 success = false;
-                spdlog::info("[LoopDetector] Loop not consistency with odometry, give up.\n");
+                SPDLOG_INFO("[LoopDetector] Loop not consistency with odometry, give up.\n");
             }
         }
     }

@@ -38,10 +38,10 @@ body_T_cam1: !!opencv-matrix
                 0, 0, 0, 1]
 
 #estimation
-estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
 estimate_td: 0                      # online estimate time offset between camera and imu
 td: -0.02                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
-estimation_mode: 2 #0:single; 1:solve all; 2: distributed; 3:server
+estimation_mode: 0 #0:single; 1:solve all; 2: distributed; 3:server
 double_counting_common_feature: 0
 min_inv_dep: 0.01
 not_estimate_first_extrinsic: 1
@@ -118,6 +118,7 @@ feature_min_dist: 15
 parallex_thres: 0.04
 knn_match_ratio: 0.9 # This apply to superpoint feature track & loop clouse detection.
 track_from_keyframe: 0
+sp_track_use_lk: 1
 
 #CNN
 cnn_use_onnx: 1
@@ -158,7 +159,7 @@ write_pgo_to_file: 1
 debug_save_g2o_only: 0
 
 #outputs
-output_path: "/home/xuhao/output/"
+output_path: "/root/output/"
 debug_print_sldwin: 0
 debug_print_states: 0
 enable_perf_output: 0

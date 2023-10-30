@@ -8,6 +8,7 @@
 #include <opencv2/core/eigen.hpp>
 #include <d2frontend/d2featuretracker.h>
 #include <d2common/fisheye_undistort.h>
+#include <spdlog/spdlog.h>
 
 using namespace std::chrono;
 
@@ -23,7 +24,7 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     int img_height = config.enable_undistort_image ? params->height_undistort: params->height;
 
     if (config.cnn_use_onnx) {
-        printf("[D2FrontEnd::LoopCam] Init CNNs using onnx\n");
+        SPDLOG_INFO("Init CNNs using onnx");
         netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, img_width, img_height, config.cnn_enable_tensorrt, 
             config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8, config.netvlad_int8_calib_table_name);
         superpoint_onnx = new SuperPointONNX(config.superpoint_model, ((int)(params->feature_min_dist/2)), config.pca_comp, 
@@ -33,7 +34,7 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
     }
     undistortors = params->undistortors;
     cams = params->camera_ptrs;
-    printf("[D2FrontEnd::LoopCam] Deepnet ready\n");
+    SPDLOG_INFO("Deepnet ready");
     if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
         fsp.open(params->OUTPUT_PATH+"superpoint.csv", std::fstream::app);
     }
@@ -196,7 +197,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
 
     tt_sum+= tt.toc();
     t_count+= 1;
-    printf("[D2Frontend::LoopCam] KF Count %d loop_cam cost avg %.1fms cur %.1fms\n", kf_count, tt_sum/t_count, tt.toc());
+    SPDLOG_INFO("KF Count {} loop_cam cost avg {:.1f}ms cur {:.1f}ms", kf_count, tt_sum/t_count, tt.toc());
 
     visual_array.frame_id = msg.keyframe_id;
     visual_array.pose_drone = msg.pose_drone;
@@ -218,7 +219,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
 
 VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vcam_id, cv::Mat &_show) {
     if (vcam_id > msg.left_images.size()) {
-        ROS_WARN("Flatten images too few");
+        SPDLOG_WARN("Flatten images too few");
         VisualImageDesc ides;
         ides.stamp = msg.stamp.toSec();
         return ides;
@@ -229,13 +230,13 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vc
         undist = cv::Mat(undistortors[vcam_id]->undist_id_cuda(undist, 0, true));
     }
     if (params->enable_perf_output) {
-        printf("[D2Frontend::LoopCam] undist image cost %.1fms\n", tt.toc());
+        SPDLOG_INFO("[D2Frontend::LoopCam] undist image cost {:.1f}ms", tt.toc());
     }
     VisualImageDesc vframe = extractorImgDescDeepnet(msg.stamp, undist, msg.left_camera_indices[vcam_id], msg.left_camera_ids[vcam_id], false);
 
     if (vframe.image_desc.size() == 0)
     {
-        ROS_WARN("Failed on deepnet: vframe.image_desc.size() == 0.");
+        SPDLOG_WARN("Failed on deepnet: vframe.image_desc.size() == 0.");
         cv::Mat _img;
         // return ides;
     }
@@ -283,7 +284,7 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vc
 VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & msg, int vcam_id, cv::Mat & _show)
 {
     if (vcam_id > msg.left_images.size()) {
-        ROS_WARN("Flatten images too few");
+        SPDLOG_WARN("Flatten images too few");
         VisualImageDesc ides;
         ides.stamp = msg.stamp.toSec();
         return ides;
@@ -293,7 +294,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
 
     if (vframe.image_desc.size() == 0)
     {
-        ROS_WARN("Failed on deepnet: vframe.image_desc.size() == 0.");
+        SPDLOG_WARN("Failed on deepnet: vframe.image_desc.size() == 0.");
         cv::Mat _img;
         // return ides;
     }
@@ -389,7 +390,7 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
 
     if (vframe0.image_desc.size() == 0 && vframe1.image_desc.size() == 0)
     {
-        ROS_WARN("Failed on deepnet: vframe0.image_desc.size() == 0 && vframe1.image_desc.size() == 0");
+        SPDLOG_WARN("Failed on deepnet: vframe0.image_desc.size() == 0 && vframe1.image_desc.size() == 0");
         // cv::Mat _img;
         // return ides;
     }
@@ -549,7 +550,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         lm.pt2d = pt_up;
         pt_up3d.normalize();
         if (pt_up3d.hasNaN()) {
-            ROS_WARN("NaN detected!!! This will inference landmark_descriptor\n");
+            SPDLOG_WARN("NaN detected!!! This will inference landmark_descriptor\n");
             continue;
         }
         lm.pt3d_norm = pt_up3d;

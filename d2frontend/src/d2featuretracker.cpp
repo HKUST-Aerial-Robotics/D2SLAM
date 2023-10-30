@@ -27,7 +27,7 @@ D2FeatureTracker::D2FeatureTracker(D2FTConfig config):
     search_radius = _config.search_local_max_dist*image_width;
     reference_frame_id = params->self_id;
     _config.sp_track_use_lk = _config.sp_track_use_lk && params->loopcamconfig->superpoint_max_num > 0;
-    spdlog::info("sp {} _config.sp_track_use_lk {}", params->loopcamconfig->superpoint_max_num, _config.sp_track_use_lk);
+    SPDLOG_INFO("sp {} _config.sp_track_use_lk {}", params->loopcamconfig->superpoint_max_num, _config.sp_track_use_lk);
 }
 
 void D2FeatureTracker::updatebySldWin(const std::vector<VINSFrame*> sld_win) {
@@ -89,7 +89,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     TicToc tic;
     if (!inited) {
         inited = true;
-        ROS_INFO("[D2FeatureTracker] receive first, will init kf\n");
+        SPDLOG_INFO("receive first, will init kf");
         iskeyframe = true;
         if (!_config.sp_track_use_lk)
         {
@@ -124,7 +124,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     }
     processFrame(frames, iskeyframe);
     report.ft_time = tic.toc();
-    spdlog::info("[D2FeatureTracker] frame_id: {} is_kf {}, landmark_num: {}/{}, mean_para {:.2f}%, time_cost: {:.1f}ms ", 
+    SPDLOG_INFO("frame_id: {} is_kf {}, landmark_num: {}/{}, mean_para {:.2f}%, time_cost: {:.1f}ms ", 
         frames.frame_id, iskeyframe, report.parallex_num, frames.landmarkNum(), report.meanParallex()*100, report.ft_time);
     if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
@@ -155,18 +155,16 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
             const auto & last = current_keyframes[i];
             if (frame_a.images.size() == 0 ||
                 frame_a.images[0].image_desc.size() != params->netvlad_dims) {
-                ROS_ERROR("[D2FeatureTracker::trackRemote] Warn: no vaild frame.image_desc.size() frame_id %ld ", frame_a.frame_id);
+                ROS_ERROR("No vaild frame.image_desc.size() frame_id {}", frame_a.frame_id);
                 return false;
             }
             const Map<const VectorXf> vlad_desc_remote(frame_a.images[0].image_desc.data(), params->netvlad_dims);
             const Map<const VectorXf> vlad_desc(last.images[0].image_desc.data(), params->netvlad_dims);
             double netvlad_similar = vlad_desc.dot(vlad_desc_remote);
             if (netvlad_similar < params->track_remote_netvlad_thres) {
-                // if (params->verbose)
-                //     printf("[D2FeatureTracker::trackRemote@%d] Remote image does not match current image %.2f/%.2f\n", params->self_id, netvlad_similar, params->track_remote_netvlad_thres);
+                SPDLOG_DEBUG("D{} Remote image does not match current image {:.2f}/{:.2f}", params->self_id, netvlad_similar, params->track_remote_netvlad_thres);
             } else {
-                if (params->verbose)
-                    printf("[D2FeatureTracker::trackRemote@%d] Remote image match image %d(%ld) %.2f/%.2f\n", params->self_id,
+                SPDLOG_DEBUG("D{} Remote image match image {}({}) {:.2f}/{:.2f}", params->self_id,
                             i, last.frame_id, netvlad_similar, params->track_remote_netvlad_thres);
                 prev = last;
                 dir_a = 0;
@@ -189,10 +187,8 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
                 } else {
                     prev = last;
                     dir_b = dirs[j];
-                    if (params->verbose) {
-                        printf("[D2FeatureTracker::trackRemote@%d] Remote image match image drone %d(%ld) dir %d:%d %.2f/%.2f\n", params->self_id,
+                    SPDLOG_DEBUG("D{} Remote image match image drone {}({}) dir {}:{} {:.2f}/{:.2f}", params->self_id,
                                 i, last.frame_id, dir_a, dir_b, netvlad_similar, params->track_remote_netvlad_thres);
-                    }
                     return true;
                 }
             }
@@ -204,7 +200,7 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
 bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     const Guard lock(track_lock);
     if (frames.is_lazy_frame || frames.matched_frame >= 0) {
-        printf("[D2FeatureTracker::trackRemoteFrames] lazy frame or matched frame, skip\n");
+        SPDLOG_INFO("[D2FeatureTracker::trackRemoteFrames] lazy frame or matched frame, skip\n");
         return false;
     }
     bool matched = false;
@@ -223,7 +219,7 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     //         frames.frame_id, frames.reference_frame_id, reference_frame_id, use_motion_predict);
     if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         report.compose(trackRemote(frames.images[0], prev.images[0], use_motion_predict, frames.pose_drone));
-        if (report.remote_matched_num > 0 && params->camera_configuration == CameraConfig::STEREO_PINHOLE && !param.lr_match_use_lk) {
+        if (report.remote_matched_num > 0 && params->camera_configuration == CameraConfig::STEREO_PINHOLE && !_config.lr_match_use_lk) {
             report.compose(trackRemote(frames.images[1], prev.images[1], use_motion_predict, frames.pose_drone));
         }
     } else if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
@@ -253,8 +249,8 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
         }
     }
     report.ft_time = tic.toc();
-    if (params->verbose || params->enable_perf_output)
-        printf("[D2FeatureTracker::trackRemoteFrames] frame %ld, matched %d, time %.2fms\n", frames.frame_id, report.remote_matched_num, report.ft_time);
+    if (params->enable_perf_output)
+        SPDLOG_INFO("[D2FeatureTracker::trackRemoteFrames] frame {}, matched {}, time {:.2f}ms", frames.frame_id, report.remote_matched_num, report.ft_time);
     if (report.remote_matched_num > 0) {
         return true;
     } else {
@@ -266,7 +262,7 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualI
         bool use_motion_predict, const Swarm::Pose & motion_prediction) {
     TrackReport report;
     if (current_keyframes.size() == 0) {
-        printf("[D2FeatureTracker::trackRemote] waiting for initialization.\n");
+        SPDLOG_INFO("[D2FeatureTracker::trackRemote] waiting for initialization.\n");
         return report;
     }
     if (prev_frame.frame_id != frame.frame_id) {
@@ -283,7 +279,7 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualI
         match_param.plot = false;
         bool success = matchLocalFeatures(prev_frame, frame, ids_b_to_a, match_param);
         if (!success) {
-            printf("[D2FeatureTracker::trackRemote] matchLocalFeatures failed.\n");
+            SPDLOG_DEBUG("matchLocalFeatures failed");
             return report;
         }
         for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
@@ -453,7 +449,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
                         lm.stamp_discover = prev_lm.stamp_discover;
                     }
                     else {
-                        spdlog::info("getPreviousLandmarkFrame failed");
+                        // SPDLOG_INFO("getPreviousLandmarkFrame failed");
                         continue;
                     }
                     if (lmanager->at(cur_lk_info.lk_ids[i]).track.size() >= _config.long_track_frames) {
@@ -469,7 +465,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
                             (prev_lm.pt3d_norm - lm.pt3d_norm).norm()*100.0);
                     report.parallex_num ++;
                 }
-                // spdlog::info("[D2FeatureTracker::trackLK] track {} LK points, {} lost, track rate {:.1f}% para {:.2f}% num {} {}->{}",
+                // SPDLOG_INFO("[D2FeatureTracker::trackLK] track {} LK points, {} lost, track rate {:.1f}% para {:.2f}% num {} {}->{}",
                 //         prev_lk_num, prev_lk_num - cur_lk_info.lk_pts.size(), cur_lk_info.lk_pts.size() * 100.0 / prev_lk_num, 
                 //         report.meanParallex()*100, report.parallex_num, prev_frame.frame_id, frame.frame_id);
             }
@@ -543,7 +539,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
             }
         }
     } else {
-        spdlog::error("[D2FeatureTracker::trackLK] empty image\n");
+        SPDLOG_ERROR("[D2FeatureTracker::trackLK] empty image\n");
     }
     
     keyframe_lk_infos[frame.frame_id][frame.camera_index] = cur_lk_info;
@@ -663,14 +659,14 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
 bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
     int prev_num = current_keyframes.size() > 0 ? current_keyframes.back().landmarkNum(): 0;
     if (report.meanParallex() > 0.5) {
-        printf("[D2FeatureTracker] unexcepted mean parallex %f\n", report.meanParallex());
+        printf("unexcepted mean parallex %f\n", report.meanParallex());
     }
     if (report.parallex_num < _config.min_keyframe_num || 
         report.long_track_num < _config.long_track_thres ||
         prev_num < _config.last_track_thres ||
         report.unmatched_num > _config.new_feature_thres*prev_num || //Unmatched is assumed to be new
         report.meanParallex() > _config.parallex_thres) { //Attenion, if mismatch this will be big
-        spdlog::debug("[D2FeatureTracker] New KF: keyframe_count: {}, long_track_num: {}, prev_num: {}, unmatched_num: {}, parallex: {:.1f}%", 
+        spdlog::debug("New KF: keyframe_count: {}, long_track_num: {}, prev_num: {}, unmatched_num: {}, parallex: {:.1f}%", 
             keyframe_count, report.long_track_num, prev_num, report.unmatched_num, report.meanParallex()*100);
         return true;
     }
@@ -998,7 +994,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             auto features_b = getFeatureHalfImg(pts_b, raw_desc_b, param.type==RIGHT_LEFT_IMG_MATCH, tmp_to_idx_b);
             if (tmp_to_idx_a.size() == 0 || tmp_to_idx_b.size() == 0) {
                 if (params->verbose)
-                    printf("[D2FeatureTracker] matchLocalFeatures failed: no feature to match.\n");
+                    printf("matchLocalFeatures failed: no feature to match.\n");
                 return false;
             }
             cv::BFMatcher bfmatcher(cv::NORM_L2, true);
@@ -1047,7 +1043,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         std::vector<unsigned char> mask;
         if (matched_pts_a_normed.size() < MIN_HOMOGRAPHY) {
             if (params->verbose)
-                printf("[D2FeatureTracker] matchLocalFeatures failed only %ld pts not meet MIN_HOMOGRAPHY\n", matched_pts_a_normed.size());
+                printf("matchLocalFeatures failed only %ld pts not meet MIN_HOMOGRAPHY\n", matched_pts_a_normed.size());
             return false;
         }
         // cv::findHomography(matched_pts_a, matched_pts_b, cv::RANSAC, _config.ransacReprojThreshold, mask);

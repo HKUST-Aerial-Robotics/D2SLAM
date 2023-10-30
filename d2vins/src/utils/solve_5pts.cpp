@@ -25,7 +25,7 @@ bool MotionEstimator::solveRelativeRT(
         cv::Mat rot, trans;
         int inlier_cnt =
             cv::recoverPose(E, ll, rr, cameraMatrix, rot, trans, mask);
-        spdlog::info("solveRelativeRT inlier_cnt: {}/{}", inlier_cnt, corres.size());
+        SPDLOG_INFO("solveRelativeRT inlier_cnt: {}/{}", inlier_cnt, corres.size());
         Eigen::Matrix3d R;
         Eigen::Vector3d T;
         for (int i = 0; i < 3; i++) {

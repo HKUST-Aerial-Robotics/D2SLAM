@@ -8,6 +8,7 @@
 #include <camodocal/camera_models/CataCamera.h>
 #include <camodocal/camera_models/PinholeCamera.h>
 #include <d2common/fisheye_undistort.h>
+#include <spdlog/spdlog.h>
 
 namespace D2FrontEnd {
     D2FrontendParams * params;
@@ -114,12 +115,12 @@ namespace D2FrontEnd {
             ftconfig->enable_search_local_aera = (int) fsSettings["enable_search_local_aera"];
             ftconfig->search_local_max_dist = fsSettings["search_local_max_dist"];
         } else {
-            printf("[D2FrontendParams] enable_search_local_aera not found, use default\n");
+            SPDLOG_INFO("[D2FrontendParams] enable_search_local_aera not found, use default\n");
         }
         if (!fsSettings["feature_min_dist"].empty()) {
             feature_min_dist = fsSettings["feature_min_dist"];
         } else {
-            printf("[D2FrontendParams] feature_min_dist not found, use default\n");
+            SPDLOG_WARN("[D2FrontendParams] feature_min_dist not found, use default: {}", feature_min_dist);
         }
         ftconfig->track_from_keyframe = (int) fsSettings["track_from_keyframe"];
         //Loop detector
@@ -150,7 +151,7 @@ namespace D2FrontEnd {
         nh.param<double>("recv_msg_duration", recv_msg_duration, 0.5);
         nh.param<bool>("enable_network", enable_network, true);
         lazy_broadcast_keyframe = (int) fsSettings["lazy_broadcast_keyframe"];
-        printf("[D2Frontend] Using lazy broadcast keyframe: %d\n", lazy_broadcast_keyframe);
+        SPDLOG_INFO("[D2Frontend] Using lazy broadcast keyframe: {}", lazy_broadcast_keyframe);
 
         if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
             loopdetectorconfig->MAX_DIRS = 1;
@@ -165,7 +166,7 @@ namespace D2FrontEnd {
             loopdetectorconfig->MAX_DIRS = 4;
             min_receive_images = 4;
         } else {
-            ROS_ERROR("[D2Frontend] Camera configuration %d not implement yet.", camera_configuration);
+            SPDLOG_INFO("[D2Frontend] Camera configuration {} not implement yet.", camera_configuration);
             exit(-1);
         }
         depth_topics.emplace_back((std::string) fsSettings["depth_topic"]);
@@ -177,12 +178,13 @@ namespace D2FrontEnd {
         readCameraConfigs(fsSettings, configPath);
         camodocal::CameraFactory cam_factory;
         for (auto & cam_calib_path : camera_config_paths) {
-            ROS_INFO("[D2Frontend] Read camera from %s", cam_calib_path.c_str());
+            SPDLOG_INFO("[D2Frontend] Read camera from {}", cam_calib_path);
             auto cam = cam_factory.generateCameraFromYamlFile(cam_calib_path);
             if (cam) {
                 camera_ptrs.push_back(cam);
             } else {
-                ROS_ERROR("[D2Frontend]Failed to read camera from %s", cam_calib_path.c_str());
+                SPDLOG_ERROR("[D2Frontend]Failed to read camera from {}", cam_calib_path);
+                exit(-1);
             }
         }
         std::string photometric_calib_file = fsSettings["photometric_calib"];
@@ -192,9 +194,9 @@ namespace D2FrontEnd {
             photometric = cv::imread(configPath + "/" + photometric_calib_file, cv::IMREAD_GRAYSCALE);
             photometric.convertTo(photometric, CV_32FC1, 1.0/255.0);
             cv::divide(avg_photometric, photometric, photometric);
-            printf("[D2Frontend] Read photometric calibration from: %s\n", photometric_calib_file.c_str());
+            SPDLOG_INFO("[D2Frontend] Read photometric calibration from: {}", photometric_calib_file);
         } else {
-            printf("[D2Frontend] No photometric calibration file provided.\n");
+            SPDLOG_WARN("[D2Frontend] No photometric calibration file provided");
         }
         if (enable_undistort_image) {
             raw_camera_ptrs = camera_ptrs;
@@ -215,7 +217,7 @@ namespace D2FrontEnd {
             //     focal_length = static_cast<camodocal::PinholeCamera* >(cam.get())->getParameters().fx();
             // }
         }
-        printf("[D2Frontend] Focal length initialize to: %.1f\n", focal_length);
+        SPDLOG_INFO("[D2Frontend] Focal length initialize to: {:.1f}", focal_length);
     }
 
 
@@ -238,7 +240,7 @@ namespace D2FrontEnd {
         std::string calib_file_path = fsSettings["calib_file_path"];
         if (calib_file_path != "") {
             calib_file_path = configPath + "/" + calib_file_path;
-            ROS_INFO("Will read camera calibration from %s", calib_file_path.c_str());
+            SPDLOG_INFO("Will read camera calibration from {}", calib_file_path);
             readCameraCalibrationfromFile(calib_file_path);
             int camera_num = extrinsics.size();
             for (auto i = 0; i < camera_num; i++) {
@@ -248,7 +250,7 @@ namespace D2FrontEnd {
                 image_topics.emplace_back(topic);
             }
         } else {
-            ROS_INFO("Read camera from config file");
+            SPDLOG_INFO("Read camera from config file");
             //Camera configurations from VINS config.
             int camera_num = fsSettings["num_of_cam"];
             for (auto i = 0; i < camera_num; i++) {
@@ -272,8 +274,8 @@ namespace D2FrontEnd {
                 camera_config_paths.emplace_back(camera_calib_path);
                 extrinsics.emplace_back(pose);
 
-                ROS_INFO("[SWARM_LOOP] Camera %d: topic: %s, calib: %s, T: %s", 
-                    i, topic.c_str(), camera_calib_path.c_str(), pose.toStr().c_str());
+                SPDLOG_INFO("Camera {}: topic: {}, calib: {}, T: {}", 
+                    i, topic.c_str(), camera_calib_path, pose.toStr());
             }
         }
     }
@@ -307,7 +309,7 @@ namespace D2FrontEnd {
             double k2 = config["distortion_coeffs"][1].as<double>();
             double p1 = config["distortion_coeffs"][2].as<double>();
             double p2 = config["distortion_coeffs"][3].as<double>();
-            printf("Camera %s model omni-radtan\n width: %d, height: %d, xi: %f, gamma1: %f, gamma2: %f, u0: %f, v0: %f, k1: %f, k2: %f, p1: %f, p2: %f\n", 
+            SPDLOG_INFO("Camera {} model omni-radtan: width: {}, height: {}, xi: {}, gamma1: {}, gamma2: {}, u0: {}, v0: {}, k1: {}, k2: {}, p1: {}, p2: {}", 
                 camera_name.c_str(), width, height, xi, gamma1, gamma2, u0, v0, k1, k2, p1, p2);
             camera = camodocal::CataCameraPtr(new camodocal::CataCamera(camera_name,
                width, height, xi, k1, k2, p1, p2,
@@ -326,13 +328,13 @@ namespace D2FrontEnd {
             double k2 = config["distortion_coeffs"][1].as<double>();
             double p1 = config["distortion_coeffs"][2].as<double>();
             double p2 = config["distortion_coeffs"][3].as<double>();
-            printf("Camera %s model pinhole-radtan\n width: %d, height: %d, fx: %f, fy: %f, cx: %f, cy: %f, k1: %f, k2: %f, p1: %f, p2: %f\n", 
+            SPDLOG_INFO("Camera {} model pinhole-radtan: width: {}, height: {}, fx: {}, fy: {}, cx: {}, cy: {}, k1: {}, k2: {}, p1: {}, p2: {}", 
                 camera_name.c_str(), width, height, fx, fy, cx, cy, k1, k2, p1, p2);
             camera = camodocal::PinholeCameraPtr(new camodocal::PinholeCamera(camera_name,
                width, height, k1, k2, p1, p2, fx, fy, cx, cy));
         }
         else {
-            printf("Camera not supported yet, please fillin in src/d2frontend_params.cpp function: readCameraConfig\n");
+            SPDLOG_ERROR("Camera not supported yet, please fillin in src/d2frontend_params.cpp function: readCameraConfig");
             exit(-1);
         }
         Matrix4d T;
