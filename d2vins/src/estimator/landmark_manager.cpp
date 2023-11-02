@@ -209,42 +209,45 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
                         lm.flag = LandmarkFlag::INITIALIZED;
                         *landmark_state[lm_id] = inv_dep;
                         if (params->debug_print_states) {
-                            SPDLOG_INFO("[D2VINS::D2LandmarkManager] Landmark {} "
-                                   "tracks {} baseline {:.2f} by tri. P {:.3f} "
-                                   "{:.3f} {:.3f} inv_dep {:.3f} err {:.3f}\n",
-                                   lm_id, lm.track.size(), (_max - _min).norm(),
-                                   point_3d.x(), point_3d.y(), point_3d.z(),
-                                   inv_dep, tri_err);
+                            SPDLOG_INFO(
+                                "Landmark {} "
+                                "tracks {} baseline {:.2f} by tri. P {:.3f} "
+                                "{:.3f} {:.3f} inv_dep {:.3f} err {:.3f}\n",
+                                lm_id, lm.track.size(), (_max - _min).norm(),
+                                point_3d.x(), point_3d.y(), point_3d.z(),
+                                inv_dep, tri_err);
                         }
                     } else {
                         lm.flag = LandmarkFlag::INITIALIZED;
                         *landmark_state[lm_id] = params->min_inv_dep;
                         if (params->debug_print_states) {
-                            SPDLOG_WARN("[D2VINS::D2LandmarkManager] "
-                                   "Initialize failed too far away: landmark "
-                                   "{} tracks {} baseline {:.2f} by "
-                                   "triangulation position {:.3f} {:.3f} {:.3f} "
-                                   "inv_dep {:.3f}",
-                                   lm_id, lm.track.size(), (_max - _min).norm(),
-                                   point_3d.x(), point_3d.y(), point_3d.z(),
-                                   inv_dep);
+                            SPDLOG_WARN(
+                                "Initialize failed too far away: landmark "
+                                "{} tracks {} baseline {:.2f} by "
+                                "triangulation position {:.3f} {:.3f} {:.3f} "
+                                "inv_dep {:.3f}",
+                                lm_id, lm.track.size(), (_max - _min).norm(),
+                                point_3d.x(), point_3d.y(), point_3d.z(),
+                                inv_dep);
                         }
                     }
                     if (params->debug_print_states) {
-                        for (auto & it: lm.track) {
+                        for (auto &it : lm.track) {
                             auto frame = *state->getFramebyId(it.frame_id);
                             auto ext = state->getExtrinsic(it.camera_id);
-                            auto cam_pose = frame.odom.pose()*ext;
-                            auto reproject_pos = cam_pose.inverse()*point_3d;
+                            auto cam_pose = frame.odom.pose() * ext;
+                            auto reproject_pos = cam_pose.inverse() * point_3d;
                             reproject_pos.normalize();
-                            SPDLOG_INFO("Frame {} camera_id {} index {} cam pose: {}"
-                                "pt3d norm {:.3f} {:.3f} {:.3f} reproject {:.3f} {:.3f} {:.3f}",
-                                    it.frame_id, it.camera_id, it.camera_index,
-                                    cam_pose.toStr().c_str(), it.pt3d_norm.x(),
-                                    it.pt3d_norm.y(), it.pt3d_norm.z(),
-                                    reproject_pos.x(), reproject_pos.y(),
-                                    reproject_pos.z());
-                    }
+                            SPDLOG_INFO(
+                                "Frame {} camera_id {} index {} cam pose: {}"
+                                "pt3d norm {:.3f} {:.3f} {:.3f} reproject "
+                                "{:.3f} {:.3f} {:.3f}",
+                                it.frame_id, it.camera_id, it.camera_index,
+                                cam_pose.toStr().c_str(), it.pt3d_norm.x(),
+                                it.pt3d_norm.y(), it.pt3d_norm.z(),
+                                reproject_pos.x(), reproject_pos.y(),
+                                reproject_pos.z());
+                        }
                     }
                 } else {
                     lm.flag = LandmarkFlag::INITIALIZED;
@@ -254,20 +257,21 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
                 // Some debug code
             } else {
                 if (params->debug_print_states) {
-                    SPDLOG_WARN("[D2VINS::D2LandmarkManager] Initialize "
-                           "failed too large triangle error: landmark {} "
-                           "tracks {} baseline {:.2f} by triangulation position "
-                           "{:.3f} {:.3f} {:.3f}",
-                           lm_id, lm.track.size(), (_max - _min).norm(),
-                           point_3d.x(), point_3d.y(), point_3d.z());
+                    SPDLOG_WARN(
+                        "Initialize "
+                        "failed too large triangle error: landmark {} "
+                        "tracks {} baseline {:.2f} by triangulation position "
+                        "{:.3f} {:.3f} {:.3f}",
+                        lm_id, lm.track.size(), (_max - _min).norm(),
+                        point_3d.x(), point_3d.y(), point_3d.z());
                 }
             }
         } else {
             if (params->debug_print_states) {
-                SPDLOG_WARN("[D2VINS::D2LandmarkManager] Initialize "
-                       "failed too short baseline: landmark {} tracks {} "
-                       "baseline {:.2f}",
-                       lm_id, lm.track.size(), (_max - _min).norm());
+                SPDLOG_WARN("Initialize "
+                            "failed too short baseline: landmark {} tracks {} "
+                            "baseline {:.2f}",
+                            lm_id, lm.track.size(), (_max - _min).norm());
             }
         }
     }
@@ -283,9 +287,9 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState *state) {
         lm.solver_flag = LandmarkSolverFlag::UNSOLVED;
         if (lm.flag < LandmarkFlag::ESTIMATED) {
             if (lm.track.size() == 0) {
-                SPDLOG_ERROR("D2VINS::D2LandmarkManager] Initialize landmark "
-                              "{} failed, no track.",
-                              lm_id);
+                SPDLOG_ERROR("Initialize landmark "
+                             "{} failed, no track.",
+                             lm_id);
                 continue;
             }
             initialLandmarkState(lm, state);
@@ -307,8 +311,7 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState *state) {
         }
     }
 
-    spdlog::debug("[D2VINS::D2LandmarkManager] Total {} initialized {}",
-                  landmark_db.size(), inited_count);
+    SPDLOG_DEBUG("Total {} initialized {}", landmark_db.size(), inited_count);
 }
 
 void D2LandmarkManager::outlierRejection(
@@ -354,8 +357,8 @@ void D2LandmarkManager::outlierRejection(
                     params->landmark_outlier_threshold) {
                     remove_count++;
                     lm.flag = LandmarkFlag::OUTLIER;
-                    spdlog::debug(
-                        "[outlierRejection] remove LM {} inv_dep/dep "
+                    SPDLOG_DEBUG(
+                        "remove LM {} inv_dep/dep "
                         "{:.2f}/{:.2f} pos {:.2f} {:.2f} {:.2f} reproj_error "
                         "{:.2f}",
                         lm_id, *landmark_state[lm_id],
@@ -367,7 +370,7 @@ void D2LandmarkManager::outlierRejection(
         }
     }
     SPDLOG_INFO(
-        "[D2VINS::D2LandmarkManager] outlierRejection remove {}/{} landmarks",
+        "outlierRejection remove {}/{} landmarks",
         remove_count, total_count);
 }
 
@@ -382,7 +385,7 @@ void D2LandmarkManager::syncState(const D2EstimatorState *state) {
             if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
                 auto inv_dep = *it.second;
                 if (inv_dep < 0) {
-                    printf("[Warn] negative inv dep %.2f found\n", inv_dep);
+                    SPDLOG_WARN("[Warn] negative inv dep {:.2f} found", inv_dep);
                 }
                 if (inv_dep < params->min_inv_dep) {
                     inv_dep = params->min_inv_dep;
@@ -396,8 +399,8 @@ void D2LandmarkManager::syncState(const D2EstimatorState *state) {
                 pos = firstFrame->odom.pose() * ext * pos;
                 lm.position = pos;
                 lm.flag = LandmarkFlag::ESTIMATED;
-                spdlog::debug(
-                    "[D2VINS::D2LandmarkManager] update LM {:d} inv_dep/dep "
+                SPDLOG_DEBUG(
+                    "update LM {:d} inv_dep/dep "
                     "{:.2f}/{:.2f} depmea {:d} {:.2f} pt3d_n {:.2f} {:.2f} "
                     "{:.2f} pos "
                     "{:.2f} {:.2f} {:.2f} baseFrame {:d} pose {} extrinsic {}",
@@ -465,7 +468,7 @@ double triangulatePoint3DPts(const std::vector<Swarm::Pose> poses,
 std::map<FrameIdType, Swarm::Pose>
 D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
                                      int camera_idx) {
-    spdlog::debug("SFMInitialization with camera {}", camera_idx);
+    SPDLOG_DEBUG("SFMInitialization with camera {}", camera_idx);
 
     // TODO: Add camera param? or consider multi-camera case
     // Here we assume we are using mono camera
@@ -483,12 +486,10 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
                                   head_frame_for_match->frame_id)) {
             initial[last_frame->frame_id] = Swarm::Pose::Identity();
             initial[head_frame_for_match->frame_id] = relative_pose;
-            SPDLOG_INFO(
-                "[D2VINS::D2LandmarkManager] Frame_id {} PnP result: {}",
-                    last_frame->frame_id, initial[last_frame->frame_id].toStr());
-            SPDLOG_INFO(
-                "[D2VINS::D2LandmarkManager] Frame_id {} PnP result: {}",
-                    head_frame_for_match->frame_id, relative_pose.toStr());
+            SPDLOG_INFO("Frame_id {} PnP result: {}", last_frame->frame_id,
+                        initial[last_frame->frame_id].toStr());
+            SPDLOG_INFO("Frame_id {} PnP result: {}",
+                        head_frame_for_match->frame_id, relative_pose.toStr());
             break;
         } else {
             continue;
@@ -519,8 +520,7 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
             initial[frame->frame_id] = pose;
             last_triangluation_pts =
                 triangulationFrames(initial, camera_idx, 2);
-            SPDLOG_INFO("{} points initialized",
-                         last_triangluation_pts.size());
+            SPDLOG_INFO("{} points initialized", last_triangluation_pts.size());
         } else {
             return std::map<FrameIdType, Swarm::Pose>();
         }
@@ -528,7 +528,8 @@ D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
 
     // Now re-triangluation all points
     auto initial_pts = triangulationFrames(initial, camera_idx, 3);
-    auto ret = PerformBA(initial, last_frame, head_frame_for_match, initial_pts, camera_idx);
+    auto ret = PerformBA(initial, last_frame, head_frame_for_match, initial_pts,
+                         camera_idx);
     return ret;
 }
 
@@ -603,7 +604,7 @@ const std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::PerformBA(
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
     SPDLOG_INFO("Finish solve BA in {:.2f}ms. rpt {}",
-                 summary.total_time_in_seconds * 1000.0, summary.BriefReport());
+                summary.total_time_in_seconds * 1000.0, summary.BriefReport());
     Swarm::Pose pose0_inv = Swarm::Pose::Identity();
     bool is_pose0_set = false;
     for (auto it : initial) {
@@ -647,10 +648,10 @@ bool D2LandmarkManager::InitFramePoseWithPts(
 
     // Then use cv::solvePnPRansac to solve the pose of frame
     if (points_undist.size() < 5) {
-        SPDLOG_ERROR("[D2VINS::D2LandmarkManager] PnP failed in "
-                      "SFMInitialization on {}, "
-                      "only {} pts",
-                      frame_id, points_3d.size());
+        SPDLOG_ERROR("PnP failed in "
+                     "SFMInitialization on {}, "
+                     "only {} pts",
+                     frame_id, points_3d.size());
         return false;
     }
     cv::Mat rvec, tvec;
@@ -670,9 +671,8 @@ bool D2LandmarkManager::InitFramePoseWithPts(
             last_triangluation_pts.erase(landmark_ids_used[i]);
         }
     }
-    SPDLOG_INFO(
-        "[D2VINS::D2LandmarkManager] Frame_id {} PnP result: {} inlier {}/{}",
-        frame_id, ret.toStr(), num_inliers, points_undist.size());
+    SPDLOG_INFO("Frame_id {} PnP result: {} inlier {}/{}", frame_id,
+                ret.toStr(), num_inliers, points_undist.size());
     return true;
 }
 
@@ -701,23 +701,22 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
     if (corres.size() < params->solve_relative_pose_min_pts ||
         sum_parallex / corres.size() <
             params->solve_relative_pose_min_parallex) {
-        SPDLOG_WARN("[D2VINS::D2LandmarkManager] Solve 5 pts failed, only {} "
-                     "pts, parallex {:.2f}",
-                     corres.size(), sum_parallex / corres.size());
+        SPDLOG_WARN("Solve 5 pts failed, only {} "
+                    "pts, parallex {:.2f}",
+                    corres.size(), sum_parallex / corres.size());
         return false;
     }
     utils::MotionEstimator estimator;
     Matrix3d R;
     Vector3d T;
     if (!estimator.solveRelativeRT(corres, R, T)) {
-        SPDLOG_WARN("[D2VINS::D2LandmarkManager] Solve 5 pts failed");
+        SPDLOG_WARN("Solve 5 pts failed");
         return false;
     }
     ret = Swarm::Pose(R, T);
-    SPDLOG_INFO(
-        "[D2VINS::D2LandmarkManager] Frame {}-{} Solve 5 pts with {} pts result: "
-        "{}",
-        frame1_id, frame2_id, corres.size(), ret.toStr());
+    SPDLOG_INFO("Frame {}-{} Solve 5 pts with {} pts result: "
+                "{}",
+                frame1_id, frame2_id, corres.size(), ret.toStr());
     return true;
 }
 

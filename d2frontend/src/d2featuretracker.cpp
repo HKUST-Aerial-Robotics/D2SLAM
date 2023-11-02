@@ -200,7 +200,6 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
 bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray & frames) {
     const Guard lock(track_lock);
     if (frames.is_lazy_frame || frames.matched_frame >= 0) {
-        SPDLOG_INFO("[D2FeatureTracker::trackRemoteFrames] lazy frame or matched frame, skip\n");
         return false;
     }
     bool matched = false;
@@ -279,7 +278,7 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualI
         match_param.plot = false;
         bool success = matchLocalFeatures(prev_frame, frame, ids_b_to_a, match_param);
         if (!success) {
-            SPDLOG_DEBUG("matchLocalFeatures failed");
+            SPDLOG_WARN("matchLocalFeatures failed");
             return report;
         }
         for (size_t i = 0; i < ids_b_to_a.size(); i++) { 
@@ -314,8 +313,8 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualI
             }
         }
     }
-    // printf("[D2Frontend::D2FeatureTracker] match %d@cam%d<->%d@cam%d report.remote_matched_num %d\n",
-    //     frame.drone_id, frame.camera_index, prev_frame.drone_id, frame.camera_index, report.remote_matched_num);
+    SPDLOG_DEBUG("[D2Frontend::D2FeatureTracker] match {}@cam{}<->{}@cam{} report.remote_matched_num {}",
+        frame.drone_id, frame.camera_index, prev_frame.drone_id, frame.camera_index, report.remote_matched_num);
     return report;
 }
 
@@ -951,8 +950,8 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     ids_b_to_a.resize(pts_b.size());
     std::fill(ids_b_to_a.begin(), ids_b_to_a.end(), -1);
     double search_radius = param.search_radius;
-    // printf("[D2FT] Frame_a %ld<->%ld enable_prediction %d pose_a %s motion_prediction %s\n", 
-    //     img_desc_a.frame_id, img_desc_b.frame_id, param.enable_prediction, param.pose_a.toStr().c_str(), param.pose_b_prediction.toStr().c_str());
+    SPDLOG_DEBUG("Match {}<->{} enable_prediction {} pose_a {} enable_search_in_local {} motion_prediction {} prediction_using_extrinsic {}", 
+        img_desc_a.frame_id, img_desc_b.frame_id, param.enable_prediction, param.pose_a.toStr(), param.enable_search_in_local, param.pose_b_prediction.toStr(), param.prediction_using_extrinsic);
     if (param.enable_prediction) {
         if (param.prediction_using_extrinsic) {
             pts_pred_a_on_b = predictLandmarks(img_desc_a, img_desc_a.extrinsic, img_desc_b.extrinsic, true);
@@ -993,15 +992,14 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             auto features_a = getFeatureHalfImg(pts_a, raw_desc_a, param.type==LEFT_RIGHT_IMG_MATCH, tmp_to_idx_a);
             auto features_b = getFeatureHalfImg(pts_b, raw_desc_b, param.type==RIGHT_LEFT_IMG_MATCH, tmp_to_idx_b);
             if (tmp_to_idx_a.size() == 0 || tmp_to_idx_b.size() == 0) {
-                if (params->verbose)
-                    printf("matchLocalFeatures failed: no feature to match.\n");
+                SPDLOG_DEBUG("matchLocalFeatures failed: no feature to match.\n");
                 return false;
             }
             cv::BFMatcher bfmatcher(cv::NORM_L2, true);
             const cv::Mat desc_a(tmp_to_idx_a.size(), params->superpoint_dims, CV_32F, const_cast<float *>(features_a.first.data()));
             const cv::Mat desc_b(tmp_to_idx_b.size(), params->superpoint_dims, CV_32F, const_cast<float *>(features_b.first.data()));
             if (_config.enable_knn_match) {
-                if (_config.enable_search_local_aera) {
+                if (param.enable_search_in_local) {
                     float move_cols = params->width_undistort *90.0/params->undistort_fov; //slightly lower than 0.5 cols when fov=200
                     for (int i = 0; i < features_a.second.size(); i++) {
                         features_a.second[i].x += param.type==LEFT_RIGHT_IMG_MATCH ? move_cols : -move_cols;
@@ -1042,8 +1040,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         //only perform this for remote
         std::vector<unsigned char> mask;
         if (matched_pts_a_normed.size() < MIN_HOMOGRAPHY) {
-            if (params->verbose)
-                printf("matchLocalFeatures failed only %ld pts not meet MIN_HOMOGRAPHY\n", matched_pts_a_normed.size());
+            SPDLOG_DEBUG("matchLocalFeatures failed only %ld pts not meet MIN_HOMOGRAPHY", matched_pts_a_normed.size());
             return false;
         }
         // cv::findHomography(matched_pts_a, matched_pts_b, cv::RANSAC, _config.ransacReprojThreshold, mask);
@@ -1057,7 +1054,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     }
     for (auto i = 0; i < ids_a.size(); i++) {
         if (ids_a[i] >= pts_a.size()) {
-            printf("ids_a[i] > pts_a.size() why is this case?\n");
+            SPDLOG_ERROR("ids_a[i] > pts_a.size() why is this case?");
             continue;
         }
         ids_b_to_a[ids_b[i]] = ids_a[i];
@@ -1102,10 +1099,9 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         }
     }
 
-    if (params->verbose || params->enable_perf_output)
-        printf("[D2FeatureTracker::matchLocalFeatures] match features %d:%d matched %ld frame %d:%d t: %.3f ms enable_knn %d search_dist %.2f check_essential %d sp_dims %d\n", 
-                pts_a.size(), pts_b.size(), ids_b.size(), img_desc_a.frame_id, img_desc_b.frame_id, tic.toc(), 
-                _config.enable_knn_match, _config.search_local_max_dist*image_width, _config.check_essential, params->superpoint_dims);
+    SPDLOG_INFO("match features {}:{} matched inliers{}/all{} frame {}:{} t: {:.3f}ms enable_knn {} kNN ratio {} search_dist {:.2f} check_essential {} sp_dims {}", 
+                pts_a.size(), pts_b.size(), ids_b.size(), _matches.size(), img_desc_a.frame_id, img_desc_b.frame_id, tic.toc(), 
+                _config.enable_knn_match, _config.knn_match_ratio, search_radius, _config.check_essential, params->superpoint_dims);
     if (ids_b.size() >= _config.remote_min_match_num) {
         return true;
     }
