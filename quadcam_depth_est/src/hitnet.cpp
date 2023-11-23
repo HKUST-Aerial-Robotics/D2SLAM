@@ -4,7 +4,7 @@
 
 namespace TensorRTHitnet{
 //TODO: refine how we create excutor
-int32_t HitnetTrt::HitnetTrt::init(const std::string& engine_filepath, int32_t stream_number){
+int32_t HitnetTrt::init(const std::string& engine_filepath, int32_t stream_number){
   if(stream_number <= 0){
     stream_number = 1;
   }

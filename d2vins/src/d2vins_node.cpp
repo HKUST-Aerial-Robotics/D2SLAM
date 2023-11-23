@@ -99,7 +99,7 @@ protected:
                 if (viokf_queue.size() > params->warn_pending_frames) {
                     ROS_WARN("[D2VINS] Low efficient on D2VINS::estimator pending frames: %d", viokf_queue.size());
                 }
-                D2Common::VisualImageDescArray viokf; //TODO: can be write in shared ptr to reduce memory and cpu loading
+                D2Common::VisualImageDescArray viokf;
                 {
                     Guard guard(queue_lock);
                     viokf = viokf_queue.front();
@@ -117,14 +117,14 @@ protected:
                     updateOutModuleSldWinAndLandmarkDB();
                     need_solve = true;
                     if (params->verbose || params->enable_perf_output)
-                        printf("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
+                        ROS_INFO("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
                 }
 
                 if (params->pub_visual_frame) {
                     visual_array_pub.publish(viokf.toROS());
                 }
                 if (params->verbose || params->enable_perf_output)
-                    printf("[D2VINS] estimator_timer_callback takes %.1f ms\n", estimator_timer.toc());
+                    ROS_INFO("[D2VINS] estimator_timer_callback takes %.1f ms\n", estimator_timer.toc());
                 bool discover_mode = false;
                 for (auto & id : ready_drones) {
                     if (pgo_poses.find(id) == pgo_poses.end() && !estimator->getState().hasDrone(id)) {
@@ -252,6 +252,7 @@ int main(int argc, char **argv)
     ros::AsyncSpinner spinner(4);
     spinner.start();
     ros::waitForShutdown();
+    spinner.stop();
+    // sleep(1000);
     return 0;
 }
-

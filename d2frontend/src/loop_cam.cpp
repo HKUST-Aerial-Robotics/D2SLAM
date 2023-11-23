@@ -17,24 +17,38 @@ namespace D2FrontEnd {
 LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) : 
     camera_configuration(config.camera_configuration),
     self_id(config.self_id),
-    _config(config)
+    config_(config)
 {
     int img_width = config.enable_undistort_image ? params->width_undistort: params->width;
     int img_height = config.enable_undistort_image ? params->height_undistort: params->height;
-
-    if (config.cnn_use_onnx) {
-        printf("[D2FrontEnd::LoopCam] Init CNNs using onnx\n");
-        netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, img_width, img_height, config.cnn_enable_tensorrt, 
-            config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8, config.netvlad_int8_calib_table_name);
-        superpoint_onnx = new SuperPointONNX(config.superpoint_model, ((int)(params->feature_min_dist/2)), config.pca_comp, 
-            config.pca_mean, img_width, img_height, config.superpoint_thres, config.superpoint_max_num, 
-            config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8, 
-            config.superpoint_int8_calib_table_name); 
+    if (config.nn_engine_type == EngineType::ONNX){
+        if (config.cnn_use_onnx) {
+            printf("[D2FrontEnd::LoopCam] Init CNNs using onnx\n");
+            netvlad_onnx = new MobileNetVLADONNX(config.netvlad_model, img_width, img_height, config.cnn_enable_tensorrt, 
+                config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8, config.netvlad_int8_calib_table_name);
+            superpoint_onnx = new SuperPointONNX(config.superpoint_model, ((int)(params->feature_min_dist/2)), config.pca_comp, 
+                config.pca_mean, img_width, img_height, config.superpoint_thres, config.superpoint_max_num, 
+                config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8, 
+                config.superpoint_int8_calib_table_name);
+        }
+    } else {
+        if(config.nn_engine_type == EngineType::TRT){
+            printf("[LoopCAM][Warning]: using cuda level engine");
+            const int32_t kStreamNum = 4;
+            superpoint_trt_ = std::make_unique<TensorRTSupperPoint::SuperPointTrt>(kStreamNum, img_width, img_height, 
+                ((int)(params->feature_min_dist/2)), config.superpoint_thres, config.superpoint_max_num, config.superpoint_trt_engine_path,
+                config.pca_comp, config.pca_mean, config.show);
+            if (superpoint_trt_ == nullptr){
+                printf("[ERROR] super point trt alloc failed\n");
+            }
+            superpoint_trt_->init();
+        }
     }
+
     undistortors = params->undistortors;
     cams = params->camera_ptrs;
     printf("[D2FrontEnd::LoopCam] Deepnet ready\n");
-    if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
+    if (config_.OUTPUT_RAW_SUPERPOINT_DESC) {
         fsp.open(params->OUTPUT_PATH+"superpoint.csv", std::fstream::app);
     }
 }
@@ -167,34 +181,40 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
         visual_array.images.resize(4);
     }
 
-    for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
-        if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
-            visual_array.images.push_back(generateGrayDepthImageDescriptor(msg, i, tmp));
-        } else if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
-            auto _imgs = generateStereoImageDescriptor(msg, i, tmp);
-            if (_config.stereo_as_depth_cam) {
-                if (_config.right_cam_as_main) {
-                    visual_array.images.push_back(_imgs[1]);
+    if (config_.nn_engine_type == EngineType::ONNX){
+        for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
+            if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+                visual_array.images.push_back(generateGrayDepthImageDescriptor(msg, i, tmp));
+            } else if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
+                auto _imgs = generateStereoImageDescriptor(msg, i, tmp);
+                if (config_.stereo_as_depth_cam) {
+                    if (config_.right_cam_as_main) {
+                        visual_array.images.push_back(_imgs[1]);
+                    } else {
+                        visual_array.images.push_back(_imgs[0]);
+                    }
                 } else {
                     visual_array.images.push_back(_imgs[0]);
+                    visual_array.images.push_back(_imgs[1]);
                 }
-            } else {
-                visual_array.images.push_back(_imgs[0]);
-                visual_array.images.push_back(_imgs[1]);
+            } else if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
+                auto seq = params->camera_seq[i];
+                // printf("[Debug] fourcorner_fisheye seq %d\n", seq);
+                visual_array.images[seq] = generateImageDescriptor(msg, i, tmp);
             }
-        } else if (camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
-            auto seq = params->camera_seq[i];
-            // printf("[Debug] fourcorner_fisheye seq %d\n", seq);
-            visual_array.images[seq] = generateImageDescriptor(msg, i, tmp);
-        }
 
-        if (_show.cols == 0) {
-            _show = tmp;
-        } else {
-            cv::hconcat(_show, tmp, _show);
+            if (_show.cols == 0) {
+                _show = tmp;
+            } else {
+                cv::hconcat(_show, tmp, _show);
+            }
         }
+    } else if(config_.nn_engine_type == EngineType::TRT){
+        //extrack bundle data
+        // printf("xxxxxxxxxxxxx TRT pure back end\n");
+        bundleGenereateImagesDescriptor(msg, visual_array);
     }
-
+    
     tt_sum+= tt.toc();
     t_count+= 1;
     printf("[D2Frontend::LoopCam] KF Count %d loop_cam cost avg %.1fms cur %.1fms\n", kf_count, tt_sum/t_count, tt.toc());
@@ -203,7 +223,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
     visual_array.pose_drone = msg.pose_drone;
     visual_array.drone_id = self_id;
 
-    if (_config.show && !_show.empty()) {
+    if (config_.show && !_show.empty()) {
         char text[100] = {0};
         char PATH[100] = {0};
         sprintf(text, "FEATURES@Drone%d", self_id);
@@ -226,7 +246,7 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vc
     }
     cv::Mat undist = msg.left_images[vcam_id];
     TicToc tt;
-    if (_config.enable_undistort_image) {
+    if (config_.enable_undistort_image) {
         undist = cv::Mat(undistortors[vcam_id]->undist_id_cuda(undist, 0, true));
         char text[100] = {0};
         #ifdef DEBUG
@@ -260,12 +280,12 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vc
     auto image_left = undist;
     auto pts_up = vframe.landmarks2D();
     std::vector<int> ids_up, ids_down;
-    if (_config.send_img) {
+    if (config_.send_img) {
         encodeImage(image_left, vframe);
     }
-    if (1) {
+    if (params->show) {
         cv::Mat img_up = image_left;
-        if (!_config.send_img) {
+        if (!config_.send_img) {
             encodeImage(img_up, vframe);
         }
         cv::cvtColor(img_up, img_up, cv::COLOR_GRAY2BGR);
@@ -286,6 +306,51 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vc
     }
     return vframe;
 }
+
+int32_t LoopCam::bundleGenereateImagesDescriptor(const StereoFrame & msg, VisualImageDescArray & viokf) {
+    std::vector<cv::Mat> input_img_vec;
+    if (config_.enable_undistort_image){
+        for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
+            cv::Mat undist = msg.left_images[i];
+            if (config_.enable_undistort_image) {
+                undist = cv::Mat(undistortors[i]->undist_id_cuda(undist, 0, true));
+            }
+            input_img_vec.push_back(undist);
+        }
+    } else {
+        input_img_vec = msg.left_images;
+    }
+    superpoint_trt_->doInference(input_img_vec);
+    superpoint_trt_->getOuput(self_id, msg, viokf);
+    printf("[Debug] Supper poiunt trt get output\n");
+    //process keypoints to landmark
+    for (int idx = 0; idx<viokf.images.size(); idx++){
+        auto && vframe = viokf.images[idx];
+        for (int i = 0 ; i < vframe.key_points.size(); i++){
+            auto && pt_up = vframe.key_points[i];
+            Eigen::Vector3d pt_up3d;
+            cams.at(idx)->liftProjective(Vector2d(pt_up.x, pt_up.y), pt_up3d);
+            LandmarkPerFrame lpf;
+            lpf.pt2d = pt_up;
+            pt_up3d.normalize();
+            if (pt_up3d.hasNaN()){
+                ROS_WARN("NaN detected!!! This will inference landmark_descriptor\n");
+                continue;
+            }
+            lpf.pt3d_norm = pt_up3d;
+            lpf.camera_index = vframe.camera_index;
+            lpf.camera_id = vframe.camera_id;
+            lpf.stamp = vframe.stamp;
+            lpf.stamp_discover = vframe.stamp;
+            lpf.color = extractColor(input_img_vec[idx], pt_up);
+            vframe.landmarks.emplace_back(lpf);
+        }
+        vframe.raw_image = input_img_vec[idx];
+    }
+    printf("[Debug] Supper poiunt trt get output\n");
+    return 0;
+}
+
 
 VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & msg, int vcam_id, cv::Mat & _show)
 {
@@ -333,7 +398,7 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
         }
         
         auto dep = msg.depth_images[vcam_id].at<unsigned short>(pt_up)/1000.0;
-        if (dep > _config.DEPTH_NEAR_THRES && dep < _config.DEPTH_FAR_THRES) {
+        if (dep > config_.DEPTH_NEAR_THRES && dep < config_.DEPTH_FAR_THRES) {
             Eigen::Vector3d pt_up3d, pt_down3d;
             cams.at(vcam_id)->liftProjective(Vector2d(pt_up.x, pt_up.y), pt_up3d);
 
@@ -353,14 +418,14 @@ VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & ms
 
     // ROS_INFO("Image 2d kpts: %ld 3d : %d desc size %ld", ides.landmarks_2d.size(), count_3d, ides.feature_descriptor.size());
 
-    if (_config.send_img) {
+    if (config_.send_img) {
         encodeImage(image_left, vframe);
     }
 
-    if (_config.show) {
+    if (config_.show) {
         cv::Mat img_up = image_left;
 
-        if (!_config.send_img) {
+        if (!config_.send_img) {
             encodeImage(img_up, vframe);
         }
 
@@ -390,9 +455,9 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
 {
     //This function currently only support pinhole-like stereo camera.
     auto vframe0 = extractorImgDescDeepnet(msg.stamp, msg.left_images[vcam_id], msg.left_camera_indices[vcam_id], 
-        msg.left_camera_ids[vcam_id], _config.right_cam_as_main);
+        msg.left_camera_ids[vcam_id], config_.right_cam_as_main);
     auto vframe1 = extractorImgDescDeepnet(msg.stamp, msg.right_images[vcam_id], msg.right_camera_indices[vcam_id], 
-        msg.right_camera_ids[vcam_id], !_config.right_cam_as_main);
+        msg.right_camera_ids[vcam_id], !config_.right_cam_as_main);
 
     if (vframe0.image_desc.size() == 0 && vframe1.image_desc.size() == 0)
     {
@@ -420,8 +485,8 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
     std::vector<int> ids_up, ids_down;
 
     int count_3d = 0;
-    if (_config.stereo_as_depth_cam) {
-        if (vframe0.landmarkNum() > _config.ACCEPT_MIN_3D_PTS) {
+    if (config_.stereo_as_depth_cam) {
+        if (vframe0.landmarkNum() > config_.ACCEPT_MIN_3D_PTS) {
             matchLocalFeatures(pts_up, pts_down, vframe0.landmark_descriptor, vframe1.landmark_descriptor, ids_up, ids_down);
         }
         Swarm::Pose pose_drone(msg.pose_drone);
@@ -432,7 +497,6 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
             auto pt_down = pts_down[i];
 
             Eigen::Vector3d pt_up3d, pt_down3d;
-            //TODO: This may not work for stereo fisheye. Pending to update.
             cams.at(msg.left_camera_indices[vcam_id])->liftProjective(Eigen::Vector2d(pt_up.x, pt_up.y), pt_up3d);
             cams.at(msg.right_camera_indices[vcam_id])->liftProjective(Eigen::Vector2d(pt_down.x, pt_down.y), pt_down3d);
 
@@ -465,15 +529,15 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
         }
     }
 
-    if (_config.send_img) {
+    if (config_.send_img) {
         encodeImage(image_left, vframe0);
         encodeImage(image_right, vframe1);
     }
 
-    if (_config.show) {
+    if (config_.show) {
         cv::Mat img_up = image_left;
         cv::Mat img_down = image_right;
-        if (!_config.send_img) {
+        if (!config_.send_img) {
             encodeImage(img_up, vframe0);
             encodeImage(img_down, vframe1);
         }
@@ -491,7 +555,7 @@ std::vector<VisualImageDesc> LoopCam::generateStereoImageDescriptor(const Stereo
         }
 
         cv::vconcat(img_up, img_down, _show);
-        if (_config.stereo_as_depth_cam) {
+        if (config_.stereo_as_depth_cam) {
             for (unsigned int i = 0; i < pts_up.size(); i++)
             {
                 int idx = ids_up[i];
@@ -533,17 +597,16 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         roi.setTo(cv::Scalar(0, 0, 0));
     }
     std::vector<cv::Point2f> landmarks_2d;
-    if (_config.superpoint_max_num > 0) {
+    if (config_.superpoint_max_num > 0) {
         //We only inference when superpoint max num > 0
         //otherwise, d2vins only uses LK optical flow feature.
-        if (_config.cnn_use_onnx) {
-            //TODO: Change to Tensorrt
+        if (config_.cnn_use_onnx) {
             superpoint_onnx->inference(img, landmarks_2d, vframe.landmark_descriptor, vframe.landmark_scores);
         }
     }
 
     if (!superpoint_mode) {
-        if (_config.cnn_use_onnx) {
+        if (config_.cnn_use_onnx) {
             vframe.image_desc = netvlad_onnx->inference(img);
         }
     }
@@ -567,7 +630,7 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, i
         lm.stamp_discover = vframe.stamp;
         lm.color = extractColor(img, pt_up);
         vframe.landmarks.emplace_back(lm);
-        if (_config.OUTPUT_RAW_SUPERPOINT_DESC) {
+        if (config_.OUTPUT_RAW_SUPERPOINT_DESC) {
             for (int j = 0; j < params->superpoint_dims; j ++) {
                 fsp << vframe.landmark_descriptor[i*params->superpoint_dims + j] << " ";
             }

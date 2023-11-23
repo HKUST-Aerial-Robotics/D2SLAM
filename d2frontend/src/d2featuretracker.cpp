@@ -85,7 +85,6 @@ TrackReport D2FeatureTracker::initTrackLKFourEye(VisualImageDescArray & frames){
         auto cur_landmark_scores = image.landmark_scores;
         image.clearLandmarks();
         LKImageInfoGPU cur_lk_info;
-        //TODO: dump here
         cv::cuda::GpuMat image_cuda(image.raw_image);
         cur_lk_info.pyr = buildImagePyramid(image_cuda);
         printf("[Debug] run here \n");
@@ -141,7 +140,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     frame_count ++;
     TrackReport report;
     landmark_predictions_viz.clear();
-    frames.send_to_backend = (frame_count % _config.frame_step) == 0;
+    frames.send_to_backend = ((frame_count % _config.frame_step) == 0);
     TicToc tic;
     if (!inited) {
         inited = true;
@@ -469,7 +468,6 @@ const VisualImageDescArray& D2FeatureTracker::getLatestKeyframe() const
     return *current_keyframes.begin();
 }
 
-
 TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     //Track LK points
     TrackReport report;
@@ -485,7 +483,6 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     // all four cam should all do pyramid and then go into this logic
     if (keyframe_lk_infos_.size() > 0 )
     {
-        //TODO: coredump here
         if(current_keyframes.size() < 1){
             spdlog::error("current_keyframes.size() < 1");
             return report;
@@ -548,8 +545,9 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
         // cv::imshow(name, frame.raw_image);
         // cv::waitKey(0);
         cv::cuda::GpuMat image_cuda(frame.raw_image);
-        cur_lk_info.pyr = buildImagePyramid(image_cuda);
         printf("[D2FeatureTracker::trackLK] buildImagePyramid\n");
+        cur_lk_info.pyr = buildImagePyramid(image_cuda);
+
     }
     //Discover new points.
     if (!frame.raw_image.empty()) {

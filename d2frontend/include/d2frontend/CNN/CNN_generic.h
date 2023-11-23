@@ -1,6 +1,9 @@
 #pragma once
 //Original code from https://github.com/enazoe/yolo-tensorrt
 #include <opencv2/opencv.hpp>
+#include <map>
+#include <string>
+
 namespace D2FrontEnd {
 class CNNInferenceGeneric {
 public:
@@ -31,3 +34,10 @@ protected:
 
 };
 }
+
+struct NodeInfo
+{
+  std::string tensor_name;
+  int32_t binding_index;
+  int32_t binding_size;
+};

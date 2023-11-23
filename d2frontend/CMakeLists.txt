@@ -23,16 +23,17 @@ find_package(catkin REQUIRED COMPONENTS
   message_filters
   image_transport
 )
-
-SET("OpenCV_DIR"  "/usr/local/share/OpenCV/")
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(lcm REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(opengv REQUIRED)
+find_package(CUDA REQUIRED)
 
+SET("OpenCV_DIR"  "/usr/local/share/OpenCV/")
 set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch" CACHE STRING "Path of libtorch")
 set(TORCH_INSTALL_PREFIX "$ENV{HOME}/source/libtorch" CACHE STRING "Path of libtorch")
+
 #Find torch Optional
 find_package(Torch)
 if (NOT Torch_FOUND)
@@ -50,8 +51,6 @@ find_package(Boost REQUIRED COMPONENTS program_options)
 include_directories(${TORCH_INCLUDE_DIRS})
 
 add_definitions("-D USE_ONNX")
-set(ONNXRUNTIME_LIB_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/lib/" CACHE STRING "Path of ONNXRUNTIME_LIB_DIR")
-set(ONNXRUNTIME_INC_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/include/" CACHE STRING "Path of ONNXRUNTIME_INC_DIR")
 
 link_directories(${ONNXRUNTIME_LIB_DIR})
 link_directories("/usr/local/lib/")
@@ -73,6 +72,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${YAML_CPP_INCLUDE_DIRS}
   ${ONNXRUNTIME_INC_DIR}
+  ${CUDA_INCLUDE_DIRS}
 )
 
 add_library(libd2frontend
@@ -106,13 +106,16 @@ set_property(TARGET ${PROJECT_NAME}_nodelet PROPERTY CXX_STANDARD 17)
 set_property(TARGET ${PROJECT_NAME}_node PROPERTY CXX_STANDARD 17)
 set_property(TARGET libd2frontend PROPERTY CXX_STANDARD 17)
 
+
 add_library(loop_cnn
   src/CNN/superpoint_common.cpp
   src/CNN/superpoint_onnx.cpp
   src/CNN/superglue_onnx.cpp
+  src/CNN/superpoint_trt.cpp
   src/loop_utils.cpp
   src/d2frontend_params.cpp
 )
+
 set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 17)
 
 
@@ -120,7 +123,11 @@ set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 17)
 target_link_libraries(loop_cnn opencv_dnn 
   onnxruntime
   ${TORCH_LIBRARIES}
+  ${CUDA_LIBRARIES}
   opengv
+  nvinfer
+  nvinfer_plugin
+  nvonnxparser
 )
 
 add_executable(loop_tensorrt_test

@@ -465,7 +465,7 @@ LKImageInfoGPU opticalflowTrackPyr(const cv::Mat &cur_img,
     reduceVector(cur_pts, status);
     reduceVector(ids, status);
     reduceVector(prev_types, status);
-    reduceVector(prev_local_index, status);    //TODO:Dump here why? prev_local_index should be the same with status
+    reduceVector(prev_local_index, status);
     return {cur_pts, lk_pts_3d_norm, ids, prev_local_index, prev_types, cur_pyr};
 }
 

@@ -72,7 +72,7 @@ struct StereoFrame {
     { }
 };
 
-//TODO:should be a class
+//TODO:22 Nov should be a class
 struct VisualImageDesc {
     //This stands for single image
     double stamp;
@@ -88,6 +88,8 @@ struct VisualImageDesc {
     Swarm::Pose extrinsic; //Camera extrinsic
     Swarm::Pose pose_drone; //IMU propagated pose
     std::vector<LandmarkPerFrame> landmarks;
+
+    std::vector<cv::Point2f> key_points; //In bundle feature detections, need this value to bring out the value from tensorrt
 
     std::vector<float> image_desc;
     std::vector<float> landmark_descriptor;
@@ -232,7 +234,6 @@ struct VisualImageDesc {
 
     std::vector<cv::Point2f> landmarks2D(bool sp_mode=false, bool normed=false) const {
         std::vector<cv::Point2f> ret;
-        //TODO:low efficiency
         for (auto & lm : landmarks) {
             if (sp_mode && lm.type != LandmarkType::SuperPointLandmark) {
                 break;

@@ -7,6 +7,7 @@
 #include "CNN/onnx_generic.h"
 #include "CNN/mobilenetvlad_onnx.h"
 #include "CNN/superpoint_onnx.h"
+#include "CNN/superpoint_trt.h"
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <d2frontend/utils.h>
@@ -29,8 +30,13 @@ void matchLocalFeatures(std::vector<cv::Point2f> & pts_up, std::vector<cv::Point
     std::vector<float> & _desc_up, std::vector<float> & _desc_down, 
     std::vector<int> & ids_up, std::vector<int> & ids_down);
 
+typedef enum {
+    ONNX = 0,
+    TRT = 1
+} EngineType;
+
 struct LoopCamConfig
-{
+{   
     /* data */
     CameraConfig camera_configuration;
     std::string superpoint_model;
@@ -56,10 +62,36 @@ struct LoopCamConfig
     bool enable_undistort_image; //Undistort image before feature detection
     std::string netvlad_int8_calib_table_name;
     std::string superpoint_int8_calib_table_name;
+
+    EngineType nn_engine_type;
+    std::string superpoint_trt_engine_path;
+    std::string netvlad_trt_engine_path;
 };
 
 class LoopCam {
-    LoopCamConfig _config;
+public:
+    // LoopDetector * loop_detector = nullptr;
+    LoopCam(LoopCamConfig config, ros::NodeHandle & nh);
+    
+    VisualImageDesc extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, int index, int camera_id, bool superpoint_mode=false);
+    std::vector<VisualImageDesc> generateStereoImageDescriptor(const StereoFrame & msg, int i, cv::Mat &_show);
+    VisualImageDesc generateGrayDepthImageDescriptor(const StereoFrame & msg, int i, cv::Mat &_show);
+    VisualImageDesc generateImageDescriptor(const StereoFrame & msg, int i, cv::Mat &_show);
+
+    //generate image descriptor through trt with bundle performance
+    int32_t bundleGenereateImagesDescriptor(const StereoFrame & msg, VisualImageDescArray & viokf);
+
+    VisualImageDescArray processStereoframe(const StereoFrame & msg);
+
+    void encodeImage(const cv::Mat & _img, VisualImageDesc & _img_desc);
+    
+    std::vector<camodocal::CameraPtr> cams;
+
+    CameraConfig getCameraConfiguration() const {
+        return camera_configuration;
+    }
+private:
+    LoopCamConfig config_;
     int cam_count = 0;
     int loop_duration = 10;
     int self_id = 0;
@@ -73,23 +105,6 @@ class LoopCam {
     std::vector<FisheyeUndist*> undistortors;
     MobileNetVLADONNX * netvlad_onnx = nullptr;
     SuperPointONNX * superpoint_onnx = nullptr;
-public:
-    // LoopDetector * loop_detector = nullptr;
-    LoopCam(LoopCamConfig config, ros::NodeHandle & nh); //TODO:there is no need to pass in nh
-    
-    VisualImageDesc extractorImgDescDeepnet(ros::Time stamp, cv::Mat img, int index, int camera_id, bool superpoint_mode=false);
-    std::vector<VisualImageDesc> generateStereoImageDescriptor(const StereoFrame & msg, int i, cv::Mat &_show);
-    VisualImageDesc generateGrayDepthImageDescriptor(const StereoFrame & msg, int i, cv::Mat &_show);
-    VisualImageDesc generateImageDescriptor(const StereoFrame & msg, int i, cv::Mat &_show);
-    VisualImageDescArray processStereoframe(const StereoFrame & msg);
-
-    void encodeImage(const cv::Mat & _img, VisualImageDesc & _img_desc);
-    
-    std::vector<camodocal::CameraPtr> cams;
-
-    CameraConfig getCameraConfiguration() const {
-        return camera_configuration;
-    }
-
+    std::unique_ptr<TensorRTSupperPoint::SuperPointTrt> superpoint_trt_ = nullptr;
 };
 }

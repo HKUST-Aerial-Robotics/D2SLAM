@@ -100,9 +100,15 @@ parallex_thres: 0.006  #original 0.012
 knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
 
 #CNN
+cnn_engine: 0 # 0 use onnx; 1 use tensorrt raw engine
 cnn_use_onnx: 1
 enable_pca_superpoint: 1
 superpoint_pca_dims: 64
+
+nn_engine_type: 1 # 0 use onnx; 1 use tensorrt raw engine
+superpoint_trt_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_v1_dyn_size_onnx_300x600.trt"
+moblieNetVlad_trt_path: "/root/swarm_ws/src/D2SLAM/models/mobilenetvlad_300x600_onnx.trt"
+
 
 #xuhao quadcam
 acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2   0.04

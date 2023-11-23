@@ -79,6 +79,10 @@ namespace D2FrontEnd {
             loopcamconfig->superpoint_int8_calib_table_name = (std::string) fsSettings["superpoint_int8_calib_table_name"];
         }
 
+        nh.param<std::string>("superpoint_trt_path",loopcamconfig->superpoint_trt_engine_path, "");
+        nh.param<std::string>("moblieNetVlad_trt_path",loopcamconfig->netvlad_trt_engine_path, "");
+        //NN engine type
+        nh.param<int>("nn_engine_type", (int &) loopcamconfig->nn_engine_type, 0);
         nh.param<bool>("lower_cam_as_main", loopcamconfig->right_cam_as_main, false);
         nh.param<double>("triangle_thres", loopcamconfig->TRIANGLE_THRES, 0.006);
         nh.param<bool>("output_raw_superpoint_desc", loopcamconfig->OUTPUT_RAW_SUPERPOINT_DESC, false);
@@ -87,8 +91,10 @@ namespace D2FrontEnd {
         loopcamconfig->self_id = self_id;
         loopcamconfig->cnn_use_onnx = (int) fsSettings["cnn_use_onnx"];
         loopcamconfig->send_img = send_img;
-
-        //Feature tracker.
+        loopcamconfig->superpoint_trt_engine_path = (std::string) fsSettings["superpoint_trt_path"];
+        loopcamconfig->netvlad_trt_engine_path = (std::string) fsSettings["moblieNetVlad_trt_path"];
+        loopcamconfig->nn_engine_type = (EngineType) (int) fsSettings["nn_engine_type"];
+        //Feature tracker.        
         ftconfig->show_feature_id = (int) fsSettings["show_track_id"];
         ftconfig->long_track_frames = fsSettings["landmark_estimate_tracks"];
         ftconfig->check_essential = (int) fsSettings["check_essential"];

@@ -7,6 +7,7 @@
     <arg name="superpoint_model_path"     default="$(find d2frontend)/../models/superpoint_v1_dyn_size.onnx"/>
     <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/mobilenetvlad_dyn_size.onnx" />
     <arg name="superglue_model_path"     default="$(find d2frontend)/../models/superglue.onnx" />
+    <arg name="superpoint_trt_path" default="$(find d2frontend)/../models/superpoint_v1_dyn_size_onnx_300x600.trt" />
     <arg name="config" default="$(find d2vins)/../config/quadcam_drone_0/quadcam_single.yaml" />
     <arg name="match_index_dist" default="200" />
     <arg name="match_index_dist_remote" default="20" />
@@ -69,6 +70,7 @@
         <param name="vins_config_path" value="$(arg config)" type="string" />
         <param name="enable_loop" value="$(arg enable_loop)" type="bool" />
         <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
+        <param name="superpoint_trt_path" value="$(arg superpoint_trt_path)" type="string" />
     </node>
     <include file="$(find d2pgo)/launch/d2pgo.launch" if="$(arg enable_pgo)" >
         <arg name="config" value="$(arg config)" />

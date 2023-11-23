@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(d2vins)
 
+set(CAMKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+set(CMAKE_CXX_FLAGS_RELEASE "-g -Og")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -Wall -g -ggdb")
 add_compile_options(-Wno-deprecated-declarations -Wno-reorder  -Wno-format -Wno-sign-compare)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
