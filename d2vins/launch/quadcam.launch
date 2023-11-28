@@ -8,6 +8,7 @@
     <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/mobilenetvlad_dyn_size.onnx" />
     <arg name="superglue_model_path"     default="$(find d2frontend)/../models/superglue.onnx" />
     <arg name="config" default="$(find d2vins)/../config/quadcam/quadcam_single.yaml" />
+    <arg name="config_depth" default="$(find d2vins)/../config/quadcam/quadcam_single.yaml" />
     <arg name="match_index_dist" default="200" />
     <arg name="match_index_dist_remote" default="20" />
     <arg name="output_path" default="/home/dji/output/" />
@@ -19,6 +20,9 @@
     <arg name="is_4dof" default="false" />
     <arg name="depth_gen" default="false" />
     <arg name="main_id" default="1" /> <!-- This only determine trust which drone to setup cooridinate frme -->
+    <arg name="taichislam" default="false" />
+    <arg name="taichislam_show" default="false" /> 
+    <arg name="skeleton_graph_gen" default="false" /> 
     
     <node pkg="d2vins" type="d2vins_node" name="d2vins" output="$(arg output)" >
         <rosparam>
@@ -82,6 +86,15 @@
     <include file="$(find quadcam_depth_est)/launch/depth-node.launch" if="$(arg depth_gen)" >
         <arg name="output" value="screen" />
         <arg name="show" value="$(arg show)" />
+        <arg name="config" value="$(arg config_depth)" />
     </include>
     <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2slam.rviz" if="$(arg rviz)" />
+        <include file="$(find taichislam)/launch/taichislam-quadcam.launch" if="$(arg taichislam)" >
+        <arg name="show" value="$(arg taichislam_show)" />
+        <arg name="skeleton_graph_gen" value="$(arg skeleton_graph_gen)" />
+        <arg name="drone_id" value="$(arg self_id)" />
+        <arg name="use_cuda" value="true" />
+        <arg name="output_map" value="true" />
+        <arg name="texture_enabled" value="false" />
+    </include>
 </launch>
