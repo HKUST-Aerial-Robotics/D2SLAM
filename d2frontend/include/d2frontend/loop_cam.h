@@ -8,6 +8,7 @@
 #include "CNN/mobilenetvlad_onnx.h"
 #include "CNN/superpoint_onnx.h"
 #include "CNN/superpoint_trt.h"
+#include "CNN/netvlad_trt.h"
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <d2frontend/utils.h>
@@ -79,7 +80,8 @@ public:
     VisualImageDesc generateImageDescriptor(const StereoFrame & msg, int i, cv::Mat &_show);
 
     //generate image descriptor through trt with bundle performance
-    int32_t bundleGenereateImagesDescriptor(const StereoFrame & msg, VisualImageDescArray & viokf);
+    int32_t bundleGenerateImagesDescriptor(const StereoFrame & msg, VisualImageDescArray & viokf);
+    int32_t bundleGenerateNetvladDescriptor(const StereoFrame & msg, VisualImageDescArray & viokf);
 
     VisualImageDescArray processStereoframe(const StereoFrame & msg);
 
@@ -106,5 +108,6 @@ private:
     MobileNetVLADONNX * netvlad_onnx = nullptr;
     SuperPointONNX * superpoint_onnx = nullptr;
     std::unique_ptr<TensorRTSupperPoint::SuperPointTrt> superpoint_trt_ = nullptr;
+    std::unique_ptr<TensorRTNetVLAD::NetVLADTrt> netvlad_trt_ = nullptr;
 };
 }

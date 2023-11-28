@@ -112,6 +112,7 @@ add_library(loop_cnn
   src/CNN/superpoint_onnx.cpp
   src/CNN/superglue_onnx.cpp
   src/CNN/superpoint_trt.cpp
+  src/CNN/netvlad_trt.cpp
   src/loop_utils.cpp
   src/d2frontend_params.cpp
 )

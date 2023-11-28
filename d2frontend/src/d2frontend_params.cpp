@@ -78,9 +78,7 @@ namespace D2FrontEnd {
             loopcamconfig->netvlad_int8_calib_table_name = (std::string) fsSettings["netvlad_int8_calib_table_name"];
             loopcamconfig->superpoint_int8_calib_table_name = (std::string) fsSettings["superpoint_int8_calib_table_name"];
         }
-
-        nh.param<std::string>("superpoint_trt_path",loopcamconfig->superpoint_trt_engine_path, "");
-        nh.param<std::string>("moblieNetVlad_trt_path",loopcamconfig->netvlad_trt_engine_path, "");
+        
         //NN engine type
         nh.param<int>("nn_engine_type", (int &) loopcamconfig->nn_engine_type, 0);
         nh.param<bool>("lower_cam_as_main", loopcamconfig->right_cam_as_main, false);

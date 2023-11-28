@@ -42,6 +42,12 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh) :
                 printf("[ERROR] super point trt alloc failed\n");
             }
             superpoint_trt_->init();
+            netvlad_trt_ = std::make_unique<TensorRTNetVLAD::NetVLADTrt>(kStreamNum, img_width, img_height,
+             config.netvlad_trt_engine_path, params->pca_netvlad ,config.show);
+            if (netvlad_trt_ == nullptr){
+                printf("[ERROR] netvlad trt alloc failed\n");
+            }
+            netvlad_trt_->init();
         }
     }
 
@@ -210,9 +216,8 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
             }
         }
     } else if(config_.nn_engine_type == EngineType::TRT){
-        //extrack bundle data
-        // printf("xxxxxxxxxxxxx TRT pure back end\n");
-        bundleGenereateImagesDescriptor(msg, visual_array);
+        bundleGenerateImagesDescriptor(msg, visual_array);
+        bundleGenerateNetvladDescriptor(msg, visual_array);
     }
     
     tt_sum+= tt.toc();
@@ -307,7 +312,7 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame & msg, int vc
     return vframe;
 }
 
-int32_t LoopCam::bundleGenereateImagesDescriptor(const StereoFrame & msg, VisualImageDescArray & viokf) {
+int32_t LoopCam::bundleGenerateImagesDescriptor(const StereoFrame & msg, VisualImageDescArray & viokf) {
     std::vector<cv::Mat> input_img_vec;
     if (config_.enable_undistort_image){
         for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
@@ -351,6 +356,22 @@ int32_t LoopCam::bundleGenereateImagesDescriptor(const StereoFrame & msg, Visual
     return 0;
 }
 
+//should be call after bundleGenerateImagesDescriptor
+int32_t LoopCam::bundleGenerateNetvladDescriptor(const StereoFrame & msg, VisualImageDescArray & viokf){
+    std::vector<cv::Mat> input_img_vec;
+    std::vector<std::vector<float>> descriptors;
+    for(auto && vframe :viokf.images){
+        input_img_vec.push_back(vframe.raw_image);
+    }
+    netvlad_trt_->doInference(input_img_vec);
+    netvlad_trt_->getOutput(descriptors);
+    for (int idx = 0; idx<viokf.images.size(); idx++){
+        auto && vframe = viokf.images[idx];
+        vframe.image_desc = descriptors[idx];
+    }
+    return 0;
+    //all camera number is not equal to 4 so change size will dump
+}
 
 VisualImageDesc LoopCam::generateGrayDepthImageDescriptor(const StereoFrame & msg, int vcam_id, cv::Mat & _show)
 {
