@@ -43,7 +43,6 @@ estimate_td: 0                      # online estimate time offset between camera
 td: -0.02                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 estimation_mode: 2 #0:single; 1:solve all; 2: distributed; 3:server
 double_counting_common_feature: 0
-min_inv_dep: 0.01
 not_estimate_first_extrinsic: 1
 
 #0:single; 1:solve all; 2: distributed; 3:server

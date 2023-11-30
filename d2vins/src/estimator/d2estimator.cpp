@@ -398,8 +398,6 @@ void D2Estimator::setStateProperties() {
         if (!problem.HasParameterBlock(pointer)) {
             continue;
         }
-        // Set minimun landmark distance
-        problem.SetParameterLowerBound(pointer, 0, params->min_inv_dep);
     }
 
     if (!params->estimate_td || state.size() < params->max_sld_win_size ||
@@ -868,11 +866,6 @@ void D2Estimator::setupLandmarkFactors() {
                 solver->addResidual(info);
                 marginalizer->addResidualInfo(info);
                 used_landmarks.insert(lm_id);
-            }
-            if (params->estimation_mode !=
-                D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
-                solver->getProblem().SetParameterLowerBound(
-                    state.getLandmarkState(lm_id), 0, params->min_inv_dep);
             }
         }
     }

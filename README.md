@@ -81,7 +81,6 @@ estimation_mode: 2                  # The estimation mode.
 # Available options are 0 (D2VINS works as mono-robot VIO), 1 (each D2VINS instance estimates all robots in the swarm with all information it found), 
 # 2 (distributed estimation mode, should be used in real-world experiments), and SERVER_MODE (D2VINS works as a server to collect information from the network and estimate the states, but not read data locally).
 double_counting_common_feature: 0 # 1 or 0. If 1, common features will be double counted. This parameter is for debugging only.
-min_inv_dep: 0.01 # The minimum inverse depth of the landmark. The default value is 0.01, which is suitable for landmarks 100 meters away.
 
 #optimization parameters
 max_solver_time: 0.08 # The maximum time allowed for each iteration of the solver (in ms).

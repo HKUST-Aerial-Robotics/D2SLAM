@@ -205,7 +205,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
                     auto ptcam = (firstFrame.odom.pose() * ext_base).inverse() *
                                  point_3d;
                     auto inv_dep = 1 / ptcam.norm();
-                    if (inv_dep > params->min_inv_dep) {
+                    if (inv_dep < params->max_inv_dep) {
                         lm.flag = LandmarkFlag::INITIALIZED;
                         *landmark_state[lm_id] = inv_dep;
                         if (params->debug_print_states) {
@@ -219,7 +219,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
                         }
                     } else {
                         lm.flag = LandmarkFlag::INITIALIZED;
-                        *landmark_state[lm_id] = params->min_inv_dep;
+                        *landmark_state[lm_id] = params->default_inv_dep;
                         if (params->debug_print_states) {
                             SPDLOG_WARN(
                                 "Initialize failed too far away: landmark "
@@ -369,7 +369,7 @@ void D2LandmarkManager::outlierRejection(
             }
         }
     }
-    SPDLOG_INFO(
+    SPDLOG_DEBUG(
         "outlierRejection remove {}/{} landmarks",
         remove_count, total_count);
 }
@@ -385,10 +385,12 @@ void D2LandmarkManager::syncState(const D2EstimatorState *state) {
             if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
                 auto inv_dep = *it.second;
                 if (inv_dep < 0) {
-                    SPDLOG_WARN("[Warn] negative inv dep {:.2f} found", inv_dep);
+                    SPDLOG_DEBUG("[Warn] small inv dep {:.2f} found", inv_dep);
+                    lm.flag = LandmarkFlag::OUTLIER;
+                    continue;
                 }
-                if (inv_dep < params->min_inv_dep) {
-                    inv_dep = params->min_inv_dep;
+                if (inv_dep > params->max_inv_dep) {
+                    inv_dep = params->default_inv_dep;
                 }
                 auto lm_per_frame = lm.track[0];
                 const auto &firstFrame =
@@ -456,7 +458,7 @@ double triangulatePoint3DPts(const std::vector<Swarm::Pose> poses,
     for (unsigned int i = 0; i < poses.size(); i++) {
         auto reproject_pos = poses[i].inverse() * point_3d;
         reproject_pos.normalize();
-        Vector3d err = points[i] - reproject_pos;
+        Vector3d err = points[i].normalized() - reproject_pos;
         if (i == 0) {
             err_pose_0 = err.norm();
         }

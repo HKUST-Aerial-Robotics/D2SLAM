@@ -83,7 +83,8 @@ struct D2VINSConfig {
 
     //Fuse depth
     bool fuse_dep = true;
-    double min_inv_dep = 1e-1; //10 meter away
+    double max_inv_dep = 1e1; //10 cm away
+    double default_inv_dep = 1e-1;
     double depth_sqrt_inf = 20.0;
     double max_depth_to_fuse = 5.;
     double min_depth_to_fuse = 0.3;

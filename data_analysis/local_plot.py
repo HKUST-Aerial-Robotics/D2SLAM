@@ -8,9 +8,9 @@ import scipy.stats as stats
 from utils import *
 from trajectory import *
 
-def read_path_from_csv(path, t0=None, delimiter=None,dte=None, reset_orientation=False):
+def read_path_from_csv(path, t0=None, delimiter=None,dte=None, reset_orientation=False, time_multiplier=1.0):
     arr = np.loadtxt(path, delimiter=delimiter)
-    t = arr[:, 0]
+    t = arr[:, 0] * time_multiplier
     if t0 is None:
         t0 = t[0]
     t = t - t0

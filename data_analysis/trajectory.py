@@ -139,7 +139,10 @@ def odometry_covariance_per_meter_with_rp(pos_vo, yaw_vo, pos_gt, yaw_gt, rp_len
         # plt.plot(rp_errors)
         # plt.grid()
         plt.show()
-    return sqr_err_pos_per_meter/c, sqr_err_yaw_per_meter/c
+    if c > 0:
+        return sqr_err_pos_per_meter/c, sqr_err_yaw_per_meter/c
+    else:
+        return np.NaN, np.NaN
 
 def odometry_covariance_per_meter(pos_vo, yaw_vo, pos_gt, yaw_gt, rp_lengths=[1.0], gt_outlier_thres=1.0, show=False,step=100):
     pos_covs = []

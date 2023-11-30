@@ -1099,7 +1099,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         }
     }
 
-    SPDLOG_INFO("match features {}:{} matched inliers{}/all{} frame {}:{} t: {:.3f}ms enable_knn {} kNN ratio {} search_dist {:.2f} check_essential {} sp_dims {}", 
+    SPDLOG_DEBUG("match features {}:{} matched inliers{}/all{} frame {}:{} t: {:.3f}ms enable_knn {} kNN ratio {} search_dist {:.2f} check_essential {} sp_dims {}", 
                 pts_a.size(), pts_b.size(), ids_b.size(), _matches.size(), img_desc_a.frame_id, img_desc_b.frame_id, tic.toc(), 
                 _config.enable_knn_match, _config.knn_match_ratio, search_radius, _config.check_essential, params->superpoint_dims);
     if (ids_b.size() >= _config.remote_min_match_num) {
