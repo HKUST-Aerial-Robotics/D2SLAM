@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(quadcam_depth_est)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
