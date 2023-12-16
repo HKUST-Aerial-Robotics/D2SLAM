@@ -119,6 +119,9 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--realsense', action='store_true', help="is realsense not TUM")
     parser.add_argument('-o', '--output', default="", type=str, help='output path')
     parser.add_argument('-p', '--sync-path', default="", action='store_true', help='sync by path command')
+    parser.add_argument('-t','--start-time', nargs='+', help='<Required> Set flag', required=True, type=float)
+    parser.add_argument('-u','--duration', nargs='+', help='<Required> Set flag', required=True, type=float)
+
     args = parser.parse_args()
     bags = args.bags
     dts = {}
@@ -143,13 +146,17 @@ if __name__ == "__main__":
             dts[bag] = t0 - t0s[bag]
     else:
         t0 = get_time0(bags[0], is_realsense=args.realsense)
-        for bag in bags:
-            t = get_time0(bag, is_realsense=args.realsense)
-            print(f"Bag {bag} start at {t.to_sec()}")
+
+        for i in range(len(bags)):
+            bag = bags[i]
+            t = t_ = get_time0(bag, is_realsense=args.realsense)
+            if len(args.start_time) > 0:
+                t = t_ + rospy.Duration(args.start_time[i])
+            print(f"Bag {bag} start at {t_.to_sec()}, we will use from {t.to_sec()}")
             dts[bag] = t0 - t
             t0s[bag] = t
 
-    pos0, q_calib, y0 = get_pose0(bags[0])
+    # pos0, q_calib, y0 = get_pose0(bags[0])
     
     import pathlib
     output_path = pathlib.Path(bags[0]).resolve() if args.output == "" else pathlib.Path(args.output)
@@ -157,7 +164,8 @@ if __name__ == "__main__":
 
     bridge = CvBridge()
     encode_param = [int(cv.IMWRITE_JPEG_QUALITY), args.quality]
-    for bag in bags:
+    for i in range(len(bags)):
+        bag = bags[i]
         output_bag = generate_bagname(bag, output_path, args.comp)
         print("Write bag to", output_bag)
         _dt = dts[bag]
@@ -169,6 +177,8 @@ if __name__ == "__main__":
             for topic, msg, t in rosbag.Bag(bag).read_messages():
                 if t < t0s[bag]:
                     continue
+                if len(args.duration) > 0 and t - t0s[bag] > rospy.Duration(args.duration[i]):
+                    break
                 if msg._has_header:
                     if msg.header.stamp.to_sec() > 0:
                         msg.header.stamp = msg.header.stamp + _dt

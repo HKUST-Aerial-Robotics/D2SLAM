@@ -145,7 +145,7 @@ void D2Frontend::processRemoteImage(VisualImageDescArray &frame_desc,
                                     bool succ_track) {
     if (params->enable_loop) {
         if (!frame_desc.isMatchedFrame()) {
-            SPDLOG_DEBUG(
+            spdlog::debug(
                 "Remote image {} is not matched, directly pass to detector",
                 frame_desc.frame_id);
             // Check if keyframe!!!
@@ -156,14 +156,14 @@ void D2Frontend::processRemoteImage(VisualImageDescArray &frame_desc,
             // We need to wait the matched frame is added to loop detector.
             if (loop_detector->hasFrame(frame_desc.matched_frame) ||
                 frame_desc.matched_drone != params->self_id) {
-                SPDLOG_DEBUG("Remote image {} is matched with {} drone {} add "
+                spdlog::debug("Remote image {} is matched with {} drone {} add "
                              "to loop queue",
                              frame_desc.frame_id, frame_desc.matched_frame,
                              frame_desc.drone_id);
                 addToLoopQueue(frame_desc);
             } else {
                 VisualImageDescArray _frame_desc = frame_desc;
-                SPDLOG_DEBUG("Remote image {} is matched with {}, waiting for "
+                spdlog::debug("Remote image {} is matched with {}, waiting for "
                              "matched frame",
                              frame_desc.frame_id, frame_desc.matched_frame);
                 new std::thread(

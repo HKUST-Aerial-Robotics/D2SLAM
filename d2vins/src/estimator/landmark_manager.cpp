@@ -311,7 +311,7 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState *state) {
         }
     }
 
-    SPDLOG_DEBUG("Total {} initialized {}", landmark_db.size(), inited_count);
+    spdlog::debug("Total {} initialized {}", landmark_db.size(), inited_count);
 }
 
 void D2LandmarkManager::outlierRejection(
@@ -357,7 +357,7 @@ void D2LandmarkManager::outlierRejection(
                     params->landmark_outlier_threshold) {
                     remove_count++;
                     lm.flag = LandmarkFlag::OUTLIER;
-                    SPDLOG_DEBUG(
+                    spdlog::debug(
                         "remove LM {} inv_dep/dep "
                         "{:.2f}/{:.2f} pos {:.2f} {:.2f} {:.2f} reproj_error "
                         "{:.2f}",
@@ -369,7 +369,7 @@ void D2LandmarkManager::outlierRejection(
             }
         }
     }
-    SPDLOG_DEBUG(
+    spdlog::debug(
         "outlierRejection remove {}/{} landmarks",
         remove_count, total_count);
 }
@@ -385,7 +385,7 @@ void D2LandmarkManager::syncState(const D2EstimatorState *state) {
             if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
                 auto inv_dep = *it.second;
                 if (inv_dep < 0) {
-                    SPDLOG_DEBUG("[Warn] small inv dep {:.2f} found", inv_dep);
+                    spdlog::debug("[Warn] small inv dep {:.2f} found", inv_dep);
                     lm.flag = LandmarkFlag::OUTLIER;
                     continue;
                 }
@@ -401,16 +401,16 @@ void D2LandmarkManager::syncState(const D2EstimatorState *state) {
                 pos = firstFrame->odom.pose() * ext * pos;
                 lm.position = pos;
                 lm.flag = LandmarkFlag::ESTIMATED;
-                SPDLOG_DEBUG(
-                    "update LM {:d} inv_dep/dep "
-                    "{:.2f}/{:.2f} depmea {:d} {:.2f} pt3d_n {:.2f} {:.2f} "
-                    "{:.2f} pos "
-                    "{:.2f} {:.2f} {:.2f} baseFrame {:d} pose {} extrinsic {}",
-                    lm_id, inv_dep, 1. / inv_dep, lm_per_frame.depth_mea,
-                    lm_per_frame.depth, pt3d_n.x(), pt3d_n.y(), pt3d_n.z(),
-                    pos.x(), pos.y(), pos.z(), lm_per_frame.frame_id,
-                    firstFrame->odom.pose().toStr().c_str(),
-                    ext.toStr().c_str());
+                // spdlog::debug(
+                //     "update LM {:d} inv_dep/dep "
+                //     "{:.2f}/{:.2f} depmea {:d} {:.2f} pt3d_n {:.2f} {:.2f} "
+                //     "{:.2f} pos "
+                //     "{:.2f} {:.2f} {:.2f} baseFrame {:d} pose {} extrinsic {}",
+                //     lm_id, inv_dep, 1. / inv_dep, lm_per_frame.depth_mea,
+                //     lm_per_frame.depth, pt3d_n.x(), pt3d_n.y(), pt3d_n.z(),
+                //     pos.x(), pos.y(), pos.z(), lm_per_frame.frame_id,
+                //     firstFrame->odom.pose().toStr().c_str(),
+                //     ext.toStr().c_str());
             } else {
                 lm.position.x() = it.second[0];
                 lm.position.y() = it.second[1];
@@ -470,7 +470,7 @@ double triangulatePoint3DPts(const std::vector<Swarm::Pose> poses,
 std::map<FrameIdType, Swarm::Pose>
 D2LandmarkManager::SFMInitialization(const std::vector<VINSFrame *> frames,
                                      int camera_idx) {
-    SPDLOG_DEBUG("SFMInitialization with camera {}", camera_idx);
+    spdlog::debug("SFMInitialization with camera {}", camera_idx);
 
     // TODO: Add camera param? or consider multi-camera case
     // Here we assume we are using mono camera

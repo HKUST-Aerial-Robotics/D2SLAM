@@ -162,9 +162,9 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
             const Map<const VectorXf> vlad_desc(last.images[0].image_desc.data(), params->netvlad_dims);
             double netvlad_similar = vlad_desc.dot(vlad_desc_remote);
             if (netvlad_similar < params->track_remote_netvlad_thres) {
-                SPDLOG_DEBUG("D{} Remote image does not match current image {:.2f}/{:.2f}", params->self_id, netvlad_similar, params->track_remote_netvlad_thres);
+                spdlog::debug("D{} Remote image does not match current image {:.2f}/{:.2f}", params->self_id, netvlad_similar, params->track_remote_netvlad_thres);
             } else {
-                SPDLOG_DEBUG("D{} Remote image match image {}({}) {:.2f}/{:.2f}", params->self_id,
+                spdlog::debug("D{} Remote image match image {}({}) {:.2f}/{:.2f}", params->self_id,
                             i, last.frame_id, netvlad_similar, params->track_remote_netvlad_thres);
                 prev = last;
                 dir_a = 0;
@@ -187,7 +187,7 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(const VisualImageDescArray & frame
                 } else {
                     prev = last;
                     dir_b = dirs[j];
-                    SPDLOG_DEBUG("D{} Remote image match image drone {}({}) dir {}:{} {:.2f}/{:.2f}", params->self_id,
+                    spdlog::debug("D{} Remote image match image drone {}({}) dir {}:{} {:.2f}/{:.2f}", params->self_id,
                                 i, last.frame_id, dir_a, dir_b, netvlad_similar, params->track_remote_netvlad_thres);
                     return true;
                 }
@@ -313,7 +313,7 @@ TrackReport D2FeatureTracker::trackRemote(VisualImageDesc & frame, const VisualI
             }
         }
     }
-    SPDLOG_DEBUG("[D2Frontend::D2FeatureTracker] match {}@cam{}<->{}@cam{} report.remote_matched_num {}",
+    spdlog::debug("[D2Frontend::D2FeatureTracker] match {}@cam{}<->{}@cam{} report.remote_matched_num {}",
         frame.drone_id, frame.camera_index, prev_frame.drone_id, frame.camera_index, report.remote_matched_num);
     return report;
 }
@@ -456,12 +456,12 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
                     }
                     
                     report.sum_parallex += (lm.pt3d_norm - prev_lm.pt3d_norm).norm();
-                    spdlog::debug("LM {} prev_2d {:.1f} {:.1f} cur_2d {:.3f} {:.3f} para_2d {:.1f}%  prev_3d {:.3f} {:.3f} {:.3f} cur_3d {:.3f} {:.3f} {:.3f} para_3d {:.1f}%",
-                            prev_lm.landmark_id, prev_lm.pt2d.x, prev_lm.pt2d.y, lm.pt2d.x, lm.pt2d.y, 
-                            cv::norm(prev_lm.pt2d - lm.pt2d)*100.0,
-                            prev_lm.pt3d_norm.x(), prev_lm.pt3d_norm.y(), prev_lm.pt3d_norm.z(), 
-                            lm.pt3d_norm.x(), lm.pt3d_norm.y(), lm.pt3d_norm.z(), 
-                            (prev_lm.pt3d_norm - lm.pt3d_norm).norm()*100.0);
+                    // spdlog::debug("LM {} prev_2d {:.1f} {:.1f} cur_2d {:.3f} {:.3f} para_2d {:.1f}%  prev_3d {:.3f} {:.3f} {:.3f} cur_3d {:.3f} {:.3f} {:.3f} para_3d {:.1f}%",
+                    //         prev_lm.landmark_id, prev_lm.pt2d.x, prev_lm.pt2d.y, lm.pt2d.x, lm.pt2d.y, 
+                    //         cv::norm(prev_lm.pt2d - lm.pt2d)*100.0,
+                    //         prev_lm.pt3d_norm.x(), prev_lm.pt3d_norm.y(), prev_lm.pt3d_norm.z(), 
+                    //         lm.pt3d_norm.x(), lm.pt3d_norm.y(), lm.pt3d_norm.z(), 
+                    //         (prev_lm.pt3d_norm - lm.pt3d_norm).norm()*100.0);
                     report.parallex_num ++;
                 }
                 // SPDLOG_INFO("[D2FeatureTracker::trackLK] track {} LK points, {} lost, track rate {:.1f}% para {:.2f}% num {} {}->{}",
@@ -950,7 +950,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
     ids_b_to_a.resize(pts_b.size());
     std::fill(ids_b_to_a.begin(), ids_b_to_a.end(), -1);
     double search_radius = param.search_radius;
-    SPDLOG_DEBUG("Match {}<->{} enable_prediction {} pose_a {} enable_search_in_local {} motion_prediction {} prediction_using_extrinsic {}", 
+    spdlog::debug("Match {}<->{} enable_prediction {} pose_a {} enable_search_in_local {} motion_prediction {} prediction_using_extrinsic {}", 
         img_desc_a.frame_id, img_desc_b.frame_id, param.enable_prediction, param.pose_a.toStr(), param.enable_search_in_local, param.pose_b_prediction.toStr(), param.prediction_using_extrinsic);
     if (param.enable_prediction) {
         if (param.prediction_using_extrinsic) {
@@ -992,7 +992,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
             auto features_a = getFeatureHalfImg(pts_a, raw_desc_a, param.type==LEFT_RIGHT_IMG_MATCH, tmp_to_idx_a);
             auto features_b = getFeatureHalfImg(pts_b, raw_desc_b, param.type==RIGHT_LEFT_IMG_MATCH, tmp_to_idx_b);
             if (tmp_to_idx_a.size() == 0 || tmp_to_idx_b.size() == 0) {
-                SPDLOG_DEBUG("matchLocalFeatures failed: no feature to match.\n");
+                spdlog::debug("matchLocalFeatures failed: no feature to match.\n");
                 return false;
             }
             cv::BFMatcher bfmatcher(cv::NORM_L2, true);
@@ -1040,7 +1040,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         //only perform this for remote
         std::vector<unsigned char> mask;
         if (matched_pts_a_normed.size() < MIN_HOMOGRAPHY) {
-            SPDLOG_DEBUG("matchLocalFeatures failed only %ld pts not meet MIN_HOMOGRAPHY", matched_pts_a_normed.size());
+            spdlog::debug("matchLocalFeatures failed only %ld pts not meet MIN_HOMOGRAPHY", matched_pts_a_normed.size());
             return false;
         }
         // cv::findHomography(matched_pts_a, matched_pts_b, cv::RANSAC, _config.ransacReprojThreshold, mask);
@@ -1099,7 +1099,7 @@ bool D2FeatureTracker::matchLocalFeatures(const VisualImageDesc & img_desc_a, co
         }
     }
 
-    SPDLOG_DEBUG("match features {}:{} matched inliers{}/all{} frame {}:{} t: {:.3f}ms enable_knn {} kNN ratio {} search_dist {:.2f} check_essential {} sp_dims {}", 
+    spdlog::debug("match features {}:{} matched inliers{}/all{} frame {}:{} t: {:.3f}ms enable_knn {} kNN ratio {} search_dist {:.2f} check_essential {} sp_dims {}", 
                 pts_a.size(), pts_b.size(), ids_b.size(), _matches.size(), img_desc_a.frame_id, img_desc_b.frame_id, tic.toc(), 
                 _config.enable_knn_match, _config.knn_match_ratio, search_radius, _config.check_essential, params->superpoint_dims);
     if (ids_b.size() >= _config.remote_min_match_num) {

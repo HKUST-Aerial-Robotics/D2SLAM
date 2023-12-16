@@ -182,7 +182,7 @@ VINSFrame *D2Estimator::addFrame(VisualImageDescArray &_frame) {
     _frame.Bg = frame.Bg;
     _frame.reference_frame_id = frame.reference_frame_id;
 
-    SPDLOG_DEBUG("Initialize VINSFrame with {}: {}", params->init_method,
+    spdlog::debug("Initialize VINSFrame with {}: {}", params->init_method,
                  frame.toStr().c_str());
     return frame_ret;
 }
@@ -245,7 +245,7 @@ VINSFrame *D2Estimator::addFrameRemote(const VisualImageDescArray &_frame) {
             auto pred_cur_pose =
                 last_frame.odom.pose() * ego_last.inverse() * pose_local_cur;
             vinsframe.odom.pose() = pred_cur_pose;
-            SPDLOG_DEBUG("Initial remoteframe {}@{} with ego-motion: {}",
+            spdlog::debug("Initial remoteframe {}@{} with ego-motion: {}",
                          _frame.frame_id, r_drone_id, pred_cur_pose.toStr());
         }
     } else {
@@ -254,11 +254,11 @@ VINSFrame *D2Estimator::addFrameRemote(const VisualImageDescArray &_frame) {
         auto pnp_init = initialFramePnP(_frame, Swarm::Pose::Identity());
         if (!pnp_init.first) {
             // Use IMU
-            SPDLOG_DEBUG("Initialization failed for remote {}@{}. will not add",
+            spdlog::debug("Initialization failed for remote {}@{}. will not add",
                          _frame.frame_id, _frame.drone_id);
             return nullptr;
         } else {
-            SPDLOG_DEBUG("Initial first remoteframe@{} with PnP: {}",
+            spdlog::debug("Initial first remoteframe@{} with PnP: {}",
                          r_drone_id, pnp_init.second.toStr());
             if (_frame.reference_frame_id < state.getReferenceFrameId() &&
                 params->estimation_mode ==
@@ -277,7 +277,7 @@ VINSFrame *D2Estimator::addFrameRemote(const VisualImageDescArray &_frame) {
     }
 
     auto frame_ret = state.addFrame(_frame, vinsframe);
-    SPDLOG_DEBUG("Add Remote VINSFrame with {}: {} IMU {} iskeyframe {}/{}",
+    spdlog::debug("Add Remote VINSFrame with {}: {} IMU {} iskeyframe {}/{}",
                  _frame.drone_id, vinsframe.toStr(), _frame.imu_buf.size(),
                  vinsframe.is_keyframe, _frame.is_keyframe);
     return frame_ret;
@@ -420,7 +420,7 @@ bool D2Estimator::isMain() const {
 }
 
 void D2Estimator::onDistributedVinsData(const DistributedVinsData &dist_data) {
-    SPDLOG_DEBUG("D{} drone {} solver_id {} iteration {} reference_frame_id {}",
+    spdlog::debug("D{} drone {} solver_id {} iteration {} reference_frame_id {}",
                  self_id, dist_data.drone_id, dist_data.solver_token,
                  dist_data.iteration_count, dist_data.reference_frame_id);
     if (dist_data.reference_frame_id == state.getReferenceFrameId()) {
@@ -468,7 +468,7 @@ void D2Estimator::waitForStart() {
         }
     }
     double time = timer.toc();
-    SPDLOG_DEBUG("D{} Wait for start time {:.f}", self_id, timer.toc());
+    spdlog::debug("D{} Wait for start time {:.f}", self_id, timer.toc());
     if (time > 100) {
         SPDLOG_WARN("D{} Wait for start time long: {:.1f}", self_id,
                     timer.toc());
@@ -492,14 +492,14 @@ void D2Estimator::solveinDistributedMode() {
     if (params->consensus_sync_to_start) {
         if (true) {
             ready_drones = std::set<int>{self_id};
-            SPDLOG_DEBUG("D{} ready, wait for start signal...", self_id);
+            spdlog::debug("D{} ready, wait for start signal...", self_id);
             waitForStart();
             if (isMain()) {
                 solve_token += 1;
                 sendSyncSignal(SyncSignal::DSolverStart, solve_token);
             }
             static_cast<ConsensusSolver *>(solver)->setToken(solve_token);
-            SPDLOG_DEBUG("D{} All drones read start solving token {}...",
+            spdlog::debug("D{} All drones read start solving token {}...",
                          self_id, solve_token);
             ready_to_start = false;
         } else {
@@ -507,7 +507,7 @@ void D2Estimator::solveinDistributedMode() {
             sendSyncSignal(SyncSignal::DSolverNonDist, solve_token);
         }
     } else {
-        SPDLOG_DEBUG("D{} async solve...", self_id);
+        spdlog::debug("D{} async solve...", self_id);
     }
 
     const Guard lock(frame_mutex);
@@ -756,7 +756,7 @@ void D2Estimator::setupLandmarkFactors() {
     current_measurement_num = 0;
     auto loss_function = new ceres::HuberLoss(1.0);
     keyframe_measurements.clear();
-    SPDLOG_DEBUG("{} landmarks", lms.size());
+    spdlog::debug("{} landmarks", lms.size());
     // We first count keyframe_measurements
     for (auto lm : lms) {
         LandmarkPerFrame firstObs = lm.track[0];
@@ -869,7 +869,7 @@ void D2Estimator::setupLandmarkFactors() {
             }
         }
     }
-    SPDLOG_DEBUG("D{} {} landmarks {} measurements {}", self_id, lms.size(),
+    spdlog::debug("D{} {} landmarks {} measurements {}", self_id, lms.size(),
                  current_measurement_num);
 }
 
@@ -954,7 +954,7 @@ std::set<int> D2Estimator::getNearbyDronesbyPGOData(
             dist_yaw < params->nearby_drone_yaw_dist / 57.3) {
             nearby_drones.insert(p.first);
         }
-        SPDLOG_DEBUG("drone {} dist {:.1f} yaw {:.1f}deg", p.first, dist,
+        spdlog::debug("drone {} dist {:.1f} yaw {:.1f}deg", p.first, dist,
                      dist_yaw * 57.3);
     }
     for (auto it : vins_poses) {
@@ -965,7 +965,7 @@ std::set<int> D2Estimator::getNearbyDronesbyPGOData(
             dist_yaw < params->nearby_drone_yaw_dist / 57.3) {
             nearby_drones.insert(it.first);
         }
-        SPDLOG_DEBUG("VINS Pose drone {} dist {:.1f} yaw {:.1f}deg", it.first,
+        spdlog::debug("VINS Pose drone {} dist {:.1f} yaw {:.1f}deg", it.first,
                      dist, dist_yaw * 57.3);
     }
     return nearby_drones;
