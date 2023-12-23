@@ -562,7 +562,7 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
     for (auto drone_id : state.availableDrones()) {
         trajs[drone_id] = Swarm::DroneTrajectory(drone_id, false);
         for (auto frame : state.getFrames(drone_id)) {
-            if (used_frames.find(frame->frame_id) == used_frames.end()) {
+            if (used_frames.count(frame->frame_id) == 0) {
                 continue;
             }
             auto pose = frame->odom.pose();
@@ -580,6 +580,9 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
                 pose = Swarm::Pose(pos, state.getAttitudeInit(frame->frame_id)*q_perturb);
             }
             trajs[drone_id].push(frame->stamp, pose, frame->frame_id);
+        }
+        if (trajs[drone_id].trajectory_size() == 0) {
+            trajs.erase(drone_id);
         }
     }
     return trajs;

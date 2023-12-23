@@ -59,52 +59,52 @@ def read_multi_folder(folder, nodes, enable_pgo=True, t0=None):
         return paths, None, t0
     return paths, paths_pgo, t0
     
-def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="/home/xuhao/output/", id_map = None, figsize=(6, 6), plot_each=True):
+def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="/home/xuhao/output/", id_map = None, figsize=(6, 6), plot_each=True, plot_3d = True):
     import matplotlib as mpl
     mpl.style.use('seaborn-whitegrid')
 
-    fig = plt.figure("plot3d", figsize=figsize)
-    ax = fig.add_subplot(111, projection='3d')
-    # ax = fig.gca(projection='3d')
     if id_map is None:
         id_map = {}
         for i in nodes:
             id_map[i] = i
 
-    for i in nodes:
-        if poses_gt is not None:
-            ax.plot(poses_gt[i].pos[:,0], poses_gt[i].pos[:,1],poses_gt[i].pos[:,2], label=f"GT {i}")
-        if poses_pgo is not None:
-            ax.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1],poses_pgo[i].pos[:,2], label=f"PGO {i}")
-        ax.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1],poses_fused[i].pos[:,2], label=f"$D^2$VINS {id_map[i]}")
-    
-    ax.set_xlabel('$X$')
-    ax.set_ylabel('$Y$')
-    ax.set_zlabel('$Z$')
-    
-    plt.legend()
-    plt.savefig(output_path+"plot3d.png")
-
-    #Plot Fused Vs GT 3D
-    fig = plt.figure("FusedVsGT3D", figsize=figsize)
-    # fig.suptitle("Fused Vs GT 3D")
-    k = 0
-    for i in nodes:
-        _id = id_map[i]
-        ax = fig.add_subplot(1, len(nodes), k+1, projection='3d')
-        ax.set_title(f"Drone {_id}")
-        if poses_gt is not None:
-            ax.plot(poses_gt[i].pos[:,0], poses_gt[i].pos[:,1],poses_gt[i].pos[:,2], label=f"Ground Truth")
-        ax.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1],poses_fused[i].pos[:,2], label=f"$D^2$VINS")
-        if poses_pgo is not None:
-            ax.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1],poses_pgo[i].pos[:,2], label=f"$D^2$PGO")
-        if i == nodes[0]:
-            plt.legend()
+    if plot_3d:
+        fig = plt.figure("plot3d", figsize=figsize)
+        ax = fig.add_subplot(111, projection='3d')
+        for i in nodes:
+            if poses_gt is not None:
+                ax.plot(poses_gt[i].pos[:,0], poses_gt[i].pos[:,1],poses_gt[i].pos[:,2], label=f"GT {i}")
+            if poses_pgo is not None:
+                ax.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1],poses_pgo[i].pos[:,2], label=f"PGO {i}")
+            ax.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1],poses_fused[i].pos[:,2], label=f"$D^2$VINS {id_map[i]}")
+        
         ax.set_xlabel('$X$')
         ax.set_ylabel('$Y$')
         ax.set_zlabel('$Z$')
-        k += 1
-    plt.savefig(output_path+"FusedVsGT3D.pdf")
+        
+        plt.legend()
+        plt.savefig(output_path+"plot3d.png")
+
+        #Plot Fused Vs GT 3D
+        fig = plt.figure("FusedVsGT3D", figsize=figsize)
+        # fig.suptitle("Fused Vs GT 3D")
+        k = 0
+        for i in nodes:
+            _id = id_map[i]
+            ax = fig.add_subplot(1, len(nodes), k+1, projection='3d')
+            ax.set_title(f"Drone {_id}")
+            if poses_gt is not None:
+                ax.plot(poses_gt[i].pos[:,0], poses_gt[i].pos[:,1],poses_gt[i].pos[:,2], label=f"Ground Truth")
+            ax.plot(poses_fused[i].pos[:,0], poses_fused[i].pos[:,1],poses_fused[i].pos[:,2], label=f"$D^2$VINS")
+            if poses_pgo is not None:
+                ax.plot(poses_pgo[i].pos[:,0], poses_pgo[i].pos[:,1],poses_pgo[i].pos[:,2], label=f"$D^2$PGO")
+            if i == nodes[0]:
+                plt.legend()
+            ax.set_xlabel('$X$')
+            ax.set_ylabel('$Y$')
+            ax.set_zlabel('$Z$')
+            k += 1
+        plt.savefig(output_path+"FusedVsGT3D.pdf")
 
     fig = plt.figure("Fused Multi 2d", figsize=figsize)
     plt.gca().set_aspect('equal')

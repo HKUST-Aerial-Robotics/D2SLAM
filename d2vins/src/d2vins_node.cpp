@@ -243,6 +243,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "d2vins");
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
+    // spdlog::set_level(spdlog::level::debug);
 
     D2VINSNode d2vins(n);
     ros::AsyncSpinner spinner(4);

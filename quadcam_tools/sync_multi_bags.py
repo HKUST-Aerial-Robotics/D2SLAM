@@ -119,8 +119,8 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--realsense', action='store_true', help="is realsense not TUM")
     parser.add_argument('-o', '--output', default="", type=str, help='output path')
     parser.add_argument('-p', '--sync-path', default="", action='store_true', help='sync by path command')
-    parser.add_argument('-t','--start-time', nargs='+', help='<Required> Set flag', required=True, type=float)
-    parser.add_argument('-u','--duration', nargs='+', help='<Required> Set flag', required=True, type=float)
+    parser.add_argument('-t','--start-time', nargs='+', help='<Required> Set flag', required=False, type=float)
+    parser.add_argument('-u','--duration', nargs='+', help='<Required> Set flag', required=False, type=float)
 
     args = parser.parse_args()
     bags = args.bags
@@ -169,7 +169,7 @@ if __name__ == "__main__":
         output_bag = generate_bagname(bag, output_path, args.comp)
         print("Write bag to", output_bag)
         _dt = dts[bag]
-        with rosbag.Bag(output_bag, 'w') as outbag:
+        with rosbag.Bag(output_bag, 'w', compression="bz2") as outbag:
             from nav_msgs.msg import Path
             path = Path()
             path_arr = []
@@ -177,7 +177,7 @@ if __name__ == "__main__":
             for topic, msg, t in rosbag.Bag(bag).read_messages():
                 if t < t0s[bag]:
                     continue
-                if len(args.duration) > 0 and t - t0s[bag] > rospy.Duration(args.duration[i]):
+                if args.duration is not None and t - t0s[bag] > rospy.Duration(args.duration[i]):
                     break
                 if msg._has_header:
                     if msg.header.stamp.to_sec() > 0:

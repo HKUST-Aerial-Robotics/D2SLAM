@@ -109,5 +109,13 @@ public:
     Eigen::Quaterniond getAttitudeInit(FrameIdType frame_id) {
         return initial_attitude.at(frame_id);
     }
+
+    std::vector<int> getAllDroneIds() {
+        std::vector<int> drone_ids;
+        for (auto it : drone_frames) {
+            drone_ids.push_back(it.first);
+        }
+        return drone_ids;
+    }
 };
 }

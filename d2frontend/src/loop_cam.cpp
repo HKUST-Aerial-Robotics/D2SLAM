@@ -197,7 +197,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
 
     tt_sum+= tt.toc();
     t_count+= 1;
-    SPDLOG_INFO("KF Count {} loop_cam cost avg {:.1f}ms cur {:.1f}ms", kf_count, tt_sum/t_count, tt.toc());
+    spdlog::debug("KF Count {} loop_cam cost avg {:.1f}ms cur {:.1f}ms", kf_count, tt_sum/t_count, tt.toc());
 
     visual_array.frame_id = msg.keyframe_id;
     visual_array.pose_drone = msg.pose_drone;
