@@ -37,7 +37,8 @@ if __name__ == '__main__':
         exit(1)
     
     bag = rosbag.Bag(args.input)
-    num_imgs = bag.get_message_count("/arducam/image/compressed") + bag.get_message_count("/arducam/image")
+    num_imgs = bag.get_message_count("/arducam/image/compressed") + bag.get_message_count("/arducam/image") + \
+        bag.get_message_count("/oak_ffc_4p/assemble_image/compressed") + bag.get_message_count("/oak_ffc_4p/assemble_image")
     print("Total number of images:", num_imgs)
     bridge = CvBridge()
 
@@ -53,7 +54,8 @@ if __name__ == '__main__':
                 t0 = t
             if (t - t0).to_sec() < args.start:
                 continue
-            if topic == "/arducam/image/compressed" or topic == "/arducam/image/raw":
+            if topic == "/arducam/image/compressed" or topic == "/arducam/image/raw" or \
+                topic == "/oak_ffc_4p/assemble_image/compressed" or topic == "/oak_ffc_4p/assemble_image":
                 c += 1
                 if c % args.step != 0:
                     continue
@@ -64,10 +66,10 @@ if __name__ == '__main__':
                 imgs = split_image(img)
                 #Compress and write imgs to output bag
                 for i, _img in enumerate(imgs):
-                    if i == 3:
-                        comp_img = bridge.cv2_to_compressed_imgmsg(_img)
-                        comp_img.header = msg.header
-                        outbag.write(f"/arducam/image_{i}/compressed", comp_img, t)
+                    # if i == 3:
+                    comp_img = bridge.cv2_to_compressed_imgmsg(_img)
+                    comp_img.header = msg.header
+                    outbag.write(f"/d2slam/image_{i}/compressed", comp_img, t)
                     # cv.imwrite(f"/home/xuhao/output/quadvins-output/imgs/fisheye_{c:06d}_{i}.jpg", _img)
                 if args.show:
                     for i in range(len(imgs)):
