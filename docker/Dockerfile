@@ -1,5 +1,6 @@
 # FROM nvidia/cuda:11.6.1-cudnn8-devel-ubuntu20.04
-FROM nvcr.io/nvidia/tensorrt:22.08-py3
+# FROM nvcr.io/nvidia/tensorrt:22.08-py3
+FROM nvcr.io/nvidia/tensorrt:23.02-py3
 ARG CERES_VERSION=2.1.0
 ARG CMAKE_VERSION=3.23.1
 ARG ONNX_VERSION=1.12.1
@@ -25,8 +26,8 @@ RUN  apt-get -y update && \
 #Install ROS
 # update ros repository
 # some code copied from https://github.com/HKUST-Aerial-Robotics/VINS-Fusion/blob/master/docker/Dockerfile
-# RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' &&\
-RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` main" > /etc/apt/sources.list.d/ros-latest.list' && \
+RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' &&\
+# RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` main" > /etc/apt/sources.list.d/ros-latest.list' && \
       curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - && \
       apt-get update && \
       if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; \

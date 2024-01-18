@@ -21,15 +21,13 @@ if [ ${START_OPTION} == 1 ]; then
   echo "${CURRENT_DIR} will be mapped in to docker container with start option 1"
   docker run -it --rm --runtime=nvidia --gpus all  --net=host \
     -v ${CURRENT_DIR}:${SWARM_WS}/src/D2SLAM \
-    -v ${HITNET}:${SWARM_WS}/src/ONNX-HITNET-Stereo-Depth-estimation \
-    -v ${CRESTEREO}:${SWARM_WS}/src/ONNX-CREStereo-Depth-Estimation \
     -v ${CONFIGS}:${SWARM_WS}/src/configs-drone-swarm \
+    -v ${NN_MODELS}:${SWARM_WS}/src/NNmodels_generator \
     -v /dev/:/dev/  -v ${DATA_SET}:/data/ --privileged -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix  --name="d2slam_container" ${DOCKERIMAGE} /bin/bash 
 else
   echo "Start docker container for image transportation only"
   docker run -it --rm --runtime=nvidia --gpus all  --net=host -v /dev/:/dev/ \
-    -v ${HITNET}:${SWARM_WS}/src/ONNX-HITNET-Stereo-Depth-estimation \
-    -v ${CRESTEREO}:${SWARM_WS}/src/ONNX-CREStereo-Depth-Estimation \
     -v ${CONFIGS}:${SWARM_WS}/src/configs-drone-swarm \
+    -v ${NN_MODELS}:${SWARM_WS}/src/NNmodels_generator \
     --privileged -e DISPLAY  -v ${DATA_SET}:/data/  -v /tmp/.X11-unix:/tmp/.X11-unix --name="d2slam_container"  ${DOCKERIMAGE} /bin/bash
 fi

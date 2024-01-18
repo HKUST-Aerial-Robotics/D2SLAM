@@ -6,6 +6,10 @@ import cv2 as cv
 import tqdm
 import numpy as np
 
+#input bag: image compressed
+#ouput bag: image splited
+
+
 def generate_bagname(bag, comp=False):
     from pathlib import Path
     p = Path(bag)
@@ -69,7 +73,7 @@ if __name__ == '__main__':
                     # if i == 3:
                     comp_img = bridge.cv2_to_compressed_imgmsg(_img)
                     comp_img.header = msg.header
-                    outbag.write(f"/d2slam/image_{i}/compressed", comp_img, t)
+                    outbag.write(f"/image_{i}/compressed", comp_img, t)
                     # cv.imwrite(f"/home/xuhao/output/quadvins-output/imgs/fisheye_{c:06d}_{i}.jpg", _img)
                 if args.show:
                     for i in range(len(imgs)):

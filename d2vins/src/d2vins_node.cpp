@@ -189,7 +189,7 @@ protected:
         updateOutModuleSldWinAndLandmarkDB();
     }
 
-    void solverThread() {
+    void solverThread() { //Remote?
         while (ros::ok()) {
             if (need_solve) {
                 estimator->solveinDistributedMode();
@@ -249,7 +249,7 @@ int main(int argc, char **argv)
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
     D2VINSNode d2vins(n);
-    ros::AsyncSpinner spinner(4);
+    ros::AsyncSpinner spinner(4); //cpu loading is high
     spinner.start();
     ros::waitForShutdown();
     spinner.stop();

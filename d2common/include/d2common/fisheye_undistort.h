@@ -93,7 +93,7 @@ class FisheyeUndist {
 
     FisheyeUndist(camodocal::CameraPtr cam, int _id, double _fov,
                   bool _enable_cuda = true,
-                  UndistortType mode = UndistortPinhole5, int imgWidth = 600,
+                  UndistortType mode = UndistortType::UndistortPinhole5, int imgWidth = 600,
                   int imgHeight = 200, cv::Mat photomertic=cv::Mat())
         : imgWidth(imgWidth),
           fov(_fov),

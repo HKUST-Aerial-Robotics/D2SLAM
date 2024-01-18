@@ -87,7 +87,7 @@ TrackReport D2FeatureTracker::initTrackLKFourEye(VisualImageDescArray & frames){
         LKImageInfoGPU cur_lk_info;
         cv::cuda::GpuMat image_cuda(image.raw_image);
         cur_lk_info.pyr = buildImagePyramid(image_cuda);
-        printf("[Debug] run here \n");
+        // printf("[Debug] run here \n");
         std::vector<cv::Point2f> n_pts;
         TicToc t_det;
         for (size_t i = 0; i < cur_landmarks.size(); i++) {
@@ -154,7 +154,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
         //Debug:
         if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE && _config.continue_track_use_lk){
             initTrackLKFourEye(frames);
-            printf("[Debug] initTrackLKFourEye\n");
+            // printf("[Debug] initTrackLKFourEye\n");
             return true;
         }
         //
@@ -172,7 +172,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
             report.compose(track(frame));
         }
     } else if(params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
-        printf("[D2FeatureTracker::trackLocalFrames] already init frame %ld, images %ld\n", frames.frame_id, frames.images.size());
+        // printf("[D2FeatureTracker::trackLocalFrames] already init frame %ld, images %ld\n", frames.frame_id, frames.images.size());
         report.compose(track(frames.images[0], frames.motion_prediction));
         report.compose(track(frames.images[1], frames.motion_prediction));
         report.compose(track(frames.images[2], frames.motion_prediction));
@@ -805,7 +805,7 @@ void D2FeatureTracker::processFrame(VisualImageDescArray & frames, bool is_keyfr
             }
         }
     }
-    printf("[Debug] d2feature tracker here\n");
+    // printf("[Debug] d2feature tracker here\n");
     // Before solve, use motion prediction as pose
     for (auto & frame: frames.images) {
         frame.pose_drone = frames.motion_prediction;

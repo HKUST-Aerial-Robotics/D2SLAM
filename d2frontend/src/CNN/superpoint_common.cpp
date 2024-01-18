@@ -7,6 +7,7 @@ using D2Common::Utility::TicToc;
 namespace D2FrontEnd {
 void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts, std::vector<float>& scores,
         int border, int dist_thresh, int img_width, int img_height, int max_num);
+
 void getKeyPoints(const cv::Mat & prob, float threshold, int nms_dist, std::vector<cv::Point2f> &keypoints, std::vector<float>& scores, int width, int height, int max_num)
 {
     TicToc getkps;
@@ -27,6 +28,7 @@ void getKeyPoints(const cv::Mat & prob, float threshold, int nms_dist, std::vect
 
     int border = 0;
     TicToc ticnms;
+    //TODO This funciton delay the whole frontend  input: rough keypoints and confidence map
     NMS2(keypoints_no_nms, conf, keypoints, scores, border, nms_dist, width, height, max_num);
     if (params->enable_perf_output) {
         printf(" NMS %f keypoints_no_nms %ld keypoints %ld/%ld\n", ticnms.toc(), keypoints_no_nms.size(), keypoints.size(), max_num);
@@ -89,6 +91,7 @@ bool pt_conf_comp(std::pair<cv::Point2f, double> i1, std::pair<cv::Point2f, doub
 }
 
 //NMS code is modified from https://github.com/KinglittleQ/SuperPoint_SLAM
+
 void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts, 
             std::vector<float>& scores, int border, int dist_thresh, int img_width, int img_height, int max_num)
 {

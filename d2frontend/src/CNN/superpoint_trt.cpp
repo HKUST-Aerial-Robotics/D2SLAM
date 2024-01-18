@@ -2,6 +2,7 @@
 #include "ATen/Parallel.h"
 #include "d2frontend/CNN/superpoint_common.h"
 #include "d2common/d2frontend_types.h"
+#include "d2common/utils.hpp"
 
 namespace TensorRTSupperPoint{
 
@@ -134,6 +135,7 @@ int32_t SuperPointTrt::doInference(std::vector<cv::Mat>& inputs){
 
 //TODO:21.Nov Output API alignment
 int32_t SuperPointTrt::getOuput(const int drone_id, const D2Common::StereoFrame & msg,D2Common::VisualImageDescArray & viokf){
+  D2Common::Utility::TicToc tic;
   for(int i = 0; i < executors_.size(); i++){
     if(semi_out_put_ptr_[i] == nullptr || desc_out_put_ptr_[i] == nullptr){
       std::cout << "output ptr is null" << std::endl;
@@ -141,10 +143,11 @@ int32_t SuperPointTrt::getOuput(const int drone_id, const D2Common::StereoFrame 
     }
     executors_[i].getOutput(semi_out_put_ptr_[i], desc_out_put_ptr_[i]);
   }
+  double cost = tic.toc();
+  // printf("[superpoint trt] get output cost %f\n", cost);
   //process output
   // auto options = torch::TensorOptions().dtype(torch::kFloat32).device(torch::kGPU);
   auto options = torch::TensorOptions().dtype(torch::kFloat32);
-  
   double stamp = msg.stamp.toSec();
   for(int i = 0; i < executors_.size(); i++){
     auto mProb = at::from_blob(semi_out_put_ptr_[i], {1, 1, height_, width_}, options);
@@ -157,10 +160,19 @@ int32_t SuperPointTrt::getOuput(const int drone_id, const D2Common::StereoFrame 
     vframe.camera_index = msg.left_camera_indices[i];
     vframe.stamp = stamp;
     vframe.drone_id = drone_id;
+
+    tic.tic();
     D2FrontEnd::getKeyPoints(prob,thres_,nms_dist_,keypoints, vframe.landmark_scores, width_,height_,max_num_);
+    cost = tic.toc();
+    printf("[superpoint trt] get keypoints cost %f\n", cost);
+    
+    tic.tic();
     D2FrontEnd::computeDescriptors(mProb, mDesc, keypoints,  vframe.landmark_descriptor, width_, height_, pca_comp_T, pca_mean);
+    cost = tic.toc();
+    printf("[superpoint trt] compute descriptors cost %f\n", cost);
+
     vframe.key_points = keypoints;
-    viokf.images[i] = vframe;
+    viokf.images[i] = vframe; //TODO: A copy here may be too much
   }
   return 0;
 }

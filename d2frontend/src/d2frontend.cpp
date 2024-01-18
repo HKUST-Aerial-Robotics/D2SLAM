@@ -96,10 +96,23 @@ void D2Frontend::monoImageCallback(const sensor_msgs::ImageConstPtr & image) {
 void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     static int count = 0;
     // ROS_INFO("[D2Frontend::processStereoframe] %d", count ++);
+    D2Common::Utility::TicToc tic;
     auto vframearry = loop_cam->processStereoframe(stereoframe);
+    double extract_time = tic.toc();
+    // printf("[D2Frontend::processStereoframe] extract time %f ms\n", extract_time);
+
+    tic.tic();
     vframearry.motion_prediction = getMotionPredict(vframearry.stamp);
-    printf("[Debug]: processStereo vframearry image size:%d\n", vframearry.images.size());
+    double predict_time = tic.toc();
+    // printf("[D2Frontend::processStereoframe] predict time %f ms\n", predict_time);
+
+    // printf("[Debug]: processStereo vframearry image size:%d\n", vframearry.images.size());
+    tic.tic();
     bool is_keyframe = feature_tracker->trackLocalFrames(vframearry);
+    double track_time = tic.toc();
+    // printf("[D2Frontend::processStereoframe] track time %f ms =\n", track_time);
+
+
     vframearry.prevent_adding_db = !is_keyframe;
     vframearry.is_keyframe = is_keyframe;
     received_image = true;

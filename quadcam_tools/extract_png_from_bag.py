@@ -1,6 +1,6 @@
 # Extrac png from rosbag
-from stereo_gen import *
-from quadcam_tools.utils.fisheye_undist import *
+from utils.stereo_gen import *
+from utils.fisheye_undist import *
 import cv2 as cv
 import numpy as np
 import argparse
@@ -14,7 +14,8 @@ import os
 topic_list = ["/cam_0_0/compressed", "/cam_0_1/compressed", 
         "/cam_1_0/compressed", "/cam_1_1/compressed",
         "/cam_2_0/compressed", "/cam_2_1/compressed",
-        "/cam_3_0/compressed", "/cam_3_1/compressed"]
+        "/cam_3_0/compressed", "/cam_3_1/compressed",
+        "/image_0/compressed"]
 
 topic_counter_map = {}
 
@@ -28,10 +29,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Extract png from rosbag')
     parser.add_argument('--bag', type=str, help='path to rosbag')
     parser.add_argument('--output', type=str, help='path to output folder')
-    parser.add_argument('--step', type=int, help='path to calibration file',default=1)
+    parser.add_argument('--step', type=int, help='image extract ',default=1)
     parser.add_argument('--number', type=int, help='path to calibration file',default=-1)
-    parser.add_argument('--width', type=int, help='path to calibration file')
-    parser.add_argument('--height', type=int, help='path to calibration file')
+    parser.add_argument('--width', type=int, help='path to calibration file') #720p = 1280 x 720
+    parser.add_argument('--height', type=int, help='path to calibration file') #
     args = parser.parse_args()
     
     ouput_path = ""

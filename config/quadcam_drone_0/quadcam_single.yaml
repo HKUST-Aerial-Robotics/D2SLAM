@@ -19,9 +19,9 @@ calib_file_path: "fisheye_cams.yaml"
 image_width: 1280
 image_height: 720
 enable_undistort_image: 1
-undistort_fov: 180
-width_undistort: 600
-height_undistort: 300
+undistort_fov: 190
+width_undistort: 300
+height_undistort: 200
 photometric_calib: "mask_1.png"
 avg_photometric: 0.7
 
@@ -86,7 +86,7 @@ remove_base_when_margin_remote: 2
 
 #feature tracker parameters
 max_cnt: 150            # max feature number in feature tracking
-max_superpoint_cnt: 130 # max feature extraction by superpoint //oringal super 150
+max_superpoint_cnt: 20 # max feature extraction by superpoint //oringal super 150
 max_solve_cnt: 200
 check_essential: 0
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
@@ -106,8 +106,8 @@ enable_pca_superpoint: 1
 superpoint_pca_dims: 64
 
 nn_engine_type: 1 # 0 use onnx; 1 use tensorrt raw engine
-superpoint_trt_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_v1_dyn_size_onnx_300x600.trt"
-moblieNetVlad_trt_path: "/root/swarm_ws/src/D2SLAM/models/mobilenetvlad_300x600_onnx.trt"
+superpoint_trt_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_v1_dyn_size_onnx_200_300.trt"
+moblieNetVlad_trt_path: "/root/swarm_ws/src/D2SLAM/models/mobilenetvlad_dyn_size_onnx_200_300.trt"
 
 
 #xuhao quadcam
@@ -146,6 +146,6 @@ pcm_thres: 2.8
 output_path: "/root/output/"
 debug_print_sldwin: 0
 debug_print_states: 0
-enable_perf_output: 0
+enable_perf_output: 1
 debug_write_margin_matrix: 0
 show_track_id: 0
