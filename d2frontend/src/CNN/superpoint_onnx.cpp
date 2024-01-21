@@ -79,7 +79,7 @@ void SuperPointONNX::inference(const cv::Mat & input, std::vector<cv::Point2f> &
     double copy_time = tic1.toc();
 
     TicToc tic2;
-    getKeyPoints(Prob, thres, nms_dist, keypoints, scores, width, height, max_num);
+    getKeyPoints(Prob, thres, nms_dist, keypoints, scores, width, height, max_num,0);
     double nms_time = tic2.toc();
     computeDescriptors(mProb, mDesc, keypoints, local_descriptors, width, height, pca_comp_T, pca_mean);
     double desc_time = tic2.toc();

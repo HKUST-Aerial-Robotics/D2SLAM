@@ -107,11 +107,11 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     // printf("[D2Frontend::processStereoframe] predict time %f ms\n", predict_time);
 
     // printf("[Debug]: processStereo vframearry image size:%d\n", vframearry.images.size());
+
     tic.tic();
     bool is_keyframe = feature_tracker->trackLocalFrames(vframearry);
     double track_time = tic.toc();
     // printf("[D2Frontend::processStereoframe] track time %f ms =\n", track_time);
-
 
     vframearry.prevent_adding_db = !is_keyframe;
     vframearry.is_keyframe = is_keyframe;
@@ -122,6 +122,7 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     if (vframearry.send_to_backend) {
         backendFrameCallback(vframearry);
     }
+
 }
 
 void D2Frontend::addToLoopQueue(const VisualImageDescArray & viokf) {
@@ -272,7 +273,7 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
         sync->registerCallback(boost::bind(&D2Frontend::depthImagesCallback, this, _1, _2));
     } else if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
         //Default we accept only horizon-concated image
-        image_sub_single = it_->subscribe(params->image_topics[0], 1000, &D2Frontend::monoImageCallback, this, hints);
+        image_sub_single = it_->subscribe(params->image_topics[0], 10, &D2Frontend::monoImageCallback, this, hints);
     }
     
     keyframe_pub = nh.advertise<swarm_msgs::node_frame>("keyframe", 10);

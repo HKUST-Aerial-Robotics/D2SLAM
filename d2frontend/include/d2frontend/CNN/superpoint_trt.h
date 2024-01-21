@@ -83,7 +83,7 @@ private:
   int32_t height_ = 300;
   int32_t width_ = 150;
   int max_num_ = 200;
-  int nms_dist_ = 10;
+  int nms_dist_ = 5;
   double thres_ = 0.015;
   bool show_info_;
 

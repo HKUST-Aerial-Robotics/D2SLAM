@@ -75,51 +75,111 @@ void D2FeatureTracker::updatebyLandmarkDB(const std::map<LandmarkIdType, Landmar
     }
 }
 
+// TrackReport D2FeatureTracker::initTrackLKFourEye(VisualImageDescArray & frames){
+//     #if 1
+//     TrackReport report;
+//     printf("[Debug] number of images carried by frames:%d\n",frames.images.size());
+//     for (auto && image: frames.images) {
+//         auto cur_landmarks = image.landmarks;
+//         auto cur_landmark_desc = image.landmark_descriptor;
+//         auto cur_landmark_scores = image.landmark_scores;
+//         image.clearLandmarks();
+//         LKImageInfoGPU cur_lk_info;
+//         cv::cuda::GpuMat image_cuda(image.raw_image);
+//         cur_lk_info.pyr = buildImagePyramid(image_cuda);
+//         // printf("[Debug] run here \n");
+//         std::vector<cv::Point2f> n_pts;
+//         TicToc t_det;
+//         for (size_t i = 0; i < cur_landmarks.size(); i++) {
+//             int count_new = 0;
+//             if (cur_lk_info.lk_pts.size() > params->total_feature_num){
+//                 break;
+//             }
+//             auto lm = cur_landmarks[i];
+//             bool has_near = false;
+//             for (auto pt: cur_lk_info.lk_pts){
+//                 if (cv::norm(pt - lm.pt2d) < params->feature_min_dist)
+//                 {
+//                     has_near = true;
+//                     break;
+//                 }
+//             }
+//             if (!has_near){
+//                 auto _id = lmanager->addLandmark(lm);
+//                 lm.landmark_id = _id;
+//                 image.landmarks.emplace_back(lm);
+//                 image.landmark_descriptor.insert(image.landmark_descriptor.end(), 
+//                     cur_landmark_desc.begin() + i * params->superpoint_dims, 
+//                     cur_landmark_desc.begin() + (i + 1) * params->superpoint_dims);
+//                 image.landmark_scores.emplace_back(cur_landmark_scores[i]);
+
+//                 cur_lk_info.lk_pts.emplace_back(lm.pt2d);
+//                 cur_lk_info.lk_ids.emplace_back(lm.landmark_id);
+//                 cur_lk_info.lk_local_index.emplace_back(image.landmarks.size() - 1);
+//                 cur_lk_info.lk_pts_3d_norm.emplace_back(lm.pt3d_norm);
+//                 cur_lk_info.lk_types.emplace_back(LandmarkType::SuperPointLandmark);
+//                 count_new ++;
+//             }
+//         }
+//         keyframe_lk_infos_[image.frame_id][image.camera_index] = cur_lk_info;
+//     }
+    
+//     this->current_keyframes.emplace_back(frames);
+//     this->keyframe_count ++;
+//     return report;
+//     #else
+
+//     #endif
+// }
+
 TrackReport D2FeatureTracker::initTrackLKFourEye(VisualImageDescArray & frames){
-    #if 1
     TrackReport report;
     printf("[Debug] number of images carried by frames:%d\n",frames.images.size());
     for (auto && image: frames.images) {
+        //Init supper point detection
+        LKImageInfoGPU cur_lk_info;
+        cv::cuda::GpuMat image_cuda(image.raw_image);
+        cur_lk_info.pyr = buildImagePyramid(image_cuda);
         auto cur_landmarks = image.landmarks;
         auto cur_landmark_desc = image.landmark_descriptor;
         auto cur_landmark_scores = image.landmark_scores;
         image.clearLandmarks();
-        LKImageInfoGPU cur_lk_info;
-        cv::cuda::GpuMat image_cuda(image.raw_image);
-        cur_lk_info.pyr = buildImagePyramid(image_cuda);
-        // printf("[Debug] run here \n");
-        std::vector<cv::Point2f> n_pts;
         TicToc t_det;
         for (size_t i = 0; i < cur_landmarks.size(); i++) {
-            int count_new = 0;
-            if (cur_lk_info.lk_pts.size() > params->total_feature_num){
-                break;
-            }
             auto lm = cur_landmarks[i];
-            bool has_near = false;
-            for (auto pt: cur_lk_info.lk_pts){
-                if (cv::norm(pt - lm.pt2d) < params->feature_min_dist)
-                {
-                    has_near = true;
-                    break;
-                }
-            }
-            if (!has_near){
-                auto _id = lmanager->addLandmark(lm);
-                lm.landmark_id = _id;
-                image.landmarks.emplace_back(lm);
+            auto unify_landmark_id = lmanager->addLandmark(lm);
+            lm.landmark_id = unify_landmark_id;
+            image.landmarks.emplace_back(lm);
+            if (! _config.continue_track_use_lk){
                 image.landmark_descriptor.insert(image.landmark_descriptor.end(), 
-                    cur_landmark_desc.begin() + i * params->superpoint_dims, 
-                    cur_landmark_desc.begin() + (i + 1) * params->superpoint_dims);
+                cur_landmark_desc.begin() + i * params->superpoint_dims, 
+                cur_landmark_desc.begin() + (i + 1) * params->superpoint_dims);
                 image.landmark_scores.emplace_back(cur_landmark_scores[i]);
-
-                cur_lk_info.lk_pts.emplace_back(lm.pt2d);
-                cur_lk_info.lk_ids.emplace_back(lm.landmark_id);
-                cur_lk_info.lk_local_index.emplace_back(image.landmarks.size() - 1);
-                cur_lk_info.lk_pts_3d_norm.emplace_back(lm.pt3d_norm);
-                cur_lk_info.lk_types.emplace_back(LandmarkType::SuperPointLandmark);
-                count_new ++;
             }
+            cur_lk_info.lk_pts.emplace_back(lm.pt2d);
+            cur_lk_info.lk_ids.emplace_back(lm.landmark_id);
+            cur_lk_info.lk_local_index.emplace_back(image.landmarks.size() - 1);
+            cur_lk_info.lk_pts_3d_norm.emplace_back(lm.pt3d_norm);
+            cur_lk_info.lk_types.emplace_back(LandmarkType::SuperPointLandmark);
+        }
+        // add good feature to track in to lk_info
+        std::vector<cv::Point2f> new_gf_pts;
+        detectPoints(image.raw_image, new_gf_pts, image.landmarks2D(), params->total_feature_num,true, _config.lk_use_fast);
+        spdlog::info("[D2FeatureTracker::initTrackLKFourEye] good feature detectPoints time: {:.2f}ms, new_gf_pts: {}", t_det.toc(), new_gf_pts.size());
+        for (auto & pt: new_gf_pts){
+            auto ret = createLKLandmark(image,pt);
+            if (!ret.first){
+                continue;
+            }
+            auto & lm = ret.second;
+            auto unify_landmark_id = lmanager->addLandmark(lm);
+            lm.landmark_id = unify_landmark_id;
+            image.landmarks.emplace_back(lm);
+            cur_lk_info.lk_pts.emplace_back(lm.pt2d);
+            cur_lk_info.lk_ids.emplace_back(lm.landmark_id);
+            cur_lk_info.lk_local_index.emplace_back(image.landmarks.size() - 1);
+            cur_lk_info.lk_pts_3d_norm.emplace_back(lm.pt3d_norm);
+            cur_lk_info.lk_types.emplace_back(LandmarkType::FlowLandmark);
         }
         keyframe_lk_infos_[image.frame_id][image.camera_index] = cur_lk_info;
     }
@@ -127,10 +187,8 @@ TrackReport D2FeatureTracker::initTrackLKFourEye(VisualImageDescArray & frames){
     this->current_keyframes.emplace_back(frames);
     this->keyframe_count ++;
     return report;
-    #else
-
-    #endif
 }
+
 
 bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     const Guard lock(track_lock);
@@ -503,7 +561,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
                 if (!ret.first) {
                     continue;
                 }
-                if (_config.continue_track_use_lk) {
+                if (! _config.continue_track_use_lk) {
                     // Copy the landmark descriptor from previous frame
                     frame.landmark_descriptor.insert(frame.landmark_descriptor.end(), 
                         prev_image.landmark_descriptor.begin() + cur_lk_info.lk_local_index[i] * params->superpoint_dims, 
@@ -551,7 +609,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
     }
     //Discover new points.
     if (!frame.raw_image.empty()) {
-        if (_config.continue_track_use_lk) {
+        if (!_config.continue_track_use_lk) {
             // In this case, select from cur_landmarks
             int count_new = 0;
             for (size_t i = 0; i < cur_landmarks.size(); i++) {
@@ -589,12 +647,11 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
                 }
             }
             spdlog::debug("{}trackLocalFrames", cur_lk_info.lk_pts.size(), count_new);
-        }
-        else {
+        } else {
             std::vector<cv::Point2f> n_pts;
             TicToc t_det;
             detectPoints(frame.raw_image, n_pts, frame.landmarks2D(), params->total_feature_num, true, _config.lk_use_fast);
-            spdlog::debug("[D2FeatureTracker::trackLK] detect {} points in {:.2f}ms\n", n_pts.size(), t_det.toc());
+            spdlog::info("[D2FeatureTracker::trackLK] detect {} points in {:.2f}ms\n", n_pts.size(), t_det.toc());
             report.unmatched_num += n_pts.size();
             for (auto & pt : n_pts) {
                 auto ret = createLKLandmark(frame, pt);

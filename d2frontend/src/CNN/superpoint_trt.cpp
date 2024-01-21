@@ -162,14 +162,14 @@ int32_t SuperPointTrt::getOuput(const int drone_id, const D2Common::StereoFrame 
     vframe.drone_id = drone_id;
 
     tic.tic();
-    D2FrontEnd::getKeyPoints(prob,thres_,nms_dist_,keypoints, vframe.landmark_scores, width_,height_,max_num_);
+    D2FrontEnd::getKeyPoints(prob,thres_,nms_dist_,keypoints, vframe.landmark_scores, width_,height_,max_num_, vframe.camera_id);
     cost = tic.toc();
-    printf("[superpoint trt] get keypoints cost %f\n", cost);
+    // printf("[superpoint trt] get keypoints cost %f\n", cost);
     
     tic.tic();
     D2FrontEnd::computeDescriptors(mProb, mDesc, keypoints,  vframe.landmark_descriptor, width_, height_, pca_comp_T, pca_mean);
     cost = tic.toc();
-    printf("[superpoint trt] compute descriptors cost %f\n", cost);
+    // printf("[superpoint trt] compute descriptors cost %f\n", cost);
 
     vframe.key_points = keypoints;
     viokf.images[i] = vframe; //TODO: A copy here may be too much

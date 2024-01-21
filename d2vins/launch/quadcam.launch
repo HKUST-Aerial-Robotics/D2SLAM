@@ -34,7 +34,7 @@
             enable_sub_remote_img: false
             accept_min_3d_pts: 30
             recv_msg_duration: 0.5
-            superpoint_thres: 0.1
+            superpoint_thres: 0.2
             triangle_thres: 0.012
             #triangle_thres: 0.008
             min_direction_loop: 4
@@ -85,7 +85,7 @@
         <arg name="output" value="screen" />
         <arg name="show" value="$(arg show)" />
     </include> -->
-    <!-- <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2slam.rviz" if="$(arg rviz)" /> -->
+    <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2slam.rviz" if="$(arg rviz)" />
     <!-- <include file="$(find taichislam)/launch/taichislam-quadcam.launch" if="$(arg taichislam)" >   
         <arg name="show" value="$(arg taichislam_show)" />
         <arg name="skeleton_graph_gen" value="$(arg skeleton_graph_gen)" />
