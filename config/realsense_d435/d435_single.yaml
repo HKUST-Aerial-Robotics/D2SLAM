@@ -43,15 +43,15 @@ body_T_cam1: !!opencv-matrix
 
 
 #estimation
-estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
 estimate_td: 0                      # online estimate time offset between camera and imu
-td: 0.001                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
+td: 0                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 estimation_mode: 0 #0:single; 1:solve all; 2: distributed; 3:server
 double_counting_common_feature: 1
-
+not_estimate_first_extrinsic: 1
 
 #optimization parameters
-max_solver_time: 0.08 # max solver itration time (ms), to guarantee real time
+max_solver_time: 0.24 # max solver itration time (ms), to guarantee real time
 max_num_iterations: 8   # max solver itrations, to guarantee real time
 consensus_max_steps: 4
 timout_wait_sync: 100
@@ -87,7 +87,7 @@ multiple_thread: 1
 
 #outlier rejection
 thres_outlier : 10.0
-perform_outlier_rejection_num: 100000
+perform_outlier_rejection_num: 30
 tri_max_err: 0.2
 
 #Marginalization
@@ -101,9 +101,9 @@ remove_base_when_margin_remote: 2
 #  set to 0 those measurements (which on a landmark's baseFrame is not been removed) will be ignore.
 
 #feature tracker parameters
-max_cnt: 150            # max feature number in feature tracking
-max_superpoint_cnt: 150 # max feature extraction by superpoint
-max_solve_cnt: 150
+max_cnt: 200            # max feature number in feature tracking
+max_superpoint_cnt: 0 # max feature extraction by superpoint
+max_solve_cnt: 500
 show_track_id: 0
 check_essential: 0
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
@@ -111,7 +111,7 @@ remote_min_match_num: 40
 ransacReprojThreshold: 10.0
 parallex_thres: 0.012
 knn_match_ratio: 0.7 #This apply to superpoint feature track & loop clouse detection.
-feature_min_dist: 20
+feature_min_dist: 10
 
 #CNN
 cnn_use_onnx: 1

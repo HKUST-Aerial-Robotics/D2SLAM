@@ -497,7 +497,7 @@ void detectPoints(const cv::Mat &img, std::vector<cv::Point2f> &n_pts,
                  require_pts, lack_up_top_pts > require_pts / 4);
     }
     std::vector<cv::Point2f> n_pts_tmp;
-    if (lack_up_top_pts > require_pts / 4) {
+    if (lack_up_top_pts > require_pts / 4 || true) {
         int num_to_detect = lack_up_top_pts;
         if (cur_pts.size() > 0) {
             // We have some points, so try to detect slightly more points to
