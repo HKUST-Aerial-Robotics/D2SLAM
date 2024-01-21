@@ -568,7 +568,7 @@ void D2Estimator::solveinDistributedMode() {
         last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
     }
 
-    visual.postSolve();
+    visual.postSolve(last_odom.stamp);
 
     if (params->debug_print_states || params->debug_print_sldwin) {
         state.printSldWin(keyframe_measurements);
@@ -653,7 +653,7 @@ void D2Estimator::solveNonDistrib() {
         last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
     }
 
-    visual.postSolve();
+    visual.postSolve(state.lastFrame().stamp);
 
     if (params->debug_print_states || params->debug_print_sldwin) {
         state.printSldWin(keyframe_measurements);

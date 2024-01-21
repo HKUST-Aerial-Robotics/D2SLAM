@@ -23,7 +23,7 @@ class D2Visualization {
 public:
     D2Visualization();
     void init(ros::NodeHandle & nh, D2Estimator * estimator);
-    void postSolve();
+    void postSolve(double stamp);
     void pubFrame(D2Common::VINSFrame* frame);
     void pubIMUProp(const Swarm::Odometry & odom);
     void pubOdometry(int drone_id, const Swarm::Odometry & odom);

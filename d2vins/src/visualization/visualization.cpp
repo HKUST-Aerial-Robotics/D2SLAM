@@ -8,7 +8,7 @@
 #include "spdlog/spdlog.h"
 
 namespace D2VINS {
-sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color = false);
+sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, ros::Time time=ros::Time(0), bool use_raw_color = false);
 
 std::vector<Eigen::Vector3d> D2Visualization::drone_colors{
         Vector3d(1, 1, 0), //drone 0 yellow
@@ -139,7 +139,8 @@ void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
     pubOdometry(frame->drone_id, frame->odom);
 }
 
-void D2Visualization::postSolve() {
+void D2Visualization::postSolve(double stamp) {
+    ros::Time ros_stamp(stamp);
     D2Common::Utility::TicToc tic;
     if (!_estimator->isInitialized()) {
         return;
@@ -147,8 +148,8 @@ void D2Visualization::postSolve() {
     auto & state = _estimator->getState();
     state.lock_state();
     auto pcl = state.getInitializedLandmarks();
-    pcl_pub.publish(toPointCloud(pcl));
-    margined_pcl.publish(toPointCloud(_estimator->getMarginedLandmarks(), true));
+    pcl_pub.publish(toPointCloud(pcl, ros_stamp));
+    margined_pcl.publish(toPointCloud(_estimator->getMarginedLandmarks(), ros_stamp, true));
 
     for (auto drone_id: state.availableDrones()) {
         if (state.size(drone_id) == 0) {
@@ -176,9 +177,10 @@ void D2Visualization::postSolve() {
     // printf("[D2VIZ::postSolve] time cost %.1fms\n", tic.toc());
 }
 
-sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, bool use_raw_color) {
+sensor_msgs::PointCloud toPointCloud(const std::vector<D2Common::LandmarkPerId> landmarks, ros::Time time, bool use_raw_color) {
     sensor_msgs::PointCloud pcl;
     pcl.header.frame_id = "world";
+    pcl.header.stamp = time;
     pcl.points.resize(landmarks.size());
     pcl.channels.resize(3);
     pcl.channels[0].name = "rgb";
