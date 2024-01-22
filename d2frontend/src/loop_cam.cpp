@@ -217,14 +217,33 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
         }
     } else if(config_.nn_engine_type == EngineType::TRT){
         // D2Common::Utility::TicToc tic;
-        bundleGenerateImagesDescriptor(msg, visual_array);
-        // double cost = tic.toc();
-        // printf("[D2Frontend::LoopCam] bundleGenerateImagesDescriptor cost %.1f ms\n", cost);
-        // tic.tic();
-        bundleGenerateNetvladDescriptor(msg, visual_array);
-        // cost = tic.toc();
-        // printf("[D2Frontend::LoopCam] bundleGenerateNetvladDescriptor cost %.1f ms\n", cost);
-    }
+        if (params->loopcamconfig->superpoint_max_num > 0){ // use SP as main feature points
+            bundleGenerateImagesDescriptor(msg, visual_array);
+            bundleGenerateNetvladDescriptor(msg, visual_array);
+        } else { //use good feature to track as main feature 
+            std::vector<cv::Mat> input_img_vec;
+            //undistort
+            if (config_.enable_undistort_image){
+                for (unsigned int i = 0; i < msg.left_images.size(); i ++) {
+                    cv::Mat undist = msg.left_images[i];
+                    if (config_.enable_undistort_image) {
+                        undist = cv::Mat(undistortors[i]->undist_id_cuda(undist, 0, true));
+                    }
+                    input_img_vec.push_back(undist);
+                }
+            } else {
+                    input_img_vec = msg.left_images;
+            }
+            //set visual_arry_info information withought any landmark. Tracking will extrack good feature
+            for (int i =0; i < msg.left_images.size(); i++){
+                visual_array.images[i].stamp = msg.stamp.toSec();
+                visual_array.images[i].camera_id = msg.left_camera_ids[i];
+                visual_array.images[i].camera_index = msg.left_camera_indices[i];
+                visual_array.images[i].drone_id = self_id;
+                visual_array.images[i].raw_image = input_img_vec[i];
+            }
+        }
+    } 
     
     tt_sum+= tt.toc();
     t_count+= 1;

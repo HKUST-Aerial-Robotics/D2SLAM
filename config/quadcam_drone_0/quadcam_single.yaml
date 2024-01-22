@@ -10,7 +10,7 @@ image0_topic: "/oak_ffc_4p/assemble_image"
 is_compressed_images: 0
 
 imu_freq: 500
-image_freq: 25
+image_freq: 20
 frame_step: 2
 
 #Camera configuration
@@ -19,9 +19,9 @@ calib_file_path: "fisheye_cams.yaml"
 image_width: 1280
 image_height: 720
 enable_undistort_image: 1
-undistort_fov: 190
-width_undistort: 300
-height_undistort: 200
+undistort_fov: 180
+width_undistort: 300 #600
+height_undistort: 200 #300 好像也可以
 photometric_calib: "mask_1.png"
 avg_photometric: 0.7
 
