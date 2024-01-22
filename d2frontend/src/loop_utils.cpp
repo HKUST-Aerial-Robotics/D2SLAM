@@ -22,7 +22,7 @@ using namespace D2Common;
 using D2Common::Utility::TicToc;
 
 #define PYR_LEVEL 3
-#define WIN_SIZE cv::Size(21, 21)
+#define WIN_SIZE cv::Size(10, 10)
 
 namespace D2FrontEnd {
 
@@ -368,7 +368,7 @@ std::vector<cv::Point2f> opticalflowTrack(const cv::Mat &cur_img,
 }
 
 LKImageInfoGPU opticalflowTrackPyr(const cv::Mat &cur_img,
-    const LKImageInfoGPU& prev_lk, TrackLRType type) {
+    const LKImageInfoGPU& prev_lk, TrackLRType type, bool enable_cuda) {
     cv::cuda::GpuMat gpu_cur_img(cur_img);
     auto cur_pyr = buildImagePyramid(gpu_cur_img);
     auto ids = prev_lk.lk_ids;
@@ -423,31 +423,57 @@ LKImageInfoGPU opticalflowTrackPyr(const cv::Mat &cur_img,
     std::vector<uchar> reverse_status;
     std::vector<cv::Point2f> reverse_pts;
 
-    cv::cuda::GpuMat gpu_prev_pts(prev_pts);
-    cv::cuda::GpuMat gpu_cur_pts(cur_pts);
-    cv::cuda::GpuMat gpu_status;
-    cv::cuda::GpuMat reverse_gpu_status;
-    cv::Ptr<cv::cuda::SparsePyrLKOpticalFlow> d_pyrLK_sparse =
-        cv::cuda::SparsePyrLKOpticalFlow::create(WIN_SIZE, PYR_LEVEL, 30, true);
-    d_pyrLK_sparse->calc(prev_lk.pyr, cur_pyr, gpu_prev_pts, gpu_cur_pts,
-                         gpu_status);
-    gpu_status.download(status);
-    gpu_cur_pts.download(cur_pts);
-    reverse_pts = cur_pts;
-    for (unsigned int i = 0; i < prev_pts.size(); i++) {
-        auto &pt = reverse_pts[i];
-        if (type == LEFT_RIGHT_IMG_MATCH && status[i] == 1) {
-            pt.x -= move_cols;
+    if(enable_cuda){
+        cv::cuda::GpuMat gpu_prev_pts(prev_pts);
+        cv::cuda::GpuMat gpu_cur_pts(cur_pts);
+        cv::cuda::GpuMat gpu_status;
+        cv::cuda::GpuMat reverse_gpu_status;
+        cv::Ptr<cv::cuda::SparsePyrLKOpticalFlow> d_pyrLK_sparse =
+            cv::cuda::SparsePyrLKOpticalFlow::create(WIN_SIZE, PYR_LEVEL, 30, true);
+        d_pyrLK_sparse->calc(prev_lk.pyr, cur_pyr, gpu_prev_pts, gpu_cur_pts,
+                            gpu_status);
+        gpu_status.download(status);
+        gpu_cur_pts.download(cur_pts);
+        reverse_pts = cur_pts;
+        for (unsigned int i = 0; i < prev_pts.size(); i++) {
+            auto &pt = reverse_pts[i];
+            if (type == LEFT_RIGHT_IMG_MATCH && status[i] == 1) {
+                pt.x -= move_cols;
+            }
+            if (type == RIGHT_LEFT_IMG_MATCH && status[i] == 1) {
+                pt.x += move_cols;
+            }
         }
-        if (type == RIGHT_LEFT_IMG_MATCH && status[i] == 1) {
-            pt.x += move_cols;
+        cv::cuda::GpuMat reverse_gpu_pts(reverse_pts);
+        d_pyrLK_sparse->calc(cur_pyr, prev_lk.pyr, gpu_cur_pts, reverse_gpu_pts,
+                            reverse_gpu_status);
+        reverse_gpu_pts.download(reverse_pts);
+        reverse_gpu_status.download(reverse_status);
+    } else {
+        // use cpu to track
+        cv::calcOpticalFlowPyrLK(
+            prev_lk.raw_img, cur_img, prev_pts, cur_pts, status, err, WIN_SIZE,
+            PYR_LEVEL,
+            cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS,
+                            30, 0.01),
+            cv::OPTFLOW_USE_INITIAL_FLOW);
+        reverse_pts = cur_pts;
+        for (unsigned int i = 0; i < prev_pts.size(); i++) {
+            auto &pt = reverse_pts[i];
+            if (type == LEFT_RIGHT_IMG_MATCH && status[i] == 1) {
+                pt.x -= move_cols;
+            }
+            if (type == RIGHT_LEFT_IMG_MATCH && status[i] == 1) {
+                pt.x += move_cols;
+            }
         }
+        cv::calcOpticalFlowPyrLK(
+            cur_img, prev_lk.raw_img, cur_pts, reverse_pts, reverse_status, err,
+            WIN_SIZE, PYR_LEVEL,
+            cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS,
+                            30, 0.01),
+            cv::OPTFLOW_USE_INITIAL_FLOW);
     }
-    cv::cuda::GpuMat reverse_gpu_pts(reverse_pts);
-    d_pyrLK_sparse->calc(cur_pyr, prev_lk.pyr, gpu_cur_pts, reverse_gpu_pts,
-                         reverse_gpu_status);
-    reverse_gpu_pts.download(reverse_pts);
-    reverse_gpu_status.download(reverse_status);
 
     for (size_t i = 0; i < status.size(); i++) {
         if (status[i] && reverse_status[i] &&
@@ -466,7 +492,7 @@ LKImageInfoGPU opticalflowTrackPyr(const cv::Mat &cur_img,
     reduceVector(ids, status);
     reduceVector(prev_types, status);
     reduceVector(prev_local_index, status);
-    return {cur_pts, lk_pts_3d_norm, ids, prev_local_index, prev_types, cur_pyr};
+    return {cur_img, cur_pts, lk_pts_3d_norm, ids, prev_local_index, prev_types, cur_pyr};
 }
 
 void detectPoints(const cv::Mat &img, std::vector<cv::Point2f> &n_pts,

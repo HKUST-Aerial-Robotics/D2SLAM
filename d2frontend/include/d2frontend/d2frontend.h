@@ -87,12 +87,9 @@ protected:
     std::shared_ptr<StereoFrame> current_stereo_frame_ = nullptr;
     int32_t stereo_frame_count_ = 0;
 
-
     int32_t loop_closure_detecting_running_ = 1;
     std::unique_ptr<ros::Rate> loop_closure_detecting_rate_ = nullptr;
     
-
-
     const int32_t kMaxQueueSize = 10;
 
 public:

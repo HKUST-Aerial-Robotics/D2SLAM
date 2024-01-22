@@ -86,10 +86,14 @@ remove_base_when_margin_remote: 2
 
 #feature tracker parameters
 max_cnt: 100            # max feature number in feature tracking
-max_superpoint_cnt: 20 # max feature extraction by superpoint //oringal super 150
+max_superpoint_cnt: 0 # max feature extraction by superpoint //oringal super 150
 max_solve_cnt: 200
 check_essential: 0
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
+
+use_gpu_feature_tracking: 0 # 1 use gpu, 0 use cpu
+use_gpu_good_feature_extraction: 0 # 1 use gpu, 0 use cpu
+
 remote_min_match_num: 20
 enable_superglue_local: 0
 enable_superglue_remote: 0

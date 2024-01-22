@@ -67,6 +67,10 @@ struct D2FrontendParams {
     bool enable_pca_superpoint = false;
     bool enable_pca_netvlad = false;
 
+    //tracking feature and extract use cpu or gpu
+    bool use_gpu_good_feature_extraction = false;
+    bool use_gpu_feature_tracking = false;
+    
     std::string pca_netvlad = "";
 
     double min_movement_keyframe = 0.3;

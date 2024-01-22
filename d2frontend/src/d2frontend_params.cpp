@@ -48,9 +48,13 @@ namespace D2FrontEnd {
         verbose = (int) fsSettings["verbose"];
         ftconfig->write_to_file = (int) fsSettings["write_tracking_image_to_file"];
 
+        //
+        use_gpu_feature_tracking = (int)fsSettings["use_gpu_feature_tracking"];
+        use_gpu_good_feature_extraction = (int)fsSettings["use_gpu_good_feature_extraction"];
+
         //Loopcam configs
-        loopcamconfig->superpoint_max_num = (int) fsSettings["max_superpoint_cnt"];
         total_feature_num = (int) fsSettings["max_cnt"];
+        loopcamconfig->superpoint_max_num = (int) fsSettings["max_superpoint_cnt"];
         loopcamconfig->DEPTH_FAR_THRES = fsSettings["depth_far_thres"];
         loopcamconfig->DEPTH_NEAR_THRES = fsSettings["depth_near_thres"];
         loopcamconfig->show = (int) fsSettings["show_feature_extraction"];

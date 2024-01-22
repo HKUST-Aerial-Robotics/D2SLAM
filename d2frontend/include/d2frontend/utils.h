@@ -14,6 +14,7 @@ using D2Common::LandmarkIdType;
 using LandmarkType = D2Common::LandmarkType;
 
 template <typename T> struct LKImageInfo {
+    cv::Mat raw_img;
     std::vector<cv::Point2f> lk_pts;
     std::vector<Eigen::Vector3d> lk_pts_3d_norm;
     std::vector<LandmarkIdType> lk_ids;
@@ -23,7 +24,7 @@ template <typename T> struct LKImageInfo {
 };
 
 using LKImageInfoCPU = LKImageInfo<cv::Mat>;
-using LKImageInfoGPU = LKImageInfo<cv::cuda::GpuMat>;
+using LKImageInfoGPU = LKImageInfo<cv::cuda::GpuMat>; //changed to both GPU and CPU
 
 cv_bridge::CvImagePtr getImageFromMsg(const sensor_msgs::Image &img_msg);
 cv_bridge::CvImagePtr
@@ -67,7 +68,7 @@ std::vector<cv::Point2f> opticalflowTrack(const cv::Mat &cur_img,
 
 LKImageInfoGPU opticalflowTrackPyr(
     const cv::Mat &cur_img, const LKImageInfoGPU& prev_lk,
-    TrackLRType type = WHOLE_IMG_MATCH);
+    TrackLRType type = WHOLE_IMG_MATCH, bool enable_cuda = true);
 
 std::vector<cv::DMatch>
 matchKNN(const cv::Mat &desc_a, const cv::Mat &desc_b,
