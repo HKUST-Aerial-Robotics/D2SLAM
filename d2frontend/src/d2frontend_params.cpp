@@ -227,6 +227,7 @@ namespace D2FrontEnd {
         enable_undistort_image = loopcamconfig->enable_undistort_image = (int) fsSettings["enable_undistort_image"];
         width_undistort = (int) fsSettings["width_undistort"];
         height_undistort = (int) fsSettings["height_undistort"];
+        image_frequency = (int) fsSettings["image_freq"];
         undistort_fov = fsSettings["undistort_fov"];
         width = (int) fsSettings["image_width"];
         height = (int) fsSettings["image_height"];

@@ -75,7 +75,7 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
         }
     }
     if (dir_count < _config.MIN_DIRECTION_LOOP) {
-        ROS_INFO("[LoopDetector@%d] Give up image_array %ld with less than %d(%d) available images",
+        spdlog::info("[LoopDetector@{}] Give up image_array {} with less than {}({}) available images",
             self_id, image_array.frame_id, _config.MIN_DIRECTION_LOOP, dir_count);
         return;
     }

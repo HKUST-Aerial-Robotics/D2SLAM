@@ -161,7 +161,7 @@ void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& 
         }
         grid.at<char>(vv, uu) = 2;
     }
-    spdlog::info("NMS2 NMS calculate {} ms count:{} \n", tic.toc(),count);
+    // spdlog::info("NMS2 NMS calculate {} ms count:{} \n", tic.toc(),count);
 
     size_t valid_cnt = 0;
 
@@ -193,7 +193,7 @@ void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& 
         pts.push_back(pts_conf_vec[i].first);
         scores.push_back(pts_conf_vec[i].second);
     }
-    spdlog::info("NMS2 sort {} ms", tic.toc());
+    // spdlog::info("NMS2 sort {} ms", tic.toc());
 }
 
 #if 0

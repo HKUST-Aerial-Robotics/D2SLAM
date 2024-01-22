@@ -651,7 +651,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc & frame) {
             std::vector<cv::Point2f> n_pts;
             TicToc t_det;
             detectPoints(frame.raw_image, n_pts, frame.landmarks2D(), params->total_feature_num, true, _config.lk_use_fast);
-            spdlog::info("[D2FeatureTracker::trackLK] detect {} points in {:.2f}ms\n", n_pts.size(), t_det.toc());
+            // spdlog::info("[D2FeatureTracker::trackLK] detect {} points in {:.2f}ms\n", n_pts.size(), t_det.toc());
             report.unmatched_num += n_pts.size();
             for (auto & pt : n_pts) {
                 auto ret = createLKLandmark(frame, pt);

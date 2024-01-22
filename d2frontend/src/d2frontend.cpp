@@ -73,6 +73,26 @@ void D2Frontend::depthImagesCallback(const sensor_msgs::ImageConstPtr left, cons
     processStereoframe(sframe);
 }
 
+// void D2Frontend::monoImageCallback(const sensor_msgs::ImageConstPtr & image) {
+//     auto _l = getImageFromMsg(image);
+//     auto img = _l->image;
+//     //Horizon split image to four images:
+//     std::vector<cv::Mat> imgs;
+//     const int num_imgs = 4;
+//     for (int i = 0; i < 4; i++) {
+//         imgs.emplace_back(img(cv::Rect(i * img.cols /num_imgs, 0, img.cols /num_imgs, img.rows)));
+//         if (imgs.back().channels() == 3) {
+//             cv::cvtColor(imgs.back(), imgs.back(), cv::COLOR_BGR2GRAY);
+//         }
+//     }
+//     if (params->show_raw_image) {
+//         cv::namedWindow("raw_image", cv::WINDOW_NORMAL | cv::WINDOW_GUI_EXPANDED);
+//         cv::imshow("RawImage", img);
+//     }
+//     StereoFrame sframe(image->header.stamp, imgs, params->extrinsics, params->self_id);
+//     processStereoframe(sframe);
+// }
+
 void D2Frontend::monoImageCallback(const sensor_msgs::ImageConstPtr & image) {
     auto _l = getImageFromMsg(image);
     auto img = _l->image;
@@ -89,8 +109,63 @@ void D2Frontend::monoImageCallback(const sensor_msgs::ImageConstPtr & image) {
         cv::namedWindow("raw_image", cv::WINDOW_NORMAL | cv::WINDOW_GUI_EXPANDED);
         cv::imshow("RawImage", img);
     }
-    StereoFrame sframe(image->header.stamp, imgs, params->extrinsics, params->self_id);
-    processStereoframe(sframe);
+
+    stereo_frame_lock_.lock();
+    // stereo_frames_.emplace_back(image->header.stamp, imgs, params->extrinsics, params->self_id);
+    // stereo_frame_count_ ++;
+    current_stereo_frame_ = std::make_shared<StereoFrame>(image->header.stamp, imgs, params->extrinsics, params->self_id);
+    stereo_frame_lock_.unlock();
+    return;
+}
+
+void D2Frontend::processStereoThread(int32_t fps){
+    this->frontend_rate_ = std::unique_ptr<ros::Rate>(new ros::Rate(fps));
+    pthread_setname_np(pthread_self(), "omnifronetend");
+    int32_t info_frequency = 0;
+    while(this->frontend_thread_running_){
+        if (stereo_frame_count_ >= kMaxQueueSize){
+            info_frequency ++;
+            if (info_frequency % 20 == 0){
+                spdlog::warn("[D2Frontend::processStereoThread] Stereo frame queue size is {} frontend too slow", stereo_frame_count_);
+            }
+        }
+        #if 0
+        if (stereo_frame_count_ > 0){
+            stereo_frame_lock_.lock();
+            auto sframe = stereo_frames_.front();
+            stereo_frames_.pop_front();
+            stereo_frame_count_ --;
+            stereo_frame_lock_.unlock();
+            processStereoframe(sframe);
+        } else {
+            spdlog::info("[D2Frontend::processStereoThread] wait for stereo frame, sleep");
+        }
+        #else
+        stereo_frame_lock_.lock();
+        auto sframe = current_stereo_frame_;
+        if (sframe == nullptr){
+            stereo_frame_lock_.unlock();
+            this->frontend_rate_->sleep();
+            continue;
+        }
+        current_stereo_frame_ = nullptr;
+        stereo_frame_lock_.unlock();
+        processStereoframe(*sframe);
+        this->frontend_rate_->sleep();
+        #endif
+    }
+}
+
+void D2Frontend::stopFrontend(){
+    if(this->frontend_thread_.joinable()){
+        this->frontend_thread_running_ = 0;
+        this->frontend_thread_.join();
+    }
+    if(this->th_loop_det.joinable()){
+        this->loop_closure_detecting_running_ = 0;
+        this->th_loop_det.join();
+    }
+    return ;
 }
 
 void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
@@ -100,19 +175,14 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     auto vframearry = loop_cam->processStereoframe(stereoframe);
     double extract_time = tic.toc();
     // printf("[D2Frontend::processStereoframe] extract time %f ms\n", extract_time);
-
     tic.tic();
     vframearry.motion_prediction = getMotionPredict(vframearry.stamp);
     double predict_time = tic.toc();
     // printf("[D2Frontend::processStereoframe] predict time %f ms\n", predict_time);
-
-    // printf("[Debug]: processStereo vframearry image size:%d\n", vframearry.images.size());
-
     tic.tic();
     bool is_keyframe = feature_tracker->trackLocalFrames(vframearry);
     double track_time = tic.toc();
     // printf("[D2Frontend::processStereoframe] track time %f ms =\n", track_time);
-
     vframearry.prevent_adding_db = !is_keyframe;
     vframearry.is_keyframe = is_keyframe;
     received_image = true;
@@ -122,7 +192,6 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     if (vframearry.send_to_backend) {
         backendFrameCallback(vframearry);
     }
-
 }
 
 void D2Frontend::addToLoopQueue(const VisualImageDescArray & viokf) {
@@ -187,7 +256,9 @@ void D2Frontend::processRemoteImage(VisualImageDescArray & frame_desc, bool succ
 
 
 void D2Frontend::loopDetectionThread() {
-    while (ros::ok()) {
+    pthread_setname_np(pthread_self(), "loopdet");
+    loop_closure_detecting_rate_ = std::unique_ptr<ros::Rate>(new ros::Rate(10));
+    while (loop_closure_detecting_running_) {
         if (loop_queue.size() > 0) {
             VisualImageDescArray vframearry;
             {
@@ -200,7 +271,7 @@ void D2Frontend::loopDetectionThread() {
             }
             loop_detector->processImageArray(vframearry);
         }
-        usleep(10000);
+        loop_closure_detecting_rate_->sleep();
     }
 }
 
@@ -215,8 +286,6 @@ void D2Frontend::onRemoteFrameROS(const swarm_msgs::ImageArrayDescriptor & remot
         this->onRemoteImage(remote_img_desc);
     }
 }
-
-D2Frontend::D2Frontend () {}
 
 void D2Frontend::Init(ros::NodeHandle & nh) {
     //Init Loop Net
@@ -289,16 +358,17 @@ void D2Frontend::Init(ros::NodeHandle & nh) {
         remote_image_desc_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("remote_frame_desc", 10);
     }
 
-    timer = nh.createTimer(ros::Duration(0.01), [&](const ros::TimerEvent & e) {
-        loop_net->scanRecvPackets();
-    });
+    // timer = nh.createTimer(ros::Duration(0.01), [&](const ros::TimerEvent & e) {
+    //     loop_net->scanRecvPackets();
+    // });
 
-    // loop_timer = nh.createTimer(ros::Duration(0.01), &D2Frontend::loopTimerCallback, this);
     th_loop_det = std::thread(&D2Frontend::loopDetectionThread, this);
-    th = std::thread([&] {
-        while(0 == loop_net->lcmHandle()) {
-        }
-    });
+
+    this->frontend_thread_ = std::thread(&D2Frontend::processStereoThread, this, params->image_frequency);
+    // th = std::thread([&] {
+    //     while(0 == loop_net->lcmHandle()) {
+    //     }
+    // });
 }
 
 }

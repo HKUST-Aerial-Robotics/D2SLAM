@@ -42,6 +42,12 @@ class D2VINSNode :  public D2FrontEnd::D2Frontend
     std::set<int> ready_drones;
     std::map<int, Swarm::Pose> pgo_poses;
     std::map<int, std::pair<int, Swarm::Pose>> vins_poses;
+    
+    //back end thread
+    int32_t thread_viokf_running_ = 1;
+    std::unique_ptr<ros::Rate> thread_viokf_rate_ = nullptr;
+
+
 protected:
     Swarm::Pose getMotionPredict(double stamp) const override {
         return estimator->getMotionPredict(stamp).first.pose();
@@ -49,8 +55,9 @@ protected:
 
     virtual void backendFrameCallback(const D2Common::VisualImageDescArray & viokf) override {
         if (params->estimation_mode < D2Common::SERVER_MODE) {
-            Guard guard(queue_lock);
+            queue_lock.lock();
             viokf_queue.emplace(viokf);
+            queue_lock.unlock();
         }
         frame_count ++;
     };
@@ -92,18 +99,93 @@ protected:
         feature_tracker->updatebyLandmarkDB(estimator->getLandmarkDB());
     }
 
-    void processVIOKFThread() {
-        while(ros::ok()) {
+    // void processVIOKFThread() {
+    //     while(ros::ok()) {
+    //         if (!viokf_queue.empty()) {
+    //             Utility::TicToc estimator_timer;
+    //             if (viokf_queue.size() > params->warn_pending_frames) {
+    //                 ROS_WARN("[D2VINS] Low efficient on D2VINS::estimator pending frames: %d", viokf_queue.size());
+    //             }
+    //             D2Common::VisualImageDescArray viokf;
+    //             {
+    //                 Guard guard(queue_lock);
+    //                 viokf = viokf_queue.front();
+    //                 viokf_queue.pop();
+    //             }
+    //             bool ret;
+    //             {
+    //                 Utility::TicToc input;
+    //                 ret = estimator->inputImage(viokf);
+    //                 double input_time = input.toc();
+    //                 Utility::TicToc loop;
+    //                 if (viokf.is_keyframe) {
+    //                     addToLoopQueue(viokf);
+    //                 }
+    //                 updateOutModuleSldWinAndLandmarkDB();
+    //                 need_solve = true;
+    //                 if (params->verbose || params->enable_perf_output)
+    //                     ROS_INFO("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
+    //             }
+
+    //             if (params->pub_visual_frame) {
+    //                 visual_array_pub.publish(viokf.toROS());
+    //             }
+    //             if (params->verbose || params->enable_perf_output)
+    //                 ROS_INFO("[D2VINS] estimator_timer_callback takes %.1f ms\n", estimator_timer.toc());
+    //             bool discover_mode = false;
+    //             for (auto & id : ready_drones) {
+    //                 if (pgo_poses.find(id) == pgo_poses.end() && !estimator->getState().hasDrone(id)) {
+    //                     discover_mode = true;
+    //                     break;
+    //                 }
+    //             }
+    //             if (ret && D2FrontEnd::params->enable_network) { //Only send keyframes
+    //                 if (params->lazy_broadcast_keyframe && !viokf.is_keyframe && !discover_mode) {
+    //                     continue;
+    //                 }
+    //                 std::set<int> nearbydrones = estimator->getNearbyDronesbyPGOData(vins_poses); 
+    //                 bool force_landmarks = false || discover_mode;
+    //                 if (nearbydrones.size() > 0) {
+    //                     force_landmarks = true;
+    //                     if (params->verbose) {
+    //                         printf("[D2VINS] Nearby drones: ");
+    //                         for (auto & id : nearbydrones) {
+    //                             printf("%d ", id);
+    //                         }
+    //                         printf("\n");
+    //                     }
+    //                 }
+    //                 Utility::TicToc broadcast_timer;
+    //                 loop_net->broadcastVisualImageDescArray(viokf, force_landmarks);
+    //                 if (params->verbose || params->enable_perf_output) {
+    //                     printf("[D2VINS] broadcastVisualImageDescArray takes %.1f ms\n", broadcast_timer.toc());
+    //                 }
+    //             }
+    //         } else {
+    //             usleep(1000);
+    //         }
+    //     }
+    // }
+
+    void processVIOKFThread(int32_t fps) {
+        pthread_setname_np(pthread_self(), "backend");
+        this->thread_viokf_rate_ = std::make_unique<ros::Rate>(fps);
+        if (thread_viokf_rate_ == nullptr) {
+            ROS_ERROR("[D2VINS] Failed to create thread_viokf_rate_");
+            return;
+        }
+        while(thread_viokf_running_) {
             if (!viokf_queue.empty()) {
                 Utility::TicToc estimator_timer;
                 if (viokf_queue.size() > params->warn_pending_frames) {
-                    ROS_WARN("[D2VINS] Low efficient on D2VINS::estimator pending frames: %d", viokf_queue.size());
+                    spdlog::warn("[D2VINS] Low efficient on D2VINS::estimator pending frames: {}", viokf_queue.size());
                 }
                 D2Common::VisualImageDescArray viokf;
                 {
-                    Guard guard(queue_lock);
+                    queue_lock.lock();
                     viokf = viokf_queue.front();
                     viokf_queue.pop();
+                    queue_lock.unlock();
                 }
                 bool ret;
                 {
@@ -120,43 +202,42 @@ protected:
                         ROS_INFO("[D2VINS] input_time %.1fms, loop detector related takes %.1f ms\n", input_time, loop.toc());
                 }
 
-                if (params->pub_visual_frame) {
-                    visual_array_pub.publish(viokf.toROS());
-                }
+                // if (params->pub_visual_frame) {
+                //     visual_array_pub.publish(viokf.toROS());
+                // }
                 if (params->verbose || params->enable_perf_output)
-                    ROS_INFO("[D2VINS] estimator_timer_callback takes %.1f ms\n", estimator_timer.toc());
+                    ROS_INFO("[D2VINS] Backend takes %.1f ms\n", estimator_timer.toc());
                 bool discover_mode = false;
-                for (auto & id : ready_drones) {
-                    if (pgo_poses.find(id) == pgo_poses.end() && !estimator->getState().hasDrone(id)) {
-                        discover_mode = true;
-                        break;
-                    }
-                }
-                if (ret && D2FrontEnd::params->enable_network) { //Only send keyframes
-                    if (params->lazy_broadcast_keyframe && !viokf.is_keyframe && !discover_mode) {
-                        continue;
-                    }
-                    std::set<int> nearbydrones = estimator->getNearbyDronesbyPGOData(vins_poses); 
-                    bool force_landmarks = false || discover_mode;
-                    if (nearbydrones.size() > 0) {
-                        force_landmarks = true;
-                        if (params->verbose) {
-                            printf("[D2VINS] Nearby drones: ");
-                            for (auto & id : nearbydrones) {
-                                printf("%d ", id);
-                            }
-                            printf("\n");
-                        }
-                    }
-                    Utility::TicToc broadcast_timer;
-                    loop_net->broadcastVisualImageDescArray(viokf, force_landmarks);
-                    if (params->verbose || params->enable_perf_output) {
-                        printf("[D2VINS] broadcastVisualImageDescArray takes %.1f ms\n", broadcast_timer.toc());
-                    }
-                }
-            } else {
-                usleep(1000);
-            }
+                // for (auto & id : ready_drones) {
+                //     if (pgo_poses.find(id) == pgo_poses.end() && !estimator->getState().hasDrone(id)) {
+                //         discover_mode = true;
+                //         break;
+                //     }
+                // }
+                // if (ret && D2FrontEnd::params->enable_network) { //Only send keyframes
+                //     if (params->lazy_broadcast_keyframe && !viokf.is_keyframe && !discover_mode) {
+                //         continue;
+                //     }
+                //     std::set<int> nearbydrones = estimator->getNearbyDronesbyPGOData(vins_poses); 
+                //     bool force_landmarks = false || discover_mode;
+                //     if (nearbydrones.size() > 0) {
+                //         force_landmarks = true;
+                //         if (params->verbose) {
+                //             printf("[D2VINS] Nearby drones: ");
+                //             for (auto & id : nearbydrones) {
+                //                 printf("%d ", id);
+                //             }
+                //             printf("\n");
+                //         }
+                //     }
+                //     Utility::TicToc broadcast_timer;
+                //     loop_net->broadcastVisualImageDescArray(viokf, force_landmarks);
+                //     if (params->verbose || params->enable_perf_output) {
+                //         printf("[D2VINS] broadcastVisualImageDescArray takes %.1f ms\n", broadcast_timer.toc());
+                //     }
+                // }
+            } 
+            this->thread_viokf_rate_->sleep();
         }
     }
 
@@ -211,31 +292,46 @@ protected:
         estimator = new D2Estimator(params->self_id);
         d2vins_net = new D2VINSNet(estimator, params->lcm_uri);
         estimator->init(nh, d2vins_net);
+        // estimator->init(nh);
         visual_array_pub = nh.advertise<swarm_msgs::ImageArrayDescriptor>("image_array_desc", 1);
         imu_sub = nh.subscribe(params->imu_topic, 250, &D2VINSNode::imuCallback, this, ros::TransportHints().tcpNoDelay()); //We need a big queue for IMU.
         pgo_fused_sub = nh.subscribe("/d2pgo/swarm_fused", 1, &D2VINSNode::pgoSwarmFusedCallback, this, ros::TransportHints().tcpNoDelay());
-        thread_viokf = std::thread([&] {
-            processVIOKFThread();
-            printf("[D2VINS] processVIOKFThread exit.\n");
-        });
-        if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS && params->consensus_sync_to_start) {
-            solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
-        } else if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
-            thread_solver = std::thread([&] {
-                solverThread();
-            });
-        }
-        thread_comm = std::thread([&] {
-            ROS_INFO("Starting d2vins_net lcm.");
-            while(0 == d2vins_net->lcmHandle()) {
-            }
-        });
+        // thread_viokf = std::thread([&] {
+        //     processVIOKFThread();
+        //     printf("[D2VINS] processVIOKFThread exit.\n");
+        // });
+    
+        this->thread_viokf = std::thread(&D2VINSNode::processVIOKFThread, this, params->IMAGE_FREQ);
+
+        // if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS && params->consensus_sync_to_start) {
+        //     solver_timer = nh.createTimer(ros::Duration(1.0/params->estimator_timer_freq), &D2VINSNode::distriburedTimerCallback, this);
+        // } else if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
+        //     thread_solver = std::thread([&] {
+        //         solverThread();
+        //     });
+        // }
+
+        // thread_comm = std::thread([&] {
+        //     ROS_INFO("Starting d2vins_net lcm.");
+        //     while(0 == d2vins_net->lcmHandle()) {
+        //     }
+        // });
         ROS_INFO("D2VINS node %d initialized. Ready to start.", params->self_id);
     }
 
 public:
     D2VINSNode(ros::NodeHandle & nh) {
         Init(nh);
+    }
+    ~D2VINSNode() {
+    }
+
+    void stopBackend(){
+        if (thread_viokf.joinable()) {
+            thread_viokf_running_ = 0;
+            thread_viokf.join();
+        }
+        return ;
     }
 };
 
@@ -247,12 +343,10 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "d2vins");
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
-
     D2VINSNode d2vins(n);
-    ros::AsyncSpinner spinner(4); //cpu loading is high
-    spinner.start();
-    ros::waitForShutdown();
-    spinner.stop();
-    // sleep(1000);
+    ros::spin();
+    d2vins.stopFrontend();
+    d2vins.stopBackend();
+    d2vins.~D2VINSNode();
     return 0;
 }

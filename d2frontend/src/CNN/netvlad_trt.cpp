@@ -185,9 +185,13 @@ int32_t NetVLADExcutor::init(std::shared_ptr<nvinfer1::ICudaEngine> engine_ptr,
 
 int32_t NetVLADExcutor::setInputImages(const cv::Mat& input){
   void* host_buffer = buffer_manager_ptr_->getHostBuffer(input_tensor_names_[0]);
+  if (input.data == nullptr) {
+    std::cout << "input data is nullptr" << std::endl;
+    return -1;
+  }
   if(host_buffer == nullptr){
     std::cout << "[NetVLADExcutor]get host buffer failed" << std::endl;
-    return -1;
+    return -2;
   }
   memcpy(buffer_manager_ptr_->getHostBuffer(input_tensor_names_[0]),
     input.data, input_tensor_map_["image:0"].binding_size);

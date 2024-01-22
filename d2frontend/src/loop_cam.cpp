@@ -8,7 +8,7 @@
 #include <opencv2/core/eigen.hpp>
 #include <d2frontend/d2featuretracker.h>
 #include <d2common/fisheye_undistort.h>
-
+#include <spdlog/spdlog.h>
 using namespace std::chrono;
 
 double TRIANGLE_THRES;
@@ -245,13 +245,13 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
         }
     } 
     
-    tt_sum+= tt.toc();
-    t_count+= 1;
-    printf("[D2Frontend::LoopCam] KF Count %d loop_cam cost avg %.1fms cur %.1fms\n", kf_count, tt_sum/t_count, tt.toc());
-
     visual_array.frame_id = msg.keyframe_id;
     visual_array.pose_drone = msg.pose_drone;
     visual_array.drone_id = self_id;
+
+    tt_sum+= tt.toc();
+    t_count+= 1;
+    spdlog::info("[D2Frontend::Frontend] KF Count {} loop_cam cost avg {} ms cur {}ms\n", kf_count, tt_sum/t_count, tt.toc());
 
     if (config_.show && !_show.empty()) {
         char text[100] = {0};

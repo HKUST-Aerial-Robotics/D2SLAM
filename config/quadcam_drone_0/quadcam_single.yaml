@@ -62,7 +62,7 @@ init_method: 0 #0 IMU, 1 PnP
 depth_estimate_baseline: 0.03
 
 #sliding window
-max_sld_win_size: 11
+max_sld_win_size: 10
 landmark_estimate_tracks: 4 #when use depth or stereo, 3 is OK.
 min_solve_frames: 6
 
@@ -85,8 +85,8 @@ remove_base_when_margin_remote: 2
 #  set to 0 those measurements (which on a landmark's baseFrame is not been removed) will be ignore.
 
 #feature tracker parameters
-max_cnt: 150            # max feature number in feature tracking
-max_superpoint_cnt: 0 # max feature extraction by superpoint //oringal super 150
+max_cnt: 100            # max feature number in feature tracking
+max_superpoint_cnt: 20 # max feature extraction by superpoint //oringal super 150
 max_solve_cnt: 200
 check_essential: 0
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
@@ -146,6 +146,8 @@ pcm_thres: 2.8
 output_path: "/root/output/"
 debug_print_sldwin: 0
 debug_print_states: 0
-enable_perf_output: 1
+enable_perf_output: 0
 debug_write_margin_matrix: 0
 show_track_id: 0
+
+

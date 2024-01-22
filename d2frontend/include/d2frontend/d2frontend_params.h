@@ -98,6 +98,7 @@ struct D2FrontendParams {
     std::vector<std::string> image_topics, depth_topics;
 
     //Extrinsics and camera configs
+    int image_frequency = 20;
     double undistort_fov = 200;
     int width_undistort = 800;
     int height_undistort = 400;

@@ -47,6 +47,30 @@ void D2Estimator::init(ros::NodeHandle & nh, D2VINSNet * net) {
     }
 }
 
+void D2Estimator::init(ros::NodeHandle & nh) {
+    state.init(params->camera_extrinsics, params->td_initial);
+    visual.init(nh, this);
+    printf("[D2Estimator::init] init done estimator on drone %d\n", self_id);
+    for (auto cam_id : state.getAvailableCameraIds()) {
+        Swarm::Pose ext = state.getExtrinsic(cam_id);
+        printf("[D2VINS::D2Estimator] extrinsic %d: %s\n", cam_id, ext.toStr().c_str());
+    }
+    vinsnet = nullptr;
+    vinsnet->DistributedVinsData_callback = [&](DistributedVinsData msg) {
+        onDistributedVinsData(msg);
+    };
+    vinsnet->DistributedSync_callback = [&](int drone_id, int signal, int64_t token) {
+        onSyncSignal(drone_id, signal, token);
+    };
+
+    imu_bufs[self_id] = IMUBuffer();
+    if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
+        solver = new D2VINSConsensusSolver(this, &state, sync_data_receiver, *params->consensus_config, solve_token);
+    } else {
+        solver = new CeresSolver(&state, params->ceres_options);
+    }
+}
+
 void D2Estimator::inputImu(IMUData data) {
     IMUData last = data;
     if (imu_bufs[self_id].size() > 0 ) {
@@ -367,7 +391,7 @@ void D2Estimator::setStateProperties() {
 
     if (!params->estimate_td || state.size() < params->max_sld_win_size || 
                 state.lastFrame().odom.vel().norm() < params->estimate_extrinsic_vel_thres) {
-        printf("[D2Estimator::setStateProperties@%d] set td to fixed sld_size %d/%d \n", self_id, state.size(), params->max_sld_win_size);
+        spdlog::info("[D2Estimator::setStateProperties@{}] set td to fixed sld_size {}/{} \n", self_id, state.size(), params->max_sld_win_size);
         problem.AddParameterBlock(state.getTdState(self_id), 1);
         problem.SetParameterBlockConstant(state.getTdState(self_id));
     }
@@ -599,7 +623,7 @@ void D2Estimator::solveNonDistrib() {
     sum_cost += report.final_cost;
 
     if (params->enable_perf_output) {
-        spdlog::info("[D2VINS] average time %.1fms, average time of iter: %.1fms, average iteration %.3f, average cost %.3f\n", 
+        spdlog::info("[D2VINS] average time {}ms, average time of iter: {}ms, average iteration {}, average cost {}", 
             sum_time*1000/solve_count, sum_time*1000/sum_iteration, sum_iteration/solve_count, sum_cost/solve_count);
     }
 

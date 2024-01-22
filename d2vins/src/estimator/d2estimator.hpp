@@ -85,6 +85,7 @@ public:
     Swarm::Odometry getOdometry() const;
     Swarm::Odometry getOdometry(int drone_id) const;
     void init(ros::NodeHandle & nh, D2VINSNet * net);
+    void init(ros::NodeHandle & nh);
     D2EstimatorState & getState();
     std::vector<LandmarkPerId> getMarginedLandmarks() const;
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
