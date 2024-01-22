@@ -8,14 +8,26 @@
 #include <opencv2/core/types.hpp>
 
 using D2Common::Utility::TicToc;
+#define evaluation 0
 
 namespace D2FrontEnd {
 void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts, std::vector<float>& scores,
         int border, int dist_thresh, int img_width, int img_height, int max_num);
+void FastNMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts, 
+            std::vector<float>& scores, int border, int dist_thresh, int img_width, int img_height, int max_num);
 
 void getKeyPoints(const cv::Mat & prob, float threshold, int nms_dist, std::vector<cv::Point2f> &keypoints, std::vector<float>& scores, int width, int height, int max_num ,  int32_t cam_id)
 {
     TicToc getkps;
+    #if 0
+    static int count = 0;
+    std::string prob_path = "/root/swarm_ws/src/D2SLAM/super_point_evaluation/prob/";
+    std::string file_name = prob_path + std::to_string(count) + ".png";
+    // cv::imwrite(file_name, prob);
+    cv::imshow("prob", prob);
+    count++;
+    #endif
+
     auto mask = (prob > threshold);
     std::vector<cv::Point> kps;
     cv::findNonZero(mask, kps);
@@ -31,10 +43,11 @@ void getKeyPoints(const cv::Mat & prob, float threshold, int nms_dist, std::vect
         conf.at<float>(i, 0) = prob.at<float>(y, x);
     }
 
-    int border = 0;
+    int border = 10;
     TicToc ticnms;
     //TODO This funciton delay the whole frontend  input: rough keypoints and confidence map
-    NMS2(keypoints_no_nms, conf, keypoints, scores, border, nms_dist, width, height, max_num);
+    // NMS2(keypoints_no_nms, conf, keypoints, scores, border, nms_dist, width, height, max_num);
+    FastNMS2(keypoints_no_nms, conf, keypoints, scores, border, nms_dist, width, height, max_num);
     if (params->enable_perf_output) {
         printf("cam_id %d NMS %f keypoints_no_nms %ld keypoints %ld/%ld\n",cam_id, ticnms.toc(), keypoints_no_nms.size(), keypoints.size(), max_num);
     }
@@ -97,7 +110,75 @@ bool pt_conf_comp(std::pair<cv::Point2f, double> i1, std::pair<cv::Point2f, doub
 
 //NMS code is modified from https://github.com/KinglittleQ/SuperPoint_SLAM
 
+void FastNMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts, 
+            std::vector<float>& scores, int border, int dist_thresh, int img_width, int img_height, int max_num)
+{
+    struct PointConf{
+        cv::Point2f pt;
+        float conf;
+        bool operator()(const PointConf &a, const PointConf &b) const
+        {
+            return a.conf > b.conf;
+        }
+    };
+    std::vector<PointConf> raw_points;
+    std::vector<cv::Point2f> pts_raw = det;
+    cv::Mat confidence = cv::Mat(cv::Size(img_width, img_height), CV_32FC1);
+    std::vector<std::pair<cv::Point2f, double>> pts_conf_vec;
+  
+    D2Common::Utility::TicToc tic;
+
+    raw_points.resize(pts_raw.size());
+    for (unsigned int i = 0; i < pts_raw.size(); i++)
+    {   
+        raw_points[i].pt = pts_raw[i];
+        raw_points[i].conf = conf.at<float>(i, 0);
+    }
+
+    std::sort(raw_points.begin(), raw_points.end(), PointConf());
+    size_t valid_cnt = 0;
+
+    tic.tic();
+
+    std::vector <PointConf> top_points_inner;
+    for (int i = 0; i < raw_points.size(); i++)
+    {   
+        int uu = (int) raw_points[i].pt.x;
+        int vv = (int) raw_points[i].pt.y;
+
+        if (uu - border < 0 || uu + border >= img_width || vv - border < 0 || vv + border >= img_height){
+            continue;
+        }
+        top_points_inner .push_back(raw_points[i]);
+    }
+        
+    tic.tic();
+    for (unsigned int i = 0; i < max_num && i < top_points_inner.size(); i ++) {
+        pts.push_back(top_points_inner[i].pt);
+        scores.push_back(top_points_inner[i].conf);
+    }
+
+    #if evaluation
+    static int32_t image_seq = 0;
+    std::string image_path = "/root/swarm_ws/src/D2SLAM/super_point_evaluation/image/";
+    std::string image_name = image_path + std::to_string(image_seq) + ".png";
+    cv::Mat localtion_map = cv::Mat(cv::Size(img_width, img_height), CV_8U);
+    localtion_map.setTo(0);
+    for (int i = 0; i < pts.size(); i++)
+    {
+        localtion_map.at<char>(pts[i].x, pts[i].y) = 255;
+    }
+    cv::imwrite(image_name, localtion_map);
+    cv::imshow("localtion_map", localtion_map);
+    cv::waitKey(0);
+    #endif
+
+    // spdlog::info("NMS2 sort {} ms", tic.toc());
+}
+
 //NMS low
+
+// NMS Fast version
 void NMS2(std::vector<cv::Point2f> det, cv::Mat conf, std::vector<cv::Point2f>& pts, 
             std::vector<float>& scores, int border, int dist_thresh, int img_width, int img_height, int max_num)
 {

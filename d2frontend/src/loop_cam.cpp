@@ -251,7 +251,7 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame & msg) {
 
     tt_sum+= tt.toc();
     t_count+= 1;
-    spdlog::info("[D2Frontend:process input raw image] KF Count {} loop_cam cost avg {} ms cur {}ms", kf_count, tt_sum/t_count, tt.toc());
+    spdlog::info("[D2Frontend:extrack superpoint or undistort] KF Count {} loop_cam cost avg {} ms cur {}ms", kf_count, tt_sum/t_count, tt.toc());
 
     if (config_.show && !_show.empty()) {
         char text[100] = {0};

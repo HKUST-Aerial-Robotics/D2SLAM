@@ -14,8 +14,8 @@ struct VINSFrame: public D2BaseFrame {
     FrameIdType prev_frame_id = -1;
     IntegrationBase * pre_integrations = nullptr; // From prev to this
     int imu_buf_index = 0;
-    VINSFrame():Ba(0., 0., 0.), Bg(0., 0., 0.)
-    {}
+    
+    VINSFrame():Ba(0., 0., 0.), Bg(0., 0., 0.){}
     
     VINSFrame(const VisualImageDescArray & frame, const IMUBuffer & buf, const VINSFrame & prev_frame);
     VINSFrame(const VisualImageDescArray & frame, const std::pair<IMUBuffer, int> & buf, const VINSFrame & prev_frame);

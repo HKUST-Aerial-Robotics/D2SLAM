@@ -174,7 +174,7 @@ void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     D2Common::Utility::TicToc tic;
     auto vframearry = loop_cam->processStereoframe(stereoframe);
     double extract_time = tic.toc();
-    // printf("[D2Frontend::processStereoframe] extract time %f ms\n", extract_time);
+    printf("[D2Frontend::processStereoframe] extract time %f ms\n", extract_time);
     tic.tic();
     vframearry.motion_prediction = getMotionPredict(vframearry.stamp);
     double predict_time = tic.toc();

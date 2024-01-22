@@ -166,7 +166,7 @@ TrackReport D2FeatureTracker::initTrackLKFourEye(VisualImageDescArray & frames){
         // add good feature to track in to lk_info
         std::vector<cv::Point2f> new_gf_pts;
         detectPoints(image.raw_image, new_gf_pts, image.landmarks2D(), params->total_feature_num, (bool)params->use_gpu_good_feature_extraction, _config.lk_use_fast);
-        spdlog::info("[D2FeatureTracker::initTrackLKFourEye] good feature detectPoints time: {:.2f}ms, new_gf_pts: {}", t_det.toc(), new_gf_pts.size());
+        // spdlog::info("[D2FeatureTracker::initTrackLKFourEye] good feature detectPoints time: {:.2f}ms, new_gf_pts: {}", t_det.toc(), new_gf_pts.size());
         for (auto & pt: new_gf_pts){
             auto ret = createLKLandmark(image,pt);
             if (!ret.first){
@@ -250,7 +250,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     }
     D2Common::Utility::TicToc process_tic;
     processFrame(frames, iskeyframe);
-    spdlog::info("[D2FeatureTracker] processframe time {}ms", process_tic.toc());
+    // spdlog::info("[D2FeatureTracker] processframe time {}ms", process_tic.toc());
 
     report.ft_time = tic.toc();
     spdlog::info("[D2FeatureTracker] frame_id: {} is_kf {}, landmark_num: {}/{}, mean_para {:.2f}%, time_cost: {:.1f}ms ", 

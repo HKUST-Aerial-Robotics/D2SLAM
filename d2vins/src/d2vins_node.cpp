@@ -207,7 +207,8 @@ protected:
                 // }
                 if (params->verbose || params->enable_perf_output)
                     ROS_INFO("[D2VINS] Backend takes %.1f ms\n", estimator_timer.toc());
-                bool discover_mode = false;
+                spdlog::info("[D2VINS] Backend takes {} ms", estimator_timer.toc());
+                // bool discover_mode = false;
                 // for (auto & id : ready_drones) {
                 //     if (pgo_poses.find(id) == pgo_poses.end() && !estimator->getState().hasDrone(id)) {
                 //         discover_mode = true;

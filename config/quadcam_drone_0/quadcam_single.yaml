@@ -35,7 +35,7 @@ double_counting_common_feature: 0
 min_inv_dep: 0.01 #100 meter away.
 
 #optimization parameters
-max_solver_time: 0.08 # max solver itration time (ms), to guarantee real time
+max_solver_time: 0.04 # max solver itration time (ms), to guarantee real time 0.04 normal running
 max_num_iterations: 8   # max solver itrations, to guarantee real time
 consensus_max_steps: 4
 timout_wait_sync: 100
@@ -46,6 +46,7 @@ relaxation_alpha: 0.
 consensus_sync_for_averaging: 0
 consensus_sync_to_start: 0 #Is sync on start of the solving..
 consensus_trigger_time_err_us: 100
+
 
 #depth fusing
 depth_far_thres: 3.0 # The max depth in frontend
@@ -67,7 +68,7 @@ landmark_estimate_tracks: 4 #when use depth or stereo, 3 is OK.
 min_solve_frames: 6
 
 #solver
-multiple_thread: 1
+multiple_thread: 4
 
 #outlier rejection
 thres_outlier : 10.0
@@ -90,6 +91,12 @@ max_superpoint_cnt: 0 # max feature extraction by superpoint //oringal super 150
 max_solve_cnt: 200
 check_essential: 0
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
+
+dynamic_superpoint: 1 # dynmiac modify the threshold of superpoint
+dynamic_superpoint_thres: 0.7 # next time extract 0.7*best_score points
+dynamic_superpoint_min_thres: 0.1 # at least extract dynamic_superpoint_min_thres*max_cnt points, if can not meet, degree frame +1
+dynamic_superpoint_degree_frames: 10 # if 10 frames do not have enough features, then dynamic modify the threshold to current_threadhold * degree_percent 
+dynamic_superpoint_degree_percent: 0.5 # next time extract 0.1*best_score points
 
 use_gpu_feature_tracking: 0 # 1 use gpu, 0 use cpu
 use_gpu_good_feature_extraction: 0 # 1 use gpu, 0 use cpu
@@ -153,5 +160,9 @@ debug_print_states: 0
 enable_perf_output: 0
 debug_write_margin_matrix: 0
 show_track_id: 0
+
+#perfromance evaluation
+enable_performance_evaluation: 0 # will print time used in frontend and backend
+enable_detailed_performance_evaluation: 0 # will print time used in each step of frontend and backend
 
 

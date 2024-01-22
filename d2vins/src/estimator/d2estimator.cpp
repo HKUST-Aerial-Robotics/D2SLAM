@@ -154,6 +154,7 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(const VisualImageDescA
 
 VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     //First we init corresponding pose for with IMU
+    D2Common::Utility::TicToc tic;
     auto & last_frame = state.lastFrame();
     auto motion_predict = getMotionPredict(_frame.stamp); //Redo motion predict for get latest initial pose
     VINSFrame frame(_frame, motion_predict.second, last_frame);
@@ -170,14 +171,22 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
         }
         frame.odom = odom_imu;
     }
+    // spdlog::warn("[D2Estimator::addFrame@{}] init pose time: {:.2f}ms\n", self_id, tic.toc());
+
+
     frame.odom.stamp = _frame.stamp;
     frame.reference_frame_id = state.getReferenceFrameId();
 
+    tic.tic();
     auto frame_ret = state.addFrame(_frame, frame);
+    // spdlog::warn("[D2Estimator::addFrame@{}] addFrame time: {:.2f}ms\n", self_id, tic.toc());
+
     //Clear old frames after add
+    tic.tic();
     if (params->estimation_mode != D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
         margined_landmarks = state.clearUselessFrames(isInitialized()); // Only marginlization when solved
     }
+    // spdlog::warn("[D2Estimator::addFrame@{}] clearUselessFrames time: {:.2f}ms\n", self_id, tic.toc());
     _frame.setTd(state.getTd(_frame.drone_id));
     //Assign IMU and initialization to VisualImageDescArray for broadcasting.
     _frame.imu_buf = motion_predict.second.first;
@@ -185,11 +194,11 @@ VINSFrame * D2Estimator::addFrame(VisualImageDescArray & _frame) {
     _frame.Ba = frame.Ba;
     _frame.Bg = frame.Bg;
     _frame.reference_frame_id = frame.reference_frame_id;
-
     if (params->verbose || params->debug_print_states) {
         printf("[D2VINS::D2Estimator] Initialize VINSFrame with %d: %s\n", 
             params->init_method, frame.toStr().c_str());
     }
+
     return frame_ret;
 }
 
@@ -313,6 +322,7 @@ void D2Estimator::inputRemoteImage(VisualImageDescArray & frame) {
 bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     //Guard 
     const Guard lock(frame_mutex);
+    D2Common::Utility::TicToc tic;
     if(!initFirstPoseFlag) {
         printf("[D2VINS::D2Estimator] tryinitFirstPose imu buf %ld\n", imu_bufs[self_id].size());
         initFirstPoseFlag = tryinitFirstPose(_frame);
@@ -331,17 +341,26 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
         usleep(2000);
         printf("[D2VINS::D2Estimator] wait for imu...\n");
     }
-
+    tic.tic();
     auto frame = addFrame(_frame);
+    spdlog::info("[D2Estimator::inputImage@{}] addFrame time: {:.2f}ms\n", self_id, tic.toc());
+
+    tic.tic();
     if (state.size() >= params->min_solve_frames && params->estimation_mode != D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
         solveNonDistrib();
     }
+    // spdlog::info("[D2Estimator::inputImage@{}] solveNonDistrib time: {:.2f}ms\n", self_id, tic.toc());
+
+    tic.tic();
     addSldWinToFrame(_frame);
+    // spdlog::info("[D2Estimator::inputImage@{}] addSldWinToFrame time: {:.2f}ms\n", self_id, tic.toc());
     frame_count ++;
     updated = true;
     if (isInitialized())
-    {
+    {   
+        tic.tic();
         visual.pubFrame(frame);
+        spdlog::info("[D2Estimator::inputImage@{}] pubFrame time: {:.2f}ms\n", self_id, tic.toc());
     }
     return true;
 }
@@ -401,6 +420,9 @@ void D2Estimator::setStateProperties() {
         problem.SetParameterBlockConstant(
             state.getPoseState(state.firstFrame(self_id).frame_id));
     }
+    // problem.NumResidualBlocks();
+    // problem.NumResiduals();
+    spdlog::warn("[D2Estimator::setStateProperties@{}] NumResidualBlocks: {} NumResiduals: {}\n", self_id, problem.NumResidualBlocks(), problem.NumResiduals());
 }
 
 bool D2Estimator::isMain() const {
@@ -623,7 +645,7 @@ void D2Estimator::solveNonDistrib() {
     sum_cost += report.final_cost;
 
     if (params->enable_perf_output) {
-        spdlog::info("[D2VINS] average time {}ms, average time of iter: {}ms, average iteration {}, average cost {}", 
+        spdlog::info("[D2VINS] Solver use average time {}ms, average time of iter: {}ms, average iteration {}, average cost {}", 
             sum_time*1000/solve_count, sum_time*1000/sum_iteration, sum_iteration/solve_count, sum_cost/solve_count);
     }
 
