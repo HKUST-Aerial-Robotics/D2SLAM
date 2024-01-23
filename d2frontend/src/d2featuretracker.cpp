@@ -253,9 +253,11 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
     // spdlog::info("[D2FeatureTracker] processframe time {}ms", process_tic.toc());
 
     report.ft_time = tic.toc();
-    spdlog::info("[D2FeatureTracker] frame_id: {} is_kf {}, landmark_num: {}/{}, mean_para {:.2f}%, time_cost: {:.1f}ms ", 
+    if (params->verbose || params->enable_perf_output){
+        spdlog::info("[D2FeatureTracker] frame_id: {} is_kf {}, landmark_num: {}/{}, mean_para {:.2f}%, time_cost: {:.1f}ms ", 
         frames.frame_id, iskeyframe, report.parallex_num, frames.landmarkNum(), report.meanParallex()*100, report.ft_time);
-
+    }
+    
     if (params->show) {
         if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
             draw(frames.images[0], frames.images[1], iskeyframe, report);
@@ -816,15 +818,17 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc & left_frame, Visual
 bool D2FeatureTracker::isKeyframe(const TrackReport & report) {
     int prev_num = current_keyframes.size() > 0 ? current_keyframes.back().landmarkNum(): 0;
     if (report.meanParallex() > 0.5) {
-        printf("[D2FeatureTracker] unexcepted mean parallex %f\n", report.meanParallex());
+        spdlog::warn("[D2FeatureTracker] keyframe unexcepted mean parallex {}\n", report.meanParallex());
     }
     if (keyframe_count < _config.min_keyframe_num || 
         report.long_track_num < _config.long_track_thres ||
         prev_num < _config.last_track_thres ||
         report.unmatched_num > _config.new_feature_thres*prev_num || //Unmatched is assumed to be new
         report.meanParallex() > _config.parallex_thres) { //Attenion, if mismatch this will be big
-        spdlog::debug("[D2FeatureTracker] New KF: keyframe_count: {}, long_track_num: {}, prev_num: {}, unmatched_num: {}, parallex: {:.1f}%", 
-            keyframe_count, report.long_track_num, prev_num, report.unmatched_num, report.meanParallex()*100);
+        if (params->verbose || params->enable_perf_output){
+            spdlog::debug("[D2FeatureTracker] Not a keyframe: keyframe_count: {}, long_track_num: {}, prev_num: {}, unmatched_num: {}, parallex: {:.1f}%", 
+                keyframe_count, report.long_track_num, prev_num, report.unmatched_num, report.meanParallex()*100);
+        }
         return true;
     }
     return false;

@@ -120,7 +120,11 @@ struct D2VINSConfig {
     bool debug_print_states = false;
     bool debug_print_sldwin = false;
     std::string output_folder;
+
     bool enable_perf_output = false;
+    bool enbale_detailed_output = false;
+    bool enbale_speed_ouptut = false;
+    
     bool debug_write_margin_matrix = false;
     bool pub_visual_frame = false;
 

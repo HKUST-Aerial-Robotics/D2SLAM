@@ -34,9 +34,11 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
     if (t0 < 0) {
         t0 = image_array.stamp;
     }
-
-    spdlog::info("[LoopDetector] processImageArray {} from {} images: {} landmark: {} lazy: {} matched_to {}@D{}\n", image_array.frame_id,
+    if (params->verbose || params->enable_perf_output){
+        spdlog::info("[LoopDetector] processImageArray {} from {} images: {} landmark: {} lazy: {} matched_to {}@D{}\n", image_array.frame_id,
         image_array.drone_id, image_array.images.size(), image_array.spLandmarkNum(), image_array.is_lazy_frame, image_array.matched_frame, image_array.matched_drone);
+    }
+   
 
     if (image_array.images.size() == 0) {
         spdlog::warn("[LoopDetector] FlattenDesc must carry more than zero images");
@@ -75,8 +77,10 @@ void LoopDetector::processImageArray(VisualImageDescArray & image_array) {
         }
     }
     if (dir_count < _config.MIN_DIRECTION_LOOP) {
-        spdlog::info("[LoopDetector@{}] Give up image_array {} with less than {}({}) available images",
+        if (params->verbose){
+            spdlog::info("[LoopDetector@{}] Give up image_array {} with less than {}({}) available images",
             self_id, image_array.frame_id, _config.MIN_DIRECTION_LOOP, dir_count);
+        }
         return;
     }
 

@@ -90,6 +90,8 @@ struct D2FrontendParams {
     bool enable_sub_remote_frame;
     bool send_whole_img_desc;
     bool enable_perf_output = false;
+    bool enbale_speed_ouptut = false;
+    bool enbale_detailed_output = false;
     bool show = false;
     bool debug_plot_superpoint_features = false;
     bool enable_loop = true;

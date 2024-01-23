@@ -43,7 +43,11 @@ namespace D2FrontEnd {
         nh.param<bool>("enable_pub_local_frame", enable_pub_local_frame, false);
         nh.param<bool>("enable_sub_remote_frame", enable_sub_remote_frame, false);
         nh.param<std::string>("output_path", OUTPUT_PATH, "");
+        
         enable_perf_output = (int) fsSettings["enable_perf_output"];
+        enbale_detailed_output = (int) fsSettings["enbale_detailed_output"];
+        enbale_speed_ouptut = (int) fsSettings["enbale_speed_ouptut"];
+
         print_network_status = (int) fsSettings["print_network_status"];
         verbose = (int) fsSettings["verbose"];
         ftconfig->write_to_file = (int) fsSettings["write_tracking_image_to_file"];

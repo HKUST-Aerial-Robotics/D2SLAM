@@ -66,7 +66,11 @@ void D2VINSConfig::init(const std::string & config_file) {
     //Outputs
     fsSettings["output_path"] >> output_folder;
     debug_print_states = (int)fsSettings["debug_print_states"];
+    
     enable_perf_output = (int)fsSettings["enable_perf_output"];
+    enbale_detailed_output = (int)fsSettings["enbale_detailed_output"];
+    enbale_speed_ouptut = (int)fsSettings["enbale_speed_ouptut"];
+
     debug_print_sldwin = (int)fsSettings["debug_print_sldwin"];
     debug_write_margin_matrix = (int)fsSettings["debug_write_margin_matrix"];
     verbose = (int) fsSettings["verbose"];

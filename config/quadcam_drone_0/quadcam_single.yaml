@@ -21,7 +21,7 @@ image_height: 720
 enable_undistort_image: 1
 undistort_fov: 180
 width_undistort: 300 #600
-height_undistort: 200 #300 好像也可以
+height_undistort: 150 #300 好像也可以
 photometric_calib: "mask_1.png"
 avg_photometric: 0.7
 
@@ -92,11 +92,11 @@ max_solve_cnt: 200
 check_essential: 0
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
 
-dynamic_superpoint: 1 # dynmiac modify the threshold of superpoint
-dynamic_superpoint_thres: 0.7 # next time extract 0.7*best_score points
-dynamic_superpoint_min_thres: 0.1 # at least extract dynamic_superpoint_min_thres*max_cnt points, if can not meet, degree frame +1
-dynamic_superpoint_degree_frames: 10 # if 10 frames do not have enough features, then dynamic modify the threshold to current_threadhold * degree_percent 
-dynamic_superpoint_degree_percent: 0.5 # next time extract 0.1*best_score points
+# dynamic_superpoint: 1 # dynmiac modify the threshold of superpoint
+# dynamic_superpoint_thres: 0.7 # next time extract 0.7*best_score points
+# dynamic_superpoint_min_thres: 0.1 # at least extract dynamic_superpoint_min_thres*max_cnt points, if can not meet, degree frame +1
+# dynamic_superpoint_degree_frames: 10 # if 10 frames do not have enough features, then dynamic modify the threshold to current_threadhold * degree_percent 
+# dynamic_superpoint_degree_percent: 0.5 # next time extract 0.1*best_score points
 
 use_gpu_feature_tracking: 0 # 1 use gpu, 0 use cpu
 use_gpu_good_feature_extraction: 0 # 1 use gpu, 0 use cpu
@@ -158,11 +158,9 @@ output_path: "/root/output/"
 debug_print_sldwin: 0
 debug_print_states: 0
 enable_perf_output: 0
+enbale_detailed_output: 0 # output feature extraction time, feature tracking time, feature matching time 
+enbale_speed_ouptut: 1 # output Frontend use time, backedn use time
 debug_write_margin_matrix: 0
 show_track_id: 0
-
-#perfromance evaluation
-enable_performance_evaluation: 0 # will print time used in frontend and backend
-enable_detailed_performance_evaluation: 0 # will print time used in each step of frontend and backend
 
 

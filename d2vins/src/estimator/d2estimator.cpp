@@ -343,24 +343,24 @@ bool D2Estimator::inputImage(VisualImageDescArray & _frame) {
     }
     tic.tic();
     auto frame = addFrame(_frame);
-    spdlog::info("[D2Estimator::inputImage@{}] addFrame time: {:.2f}ms\n", self_id, tic.toc());
-
+    if (params->enbale_detailed_output){
+        spdlog::info("[D2Estimator::inputImage@{}] addFrame time: {:.2f}ms\n", self_id, tic.toc());
+    }
     tic.tic();
     if (state.size() >= params->min_solve_frames && params->estimation_mode != D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
         solveNonDistrib();
     }
-    // spdlog::info("[D2Estimator::inputImage@{}] solveNonDistrib time: {:.2f}ms\n", self_id, tic.toc());
-
+    if (params->enbale_detailed_output){
+        spdlog::info("[D2Estimator::inputImage@{}] solveNonDistrib time: {:.2f}ms\n", self_id, tic.toc());
+    }
+    
     tic.tic();
     addSldWinToFrame(_frame);
-    // spdlog::info("[D2Estimator::inputImage@{}] addSldWinToFrame time: {:.2f}ms\n", self_id, tic.toc());
     frame_count ++;
     updated = true;
     if (isInitialized())
     {   
-        tic.tic();
         visual.pubFrame(frame);
-        spdlog::info("[D2Estimator::inputImage@{}] pubFrame time: {:.2f}ms\n", self_id, tic.toc());
     }
     return true;
 }
@@ -420,9 +420,6 @@ void D2Estimator::setStateProperties() {
         problem.SetParameterBlockConstant(
             state.getPoseState(state.firstFrame(self_id).frame_id));
     }
-    // problem.NumResidualBlocks();
-    // problem.NumResiduals();
-    spdlog::warn("[D2Estimator::setStateProperties@{}] NumResidualBlocks: {} NumResiduals: {}\n", self_id, problem.NumResidualBlocks(), problem.NumResiduals());
 }
 
 bool D2Estimator::isMain() const {
@@ -651,11 +648,16 @@ void D2Estimator::solveNonDistrib() {
 
     if (params->estimation_mode < D2Common::SERVER_MODE) {
         auto last_odom = state.lastFrame().odom;
-        spdlog::info("C{} landmarks {} odom {} td {:.1f}ms opti_time {:.1f}ms", solve_count, 
+        if (params->debug_print_states){
+            spdlog::info("C{} landmarks {} odom {} td {:.1f}ms opti_time {:.1f}ms", solve_count, 
             current_landmark_num, last_odom.toStr(), state.td*1000, report.total_time*1000);
+        }
+
     } else {
-        spdlog::info("C{} landmarks {} td {:1.f}ms opti_time {:.1f}ms", solve_count, 
+        if (params->debug_print_states){
+            spdlog::info("C{} landmarks {} td {:.1f}ms opti_time {:.1f}ms", solve_count, 
             current_landmark_num, state.td*1000, report.total_time*1000);
+        }
     }
 
     // Reprogation

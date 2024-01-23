@@ -120,16 +120,18 @@ void D2Frontend::monoImageCallback(const sensor_msgs::ImageConstPtr & image) {
 
 void D2Frontend::processStereoThread(int32_t fps){
     this->frontend_rate_ = std::unique_ptr<ros::Rate>(new ros::Rate(fps));
+    D2Common::Utility::TicToc tic;
     pthread_setname_np(pthread_self(), "omnifronetend");
     int32_t info_frequency = 0;
     while(this->frontend_thread_running_){
+        tic.tic();
         if (stereo_frame_count_ >= kMaxQueueSize){
             info_frequency ++;
             if (info_frequency % 20 == 0){
                 spdlog::warn("[D2Frontend::processStereoThread] Stereo frame queue size is {} frontend too slow", stereo_frame_count_);
             }
         }
-        #if 0
+        #if 0 //this will delay the system
         if (stereo_frame_count_ > 0){
             stereo_frame_lock_.lock();
             auto sframe = stereo_frames_.front();
@@ -151,6 +153,9 @@ void D2Frontend::processStereoThread(int32_t fps){
         current_stereo_frame_ = nullptr;
         stereo_frame_lock_.unlock();
         processStereoframe(*sframe);
+        if (params->enbale_speed_ouptut) {
+            spdlog::info("[D2Frontend] frontend speed {} ms", tic.toc());
+        }
         this->frontend_rate_->sleep();
         #endif
     }
@@ -170,19 +175,28 @@ void D2Frontend::stopFrontend(){
 
 void D2Frontend::processStereoframe(const StereoFrame & stereoframe) {
     static int count = 0;
-    // ROS_INFO("[D2Frontend::processStereoframe] %d", count ++);
     D2Common::Utility::TicToc tic;
     auto vframearry = loop_cam->processStereoframe(stereoframe);
     double extract_time = tic.toc();
-    printf("[D2Frontend::processStereoframe] extract time %f ms\n", extract_time);
+    if (params->enbale_detailed_output){
+        spdlog::info("[D2Frontend::processStereoframe] extract time {} ms\n", extract_time);
+    }
+
     tic.tic();
     vframearry.motion_prediction = getMotionPredict(vframearry.stamp);
     double predict_time = tic.toc();
-    // printf("[D2Frontend::processStereoframe] predict time %f ms\n", predict_time);
+    if (params->enbale_detailed_output){
+        printf("[D2Frontend::processStereoframe] predict time %f ms\n", predict_time);
+
+    }
+
     tic.tic();
     bool is_keyframe = feature_tracker->trackLocalFrames(vframearry);
     double track_time = tic.toc();
-    // printf("[D2Frontend::processStereoframe] track time %f ms =\n", track_time);
+    if (params->enbale_detailed_output){
+        printf("[D2Frontend::processStereoframe] track time %f ms =\n", track_time);
+    }
+
     vframearry.prevent_adding_db = !is_keyframe;
     vframearry.is_keyframe = is_keyframe;
     received_image = true;
