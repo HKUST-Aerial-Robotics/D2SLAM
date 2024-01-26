@@ -987,7 +987,7 @@ std::pair<Swarm::Odometry, std::pair<IMUBuffer, int>> D2Estimator::getMotionPred
     auto ret = imu_bufs.at(self_id).periodIMU(last_frame.imu_buf_index, stamp + state.td);
     auto _imu = ret.first;
     auto index = ret.second;
-    if (fabs(_imu.size()/(stamp - last_frame.stamp) - params->IMU_FREQ) > 15) {
+    if (fabs(_imu.size()/(stamp - last_frame.stamp) - params->IMU_FREQ) > 20) {
         printf("\033[0;31m[D2VINS::D2Estimator] Local IMU error freq: %.3f start_t %.3f/%.3f end_t %.3f/%.3f\033[0m\n", 
             _imu.size()/(stamp - last_frame.stamp),
             last_frame.stamp + state.td, _imu[0].t, stamp + state.td, _imu[_imu.size()-1].t);

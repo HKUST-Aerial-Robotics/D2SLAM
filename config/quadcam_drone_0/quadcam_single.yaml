@@ -11,7 +11,7 @@ is_compressed_images: 0
 
 imu_freq: 500
 image_freq: 20
-frame_step: 2
+frame_step: 3
 
 #Camera configuration
 camera_configuration: 3  #STEREO_PINHOLE = 0, STEREO_FISHEYE = 1, PINHOLE_DEPTH = 2, FOURCORNER_FISHEYE = 3
@@ -86,7 +86,7 @@ remove_base_when_margin_remote: 2
 #  set to 0 those measurements (which on a landmark's baseFrame is not been removed) will be ignore.
 
 #feature tracker parameters
-max_cnt: 100            # max feature number in feature tracking
+max_cnt: 50            # max feature number in feature tracking
 max_superpoint_cnt: 0 # max feature extraction by superpoint //oringal super 150
 max_solve_cnt: 200
 check_essential: 0
@@ -119,7 +119,6 @@ superpoint_pca_dims: 64
 nn_engine_type: 1 # 0 use onnx; 1 use tensorrt raw engine
 superpoint_trt_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_v1_dyn_size_onnx_200_300.trt"
 moblieNetVlad_trt_path: "/root/swarm_ws/src/D2SLAM/models/mobilenetvlad_dyn_size_onnx_200_300.trt"
-
 
 #xuhao quadcam
 acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2   0.04
@@ -162,5 +161,3 @@ enbale_detailed_output: 0 # output feature extraction time, feature tracking tim
 enbale_speed_ouptut: 1 # output Frontend use time, backedn use time
 debug_write_margin_matrix: 0
 show_track_id: 0
-
-

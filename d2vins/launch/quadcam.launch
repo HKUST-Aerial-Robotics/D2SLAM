@@ -8,6 +8,7 @@
     <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/mobilenetvlad_dyn_size.onnx" />
     <arg name="superglue_model_path"     default="$(find d2frontend)/../models/superglue.onnx" />
     <arg name="superpoint_trt_path" default="$(find d2frontend)/../models/superpoint_v1_dyn_size_onnx_300x600.trt" />
+    <arg name="depth_config" default="/root/swarm_ws/src/D2SLAM/config/quadcam_drone_0/quadcam_depth.yaml"/>
     <arg name="config" default="$(find d2vins)/../config/quadcam_drone_0/quadcam_single.yaml" />
     <arg name="match_index_dist" default="200" />
     <arg name="match_index_dist_remote" default="20" />
@@ -20,7 +21,12 @@
     <arg name="is_4dof" default="false" />
     <arg name="depth_gen" default="false" />
     <arg name="main_id" default="1" /> <!-- This only determine trust which drone to setup cooridinate frme -->
-    
+    <node pkg="quadcam_depth_est" type="quadcam_depth_est_node" name="quadcam_depth_est" output="$(arg output)" >
+        <param name="show" value="$(arg show)"/>
+        <param name="depth_config" value="$(arg depth_config)"/>
+    </node>    
+
+
     <node pkg="d2vins" type="d2vins_node" name="d2vins" output="$(arg output)">
         <rosparam>
             lcm_uri: udpm://224.0.0.251:7667?ttl=1
@@ -72,6 +78,8 @@
         <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
         <param name="superpoint_trt_path" value="$(arg superpoint_trt_path)" type="string" />
     </node>
+
+
     <!-- <include file="$(find d2pgo)/launch/d2pgo.launch" if="$(arg enable_pgo)" >
         <arg name="config" value="$(arg config)" />
         <arg name="self_id" value="$(arg self_id)" />
@@ -85,7 +93,8 @@
         <arg name="output" value="screen" />
         <arg name="show" value="$(arg show)" />
     </include> -->
-    <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2slam.rviz" if="$(arg rviz)" />
+
+    <!-- <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2slam.rviz" if="$(arg rviz)" /> -->
     <!-- <include file="$(find taichislam)/launch/taichislam-quadcam.launch" if="$(arg taichislam)" >   
         <arg name="show" value="$(arg taichislam_show)" />
         <arg name="skeleton_graph_gen" value="$(arg skeleton_graph_gen)" />

@@ -29,5 +29,6 @@ else
   docker run -it --rm --runtime=nvidia --gpus all  --net=host -v /dev/:/dev/ \
     -v ${CONFIGS}:${SWARM_WS}/src/configs-drone-swarm \
     -v ${NN_MODELS}:${SWARM_WS}/src/NNmodels_generator \
-    --privileged -e DISPLAY  -v ${DATA_SET}:/data/  -v /tmp/.X11-unix:/tmp/.X11-unix --name="d2slam_container"  ${DOCKERIMAGE} /bin/bash
+    --privileged -e DISPLAY  -v ${DATA_SET}:/data/  -v /tmp/.X11-unix:/tmp/.X11-unix --name="d2slam_container"  ${DOCKERIMAGE} /bin/bash \
+    -c "source ./devel/setup.bash && roslaunch d2vins quadcam.launch"
 fi
