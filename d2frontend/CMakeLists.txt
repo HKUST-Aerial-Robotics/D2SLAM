@@ -66,6 +66,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
   /usr/local/include/
+  
   include
   ${opengv_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
@@ -173,6 +174,7 @@ target_link_libraries(libd2frontend
   dw
   loop_cnn
   opengv
+  spdlog
 )
 
 target_link_libraries(${PROJECT_NAME}_nodelet
@@ -184,6 +186,7 @@ target_link_libraries(${PROJECT_NAME}_nodelet
   dw
   libd2frontend
 )
+
 
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
