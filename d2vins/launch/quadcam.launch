@@ -8,8 +8,8 @@
     <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/mobilenetvlad_dyn_size.onnx" />
     <arg name="superglue_model_path"     default="$(find d2frontend)/../models/superglue.onnx" />
     <arg name="superpoint_trt_path" default="$(find d2frontend)/../models/superpoint_v1_dyn_size_onnx_300x600.trt" />
-    <arg name="depth_config" default="/root/swarm_ws/src/D2SLAM/config/quadcam_drone_0/quadcam_depth.yaml"/>
-    <arg name="config" default="$(find d2vins)/../config/quadcam_drone_0/quadcam_single.yaml" />
+    <arg name="depth_config" default="/root/swarm_ws/src/D2SLAM/config/quadcam_drone_nxt_v2/quadcam_depth.yaml"/>
+    <arg name="config" default="$(find d2vins)/../config/quadcam_drone_nxt_v2/quadcam_single.yaml" />
     <arg name="match_index_dist" default="200" />
     <arg name="match_index_dist_remote" default="20" />
     <arg name="output_path" default="/home/dji/output/" />
