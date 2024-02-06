@@ -104,7 +104,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray & frames) {
             frames.images[1].landmark_descriptor.clear();
             frames.images[1].landmark_scores.clear();
         }
-        report.compose(track(frames.images[0], frames.images[1], true, WHOLE_IMG_MATCH, _config.lr_match_use_lk));
+        // report.compose(track(frames.images[0], frames.images[1], true, WHOLE_IMG_MATCH, _config.lr_match_use_lk));
     } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
         for (auto & frame : frames.images) {
             report.compose(track(frame));

@@ -2,34 +2,32 @@
 
 #inputs
 imu: 1         
-imu_topic: "/dji_sdk_1/dji_sdk/imu"
-image0_topic: "/camera/infra1/image_rect_raw"
-image1_topic: "/camera/infra2/image_rect_raw"
+imu_topic: "/gopro/imu"
+image0_topic: "/gopro/image_raw"
+image1_topic: "/gopro/image_raw"
 
 is_compressed_images: 1
 
-imu_freq: 400
-image_freq: 30
+imu_freq: 200
+image_freq: 25
 frame_step: 2
 
 #Camera configuration
 camera_configuration: 0  #STEREO_PINHOLE = 0, STEREO_FISHEYE = 1, PINHOLE_DEPTH = 2, FOURCORNER_FISHEYE = 3
 num_of_cam: 2
 cam0_calib: "left.yaml"
-cam1_calib: "right.yaml"
-image_width: 640
-image_height: 480
+cam1_calib: "left.yaml"
+image_width: 960
+image_height: 540
 
 body_T_cam0: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [ 1.1014988987389507e-02, 1.1173204624065403e-02,
-       9.9987690718209743e-01, 9.9229853273207963e-02,
-       -9.9978378585431993e-01, -1.7513561748200734e-02,
-       1.1209669829911950e-02, 2.0092259073349470e-02,
-       1.7636653889311404e-02, -9.9978419404055430e-01,
-       1.0977877129386582e-02, 1.0467856544782061e-02, 0., 0., 0., 1. ]
+   data: [ -0.99997758,  0.00336492, -0.00579021, -0.00229512,
+       0.00579283,  0.00076879, -0.99998293, -0.00517814,
+       -0.00336042, -0.99999404, -0.00078827, -0.01658675,
+       0., 0., 0., 1. ]
 body_T_cam1: !!opencv-matrix
    rows: 4
    cols: 4
@@ -102,7 +100,7 @@ remove_base_when_margin_remote: 2
 #  set to 0 those measurements (which on a landmark's baseFrame is not been removed) will be ignore.
 
 #feature tracker parameters
-max_cnt: 200            # max feature number in feature tracking
+max_cnt: 500            # max feature number in feature tracking
 max_superpoint_cnt: 0 # max feature extraction by superpoint
 max_solve_cnt: 500
 show_track_id: 0
@@ -126,10 +124,6 @@ netvlad_int8_calib_table_name: "mobilenetvlad_calibration.flatbuffers"
 superpoint_int8_calib_table_name: "superpoint_calibration.flatbuffers"
 
 # #Measurement parameters       The more accurate parameters you provide, the better performance
-# acc_n: 0.0028         # accelerometer measurement noise standard deviation. #0.2   0.04
-# gyr_n: 0.00016        # gyroscope measurement noise standard deviation.     #0.05  0.004
-# acc_w: 0.00086        # accelerometer bias random work noise standard deviation.  #0.002
-# gyr_w: 0.000022       # gyroscope bias random work noise standard deviation.     #4.0e-5
 acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2   0.04
 gyr_n: 0.05         # gyroscope measurement noise standard deviation.     #0.05  0.004
 acc_w: 0.002         # accelerometer bias random work noise standard deviation.  #0.002
