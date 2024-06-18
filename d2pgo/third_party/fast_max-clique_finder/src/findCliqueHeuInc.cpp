@@ -1,15 +1,16 @@
 // This file is modified from the original file at:
 // https://github.com/MIT-SPARK/Kimera-RPGO/blob/master/include/KimeraRPGO/max_clique_finder/findCliqueHeu.cpp
-#include "findClique.h"
-#include <cstddef>
+#include <stdlib.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <stdlib.h>
+
+#include <cstddef>
+
+#include "findClique.h"
 namespace FMC {
-int maxCliqueHeuIncremental(CGraphIO& gio,
-                            size_t num_new_lc,
+int maxCliqueHeuIncremental(CGraphIO& gio, size_t num_new_lc,
                             size_t prev_maxclique_size,
-                            vector<int> & max_clique_data) {
+                            vector<int>& max_clique_data) {
   vector<int>* p_v_i_Vertices = gio.GetVerticesPtr();
   vector<int>* p_v_i_Edges = gio.GetEdgesPtr();
   // srand(time(NULL));
@@ -29,8 +30,7 @@ int maxCliqueHeuIncremental(CGraphIO& gio,
   // compute the max clique for each vertex
   // TODO tricky indexing ...
   for (size_t iCandidateVertex = p_v_i_Vertices->size() - num_new_lc - 1;
-       iCandidateVertex < p_v_i_Vertices->size() - 1;
-       iCandidateVertex++) {
+       iCandidateVertex < p_v_i_Vertices->size() - 1; iCandidateVertex++) {
     // Pruning 1
     if (maxClq > ((*p_v_i_Vertices)[iCandidateVertex + 1] -
                   (*p_v_i_Vertices)[iCandidateVertex])) {
@@ -97,4 +97,4 @@ int maxCliqueHeuIncremental(CGraphIO& gio,
 
   return maxClq;
 }
-}
+}  // namespace FMC

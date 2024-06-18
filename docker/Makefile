@@ -1,4 +1,4 @@
-all: jetson_base jetson pc
+all: jetson_base jetson x86
 
 help:
 	@echo ""
@@ -9,8 +9,8 @@ help:
 	@echo "   1. make clean              - remove all images"
 	@echo ""
 
-pc:
-	@docker build  -t d2slam:pc -f ./Dockerfile ..
+x86:
+	@docker build  -t d2slam:x86 -f ./Dockerfile.x86 ..
 
 jetson:
 	@docker build  -t d2slam:jetson -f ./Dockerfile.jetson ..

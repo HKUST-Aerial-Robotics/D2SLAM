@@ -1,0 +1,8 @@
+repos:
+  - repo: https://github.com/cpp-linter/cpp-linter-hooks
+    rev: v0.4.0  # Use the ref you want to point at
+    hooks:
+      - id: clang-format
+        args: [--style=Google] # Other coding style: LLVM, GNU, Chromium, Microsoft, Mozilla, WebKit.
+      # - id: clang-tidy
+      #   args: [--checks='all', -p, build]
