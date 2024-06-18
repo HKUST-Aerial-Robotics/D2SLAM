@@ -19,7 +19,8 @@ RUN  apt-get -y update && \
       libsuitesparse-dev \
       libglib2.0-dev \
       libyaml-cpp-dev \
-      libdw-dev
+      libdw-dev \
+      vim
 
 #Install ROS
 # update ros repository
@@ -68,7 +69,7 @@ RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       cd ceres-solver && \
       mkdir build && cd build && \
       cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
-      make -j$(USE_PROC) install && \
+      make -j$(nproc) install && \
       rm -rf ../../ceres-solver && \
       apt-get clean all
 
@@ -80,10 +81,16 @@ RUN   wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VE
       rm onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz
 
 #Install Libtorch (CUDA)
-RUN   wget https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-${LIBTORCH_VERSION}%2Bcpu.zip && \
-      unzip libtorch-shared-with-deps-${LIBTORCH_VERSION}+cpu.zip && \
-      rm libtorch-shared-with-deps-${LIBTORCH_VERSION}+cpu.zip && \
+# RUN   wget https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-${LIBTORCH_VERSION}%2Bcpu.zip && \
+#       unzip libtorch-shared-with-deps-${LIBTORCH_VERSION}+cpu.zip && \
+#       rm libtorch-shared-with-deps-${LIBTORCH_VERSION}+cpu.zip && \
+#       cp -r libtorch/* /usr/local/
+
+RUN   wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.0.1%2Bcpu.zip && \
+      unzip libtorch-cxx11-abi-shared-with-deps-2.0.1+cpu.zip && \
+      rm libtorch-cxx11-abi-shared-with-deps-2.0.1+cpu.zip && \
       cp -r libtorch/* /usr/local/
+
 
 #Install LCM
 RUN   git clone https://github.com/lcm-proj/lcm && \
@@ -91,14 +98,14 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
       git checkout tags/v1.4.0 && \
       mkdir build && cd build && \
       cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
-      make -j$(USE_PROC) install && \
+      make -j$(nproc) install && \
       pip install lcm
 
 #Install Faiss
 RUN   git clone https://github.com/facebookresearch/faiss.git && \
       cd faiss && git checkout tags/v${FAISS_VERSION} && \
       cmake -B build -DCMAKE_BUILD_TYPE=Release -DFAISS_OPT_LEVEL=avx2 -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF -DFAISS_ENABLE_GPU=OFF . && \
-      make -C build -j faiss && \
+      make -C build -j$(nproc) faiss && \
       make -C build install && \
       rm -rf ../faiss
 
@@ -131,12 +138,12 @@ RUN   cd opencv-${OPENCV_VERSION} && \
 cudev,cudaoptflow,cudaimgproc,cudalegacy,cudaarithm,cudacodec,cudastereo,\
 cudafeatures2d,xfeatures2d,tracking,stereo,\
 aruco,videoio,ccalib && \
-      make -j $(USE_PROC) && \
+      make -j$(nproc) && \
       make install 
 
 #Install OpenGV
 RUN git clone https://github.com/HKUST-Swarm/opengv && \
-      mkdir opengv/build && cd opengv/build && cmake .. && make && \
+      mkdir opengv/build && cd opengv/build && cmake .. && make -j$(nproc) && \
       make install
 
 #Install Backward
