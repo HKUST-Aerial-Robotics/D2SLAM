@@ -5,8 +5,8 @@
 
 #include "ATen/Parallel.h"
 #include "d2common/utils.hpp"
-using D2Common::Utility::TicToc;
 
+using D2Common::Utility::TicToc;
 namespace D2FrontEnd {
 SuperPointONNX::SuperPointONNX(std::string engine_path, int _nms_dist,
                                std::string _pca_comp, std::string _pca_mean,
@@ -60,7 +60,7 @@ void SuperPointONNX::doInference(const unsigned char* input,
                 output_names_, output_tensors_.data(), 2);
 }
 
-void SuperPointONNX::inference(const cv::Mat& input,
+void SuperPointONNX::infer(const cv::Mat& input,
                                std::vector<cv::Point2f>& keypoints,
                                std::vector<float>& local_descriptors,
                                std::vector<float>& scores) {

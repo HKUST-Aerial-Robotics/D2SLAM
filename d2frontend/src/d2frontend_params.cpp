@@ -16,12 +16,16 @@
 namespace D2FrontEnd {
 D2FrontendParams* params;
 std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(
-    const std::string& camera_name, const YAML::Node& config);
+    const std::string& camera_name, const YAML::Node& config, int32_t extrinsic_parameter_type = 1);
+
+
 D2FrontendParams::D2FrontendParams(ros::NodeHandle& nh) {
   // Read VINS params.
   nh.param<std::string>("vins_config_path", vins_config_path, "");
   cv::FileStorage fsSettings;
+  printf("Read VINS config from %s\n", vins_config_path.c_str());
   fsSettings.open(vins_config_path.c_str(), cv::FileStorage::READ);
+
   int pn = vins_config_path.find_last_of('/');
   std::string configPath = vins_config_path.substr(0, pn);
 
@@ -76,12 +80,46 @@ D2FrontendParams::D2FrontendParams(ros::NodeHandle& nh) {
     loopdetectorconfig->loop_detection_netvlad_thres =
         1.46 * loopdetectorconfig->loop_detection_netvlad_thres - 0.499128;
   }
-  nh.param<double>("superpoint_thres", loopcamconfig->superpoint_thres, 0.012);
-  nh.param<std::string>("pca_comp_path", loopcamconfig->pca_comp, "");
-  nh.param<std::string>("pca_mean_path", loopcamconfig->pca_mean, "");
-  nh.param<std::string>("pca_netvlad", pca_netvlad, "");
-  nh.param<std::string>("superpoint_model_path",
-                        loopcamconfig->superpoint_model, "");
+
+  //superpoint configurations
+  cv::FileNode fs_superpoint_config = fsSettings["superpoint_config"];
+  SuperPoint::SuperPointConfig superpoint_config;
+  superpoint_config.max_keypoints  = static_cast<int32_t>(fsSettings["max_superpoint_cnt"]);
+  superpoint_config.onnx_path = static_cast<std::string>(fs_superpoint_config["onnx_path"]);
+  superpoint_config.engine_path = static_cast<std::string>(fs_superpoint_config["trt_engine_path"]);
+  superpoint_config.keypoint_threshold = static_cast<float>(fs_superpoint_config["threshold"]);
+  cv::FileNode input_tensor_names = fs_superpoint_config["input_tensor_names"];
+  for (const auto& name : input_tensor_names) {
+    superpoint_config.input_tensor_names.push_back(static_cast<std::string>(name));
+    printf("input_tensor_names: %s\n", static_cast<std::string>(name).c_str());
+  }
+  cv::FileNode output_tensor_names = fs_superpoint_config["output_tensor_names"];
+  for (const auto& name : output_tensor_names) {
+    superpoint_config.output_tensor_names.push_back(static_cast<std::string>(name));
+    printf("output_tensor_names: %s\n", static_cast<std::string>(name).c_str());
+  }
+  superpoint_config.input_height = static_cast<int32_t>(fs_superpoint_config["input_height"]);
+  superpoint_config.input_width = static_cast<int32_t>(fs_superpoint_config["input_width"]);
+  superpoint_config.enable_pca =  static_cast<int32_t>(fs_superpoint_config["enable_pca"]) !=0;
+  superpoint_config.pca_mean_path = static_cast<std::string>(fs_superpoint_config["pca_mean_path"]);
+  superpoint_config.pca_comp_path = static_cast<std::string>(fs_superpoint_config["pca_comp_path"]);
+  superpoint_config.superpoint_pca_dims = static_cast<int32_t>(fs_superpoint_config["superpoint_pca_dims"]);
+
+  //print superpoint configuration all above
+  printf("superpoint_config.max_keypoints: %d\n", superpoint_config.max_keypoints);
+  printf("superpoint_config.onnx_path: %s\n", superpoint_config.onnx_path.c_str());
+  printf("superpoint_config.engine_path: %s\n", superpoint_config.engine_path.c_str());
+  printf("superpoint_config.keypoint_threshold: %f\n", superpoint_config.keypoint_threshold);
+
+  loopcamconfig->superpoint_config = superpoint_config;
+  
+
+  // nh.param<double>("superpoint_thres", loopcamconfig->superpoint_thres, 0.012);
+  // nh.param<std::string>("pca_comp_path", loopcamconfig->pca_comp, "");
+  // nh.param<std::string>("pca_mean_path", loopcamconfig->pca_mean, "");
+  // nh.param<std::string>("pca_netvlad", pca_netvlad, "");
+  // nh.param<std::string>("superpoint_model_path",
+  //                       loopcamconfig->superpoint_model, "");
   nh.param<std::string>("netvlad_model_path", loopcamconfig->netvlad_model, "");
   loopcamconfig->cnn_enable_tensorrt = (int)fsSettings["cnn_enable_tensorrt"];
   loopcamconfig->cnn_enable_tensorrt_int8 =
@@ -285,10 +323,11 @@ void D2FrontendParams::readCameraConfigs(cv::FileStorage& fsSettings,
   }
 
   std::string calib_file_path = fsSettings["calib_file_path"];
+  int32_t extrinsic_parameter_type = static_cast<int32_t>(fsSettings["extrinsic_parameter_type"]);
   if (calib_file_path != "") {
     calib_file_path = configPath + "/" + calib_file_path;
     SPDLOG_INFO("Will read camera calibration from {}", calib_file_path);
-    readCameraCalibrationfromFile(calib_file_path);
+    readCameraCalibrationfromFile(calib_file_path, extrinsic_parameter_type);
     int camera_num = extrinsics.size();
     for (auto i = 0; i < camera_num; i++) {
       char param_name[64] = {0};
@@ -327,20 +366,20 @@ void D2FrontendParams::readCameraConfigs(cv::FileStorage& fsSettings,
   }
 }
 
-void D2FrontendParams::readCameraCalibrationfromFile(const std::string& path) {
+void D2FrontendParams::readCameraCalibrationfromFile(const std::string& path, int32_t extrinsic_parameter_type) {
   YAML::Node config = YAML::LoadFile(path);
   for (const auto& kv : config) {
     std::string camera_name = kv.first.as<std::string>();
     std::cout << camera_name << "\n";
     const YAML::Node& value = kv.second;
-    auto ret = readCameraConfig(camera_name, value);
+    auto ret = readCameraConfig(camera_name, value, extrinsic_parameter_type);
     camera_ptrs.emplace_back(ret.first);
     extrinsics.emplace_back(ret.second);
   }
 }
 
 std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(
-    const std::string& camera_name, const YAML::Node& config) {
+    const std::string& camera_name, const YAML::Node& config, int32_t extrinsic_parameter_type) {
   // In this case, we generate camera ptr.
   // Now only accept omni-radtan.
   camodocal::CameraPtr camera;
@@ -396,9 +435,18 @@ std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(
       T(i, j) = config["T_cam_imu"][i][j].as<double>();
     }
   }
-  Matrix3d R = T.block<3, 3>(0, 0);
-  Vector3d t = T.block<3, 1>(0, 3);
-  Swarm::Pose pose(T.block<3, 3>(0, 0), T.block<3, 1>(0, 3));
+
+  Matrix3d R;
+  Vector3d t;
+  // OmniNxt use mode 0 thus R=R.inverse(); t=-R*t;
+  if (extrinsic_parameter_type == 0){
+    R = T.block<3, 3>(0, 0).transpose();
+    t = -R*T.block<3, 1>(0, 3);
+  } else {
+    R = T.block<3, 3>(0, 0);
+    t = T.block<3, 1>(0, 3);
+  }
+  Swarm::Pose pose(R, t);
   std::cout << "T_cam_imu:\n" << T << std::endl;
   std::cout << "pose:\n" << pose.toStr() << std::endl;
 

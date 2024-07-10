@@ -60,8 +60,7 @@ void computeDescriptors(const torch::Tensor& mProb, const torch::Tensor& mDesc,
 
   // mDesc.to(torch::kCUDA);
   // grid.to(torch::kCUDA);
-  auto desc = torch::grid_sampler(mDesc, grid, 0, 0, 0);
-
+  auto desc = torch::grid_sampler(mDesc, grid, 0, 0, 0); // [1,256,w/8,h/8] [1,1,n_keypoints,2] [1,256,1,n_keypoints]
   desc = desc.squeeze(0).squeeze(1);
 
   // normalize to 1
@@ -72,7 +71,7 @@ void computeDescriptors(const torch::Tensor& mProb, const torch::Tensor& mDesc,
   desc = desc.to(torch::kCPU);
   Eigen::Map<
       Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
-      _desc(desc.data<float>(), desc.size(0), desc.size(1));
+      _desc(desc.data<float>(), desc.size(0), desc.size(1)); //[256, n_keypoints]
   if (pca_comp_T.size() > 0) {
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
         _desc_new = (_desc.rowwise() - pca_mean) * pca_comp_T;

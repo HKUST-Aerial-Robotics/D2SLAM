@@ -122,7 +122,7 @@ struct D2FrontendParams {
 
     D2FrontendParams(ros::NodeHandle &);
     D2FrontendParams() {}
-    void readCameraCalibrationfromFile(const std::string & path);
+    void readCameraCalibrationfromFile(const std::string & path, int32_t extrinsic_parameter_type = 1);
     void generateCameraModels(cv::FileStorage & fsSettings, std::string config_path);
     void readCameraConfigs(cv::FileStorage & fsSettings, std::string config_path);
 

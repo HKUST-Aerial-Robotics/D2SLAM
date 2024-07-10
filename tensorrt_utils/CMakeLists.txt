@@ -24,4 +24,3 @@ target_link_libraries(${PROJECT_NAME}
   nvinfer_plugin
   nvonnxparser
 )
-

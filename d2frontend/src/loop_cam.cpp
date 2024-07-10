@@ -1,16 +1,20 @@
 #include <camodocal/camera_models/CameraFactory.h>
-#include <cv_bridge/cv_bridge.h>
-#include <d2common/fisheye_undistort.h>
-#include <d2frontend/d2featuretracker.h>
-#include <d2frontend/loop_cam.h>
-#include <spdlog/spdlog.h>
 
+#include <memory>
+
+#include <cv_bridge/cv_bridge.h>
+#include "opencv2/features2d.hpp"
+#include <spdlog/spdlog.h>
 #include <chrono>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/opencv.hpp>
-#include <swarm_msgs/swarm_lcm_converter.hpp>
 
-#include "opencv2/features2d.hpp"
+
+#include <swarm_msgs/swarm_lcm_converter.hpp>
+#include <d2common/fisheye_undistort.h>
+#include <d2frontend/d2featuretracker.h>
+#include <d2frontend/loop_cam.h>
+#include "d2frontend/CNN/superpoint.h"
 
 using namespace std::chrono;
 
@@ -32,13 +36,25 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh)
         config.netvlad_model, img_width, img_height, config.cnn_enable_tensorrt,
         config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8,
         config.netvlad_int8_calib_table_name);
-    superpoint_onnx = new SuperPointONNX(
-        config.superpoint_model, ((int)(params->feature_min_dist / 2)),
-        config.pca_comp, config.pca_mean, img_width, img_height,
-        config.superpoint_thres, config.superpoint_max_num,
-        config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16,
-        config.cnn_enable_tensorrt_int8,
-        config.superpoint_int8_calib_table_name);
+        
+    SuperPoint::SuperPointConfig sp_config = config.superpoint_config;
+    superpoint_ptr = std::make_unique<SuperPoint>(sp_config);
+    if (superpoint_ptr->build()){
+      SPDLOG_INFO("SuperPoint build success");
+    } else {
+      SPDLOG_ERROR("SuperPoint build failed");
+    }
+
+
+    // superpoint_onnx = new SuperPointONNX(
+    //     config.superpoint_model, ((int)(params->feature_min_dist / 2)),
+    //     config.pca_comp, config.pca_mean, img_width, img_height,
+    //     config.superpoint_thres, config.superpoint_max_num,
+    //     config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16,
+    //     config.cnn_enable_tensorrt_int8,
+    //     config.superpoint_int8_calib_table_name);
+    
+
   }
   undistortors = params->undistortors;
   cams = params->camera_ptrs;
@@ -581,10 +597,8 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img,
   if (_config.superpoint_max_num > 0) {
     // We only inference when superpoint max num > 0
     // otherwise, d2vins only uses LK optical flow feature.
-    if (_config.cnn_use_onnx) {
-      superpoint_onnx->inference(img, landmarks_2d, vframe.landmark_descriptor,
-                                 vframe.landmark_scores);
-    }
+    superpoint_ptr->infer(img, landmarks_2d, vframe.landmark_descriptor,
+                                vframe.landmark_scores);
   }
 
   if (!superpoint_mode) {

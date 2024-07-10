@@ -959,6 +959,7 @@ std::set<int> D2Estimator::getNearbyDronesbyPGOData(
   }
   return nearby_drones;
 }
+
 std::pair<Swarm::Odometry, std::pair<IMUBuffer, int>>
 D2Estimator::getMotionPredict(double stamp) const {
   if (!initFirstPoseFlag) {

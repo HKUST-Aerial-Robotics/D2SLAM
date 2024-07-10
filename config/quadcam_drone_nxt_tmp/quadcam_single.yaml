@@ -16,14 +16,16 @@ frame_step: 3
 #Camera configuration
 camera_configuration: 3  #STEREO_PINHOLE = 0, STEREO_FISHEYE = 1, PINHOLE_DEPTH = 2, FOURCORNER_FISHEYE = 3
 calib_file_path: "fisheye_cams.yaml"
+extrinsic_parameter_type: 0 # 0: cam^T_imu 1: imu^T_cam   //NXT use 0, D2SLAM dataset use 1
 image_width: 1280
 image_height: 720
 enable_undistort_image: 1
 undistort_fov: 180
-width_undistort: 300 #600
-height_undistort: 150 #300 好像也可以
-photometric_calib: "mask_1.png"
+width_undistort: 320 #600
+height_undistort: 160 #300
+photometric_calib: ""
 avg_photometric: 0.7
+sp_track_use_lk: 1
 
 #estimation
 not_estimate_first_extrinsic: 0
@@ -87,7 +89,7 @@ remove_base_when_margin_remote: 2
 
 #feature tracker parameters
 max_cnt: 50            # max feature number in feature tracking
-max_superpoint_cnt: 0 # max feature extraction by superpoint //oringal super 150
+max_superpoint_cnt: 50 # max feature extraction by superpoint //oringal super 150
 max_solve_cnt: 200
 check_essential: 0
 enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
@@ -113,12 +115,34 @@ knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detec
 #CNN
 cnn_engine: 0 # 0 use onnx; 1 use tensorrt raw engine
 cnn_use_onnx: 1
-enable_pca_superpoint: 1
-superpoint_pca_dims: 64
+
 
 nn_engine_type: 1 # 0 use onnx; 1 use tensorrt raw engine
 superpoint_trt_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_v1_dyn_size_onnx_200_300.trt"
 moblieNetVlad_trt_path: "/root/swarm_ws/src/D2SLAM/models/mobilenetvlad_dyn_size_onnx_200_300.trt"
+
+#Superpoint
+superpoint_config:
+  onnx_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_series/superpoint_v1_sim_int32.onnx"
+  trt_engine_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_series/superpoint_v1_sim_int32.trt"
+  enable_fp16: 1
+  input_width: 320
+  input_height: 160
+  input_tensor_names:
+    - "input"
+  output_tensor_names:
+    - "scores" # keypoint output
+    - "descriptors" # descriptor output
+    # these two parameters sequence must follow the given output sequence.
+  threshold: 0.15
+  nms_radius: 20
+  enable_pca: 1
+  pca_mean_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_series/mean_.csv"
+  pca_comp_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_series/components_.csv"
+  superpoint_pca_dims: 64
+
+
+
 
 #xuhao quadcam
 acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2   0.04
