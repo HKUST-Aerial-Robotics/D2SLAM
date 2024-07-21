@@ -4,11 +4,12 @@
 #include <boost/program_options.hpp>
 
 #include "d2common/fisheye_undistort.h"
+#include "d2frontend/d2frontend_params.h"
 
-namespace D2FrontEnd {
-std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(
-    const std::string& camera_name, const YAML::Node& config, int32_t extrinsic_parameter_type = 1 );
-}
+// namespace D2FrontEnd {
+// std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(
+//     const std::string& camera_name, const YAML::Node& config, int32_t extrinsic_parameter_type = 1 );
+// }
 
 using namespace D2FrontEnd;
 using D2Common::FisheyeUndist;
@@ -37,7 +38,7 @@ int main(int argc, char** argv) {
   cv::waitKey(1);
   printf("Read image file %s OK", image_path.c_str());
   YAML::Node config = YAML::LoadFile(calib_path);
-  auto ret = D2FrontEnd::readCameraConfig(camera_name, config[camera_name]);
+  auto ret = D2FrontendParams::readCameraConfig(camera_name, config[camera_name]);
   printf("Read camera %s fov %f calib from file %s OK", camera_name.c_str(),
          fov, calib_path.c_str());
 

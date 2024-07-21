@@ -6,6 +6,7 @@
 #include <nav_msgs/Odometry.h>
 #include <spdlog/spdlog.h>
 #include <swarm_msgs/node_frame.h>
+#include <sys/prctl.h>
 
 #include <Eigen/Eigen>
 #include <d2common/utils.hpp>
@@ -26,6 +27,8 @@
 // }
 
 namespace D2FrontEnd {
+
+
 typedef std::lock_guard<std::mutex> lock_guard;
 
 void D2Frontend::onLoopConnection(LoopEdge &loop_con, bool is_local) {
@@ -68,10 +71,21 @@ void D2Frontend::stereoImagesCallback(const sensor_msgs::ImageConstPtr left,
                                       const sensor_msgs::ImageConstPtr right) {
   auto _l = getImageFromMsg(left);
   auto _r = getImageFromMsg(right);
-  StereoFrame sframe(_l->header.stamp, _l->image, _r->image,
+  // StereoFrame sframe(_l->header.stamp, _l->image, _r->image,
+  //                    params->extrinsics[0], params->extrinsics[1],
+  //                    params->self_id);
+  if (stereo_frame_buffer_lock_.try_lock()) {
+    stereo_frame_q_.push(std::make_shared<StereoFrame>(_l->header.stamp, _l->image, _r->image,
                      params->extrinsics[0], params->extrinsics[1],
-                     params->self_id);
-  processStereoframe(sframe);
+                     params->self_id));
+    while (stereo_frame_q_.size() > visual_frame_size_) {
+      spdlog::warn("D2VINS frontend process is slow; dropping frames\n");
+      stereo_frame_q_.pop();
+    }
+    stereo_frame_buffer_lock_.unlock();
+  }
+  return;
+  // processStereoframe(sframe);
 }
 
 void D2Frontend::depthImagesCallback(const sensor_msgs::ImageConstPtr left,
@@ -80,7 +94,17 @@ void D2Frontend::depthImagesCallback(const sensor_msgs::ImageConstPtr left,
   auto _d = getImageFromMsg(depth);
   StereoFrame sframe(left->header.stamp, _l->image, _d->image,
                      params->extrinsics[0], params->self_id);
-  processStereoframe(sframe);
+  if (stereo_frame_buffer_lock_.try_lock()) {
+    stereo_frame_q_.push(std::make_shared<StereoFrame>(left->header.stamp, _l->image, _d->image,
+                     params->extrinsics[0], params->self_id));
+    while (stereo_frame_q_.size() > visual_frame_size_) {
+      spdlog::warn("D2VINS frontend process is slow; dropping frames\n");
+      stereo_frame_q_.pop();
+    }
+    stereo_frame_buffer_lock_.unlock();
+  }
+  return ;
+  // processStereoframe(sframe);
 }
 
 void D2Frontend::monoImageCallback(const sensor_msgs::ImageConstPtr &image) {
@@ -100,9 +124,64 @@ void D2Frontend::monoImageCallback(const sensor_msgs::ImageConstPtr &image) {
     cv::namedWindow("raw_image", cv::WINDOW_NORMAL | cv::WINDOW_GUI_EXPANDED);
     cv::imshow("RawImage", img);
   }
-  StereoFrame sframe(image->header.stamp, imgs, params->extrinsics,
-                     params->self_id);
-  processStereoframe(sframe);
+  // StereoFrame sframe(image->header.stamp, imgs, params->extrinsics,
+  //                    params->self_id);
+  if (stereo_frame_buffer_lock_.try_lock()) {
+    stereo_frame_q_.push(std::make_shared<StereoFrame>(image->header.stamp, imgs, params->extrinsics,
+                     params->self_id));
+    while (stereo_frame_q_.size() > visual_frame_size_) {
+      spdlog::warn("D2VINS frontend process is slow; dropping frames\n");
+      stereo_frame_q_.pop();
+    }
+    stereo_frame_buffer_lock_.unlock();
+  }
+  return ;
+  // processStereoframe(sframe);
+}
+
+void D2Frontend::processStereoFrameThread() {
+  //set thread name
+  prctl(PR_SET_NAME, "D2FrontendStereoFrame", 0, 0, 0);
+  while (stereo_frame_thread_running_) {
+    if (stereo_frame_buffer_lock_.try_lock()) {
+      if (stereo_frame_q_.size() > 0) {
+        auto sframe = stereo_frame_q_.front();
+        stereo_frame_q_.pop();
+        processStereoframe(*sframe);
+      }
+      stereo_frame_buffer_lock_.unlock();
+    }
+    stereo_frame_thread_rate_ptr_->sleep();
+  }
+}
+
+void D2Frontend::loopDetectionThread() {
+  //set thread name
+  prctl(PR_SET_NAME, "D2FrontendLoopDetection", 0, 0, 0);
+  while (loop_detection_thread_running_) {
+    if (loop_queue.size() > 0) {
+      VisualImageDescArray vframearry;
+      { //minimal lock scope
+        lock_guard guard(loop_lock);
+        vframearry = loop_queue.front();
+        loop_queue.pop();
+      }
+      if (loop_queue.size() > 10) {
+        SPDLOG_WARN("Loop queue size is {}", loop_queue.size());
+      }
+      loop_detector->processImageArray(vframearry);
+    }
+    loop_detection_thread_rate_ptr_->sleep();
+  }
+}
+
+void D2Frontend::lcmThread() {
+  //set thread name
+  prctl(PR_SET_NAME, "D2FrontendLCM", 0, 0, 0);
+  while (lcm_thread_running_) {
+    loop_net->lcmHandle();
+    lcm_thread_rate_ptr_->sleep();
+  }
 }
 
 void D2Frontend::processStereoframe(const StereoFrame &stereoframe) {
@@ -189,24 +268,6 @@ void D2Frontend::processRemoteImage(VisualImageDescArray &frame_desc,
   }
 }
 
-void D2Frontend::loopDetectionThread() {
-  while (ros::ok()) {
-    if (loop_queue.size() > 0) {
-      VisualImageDescArray vframearry;
-      {
-        lock_guard guard(loop_lock);
-        vframearry = loop_queue.front();
-        loop_queue.pop();
-      }
-      if (loop_queue.size() > 10) {
-        SPDLOG_WARN("Loop queue size is {}", loop_queue.size());
-      }
-      loop_detector->processImageArray(vframearry);
-    }
-    usleep(10000);
-  }
-}
-
 void D2Frontend::pubNodeFrame(const VisualImageDescArray &viokf) {
   auto _kf = viokf.toROS();
   keyframe_pub.publish(_kf);
@@ -272,9 +333,9 @@ void D2Frontend::Init(ros::NodeHandle &nh) {
     SPDLOG_INFO("Input: images {} and {}", params->image_topics[0],
                 params->image_topics[1]);
     image_sub_l =
-        new ImageSubscriber(*it_, params->image_topics[0], 1000, hints);
+        new ImageSubscriber(*it_, params->image_topics[0], 10, hints);
     image_sub_r =
-        new ImageSubscriber(*it_, params->image_topics[1], 1000, hints);
+        new ImageSubscriber(*it_, params->image_topics[1], 10, hints);
     sync = new message_filters::Synchronizer<ApproSync>(
         ApproSync(10), *image_sub_l, *image_sub_r);
     sync->registerCallback(
@@ -283,9 +344,9 @@ void D2Frontend::Init(ros::NodeHandle &nh) {
     SPDLOG_INFO("Input: raw images {} and depth {}", params->image_topics[0],
                 params->depth_topics[0]);
     image_sub_l =
-        new ImageSubscriber(*it_, params->image_topics[0], 1000, hints);
+        new ImageSubscriber(*it_, params->image_topics[0], 10, hints);
     image_sub_r =
-        new ImageSubscriber(*it_, params->depth_topics[0], 1000, hints);
+        new ImageSubscriber(*it_, params->depth_topics[0], 10, hints);
     sync = new message_filters::Synchronizer<ApproSync>(
         ApproSync(10), *image_sub_l, *image_sub_r);
     sync->registerCallback(
@@ -293,7 +354,7 @@ void D2Frontend::Init(ros::NodeHandle &nh) {
   } else if (params->camera_configuration == CameraConfig::FOURCORNER_FISHEYE) {
     // Default we accept only horizon-concated image
     image_sub_single =
-        it_->subscribe(params->image_topics[0], 1000,
+        it_->subscribe(params->image_topics[0], 10,
                        &D2Frontend::monoImageCallback, this, hints);
   }
 
@@ -317,13 +378,22 @@ void D2Frontend::Init(ros::NodeHandle &nh) {
     loop_net->scanRecvPackets();
   });
 
+  stereo_frame_thread_rate_ptr_ = std::make_unique<ros::Rate>(params->ftconfig->stereo_frame_thread_rate); 
+  loop_detection_thread_rate_ptr_ = std::make_unique<ros::Rate>(params->ftconfig->loop_detection_thread_rate);
+  lcm_thread_rate_ptr_ = std::make_unique<ros::Rate>(params->ftconfig->lcm_thread_rate);
+
+  //start d2frontend thread
+  startThread();
+  spdlog::info("D2Frontend initialized");
+
   // loop_timer = nh.createTimer(ros::Duration(0.01),
   // &D2Frontend::loopTimerCallback, this);
-  th_loop_det = std::thread(&D2Frontend::loopDetectionThread, this);
-  th = std::thread([&] {
-    while (0 == loop_net->lcmHandle()) {
-    }
-  });
+  // th_loop_det = std::thread(&D2Frontend::loopDetectionThread, this);
+  // th = std::thread([&] {
+  //   while (0 == loop_net->lcmHandle()) {
+  //   }
+  // });
+
 }
 
 }  // namespace D2FrontEnd

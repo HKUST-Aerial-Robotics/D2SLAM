@@ -26,6 +26,12 @@ height_undistort: 160 #300
 photometric_calib: ""
 avg_photometric: 0.7
 sp_track_use_lk: 1
+image_queue_size : 10
+
+
+#frontend frequency
+loop_detection_freq: 1
+lcm_thread_freq: 1
 
 #estimation
 not_estimate_first_extrinsic: 0
@@ -115,7 +121,6 @@ knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detec
 #CNN
 cnn_engine: 0 # 0 use onnx; 1 use tensorrt raw engine
 cnn_use_onnx: 1
-
 
 nn_engine_type: 1 # 0 use onnx; 1 use tensorrt raw engine
 superpoint_trt_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_v1_dyn_size_onnx_200_300.trt"

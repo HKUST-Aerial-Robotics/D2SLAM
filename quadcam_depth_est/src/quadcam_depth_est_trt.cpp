@@ -11,9 +11,9 @@
 #include "pcl_utils.hpp"
 
 
-namespace D2FrontEnd {
-    std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(const std::string & camera_name, const YAML::Node & config);
-};
+// namespace D2FrontEnd {
+//     std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(const std::string & camera_name, const YAML::Node & config, int32_t extrinsic_parameter_type = 1);
+// };
 
 namespace D2QuadCamDepthEst
 {
@@ -130,7 +130,7 @@ void QuadcamDepthEstTrt::loadVirtualCameras(YAML::Node & config, std::string con
       printf("[QuadcamDepthEstTrt] Load camera %s\n", camera_name.c_str());
       //fisheye camera parameters
       const YAML::Node & camera_parameters = cam_para.second;
-      auto cam_model = D2FrontEnd::readCameraConfig(camera_name,camera_parameters);
+      auto cam_model = D2FrontEnd::D2FrontendParams::readCameraConfig(camera_name,camera_parameters);
       this->raw_cameras_.push_back(cam_model.first); 
       //load distotors and photometric calibration
       double fov = config["fov"].as<double>();

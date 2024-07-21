@@ -272,8 +272,11 @@ int main(int argc, char **argv) {
   // spdlog::set_level(spdlog::level::debug);
 
   D2VINSNode d2vins(n);
-  ros::AsyncSpinner spinner(4);
-  spinner.start();
-  ros::waitForShutdown();
+  // ros::AsyncSpinner spinner(4);
+  // spinner.start();
+  // ros::waitForShutdown();
+  ros::spin();
+  d2vins.stopFrontend();
+
   return 0;
 }

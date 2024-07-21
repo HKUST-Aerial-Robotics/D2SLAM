@@ -69,6 +69,7 @@ target_link_libraries(
   nvinfer_plugin
   nvonnxparser
   tensorrt_utils
+  yaml-cpp
 )
 
 add_definitions("-Wall -g")

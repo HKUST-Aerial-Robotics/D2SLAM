@@ -8,6 +8,8 @@
 #include <ros/ros.h>
 #include <swarm_msgs/Pose.h>
 #include <d2common/d2basetypes.h>
+#include <yaml-cpp/yaml.h>
+
 
 #define ACCEPT_LOOP_YAW (30) //ACCEPT MAX Yaw 
 
@@ -58,6 +60,7 @@ struct D2FrontendParams {
     std::string OUTPUT_PATH;
     int width;
     int height;
+    int image_queue_size; //this size is critical for the realtime performance
     double recv_msg_duration = 0.5;
     double feature_min_dist = 20;
     int total_feature_num = 150;
@@ -125,6 +128,9 @@ struct D2FrontendParams {
     void readCameraCalibrationfromFile(const std::string & path, int32_t extrinsic_parameter_type = 1);
     void generateCameraModels(cv::FileStorage & fsSettings, std::string config_path);
     void readCameraConfigs(cv::FileStorage & fsSettings, std::string config_path);
+    static std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(
+    const std::string& camera_name, const YAML::Node& config, int32_t extrinsic_parameter_type = 1);
+
 
 };
 extern D2FrontendParams * params;

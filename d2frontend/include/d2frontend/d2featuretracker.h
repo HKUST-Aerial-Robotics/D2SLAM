@@ -49,6 +49,11 @@ struct D2FTConfig {
     bool lr_match_use_lk = true;
     bool lk_lk_use_pred = true;
     bool sp_track_use_lk = true;
+
+    //frontend thread frequency.
+    float  stereo_frame_thread_rate = 20.0;
+    float loop_detection_thread_rate = 1.0;
+    float lcm_thread_rate = 1.0;
 };
 
 struct TrackReport {

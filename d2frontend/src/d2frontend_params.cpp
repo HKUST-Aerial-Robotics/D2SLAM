@@ -15,9 +15,6 @@
 
 namespace D2FrontEnd {
 D2FrontendParams* params;
-std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(
-    const std::string& camera_name, const YAML::Node& config, int32_t extrinsic_parameter_type = 1);
-
 
 D2FrontendParams::D2FrontendParams(ros::NodeHandle& nh) {
   // Read VINS params.
@@ -40,6 +37,9 @@ D2FrontendParams::D2FrontendParams(ros::NodeHandle& nh) {
   nh.param<double>("nonkeyframe_waitsec", ACCEPT_NONKEYFRAME_WAITSEC, 5.0);
   nh.param<double>("min_movement_keyframe", min_movement_keyframe, 0.3);
   estimation_mode = (ESTIMATION_MODE)(int)fsSettings["estimation_mode"];
+
+  //frontend settings
+  
 
   // Debug configs
   nh.param<bool>("send_img", send_img, false);
@@ -140,6 +140,11 @@ D2FrontendParams::D2FrontendParams(ros::NodeHandle& nh) {
   loopcamconfig->self_id = self_id;
   loopcamconfig->cnn_use_onnx = (int)fsSettings["cnn_use_onnx"];
   loopcamconfig->send_img = send_img;
+
+  //frontend thread frequency
+  ftconfig->lcm_thread_rate = static_cast<float>(fsSettings["lcm_thread_freq"]);
+  ftconfig->stereo_frame_thread_rate = static_cast<float>(fsSettings["image_freq"]);
+  ftconfig->loop_detection_thread_rate = static_cast<float>(fsSettings["loop_detection_freq"]);
 
   // Feature tracker.
   ftconfig->show_feature_id = (int)fsSettings["show_track_id"];
@@ -378,7 +383,8 @@ void D2FrontendParams::readCameraCalibrationfromFile(const std::string& path, in
   }
 }
 
-std::pair<camodocal::CameraPtr, Swarm::Pose> readCameraConfig(
+std::pair<camodocal::CameraPtr, Swarm::Pose> D2FrontendParams::
+readCameraConfig(
     const std::string& camera_name, const YAML::Node& config, int32_t extrinsic_parameter_type) {
   // In this case, we generate camera ptr.
   // Now only accept omni-radtan.

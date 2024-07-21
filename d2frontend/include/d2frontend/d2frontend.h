@@ -30,6 +30,7 @@ class D2FeatureTracker;
 class LoopDetector;
 class D2Frontend {
     typedef image_transport::SubscriberFilter ImageSubscriber;
+
 protected:
     using ApproSync = message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image>;
 
@@ -45,7 +46,7 @@ protected:
     std::queue<VisualImageDescArray> loop_queue;
     std::mutex loop_lock;
     image_transport::ImageTransport * it_;
-
+    virtual void Init(ros::NodeHandle & nh);
     virtual void backendFrameCallback(const VisualImageDescArray & viokf) {};
 
     void onLoopConnection (LoopEdge & loop_con, bool is_local = false);
@@ -69,7 +70,6 @@ protected:
     virtual void processRemoteImage(VisualImageDescArray & frame_desc, bool succ_track);
 
     void processStereoframe(const StereoFrame & stereoframe);
-    void loopDetectionThread();
 
     void addToLoopQueue(const VisualImageDescArray & viokf);
 
@@ -86,12 +86,58 @@ protected:
     std::thread th, th_loop_det;
     bool received_image = false;
     ros::Timer timer, loop_timer;
+
+    //data buffe
+    std::queue<std::shared_ptr<StereoFrame>> stereo_frame_q_;
+
+    std::mutex stereo_frame_buffer_lock_;
+    int32_t visual_frame_size_ = 2;
+
+    //process stereo frame thread
+    std::thread stereo_frame_thread_;
+    bool stereo_frame_thread_running_ = false;
+    std::unique_ptr<ros::Rate> stereo_frame_thread_rate_ptr_;
+    void processStereoFrameThread();
+    
+    //Loop detection thread
+    std::thread loop_detection_thread_;
+    bool loop_detection_thread_running_ = false;
+    std::unique_ptr<ros::Rate> loop_detection_thread_rate_ptr_;
+    void loopDetectionThread();
+
+    //lcm thread
+    std::thread lcm_thread_;
+    bool lcm_thread_running_ = false;
+    std::unique_ptr<ros::Rate> lcm_thread_rate_ptr_;
+    void lcmThread();
+
+    void startThread(){
+        stereo_frame_thread_running_ = true;
+        stereo_frame_thread_ = std::thread(&D2Frontend::processStereoFrameThread, this);
+        loop_detection_thread_running_ = true;
+        loop_detection_thread_ = std::thread(&D2Frontend::loopDetectionThread, this);
+        lcm_thread_running_ = true;
+        lcm_thread_ = std::thread(&D2Frontend::lcmThread, this);
+    }
+
+    void stopThreads(){
+        stereo_frame_thread_running_ = false;
+        stereo_frame_thread_.join();
+        loop_detection_thread_running_ = false;
+        loop_detection_thread_.join();
+        lcm_thread_running_ = false;
+        lcm_thread_.join();
+    };
+
+
+
 public:
     D2Frontend ();
     virtual Swarm::Pose getMotionPredict(double stamp) const {return Swarm::Pose();};
+    void stopFrontend(){
+        stopThreads();
+    };
     
-protected:
-    virtual void Init(ros::NodeHandle & nh);
 };
 
 }
