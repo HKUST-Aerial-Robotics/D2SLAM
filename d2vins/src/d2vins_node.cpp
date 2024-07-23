@@ -9,6 +9,7 @@
 #include <chrono>
 #include <mutex>
 #include <queue>
+#include <sys/prctl.h>
 
 #include "estimator/d2estimator.hpp"
 #include "network/d2vins_net.hpp"
@@ -26,6 +27,18 @@ using namespace D2Common;
 using namespace std::chrono;
 
 class D2VINSNode : public D2FrontEnd::D2Frontend {
+public:
+  void stopAllThread(){
+    thread_viokf_running = false;
+    thread_viokf.join();
+    if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
+      thread_solver_running = false;
+      thread_solver.join();
+    }
+    thread_comm_running = false;
+    thread_comm.join();
+  }
+private:
   typedef std::lock_guard<std::mutex> Guard;
   D2Estimator *estimator = nullptr;
   D2VINSNet *d2vins_net = nullptr;
@@ -35,7 +48,18 @@ class D2VINSNode : public D2FrontEnd::D2Frontend {
   std::queue<D2Common::VisualImageDescArray> viokf_queue;
   std::mutex queue_lock;
   ros::Timer estimator_timer, solver_timer;
+
   std::thread thread_comm, thread_solver, thread_viokf;
+
+  bool thread_viokf_running = false;
+  bool thread_solver_running = false;
+  bool thread_comm_running = false;
+
+  std::unique_ptr<ros::Rate> viokf_rate_ptr_;
+  std::unique_ptr<ros::Rate> solver_rate_ptr_;
+  std::unique_ptr<ros::Rate> comm_rate_ptr_;
+
+
   bool has_received_imu = false;
   double last_imu_ts = 0;
   bool need_solve = false;
@@ -102,7 +126,9 @@ class D2VINSNode : public D2FrontEnd::D2Frontend {
   }
 
   void processVIOKFThread() {
-    while (ros::ok()) {
+    //set thread name
+    prctl(PR_SET_NAME, "D2VINS::estimator", 0, 0, 0);
+    while (thread_viokf_running) {
       if (!viokf_queue.empty()) {
         Utility::TicToc estimator_timer;
         if (viokf_queue.size() > params->warn_pending_frames) {
@@ -171,9 +197,8 @@ class D2VINSNode : public D2FrontEnd::D2Frontend {
                 broadcast_timer.toc());
           }
         }
-      } else {
-        usleep(1000);
       }
+      viokf_rate_ptr_->sleep();
     }
   }
 
@@ -208,18 +233,20 @@ class D2VINSNode : public D2FrontEnd::D2Frontend {
   }
 
   void solverThread() {
-    while (ros::ok()) {
+    //name thread
+    prctl(PR_SET_NAME, "D2VINS::solver", 0, 0, 0);
+    while (thread_solver_running) {
       if (need_solve) {
         estimator->solveinDistributedMode();
         updateOutModuleSldWinAndLandmarkDB();
         if (!params->consensus_sync_to_start) {
           need_solve = false;
-        } else {
-          usleep(0.5 / params->estimator_timer_freq * 1e6);
-        }
-      } else {
-        usleep(1000);
+        } 
+        // else {
+        //   usleep(0.5 / params->estimator_timer_freq * 1e6);
+        // }
       }
+      solver_rate_ptr_->sleep();
     }
   }
 
@@ -237,6 +264,13 @@ class D2VINSNode : public D2FrontEnd::D2Frontend {
     pgo_fused_sub = nh.subscribe("/d2pgo/swarm_fused", 1,
                                  &D2VINSNode::pgoSwarmFusedCallback, this,
                                  ros::TransportHints().tcpNoDelay());
+    // thread_viokf = std::thread([&] {
+    //   processVIOKFThread();
+    //   SPDLOG_INFO("[D2VINS] processVIOKFThread exit.");
+    // });
+
+    thread_viokf_running = true;
+    viokf_rate_ptr_ = std::make_unique<ros::Rate>(params->estimator_timer_freq);
     thread_viokf = std::thread([&] {
       processVIOKFThread();
       SPDLOG_INFO("[D2VINS] processVIOKFThread exit.");
@@ -248,11 +282,20 @@ class D2VINSNode : public D2FrontEnd::D2Frontend {
                          &D2VINSNode::distriburedTimerCallback, this);
     } else if (params->estimation_mode ==
                D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
+      thread_solver_running = true;
+      solver_rate_ptr_ = std::make_unique<ros::Rate>(params->estimator_timer_freq);
       thread_solver = std::thread([&] { solverThread(); });
     }
+
+    thread_comm_running = true;
+    comm_rate_ptr_ = std::make_unique<ros::Rate>(1);
     thread_comm = std::thread([&] {
       SPDLOG_INFO("Starting d2vins_net lcm.");
-      while (0 == d2vins_net->lcmHandle()) {
+      while (thread_comm_running) {
+        //name thread
+        prctl(PR_SET_NAME, "D2VINS::lcm", 0, 0, 0);
+        while (0 == d2vins_net->lcmHandle());
+        comm_rate_ptr_->sleep();
       }
     });
     SPDLOG_INFO("D2VINS node {} initialized. Ready to start.", params->self_id);
@@ -276,7 +319,8 @@ int main(int argc, char **argv) {
   // spinner.start();
   // ros::waitForShutdown();
   ros::spin();
+  sleep(5);
   d2vins.stopFrontend();
-
+  d2vins.stopAllThread();
   return 0;
 }
