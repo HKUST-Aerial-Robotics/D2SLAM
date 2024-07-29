@@ -14,17 +14,22 @@ This paper and open-source project presents $D^2$ SLAM, a novel decentralized an
 
 We argue $D^2$SLAM can be applied in a wide range of real-world applications.
 
-Our pre-print paper is currently available at https://arxiv.org/abs/2211.01538
+Our pre-print paper is currently available at [IEEE TRO](https://ieeexplore.ieee.org/document/10582478)
 
 Citation:
 ```
-@article{xu2022d,
-  title={{$D^2$SLAM: Decentralized and Distributed Collaborative Visual-inertial SLAM System for Aerial Swarm}},
+@ARTICLE{10582478,
   author={Xu, Hao and Liu, Peize and Chen, Xinyi and Shen, Shaojie},
-  journal={arXiv preprint arXiv:2211.01538},
-  year={2022}
-}
+  journal={IEEE Transactions on Robotics}, 
+  title={$D^{2}$SLAM: Decentralized and Distributed Collaborative Visual-Inertial SLAM System for Aerial Swarm}, 
+  year={2024},
+  volume={40},
+  number={},
+  pages={3445-3464},
+  keywords={Simultaneous localization and mapping;Robots;Location awareness;State estimation;Accuracy;Optimization;Task analysis;Aerial systems: perception and autonomy;multirobot systems;simultaneous localization and mapping (SLAM);swarms},
+  doi={10.1109/TRO.2024.3422003}}
 ```
+
 ## Build
 To run $D^2$ SLAM, CUDA support is currently necessary for front-end acceleration. 
 $D^2$ SLAM has numerous dependencies, and we recommend compiling $D^2$ SLAM using our Docker image. We provide two Docker images, one for PC and one for the embedded platform, Nvidia Jetson. We have evaluated $D^2$ SLAM on Nvidia Xavier NX.
