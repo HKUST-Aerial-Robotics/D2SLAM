@@ -7,10 +7,10 @@
     <arg name="is_4dof"     default="false"/>
     <arg name="self_id"     default="1"/>
     <arg name="vins"     default="false"/>
-    <arg name="superpoint_model_path"     default="$(find d2frontend)/../models/superpoint_v1_dyn_size.onnx"/>
-    <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/mobilenetvlad_dyn_size.onnx" />
-    <arg name="superglue_model_path"     default="$(find d2frontend)/../models/superglue.onnx" />
-    <arg name="config" default="$(find d2vins)/../config/realsense_d435/d435_single.yaml" />
+    <!-- <arg name="superpoint_model_path"     default="$(find d2frontend)/../models/superpoint_v1_dyn_size.onnx"/> -->
+    <arg name="netvlad_model_path"     default="/root/swarm_ws/src/D2SLAM/models/netvlad_series/mobilenetvlad_dyn_size.onnx" />
+    <arg name="superglue_model_path"     default="/root/swarm_ws/src/D2SLAM/models/superglue_series/superglue.onnx" />
+    <arg name="config" default="$(find d2vins)/../config/realsense_l515/l515_single.yaml" />
     <arg name="match_index_dist" default="100" />
     <arg name="match_index_dist_remote" default="20" />
     <arg name="output_path" default="/home/dji/output/" />
