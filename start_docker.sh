@@ -3,7 +3,7 @@
 # Usage: ./start_ffc_4p_docker.sh  1 to start docker only for image transportation.
 # Please do not move this file to other dir, it will cause the docker container can not find the current dir.
 SWARM_WS=/root/swarm_ws
-DOCKERIMAGE="d2slam:jetson_orin"
+DOCKERIMAGE="hkustswarm/d2slam:jetson_orin"
 DATA_SET=/home/dji/dataset
 if [ $# -eq 0 ]; then
   echo "[INFO] No start option, will start docker container only for application"

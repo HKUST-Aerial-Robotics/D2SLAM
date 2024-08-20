@@ -34,10 +34,11 @@ jobs:
       uses: docker/build-push-action@v3
       with:
         context: .
-        file: docker/Dockerfile
+        file: docker/Dockerfile.x86
         push: true
         tags: |
           hkustswarm/d2slam:${{ steps.date.outputs.today }}
+          hkustswarm/d2slam:pc
           hkustswarm/d2slam:latest
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache
@@ -68,11 +69,11 @@ jobs:
       uses: docker/build-push-action@v3
       with:
         context: .
-        file: docker/Dockerfile.jetson_base_35.1.0
+        file: docker/Dockerfile.jetson_orin_base_35.3.1
         push: true
         tags: |
-          hkustswarm/d2slam:jetson_base_35.1.0-${{ steps.date.outputs.today }}
-          hkustswarm/d2slam:jetson_base_35.1.0
+          hkustswarm/d2slam:jetson_orin_base_35.3.1-${{ steps.date.outputs.today }}
+          hkustswarm/d2slam:jetson_orin_base_35.3.1
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache
     -
@@ -83,7 +84,7 @@ jobs:
         file: docker/Dockerfile.jetson
         push: true
         tags: |
-          hkustswarm/d2slam:jetson-${{ steps.date.outputs.today }}
-          hkustswarm/d2slam:jetson
+          hkustswarm/d2slam:jetson_orin-${{ steps.date.outputs.today }}
+          hkustswarm/d2slam:jetson_orin
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache
