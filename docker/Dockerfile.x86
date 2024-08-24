@@ -1,5 +1,5 @@
 # FROM nvidia/cuda:11.6.1-cudnn8-devel-ubuntu20.04
-FROM nvcr.io/nvidia/tensorrt:23.04-py3
+FROM nvcr.io/nvidia/tensorrt:22.08-py3
 ARG CERES_VERSION=2.1.0
 ARG CMAKE_VERSION=3.23.1
 ARG ONNX_VERSION=1.12.1
@@ -23,54 +23,35 @@ RUN  apt-get -y update && \
       lsb-release \
       vim \
       curl \
-      ca-certificates
+      ca-certificates \
+      htop \
+      xterm \
+      gdb \
+      build-essential \
+      net-tools \
+      htop \
+      xterm \
+      gdb \
+      zip \
+      unzip
 
-#Install ROS
-# update ros repository
-# some code copied from https://github.com/HKUST-Aerial-Robotics/VINS-Fusion/blob/master/docker/Dockerfile
-RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' &&\
-# RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` main" > /etc/apt/sources.list.d/ros-latest.list' && \
+#ROS
+RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` main" > /etc/apt/sources.list.d/ros-latest.list' && \
       curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - && \
       apt-get update && \
-      if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; \
-      else export USE_PROC=$(($(nproc)/2)) ; fi && \
-      apt-get update && \
-      DEBIAN_FRONTEND=noninteractive  apt-get install -y \
+      apt-get install -y  --no-install-recommends \
       ros-${ROS_VERSION}-ros-base \
       ros-${ROS_VERSION}-nav-msgs \
       ros-${ROS_VERSION}-sensor-msgs \
       ros-${ROS_VERSION}-cv-bridge \
       ros-${ROS_VERSION}-rviz \
-      ros-${ROS_VERSION}-pcl-ros \
       ros-${ROS_VERSION}-image-transport-plugins \
-      python3-rosdep \
-      python3-rosinstall \
-      python3-rosinstall-generator \
-      python3-wstool \
+      ros-${ROS_VERSION}-pcl-ros \
       build-essential \
+      libdw-dev \
       ros-${ROS_VERSION}-catkin \
-      net-tools \
-      python3-catkin-tools \
-      htop \
-      xterm \
-      gdb && \
-      rosdep init && \
-      rosdep update
-
-RUN   sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' &&\
-      curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add - &&\
-      apt-get update && \
-      sudo apt install ros-noetic-desktop-full
-      # DEBIAN_FRONTEND=noninteractive  apt-get install -y \
-      # ros-${ROS_VERSION}-ros-base \
-      # ros-${ROS_VERSION}-nav-msgs \
-      # ros-${ROS_VERSION}-sensor-msgs \
-      # ros-${ROS_VERSION}-cv-bridge \
-      # ros-${ROS_VERSION}-rviz \
-      # ros-${ROS_VERSION}-pcl-ros \
-      # ros-${ROS_VERSION}-image-transport-plugins \
-      # python3-catkin-tools 
-
+      python3-catkin-tools python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential && \
+      rosdep init && rosdep update
 
 
 #Replace CMAKE

@@ -26,7 +26,16 @@ RUN   apt-get -y update && \
       libgoogle-glog-dev \
       libsuitesparse-dev \
       libglib2.0-dev \
-      libyaml-cpp-dev
+      libyaml-cpp-dev \
+      net-tools \
+      htop \
+      xterm \
+      gdb \
+      zip \
+      unzip \
+      libdw-dev \
+      vim \
+      xterm
 
 #ROS
 RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` main" > /etc/apt/sources.list.d/ros-latest.list' && \
@@ -41,14 +50,7 @@ RUN sh -c 'echo "deb http://mirrors.ustc.edu.cn/ros/ubuntu/ `lsb_release -cs` ma
       ros-${ROS_VERSION}-image-transport-plugins \
       ros-${ROS_VERSION}-pcl-ros \
       build-essential \
-      libdw-dev \
       ros-${ROS_VERSION}-catkin \
-      net-tools \
-      htop \
-      xterm \
-      gdb \
-      zip \
-      unzip \
       python3-catkin-tools python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential && \
       rosdep init && rosdep update
 
