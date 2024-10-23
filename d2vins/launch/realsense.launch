@@ -16,8 +16,8 @@
     <arg name="output_path" default="/home/dji/output/" />
     <arg name="nonkeyframe_waitsec" default="5.0" />
     <arg name="inter_drone_init_frames" default="3" />
-    <arg name="enable_loop" default="false" />
-    <arg name="enable_pgo" default="false" />
+    <arg name="enable_loop" default="true" />
+    <arg name="enable_pgo" default="true" />
     <arg name="rviz" default="false" />
     <arg name="main_id" default="1" /> <!-- This only determine trust which drone to setup cooridinate frme -->
     <arg name="taichislam" default="false" />
@@ -37,7 +37,7 @@
             enable_sub_remote_img: false
             accept_min_3d_pts: 30
             recv_msg_duration: 0.5
-            superpoint_thres: 0.2
+            superpoint_thres: 0.1
             triangle_thres: 0.012
             #triangle_thres: 0.008
             min_direction_loop: 1
@@ -72,7 +72,6 @@
         <param name="vins_config_path" value="$(arg config)" type="string" />
         <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
         <param name="enable_loop" value="$(arg enable_loop)" type="bool" />
-        <remap from="~imu" to="/dji_sdk_1/dji_sdk/imu" />
     </node>
     <include file="$(find d2pgo)/launch/d2pgo.launch" if="$(arg enable_pgo)" >
         <arg name="config" value="$(arg config)" />

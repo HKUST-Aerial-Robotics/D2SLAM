@@ -1,0 +1,69 @@
+enable_cnn: true
+cnn_int8: false
+cnn_fp16: true
+cnn_use_tensorrt: true
+cnn_type: "hitnet"
+# cnn_type: "crestereo"
+onnx_path: "/root/swarm_ws/src/D2SLAM/models/hitnet_series/hitnet_1x240x320_model_float16_quant_opt.onnx"
+cnn_quant_path: ""
+trt_engine_path: "/root/swarm_ws/src/D2SLAM/models/hitnet_series/hitnet_1x240x320_model_float16_quant_opt.trt"
+cnn_input_rgb : false
+enable_texture: false
+width: 320
+height: 240
+pixel_step: 2
+image_step: 3
+max_z: 10
+min_z: 0.1
+cam_calib_file_path: "/root/swarm_ws/src/D2SLAM/config/quadcam_drone_nxt_tmp/fisheye_cams.yaml"
+fov: 190
+fps: 10
+
+image_topic: "/oak_ffc_4p/assemble_image"
+image_type: "raw"
+
+drone_pose_topic: "/d2vins/imu_propagation"
+
+use_occ_map: true
+
+photometric_calib_numbers: 4
+#TODO: refine this process to make vig calibration more easy to read
+photometric_calib_path: "/root/swarm_ws/src/D2SLAM/config/quadcam_drone_nxt_tmp/camera_vig_mask_optional"
+# photometric_calib_path: ""
+# photometric_calib: "mask.png"
+photometric_calib: ""
+avg_brightness: 0.7
+stereos:
+  stereo1_0:
+    cam_idx_l: 0
+    cam_idx_r: 1
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "/root/swarm_ws/src/D2SLAM/config/quadcam_drone_nxt_tmp/stereo_calib_0_1_240_320.yaml"
+    pointcloud_topic: "quaddepth/pointcloud_0"
+    cam_pos_topic: "quaddepth/cam_pos_0"
+  stereo2_1:
+    cam_idx_l: 1
+    cam_idx_r: 2
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "/root/swarm_ws/src/D2SLAM/config/quadcam_drone_nxt_tmp/stereo_calib_1_2_240_320.yaml"
+    pointcloud_topic: "quaddepth/pointcloud_1"
+    cam_pos_topic: "quaddepth/cam_pos_1"
+  stereo3_2:
+    cam_idx_l: 2
+    cam_idx_r: 3
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "/root/swarm_ws/src/D2SLAM/config/quadcam_drone_nxt_tmp/stereo_calib_2_3_240_320.yaml"
+    pointcloud_topic: "quaddepth/pointcloud_2"
+    cam_pos_topic: "quaddepth/cam_pos_2"
+  stereo0_3:
+    cam_idx_l: 3
+    cam_idx_r: 0
+    idx_l: 1
+    idx_r: 0
+    stereo_config: "/root/swarm_ws/src/D2SLAM/config/quadcam_drone_nxt_tmp/stereo_calib_3_0_240_320.yaml"
+    pointcloud_topic: "quaddepth/pointcloud_3"
+    cam_pos_topic: "quaddepth/cam_pos_3"
+camera_configuration: 3

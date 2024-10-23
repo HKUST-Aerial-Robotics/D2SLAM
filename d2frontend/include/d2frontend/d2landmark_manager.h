@@ -12,11 +12,17 @@ protected:
     int count = 0;
     typedef std::lock_guard<std::recursive_mutex> Guard;
     mutable std::recursive_mutex state_lock;
+
 public:
     int total_lm_per_frame_num = 0;
     virtual int addLandmark(const LandmarkPerFrame & lm);
     virtual void updateLandmark(const LandmarkPerFrame & lm);
     LandmarkPerId & at(LandmarkIdType i) {
+        if (landmark_db.find(i) == landmark_db.end()) {
+            // Throw error with i
+            std::cout << "Landmark id " << i << " not found!" << std::endl;
+            throw std::runtime_error("Landmark id not found!");
+        }
         return landmark_db.at(i);
     }
     const LandmarkPerId & at(LandmarkIdType i) const {
@@ -43,6 +49,8 @@ public:
     std::vector<LandmarkPerId> getInitializedLandmarks(int min_tracks) const;
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;
     bool hasLandmark(LandmarkIdType landmark_id) const;
+    std::vector<LandmarkIdType> findCommonLandmarkIds(FrameIdType frame_id1, FrameIdType frame_id2) const;
+    std::vector<std::pair<LandmarkPerFrame,LandmarkPerFrame>> findCommonLandmarkPerFrames(FrameIdType frame_id1, FrameIdType frame_id2) const;
 
 };
 }

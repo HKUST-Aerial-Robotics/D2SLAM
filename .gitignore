@@ -14,15 +14,15 @@ d2pgo/scripts/pose_graph_partitioning/__pycache__/
 d2pgo/scripts/notebooks/*.png
 quadcam_depth_est/build/
 quadcam_tools/__pycache__/
-models/*.onnx
-models/*.pb
+# models/*.onnx
+# models/*.pb
 models/*.trt
-models/*.engine
-models/*.profile
-model.zip
+# models/*.engine
+# models/*.profile
+# model.zip
 *.engine
 *.profile
-models/
+# models/
 data_analysis/.ipynb_checkpoints/
 d2pgo/posegraph-graphviz.*
 d2pgo/scripts/notebooks/posegraph-graphviz.*

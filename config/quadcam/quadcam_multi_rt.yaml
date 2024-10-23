@@ -32,7 +32,6 @@ estimate_td: 0                      # online estimate time offset between camera
 td: -0.186                           # For new datasets with filter
 estimation_mode: 2
 double_counting_common_feature: 0
-min_inv_dep: 0.01 #100 meter away.
 
 #optimization parameters
 max_solver_time: 0.5 # max solver itration time (ms), to guarantee real time

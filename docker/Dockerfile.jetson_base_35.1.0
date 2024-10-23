@@ -1,10 +1,9 @@
 #Ubuntu 18.04/Jetpack 5.0.2/ROS Melodic
 FROM nvcr.io/nvidia/l4t-jetpack:r35.1.0
 ARG CERES_VERSION=2.1.0
-ARG CMAKE_VERSION=3.23.1
 ARG ONNX_VERSION=1.12.1
 ENV SWARM_WS=/root/swarm_ws
-ARG CMAKE_VERSION=3.23.1
+ARG CMAKE_VERSION=3.24.1
 ARG ONNX_VERSION=1.12.1
 ARG OPENCV_VERSION=4.6.0
 ARG ROS_VERSION=noetic
@@ -102,14 +101,14 @@ RUN   apt update && \
 cudev,cudaoptflow,cudaimgproc,cudalegacy,cudaarithm,cudacodec,cudastereo,\
 cudafeatures2d,xfeatures2d,tracking,stereo,\
 aruco,videoio,ccalib && \
-      make -j ${USE_PROC} && \
-      make install 
+      make -j$(nproc) && \
+      make install
 
 RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       cd ceres-solver && \
       mkdir build && cd build && \
       cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF -DCUDA=OFF .. && \
-      make -j2 install && \
+      make -j$(nproc) install && \
       rm -rf ../../ceres-solver && \
       apt-get clean all
 
@@ -119,19 +118,19 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
       git checkout tags/v1.4.0 && \
       mkdir build && cd build && \
       cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
-      make -j${USE_PROC} install
+      make -j$(nproc) install
 
 #Install Faiss
 RUN   git clone https://github.com/facebookresearch/faiss.git && \
       cd faiss && git checkout tags/v${FAISS_VERSION} && \
       cmake -B build -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF -DFAISS_ENABLE_GPU=OFF . && \
-      make -C build -j faiss && \
+      make -C build -j$(nproc) faiss && \
       make -C build install && \
       rm -rf ../faiss
 
 #Install OpenGV
 RUN   git clone https://github.com/HKUST-Swarm/opengv && \
-      mkdir opengv/build && cd opengv/build && cmake .. && make -j${USE_PROC} && \
+      mkdir opengv/build && cd opengv/build && cmake .. && make -j$(nproc) && \
       make install
 
 #Install Backward
@@ -157,3 +156,13 @@ RUN   pip3 install --no-cache https://developer.download.nvidia.com/compute/redi
 
 # Install for TaichiSLAM
 RUN   pip install transformations numpy lcm matplotlib scipy && apt install ros-${ROS_VERSION}-ros-numpy # taichi
+
+
+
+#Install spdlog
+RUN   wget https://github.com/gabime/spdlog/archive/refs/tags/v1.12.0.tar.gz && \
+      tar -zxvf v1.12.0.tar.gz && \
+      cd spdlog-1.12.0 && \
+      mkdir build && cd build && \
+      cmake .. && make -j$(nproc) && \
+      make install

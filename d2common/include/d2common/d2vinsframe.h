@@ -12,7 +12,7 @@ struct VINSFrame: public D2BaseFrame {
     Vector3d Ba; // bias of acc
     Vector3d Bg; //bias of gyro
     FrameIdType prev_frame_id = -1;
-    IntegrationBase * pre_integrations = nullptr;
+    IntegrationBase * pre_integrations = nullptr; // From prev to this
     int imu_buf_index = 0;
     VINSFrame():Ba(0., 0., 0.), Bg(0., 0., 0.)
     {}

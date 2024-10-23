@@ -88,7 +88,7 @@ def get_pose0(bag):
             # ypr = 
             print(f"Will use {t0} as start yaw0 {y0} pos0 {pos0} qcalib {q_calib}")
             return pos0, q_calib, y0
-        elif topic == "/SwarmNode1/pose":
+        elif topic == "/SwarmNode1/pose" or topic=="/leica/pose/relative":
             quat0 = msg.pose.orientation
             pos0 = msg.pose.position
             y0, p0, r0 = quat2eulers(quat0.w, quat0.x, quat0.y, quat0.z)
@@ -100,8 +100,8 @@ def get_pose0(bag):
     return None, None, None
 
 def compress_image_msg(msg):
-    img16 = bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
-    cv_image = (img16/256).astype('uint8')
+    cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+    # cv_image = (img16/256).astype('uint8')
     comp_img = CompressedImage()
     comp_img.header = msg.header
     comp_img.format = "mono8; jpeg compressed"
@@ -119,6 +119,9 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--realsense', action='store_true', help="is realsense not TUM")
     parser.add_argument('-o', '--output', default="", type=str, help='output path')
     parser.add_argument('-p', '--sync-path', default="", action='store_true', help='sync by path command')
+    parser.add_argument('-t','--start-time', nargs='+', help='<Required> Set flag', required=False, type=float)
+    parser.add_argument('-u','--duration', nargs='+', help='<Required> Set flag', required=False, type=float)
+
     args = parser.parse_args()
     bags = args.bags
     dts = {}
@@ -143,13 +146,17 @@ if __name__ == "__main__":
             dts[bag] = t0 - t0s[bag]
     else:
         t0 = get_time0(bags[0], is_realsense=args.realsense)
-        for bag in bags:
-            t = get_time0(bag, is_realsense=args.realsense)
-            print(f"Bag {bag} start at {t.to_sec()}")
+
+        for i in range(len(bags)):
+            bag = bags[i]
+            t = t_ = get_time0(bag, is_realsense=args.realsense)
+            if len(args.start_time) > 0:
+                t = t_ + rospy.Duration(args.start_time[i])
+            print(f"Bag {bag} start at {t_.to_sec()}, we will use from {t.to_sec()}")
             dts[bag] = t0 - t
             t0s[bag] = t
 
-    pos0, q_calib, y0 = get_pose0(bags[0])
+    # pos0, q_calib, y0 = get_pose0(bags[0])
     
     import pathlib
     output_path = pathlib.Path(bags[0]).resolve() if args.output == "" else pathlib.Path(args.output)
@@ -157,11 +164,12 @@ if __name__ == "__main__":
 
     bridge = CvBridge()
     encode_param = [int(cv.IMWRITE_JPEG_QUALITY), args.quality]
-    for bag in bags:
+    for i in range(len(bags)):
+        bag = bags[i]
         output_bag = generate_bagname(bag, output_path, args.comp)
         print("Write bag to", output_bag)
         _dt = dts[bag]
-        with rosbag.Bag(output_bag, 'w') as outbag:
+        with rosbag.Bag(output_bag, 'w', compression="bz2") as outbag:
             from nav_msgs.msg import Path
             path = Path()
             path_arr = []
@@ -169,6 +177,8 @@ if __name__ == "__main__":
             for topic, msg, t in rosbag.Bag(bag).read_messages():
                 if t < t0s[bag]:
                     continue
+                if args.duration is not None and t - t0s[bag] > rospy.Duration(args.duration[i]):
+                    break
                 if msg._has_header:
                     if msg.header.stamp.to_sec() > 0:
                         msg.header.stamp = msg.header.stamp + _dt
@@ -183,7 +193,7 @@ if __name__ == "__main__":
                         cv.waitKey(1)
                     continue
                 outbag.write(topic, msg, t + _dt )
-                if topic == "/vrpn_client/raw_transform" or topic == "/SwarmNode1/pose":
+                if topic == "/vrpn_client/raw_transform" or topic == "/SwarmNode1/pose" or topic=="/leica/pose/relative":
                     if topic == "/vrpn_client/raw_transform":
                         posestamp = PoseStamped()
                         posestamp.header = msg.header
@@ -194,7 +204,7 @@ if __name__ == "__main__":
                         quat = msg.transform.rotation
                         quat = np.array([quat.w, quat.x, quat.y, quat.z])
                         quat = quaternion_multiply(q_calib, quat)
-                    elif topic == "/SwarmNode1/pose":
+                    elif topic == "/SwarmNode1/pose" or topic=="/leica/pose/relative":
                         posestamp = PoseStamped()
                         posestamp.header = msg.header
                         posestamp.header.frame_id = "world"

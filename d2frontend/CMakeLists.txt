@@ -25,27 +25,32 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 SET("OpenCV_DIR"  "/usr/local/share/OpenCV/")
+SET("TENSORRT_UTILS_INC" "../tensorrt_utils/include/")
+
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(lcm REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(opengv REQUIRED)
+find_package(CUDA REQUIRED)
 
 set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch" CACHE STRING "Path of libtorch")
 set(TORCH_INSTALL_PREFIX "$ENV{HOME}/source/libtorch" CACHE STRING "Path of libtorch")
+set(TORCH_INCLUDE_DIRS "/root/libtorch/include")
+set(TORCH_LIBRARIES "/root/libtorch/lib")
 #Find torch Optional
-find_package(Torch)
-if (NOT Torch_FOUND)
-  message("PyTorch not found")
-  set(TORCH_INCLUDE_DIRS "$ENV{HOME}/source/libtorch/" CACHE STRING "Path of torch install path")
-  set(TORCH_INCLUDE_DIRS
-    ${TORCH_INSTALL_PREFIX}/include
-    ${TORCH_INSTALL_PREFIX}/include/torch/csrc/api/include)
-  set(TORCH_LIBRARIES
-    ${TORCH_INSTALL_PREFIX}/lib/libtorch.so
-    ${TORCH_INSTALL_PREFIX}/lib/libc10.so
-    ${TORCH_INSTALL_PREFIX}/lib/libtorch_cpu.so)
-endif()
+find_package(Torch REQUIRED)
+# if (NOT Torch_FOUND)
+#   message("PyTorch not found")
+#   set(TORCH_INCLUDE_DIRS "$ENV{HOME}/source/libtorch/" CACHE STRING "Path of torch install path")
+#   set(TORCH_INCLUDE_DIRS
+#     ${TORCH_INSTALL_PREFIX}/include
+#     ${TORCH_INSTALL_PREFIX}/include/torch/csrc/api/include)
+#   set(TORCH_LIBRARIES
+#     ${TORCH_INSTALL_PREFIX}/lib/libtorch.so
+#     ${TORCH_INSTALL_PREFIX}/lib/libc10.so
+#     ${TORCH_INSTALL_PREFIX}/lib/libtorch_cpu.so)
+# endif()
 find_package(Boost REQUIRED COMPONENTS program_options)
 include_directories(${TORCH_INCLUDE_DIRS})
 
@@ -65,6 +70,7 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
+
 include_directories(
   /usr/local/include/
   include
@@ -85,6 +91,8 @@ add_library(libd2frontend
   src/loop_utils.cpp
   src/d2landmark_manager.cpp
 )
+
+add_subdirectory(../tensorrt_utils  tensorrt_utils)
 
 add_library(${PROJECT_NAME}_nodelet
   src/d2frontend_nodelet.cpp
@@ -108,7 +116,8 @@ set_property(TARGET libd2frontend PROPERTY CXX_STANDARD 17)
 
 add_library(loop_cnn
   src/CNN/superpoint_common.cpp
-  src/CNN/superpoint_onnx.cpp
+  # src/CNN/superpoint_onnx.cpp
+  src/CNN/superpoint.cpp
   src/CNN/superglue_onnx.cpp
   src/loop_utils.cpp
   src/d2frontend_params.cpp
@@ -117,24 +126,38 @@ set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 17)
 
 
 #Use tensorrt and onnx
-target_link_libraries(loop_cnn opencv_dnn 
+target_link_libraries(loop_cnn 
+  opencv_dnn 
   onnxruntime
-  ${TORCH_LIBRARIES}
   opengv
+  nvinfer
+  nvinfer_plugin
+  nvonnxparser
+  tensorrt_utils
 )
 
-add_executable(loop_tensorrt_test
-  tests/loop_tensorrt_test.cpp
+target_include_directories(loop_cnn PUBLIC
+  /usr/include
+  /usr/local/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  # ${ONNXRUNTIME_INC_DIR}
+  ${CUDA_INCLUDE_DIRS}
+  ${TENSORRT_UTILS_INC}
+  ${Boost_LIBRARIES}
 )
 
-target_link_libraries(loop_tensorrt_test
-  loop_cnn
-  dw
-  ${YAML_CPP_LIBRARIES}
-  ${TORCH_LIBRARIES}
-  ${OpenCV_LIBRARIES}
-  ${catkin_LIBRARIES}
-  ${Boost_LIBRARIES})
+# add_executable(loop_tensorrt_test
+#   tests/loop_tensorrt_test.cpp
+# )
+
+# target_link_libraries(loop_tensorrt_test
+#   loop_cnn
+#   dw
+#   ${YAML_CPP_LIBRARIES}
+#   ${TORCH_LIBRARIES}
+#   ${OpenCV_LIBRARIES}
+#   ${catkin_LIBRARIES}
+#   ${Boost_LIBRARIES})
 
 add_executable(camera_undistort_test
   tests/camera_undistort_test.cpp
@@ -203,3 +226,4 @@ target_link_libraries(${PROJECT_NAME}_spy
   dw
   libd2frontend
 )
+

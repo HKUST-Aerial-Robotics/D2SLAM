@@ -1,7 +1,7 @@
 enable_cnn: true
 cnn_int8: false
 cnn_fp16: true
-cnn_use_tensorrt: true
+cnn_use_tensorrt: false
 # cnn_type: "hitnet"
 cnn_type: "crestereo"
 enable_texture: true

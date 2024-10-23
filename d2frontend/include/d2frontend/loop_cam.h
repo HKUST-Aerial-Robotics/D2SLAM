@@ -6,12 +6,14 @@
 #include "d2frontend_params.h"
 #include "CNN/onnx_generic.h"
 #include "CNN/mobilenetvlad_onnx.h"
-#include "CNN/superpoint_onnx.h"
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <d2frontend/utils.h>
 #include "d2common/d2frontend_types.h"
 #include <fstream>
+#include <memory>
+
+#include "CNN/superpoint.h"
 
 //#include <swarm_loop/HFNetSrv.h>
 
@@ -56,6 +58,8 @@ struct LoopCamConfig
     bool enable_undistort_image; //Undistort image before feature detection
     std::string netvlad_int8_calib_table_name;
     std::string superpoint_int8_calib_table_name;
+
+    SuperPoint::SuperPointConfig superpoint_config;
 };
 
 class LoopCam {
@@ -70,7 +74,9 @@ class LoopCam {
     std::fstream fsp;
     std::vector<FisheyeUndist*> undistortors;
     MobileNetVLADONNX * netvlad_onnx = nullptr;
-    SuperPointONNX * superpoint_onnx = nullptr;
+    // SuperPointONNX * superpoint_onnx = nullptr;
+    std::unique_ptr<SuperPoint> superpoint_ptr = nullptr;
+
 public:
     // LoopDetector * loop_detector = nullptr;
     LoopCam(LoopCamConfig config, ros::NodeHandle & nh);
