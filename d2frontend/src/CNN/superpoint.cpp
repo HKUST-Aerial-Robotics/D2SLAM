@@ -174,7 +174,7 @@ bool SuperPoint::infer(const cv::Mat & input, std::vector<cv::Point2f> & keypoin
     }
     // [n_keypoints_num,n]
     for (auto &descriptor : raw_descriptors) {
-        for (int i = 0; i < descriptor.size(); ++i) {
+        for (unsigned int i = 0; i < descriptor.size(); ++i) {
             descriptors.push_back(descriptor[i]);
         }
     }
@@ -201,7 +201,7 @@ bool SuperPoint::processInput(const tensorrt_buffer::BufferManager &buffers, con
 void SuperPoint::findHighScoreIndex(std::vector<float> &scores, std::vector<Eigen::Vector2f> &keypoints,
                                     int h, int w, float threshold) {
     std::vector<float> new_scores;
-    for (int i = 0; i < scores.size(); ++i) {
+    for (unsigned int i = 0; i < scores.size(); ++i) {
         if (scores[i] > threshold) {
             Eigen::Vector2f location = {i % w, int(i / w)}; //u,v
             keypoints.emplace_back(location);
@@ -217,7 +217,7 @@ void SuperPoint::removeBorders( std::vector<Eigen::Vector2f> &keypoints, std::ve
                                 int width) {
     std::vector<Eigen::Vector2f> keypoints_selected;
     std::vector<float> scores_selected;
-    for (int i = 0; i < keypoints.size(); ++i) {
+    for (unsigned int i = 0; i < keypoints.size(); ++i) {
         bool flag_h = (keypoints[i][1] >= border) && (keypoints[i][1] < (height - border)); //v 
         bool flag_w = (keypoints[i][0] >= border) && (keypoints[i][0] < (width - border)); //u
         if (flag_h && flag_w) {
@@ -440,14 +440,14 @@ bool SuperPoint::deserializeEngine(){
 //     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
 //         _desc_new = (_desc.rowwise() - pca_mean) * pca_comp_T;
 //     // Perform row wise normalization
-//     for (int i = 0; i < _desc_new.rows(); i++) {
+//     for (unsigned int i = 0; i < _desc_new.rows(); i++) {
 //       _desc_new.row(i) /= _desc_new.row(i).norm();
 //     }
 //     local_descriptors = std::vector<float>(
 //         _desc_new.data(),
 //         _desc_new.data() + _desc_new.cols() * _desc_new.rows());
 //   } else {
-//     for (int i = 0; i < _desc.rows(); i++) {
+//     for (unsigned int i = 0; i < _desc.rows(); i++) {
 //       _desc.row(i) /= _desc.row(i).norm();
 //     }
 //     local_descriptors = std::vector<float>(

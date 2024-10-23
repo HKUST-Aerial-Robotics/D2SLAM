@@ -18,7 +18,7 @@ void getKeyPoints(const cv::Mat& prob, float threshold, int nms_dist,
   std::vector<cv::Point> kps;
   cv::findNonZero(mask, kps);
   std::vector<cv::Point2f> keypoints_no_nms;
-  for (int i = 0; i < kps.size(); i++) {
+  for (unsigned int i = 0; i < kps.size(); i++) {
     keypoints_no_nms.push_back(cv::Point2f(kps[i].x, kps[i].y));
   }
 
@@ -76,14 +76,14 @@ void computeDescriptors(const torch::Tensor& mProb, const torch::Tensor& mDesc,
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
         _desc_new = (_desc.rowwise() - pca_mean) * pca_comp_T;
     // Perform row wise normalization
-    for (int i = 0; i < _desc_new.rows(); i++) {
+    for (unsigned int i = 0; i < _desc_new.rows(); i++) {
       _desc_new.row(i) /= _desc_new.row(i).norm();
     }
     local_descriptors = std::vector<float>(
         _desc_new.data(),
         _desc_new.data() + _desc_new.cols() * _desc_new.rows());
   } else {
-    for (int i = 0; i < _desc.rows(); i++) {
+    for (unsigned int i = 0; i < _desc.rows(); i++) {
       _desc.row(i) /= _desc.row(i).norm();
     }
     local_descriptors = std::vector<float>(
@@ -126,7 +126,7 @@ void NMS2(std::vector<cv::Point2f> det, cv::Mat conf,
     confidence.at<float>(vv, uu) = conf.at<float>(i, 0);
   }
 
-  for (int i = 0; i < pts_raw.size(); i++) {
+  for (unsigned int i = 0; i < pts_raw.size(); i++) {
     int uu = (int)pts_raw[i].x;
     int vv = (int)pts_raw[i].y;
 

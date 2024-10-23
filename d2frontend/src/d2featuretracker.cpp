@@ -501,7 +501,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc &frame) {
                                           TrackLRType::WHOLE_IMG_MATCH);
         pyr_has_built = true;
         cur_lk_info.lk_pts_3d_norm.resize(cur_lk_info.lk_pts.size());
-        for (int i = 0; i < cur_lk_info.lk_pts.size(); i++) {
+        for (unsigned int i = 0; i < cur_lk_info.lk_pts.size(); i++) {
           auto ret =
               createLKLandmark(frame, cur_lk_info.lk_pts[i],
                                cur_lk_info.lk_ids[i], cur_lk_info.lk_types[i]);
@@ -723,7 +723,7 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc &left_frame,
       keyframe_lk_infos.at(left_frame.frame_id).at(left_frame.camera_index);
   // Add the SP points to the LK points if use_lk_for_left_right_track is true
   if (use_lk_for_left_right_track && !_config.sp_track_use_lk) {
-    for (int i = 0; i < left_frame.landmarkNum(); i++) {
+    for (unsigned int i = 0; i < left_frame.landmarkNum(); i++) {
       if (left_frame.landmarks[i].landmark_id >= 0 &&
           left_frame.landmarks[i].type == LandmarkType::SuperPointLandmark) {
         left_lk_info.lk_pts.emplace_back(left_frame.landmarks[i].pt2d);
@@ -745,7 +745,7 @@ TrackReport D2FeatureTracker::trackLK(const VisualImageDesc &left_frame,
   if (!left_lk_info.lk_ids.empty()) {
     auto cur_lk_info =
         opticalflowTrackPyr(right_frame.raw_image, left_lk_info, type);
-    for (int i = 0; i < cur_lk_info.lk_pts.size(); i++) {
+    for (unsigned int i = 0; i < cur_lk_info.lk_pts.size(); i++) {
       auto ret =
           createLKLandmark(right_frame, cur_lk_info.lk_pts[i],
                            cur_lk_info.lk_ids[i], cur_lk_info.lk_types[i]);
@@ -952,7 +952,7 @@ cv::Mat D2FeatureTracker::drawToImage(const VisualImageDesc &frame,
     // Draw predictions here
     auto &predictions = landmark_predictions_viz.at(frame.camera_id);
     auto &prev = landmark_predictions_matched_viz.at(frame.camera_id);
-    for (int i = 0; i < predictions.size(); i++) {
+    for (unsigned int i = 0; i < predictions.size(); i++) {
       cv::circle(img, predictions[i], 3, cv::Scalar(0, 255, 0), 2);
       cv::line(img, prev[i], predictions[i], cv::Scalar(0, 0, 255), 1, 8, 0);
       // if (cv::norm(prev[i] - predictions[i]) > 20) {
@@ -1078,7 +1078,7 @@ std::pair<std::vector<float>, std::vector<cv::Point2f>> getFeatureHalfImg(
   float move_cols =
       params->width_undistort * 90.0 /
       params->undistort_fov;  // slightly lower than 0.5 cols when fov=200
-  for (int i = 0; i < pts.size(); i++) {
+  for (unsigned int i = 0; i < pts.size(); i++) {
     if (require_left && pts[i].x < params->width_undistort - move_cols ||
         !require_left && pts[i].x >= move_cols) {
       tmp_to_idx[c] = i;
@@ -1183,7 +1183,7 @@ bool D2FeatureTracker::matchLocalFeatures(
               params->width_undistort * 90.0 /
               params
                   ->undistort_fov;  // slightly lower than 0.5 cols when fov=200
-          for (int i = 0; i < features_a.second.size(); i++) {
+          for (unsigned int i = 0; i < features_a.second.size(); i++) {
             features_a.second[i].x +=
                 param.type == LEFT_RIGHT_IMG_MATCH ? move_cols : -move_cols;
           }
@@ -1261,10 +1261,10 @@ bool D2FeatureTracker::matchLocalFeatures(
     char name[100];
     std::vector<cv::KeyPoint> kps_a, kps_b;
     // Kps from points
-    for (int i = 0; i < pts_a.size(); i++) {
+    for (unsigned int i = 0; i < pts_a.size(); i++) {
       kps_a.push_back(cv::KeyPoint(pts_a[i].x, pts_a[i].y, 1));
     }
-    for (int i = 0; i < pts_b.size(); i++) {
+    for (unsigned int i = 0; i < pts_b.size(); i++) {
       kps_b.push_back(cv::KeyPoint(pts_b[i].x, pts_b[i].y, 1));
     }
     cv::Mat show;
@@ -1283,7 +1283,7 @@ bool D2FeatureTracker::matchLocalFeatures(
       cv::Mat show_check;
       cv::hconcat(img_desc_a.raw_image, image_b, show_check);
       cv::cvtColor(show_check, show_check, cv::COLOR_GRAY2BGR);
-      for (int i = 0; i < matched_pts_a.size(); i++) {
+      for (unsigned int i = 0; i < matched_pts_a.size(); i++) {
         // random color
         cv::Scalar color(rand() & 255, rand() & 255, rand() & 255);
         cv::line(show_check, matched_pts_a[i],
@@ -1320,7 +1320,7 @@ D2FeatureTracker::predictLandmarksWithExtrinsic(
     const Swarm::Pose &cam_pose_b) const {
   std::map<LandmarkIdType, cv::Point2f> pts_a_pred_on_b;
   auto cam = cams.at(camera_index);
-  for (int i = 0; i < pts_3d_norm.size(); i++) {
+  for (unsigned int i = 0; i < pts_3d_norm.size(); i++) {
     Vector3d landmark_pos_cam =
         pts_3d_norm[i] * _config.landmark_distance_assumption;
     Vector3d pt3d = cam_pose_a * landmark_pos_cam;
@@ -1338,7 +1338,7 @@ std::vector<cv::Point2f> D2FeatureTracker::predictLandmarks(
   std::vector<cv::Point2f> pts_a_pred_on_b;
   assert(img_desc_a.drone_id == params->self_id);
   auto cam = cams.at(img_desc_a.camera_index);
-  for (int i = 0; i < img_desc_a.spLandmarkNum(); i++) {
+  for (unsigned int i = 0; i < img_desc_a.spLandmarkNum(); i++) {
     auto landmark_id = img_desc_a.landmarks[i].landmark_id;
     // Query 3d landmark position
     bool find_position = false;

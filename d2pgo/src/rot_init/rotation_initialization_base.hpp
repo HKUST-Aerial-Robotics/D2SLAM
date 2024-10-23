@@ -11,7 +11,7 @@ using D2Common::Utility::TicToc;
 
 template <typename Derived, typename T>
 inline void fillInTripet(int i0, int j0, const MatrixBase<Derived> & M, std::vector<Eigen::Triplet<T>> & triplets) {
-    for (int i = 0; i < M.rows(); i ++) { //Row, col of relative rotation R
+    for (unsigned int i = 0; i < M.rows(); i ++) { //Row, col of relative rotation R
         for (int j = 0; j < M.cols(); j ++) {
             triplets.emplace_back(Eigen::Triplet<T>(i0 + i, j0 + j, M(i, j)));
         }

@@ -117,7 +117,7 @@ double triangulatePoint(Eigen::Quaterniond q0, Eigen::Vector3d t0,
 template <typename T>
 void reduceVector(std::vector<T> &v, std::vector<uchar> status) {
   int j = 0;
-  for (int i = 0; i < int(v.size()); i++)
+  for (unsigned int i = 0; i < v.size(); i++)
     if (status[i]) v[j++] = v[i];
   v.resize(j);
 }

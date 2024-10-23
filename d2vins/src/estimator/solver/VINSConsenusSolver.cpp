@@ -60,7 +60,7 @@ void D2VINSConsensusSolver::receiveAll() {
 void D2VINSConsensusSolver::updateWithDistributedVinsData(
     const DistributedVinsData& dist_data) {
   auto _state = static_cast<D2EstimatorState*>(state);
-  for (int i = 0; i < dist_data.frame_ids.size(); i++) {
+  for (unsigned int i = 0; i < dist_data.frame_ids.size(); i++) {
     auto frame_id = dist_data.frame_ids[i];
     if (_state->hasFrame(frame_id)) {
       auto pointer = _state->getPoseState(frame_id);
@@ -71,7 +71,7 @@ void D2VINSConsensusSolver::updateWithDistributedVinsData(
     }
   }
 
-  for (int i = 0; i < dist_data.cam_ids.size(); i++) {
+  for (unsigned int i = 0; i < dist_data.cam_ids.size(); i++) {
     auto cam_id = dist_data.cam_ids[i];
     if (_state->hasCamera(cam_id)) {
       auto pointer = _state->getExtrinsicState(cam_id);

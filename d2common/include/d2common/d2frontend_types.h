@@ -217,7 +217,7 @@ struct VisualImageDesc {
                 img_desc.landmark_descriptor_int8.resize(landmark_descriptor.size());
                 img_desc.landmark_descriptor_size = 0;
                 auto max = desc0.cwiseAbs().maxCoeff();
-                for (int i = 0; i < landmark_descriptor.size(); i++) {
+                for (unsigned int i = 0; i < landmark_descriptor.size(); i++) {
                     img_desc.landmark_descriptor_int8[i] = (int8_t)(desc0[i] / max * 127);
                 }
                 img_desc.landmark_scores_size = 0;
@@ -248,7 +248,7 @@ struct VisualImageDesc {
                 img_desc.header.image_desc_int8.resize(image_desc.size());
                 img_desc.header.image_desc_size = 0;
                 double max = Eigen::Map<const VectorXf>(image_desc.data(), image_desc.size()).cwiseAbs().maxCoeff();
-                for (int i = 0; i < image_desc.size(); i++) {
+                for (unsigned int i = 0; i < image_desc.size(); i++) {
                     img_desc.header.image_desc_int8[i] = (int8_t)(image_desc[i] / max * 127);
                 }
             } else {
@@ -304,7 +304,7 @@ struct VisualImageDesc {
         if (desc.landmark_descriptor_int8.size() > 0) {
             landmark_descriptor.resize(desc.landmark_descriptor_int8.size());
             Eigen::Map<VectorXf> desc0(landmark_descriptor.data(), landmark_descriptor.size());
-            for (int i = 0; i < landmark_descriptor.size(); i++) {
+            for (unsigned int i = 0; i < landmark_descriptor.size(); i++) {
                 desc0(i) = desc.landmark_descriptor_int8[i] / 127.0;
             }
             //Per feature normalize the landmark desc
@@ -317,7 +317,7 @@ struct VisualImageDesc {
         if (desc.header.image_desc_size_int8 > 0) {
             image_desc.resize(desc.header.image_desc_size_int8);
             Eigen::Map<VectorXf> gdesc(image_desc.data(), image_desc.size());
-            for (int i = 0; i < image_desc.size(); i++) {
+            for (unsigned int i = 0; i < image_desc.size(); i++) {
                 gdesc(i) = desc.header.image_desc_int8[i] / 127.0;
             }
             gdesc.normalize();

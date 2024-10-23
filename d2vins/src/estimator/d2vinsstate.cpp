@@ -70,7 +70,7 @@ std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(
 }
 
 void D2EstimatorState::init(std::vector<Swarm::Pose> _extrinsic, double _td) {
-  for (int i = 0; i < _extrinsic.size(); i++) {
+  for (unsigned int i = 0; i < _extrinsic.size(); i++) {
     auto pose = _extrinsic[i];
     auto cam_id = addCamera(pose, i, self_id);
     local_camera_ids.push_back(cam_id);
@@ -658,7 +658,7 @@ void D2EstimatorState::printSldWin(
   const Guard lock(state_lock);
   for (auto it : sld_wins) {
     printf("=========SLDWIN@drone%d=========\n", it.first);
-    for (int i = 0; i < it.second.size(); i++) {
+    for (unsigned int i = 0; i < it.second.size(); i++) {
       int num_mea = 0;
       if (keyframe_measurments.find(it.second[i]->frame_id) !=
           keyframe_measurments.end()) {
@@ -680,7 +680,7 @@ const std::vector<VINSFrame *> &D2EstimatorState::getSldWin(
 void D2EstimatorState::updateEgoMotion() {
   const Guard lock(state_lock);
   auto &sld_win = sld_wins[self_id];
-  for (int i = 0; i < sld_win.size() - 1; i++) {
+  for (int i = 0; i < static_cast<int>(sld_win.size()) - 1; i++) {
     auto frame_ptr = sld_win[i];
     auto frame_id = sld_win[i]->frame_id;
     if (ego_motions.find(frame_id) == ego_motions.end()) {
@@ -778,7 +778,7 @@ bool D2EstimatorState::solveGyroscopeBias(
   Vector3d delta_bg;
   A.setZero();
   b.setZero();
-  for (int i = 0; i < sld_win.size() - 1; i++) {
+  for (int i = 0; i < static_cast<int>(sld_win.size()) - 1; i++) {
     auto frame_i = sld_win[i];
     auto frame_j = sld_win[i + 1];
     MatrixXd tmp_A(3, 3);
@@ -822,7 +822,7 @@ bool D2EstimatorState::LinearAlignment(
   b.setZero();
 
   int i = 0;
-  for (int i = 0; i < sld_win.size() - 1; i++) {
+  for (int i = 0; i < static_cast<int>(sld_win.size()) - 1; i++) {
     auto frame_i = sld_win[i];
     auto frame_j = sld_win[i + 1];
     Swarm::Pose pose_i = sfm_poses.at(frame_i->frame_id);
@@ -897,7 +897,7 @@ bool D2EstimatorState::LinearAlignment(
   g = q0 * g;
   SPDLOG_INFO("G final {:.4f} {:.4f} {:.4f}", g.x(), g.y(), g.z());
 
-  for (int i = 0; i < sld_win.size(); i++) {
+  for (unsigned int i = 0; i < sld_win.size(); i++) {
     auto frame = sld_win[i];
     Swarm::Pose imu_pose = sfm_poses.at(frame->frame_id);
     if (i == 0) {
@@ -949,7 +949,7 @@ void D2EstimatorState::RefineGravity(
     MatrixXd lxly(3, 2);
     lxly = TangentBasis(g0);
     int i = 0;
-    for (int i = 0; i < sld_win.size() - 1; i++) {
+    for (int i = 0; i < static_cast<int>(sld_win.size()) - 1; i++) {
       auto frame_i = sld_win[i];
       auto frame_j = sld_win[i + 1];
       Swarm::Pose pose_i = sfm_poses.at(frame_i->frame_id);

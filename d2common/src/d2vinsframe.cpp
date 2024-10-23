@@ -99,7 +99,7 @@ swarm_msgs::VIOFrame VINSFrame::toROS(const std::vector<Swarm::Pose>& exts) {
   msg.is_keyframe = is_keyframe;
   msg.reference_frame_id = reference_frame_id;
   msg.odom = odom.toRos();
-  for (int i = 0; i < exts.size(); i++) {
+  for (unsigned int i = 0; i < exts.size(); i++) {
     msg.extrinsics.emplace_back(exts[i].toROS());
   }
   return msg;

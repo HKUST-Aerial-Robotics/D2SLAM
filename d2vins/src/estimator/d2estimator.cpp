@@ -284,7 +284,7 @@ VINSFrame *D2Estimator::addFrameRemote(const VisualImageDescArray &_frame) {
 }
 
 void D2Estimator::addSldWinToFrame(VisualImageDescArray &frame) {
-  for (int i = 0; i < state.size(); i++) {
+  for (unsigned int i = 0; i < state.size(); i++) {
     frame.sld_win_status.push_back(state.getFrame(i).frame_id);
   }
 }

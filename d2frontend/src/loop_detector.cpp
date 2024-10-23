@@ -747,7 +747,7 @@ void LoopDetector::drawMatched(
   }
   std::set<int> inlier_set(inliers.begin(), inliers.end());
 
-  for (int i = 0; i < index2dirindex_a.size(); i++) {
+  for (unsigned int i = 0; i < index2dirindex_a.size(); i++) {
     int old_pt_id = index2dirindex_b[i].second;
     int old_dir_id = index2dirindex_b[i].first;
 

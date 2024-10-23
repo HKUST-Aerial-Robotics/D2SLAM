@@ -9,11 +9,11 @@ DistributedVinsData::DistributedVinsData(const DistributedVinsData_t& msg)
       solver_token(msg.solver_token),
       iteration_count(msg.iteration_count),
       reference_frame_id(msg.reference_frame_id) {
-  for (int i = 0; i < msg.frame_ids.size(); i++) {
+  for (unsigned int i = 0; i < msg.frame_ids.size(); i++) {
     frame_ids.emplace_back(msg.frame_ids[i]);
     frame_poses.emplace_back(Swarm::Pose(msg.frame_poses[i]));
   }
-  for (int i = 0; i < msg.extrinsic.size(); i++) {
+  for (unsigned int i = 0; i < msg.extrinsic.size(); i++) {
     extrinsic.emplace_back(Swarm::Pose(msg.extrinsic[i]));
     cam_ids.emplace_back(msg.cam_ids[i]);
   }
@@ -23,11 +23,11 @@ DistributedVinsData_t DistributedVinsData::toLCM() const {
   DistributedVinsData_t msg;
   msg.timestamp = toLCMTime(ros::Time(stamp));
   msg.drone_id = drone_id;
-  for (int i = 0; i < frame_ids.size(); i++) {
+  for (unsigned int i = 0; i < frame_ids.size(); i++) {
     msg.frame_ids.emplace_back(frame_ids[i]);
     msg.frame_poses.emplace_back(frame_poses[i].toLCM());
   }
-  for (int i = 0; i < extrinsic.size(); i++) {
+  for (unsigned int i = 0; i < extrinsic.size(); i++) {
     msg.extrinsic.emplace_back(extrinsic[i].toLCM());
     msg.cam_ids.emplace_back(cam_ids[i]);
   }

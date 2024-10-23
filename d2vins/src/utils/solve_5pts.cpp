@@ -9,7 +9,7 @@ bool MotionEstimator::solveRelativeRT(
     Matrix3d &Rotation, Vector3d &Translation) {
   if (corres.size() >= 15) {
     std::vector<cv::Point2f> ll, rr;
-    for (int i = 0; i < int(corres.size()); i++) {
+    for (unsigned int i = 0; i < corres.size(); i++) {
       if (fabs(corres[i].first(2)) > 0.001 &&
           fabs(corres[i].second(2)) > 0.001) {
         cv::Point2f first =

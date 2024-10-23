@@ -60,7 +60,7 @@ void maxCliqueHelper(CGraphIO& gio, vector<int>* U, int sizeOfClique,
       // Pruning 5
       if (getDegree(ptrVertex, (*ptrEdge)[j]) >= maxClq) {
         // Loop over U.
-        for (int i = 0; i < U->size(); i++) {
+        for (unsigned int i = 0; i < U->size(); i++) {
           if ((*ptrEdge)[j] == (*U)[i]) U_new.push_back((*ptrEdge)[j]);
         }
       } else
@@ -146,7 +146,7 @@ int maxClique(CGraphIO& gio, int l_bound, vector<int>& max_clique_data) {
 
 void print_max_clique(vector<int>& max_clique_data) {
   // cout << "Maximum clique: ";
-  for (int i = 0; i < max_clique_data.size(); i++)
+  for (unsigned int i = 0; i < max_clique_data.size(); i++)
     cout << max_clique_data[i] + 1 << " ";
   cout << endl;
 }

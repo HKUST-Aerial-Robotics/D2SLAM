@@ -362,7 +362,7 @@ std::vector<cv::Point2f> opticalflowTrack(const cv::Mat &cur_img,
       status[i] = 0;
   }
 
-  for (int i = 0; i < int(cur_pts.size()); i++) {
+  for (unsigned int i = 0; i < cur_pts.size(); i++) {
     if (status[i] && !inBorder(cur_pts[i], cur_img.size())) {
       status[i] = 0;
     }
@@ -468,7 +468,7 @@ LKImageInfoGPU opticalflowTrackPyr(const cv::Mat &cur_img,
       status[i] = 0;
   }
 
-  for (int i = 0; i < int(cur_pts.size()); i++) {
+  for (unsigned int i = 0; i < cur_pts.size(); i++) {
     if (status[i] && !inBorder(cur_pts[i], cur_img.size())) {
       status[i] = 0;
     }
@@ -580,7 +580,7 @@ std::vector<cv::Point2f> detectFastByRegion(cv::InputArray _img,
               return a.response > b.response;
             });
   // Return the top features
-  for (int i = 0; i < total_kpts.size(); i++) {
+  for (unsigned int i = 0; i < total_kpts.size(); i++) {
     ret.push_back(total_kpts[i].pt);
     if (ret.size() >= features) {
       break;
@@ -632,7 +632,7 @@ int computeRelativePosePnP(const std::vector<Vector3d> lm_positions_a,
   int iteratives = 100;
   Point3fVector pts3d;
   Point2fVector pts2d;
-  for (int i = 0; i < lm_positions_a.size(); i++) {
+  for (unsigned int i = 0; i < lm_positions_a.size(); i++) {
     auto z = lm_3d_norm_b[i].z();
     if (z > 1e-1) {
       pts3d.push_back(cv::Point3f(lm_positions_a[i].x(), lm_positions_a[i].y(),
@@ -676,12 +676,12 @@ Swarm::Pose computePosePnPnonCentral(
   opengv::points_t points;
   opengv::rotations_t camRotations;
   opengv::translations_t camOffsets;
-  for (int i = 0; i < lm_positions_a.size(); i++) {
+  for (unsigned int i = 0; i < lm_positions_a.size(); i++) {
     bearings.push_back(lm_3d_norm_b[i]);
     camCorrespondences.push_back(camera_indices[i]);
     points.push_back(lm_positions_a[i]);
   }
-  for (int i = 0; i < cam_extrinsics.size(); i++) {
+  for (unsigned int i = 0; i < cam_extrinsics.size(); i++) {
     camRotations.push_back(cam_extrinsics[i].R());
     camOffsets.push_back(cam_extrinsics[i].pos());
   }
@@ -714,7 +714,7 @@ Swarm::Pose computePosePnPnonCentral(
   bearings.clear();
   camCorrespondences.clear();
   points.clear();
-  for (int i = 0; i < lm_positions_a.size(); i++) {
+  for (unsigned int i = 0; i < lm_positions_a.size(); i++) {
     if (inlier_set.find(i) == inlier_set.end()) {
       continue;
     }

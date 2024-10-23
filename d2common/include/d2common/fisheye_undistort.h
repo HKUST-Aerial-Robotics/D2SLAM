@@ -129,7 +129,7 @@ class FisheyeUndist {
             auto _photometics_gpu = undist_all_cuda(photomertic, true);
             photometics = _photometics;
             photometics_gpu = _photometics_gpu;
-            for (int i = 0; i < _photometics.size(); i++) {
+            for (unsigned int i = 0; i < _photometics.size(); i++) {
                 cv::Mat bgr;
                 cv::cvtColor(_photometics[i], bgr, cv::COLOR_GRAY2BGR);
                 photometics_bgr.push_back(bgr);

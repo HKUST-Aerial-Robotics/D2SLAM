@@ -5,6 +5,7 @@
 #include <opencv2/opencv.hpp>
 #include "d2basetypes.h"
 #include <swarm_msgs/swarm_lcm_converter.hpp>
+#include <spdlog/spdlog.h>
 
 namespace D2Common {
 enum LandmarkFlag {
@@ -268,7 +269,7 @@ struct LandmarkPerId {
                 return it;
             }
         }
-        printf("LandmarkPerId::at: Error, cannot find frame_id %d\n", frame_id);
+        spdlog::warn("LandmarkPerId::at Warn, cannot find frame_id {}", frame_id);
         return LandmarkPerFrame();
     }
 

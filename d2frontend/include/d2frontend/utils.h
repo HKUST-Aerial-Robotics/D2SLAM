@@ -36,7 +36,7 @@ Eigen::VectorXf load_csv_vec_eigen(std::string csv);
 template <typename T, typename B>
 inline void reduceVector(std::vector<T> &v, std::vector<B> status) {
     int j = 0;
-    for (int i = 0; i < int(v.size()); i++)
+    for (unsigned int i = 0; i < v.size(); i++)
         if (status[i])
             v[j++] = v[i];
     v.resize(j);

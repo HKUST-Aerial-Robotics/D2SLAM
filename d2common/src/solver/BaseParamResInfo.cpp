@@ -61,7 +61,7 @@ void ResidualInfo::Evaluate(const std::vector<ParamInfo> &param_infos,
   std::vector<int> blk_sizes = cost_function->parameter_block_sizes();
   std::vector<double *> raw_jacobians(blk_sizes.size());
   jacobians.resize(blk_sizes.size());
-  for (int i = 0; i < static_cast<int>(blk_sizes.size()); i++) {
+  for (unsigned int i = 0; i < blk_sizes.size(); i++) {
     jacobians[i].resize(cost_function->num_residuals(), blk_sizes[i]);
     jacobians[i].setZero();
     raw_jacobians[i] = jacobians[i].data();
@@ -83,7 +83,7 @@ void ResidualInfo::Evaluate(const std::vector<ParamInfo> &param_infos,
       residual_scaling_ = sqrt_rho1_ / (1 - alpha);
       alpha_sq_norm_ = alpha / sq_norm;
     }
-    for (int i = 0; i < static_cast<int>(params.size()); i++) {
+    for (unsigned int i = 0; i < params.size(); i++) {
       jacobians[i] = sqrt_rho1_ * (jacobians[i] -
                                    alpha_sq_norm_ * residuals *
                                        (residuals.transpose() * jacobians[i]));

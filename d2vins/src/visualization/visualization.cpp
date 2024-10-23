@@ -48,7 +48,7 @@ void D2Visualization::init(ros::NodeHandle& nh, D2Estimator* estimator) {
       nh.advertise<visualization_msgs::MarkerArray>("camera_visual", 1000);
   frame_pub_local = nh.advertise<swarm_msgs::VIOFrame>("frame_local", 1000);
   frame_pub_remote = nh.advertise<swarm_msgs::VIOFrame>("frame_remote", 1000);
-  for (int i = 0; i < estimator->getState().localCameraExtrinsics().size();
+  for (unsigned int i = 0; i < estimator->getState().localCameraExtrinsics().size();
        i++) {
     char topic_name[64] = {0};
     sprintf(topic_name, "camera_pose_%d", i);
@@ -100,7 +100,7 @@ void D2Visualization::pubOdometry(int drone_id, const Swarm::Odometry& odom) {
         tf::StampedTransform(transform, odom_ros.header.stamp, "world", "imu"));
     auto& state = _estimator->getState();
     auto exts = state.localCameraExtrinsics();
-    for (int i = 0; i < exts.size(); i++) {
+    for (unsigned int i = 0; i < exts.size(); i++) {
       auto camera_pose = exts[i];
       auto pose = odom.pose() * camera_pose;
       geometry_msgs::PoseStamped camera_pose_ros;
@@ -179,7 +179,7 @@ void D2Visualization::postSolve() {
 
   CameraPoseVisualization sld_win_visual;
   for (auto drone_id : state.availableDrones()) {
-    for (int i = 0; i < state.size(drone_id); i++) {
+    for (unsigned int i = 0; i < state.size(drone_id); i++) {
       auto& frame = state.getFrame(drone_id, i);
       CamIdType camera_id = *state.getAvailableCameraIds().begin();
       auto frame_pose = frame.odom.pose();
@@ -204,7 +204,7 @@ sensor_msgs::PointCloud toPointCloud(
   pcl.channels.resize(3);
   pcl.channels[0].name = "rgb";
   pcl.channels[0].values.resize(landmarks.size());
-  for (int i = 0; i < landmarks.size(); i++) {
+  for (unsigned int i = 0; i < landmarks.size(); i++) {
     pcl.points[i].x = landmarks[i].position.x();
     pcl.points[i].y = landmarks[i].position.y();
     pcl.points[i].z = landmarks[i].position.z();

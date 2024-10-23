@@ -470,7 +470,7 @@ void D2PGO::setupLoopFactors(SolverWrapper* solver,
 void D2PGO::setupEgoMotionFactors(SolverWrapper* solver, int drone_id) {
   auto frames = state.getFrames(drone_id);
   auto traj = state.getEgomotionTraj(drone_id);
-  for (int i = 0; i < frames.size() - 1; i++) {
+  for (unsigned int i = 0; i < frames.size() - 1; i++) {
     auto frame_a = frames[i];
     auto frame_b = frames[i + 1];
     Swarm::Pose rel_pose;

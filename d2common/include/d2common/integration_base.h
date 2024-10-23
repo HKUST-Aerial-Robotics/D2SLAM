@@ -88,7 +88,7 @@ class IntegrationBase
         linearized_bg = _linearized_bg;
         jacobian.setIdentity();
         covariance.setZero();
-        for (int i = 0; i < static_cast<int>(dt_buf.size()); i++)
+        for (unsigned int i = 0; i < dt_buf.size(); i++)
             propagate(dt_buf[i], acc_buf[i], gyr_buf[i]);
     }
 
