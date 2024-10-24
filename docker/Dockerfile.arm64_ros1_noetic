@@ -1,0 +1,15 @@
+FROM hkustswarm/d2slam:arm64_base_ros1_noetic
+ARG ROS_VERSION=noetic
+ENV SWARM_WS=/root/swarm_ws
+
+#Build D2SLAM
+RUN   mkdir -p ${SWARM_WS}/src/ && \
+      cd ${SWARM_WS}/src/ && \
+      git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM && \
+      git clone https://github.com/HKUST-Swarm/sync_bag_player.git && \
+COPY ./ ${SWARM_WS}/src/D2SLAM
+WORKDIR $SWARM_WS
+RUN   source "/opt/ros/${ROS_VERSION}/setup.bash" && \
+      catkin config -DCMAKE_BUILD_TYPE=Release \
+            --cmake-args -DENABLE_CUDA=OFF && \
+      catkin build

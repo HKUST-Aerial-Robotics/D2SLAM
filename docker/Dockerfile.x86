@@ -101,8 +101,8 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
       pip install lcm
 
 #Install Faiss
-RUN   git clone https://github.com/facebookresearch/faiss.git && \
-      cd faiss && git checkout tags/v${FAISS_VERSION} && \
+RUN   git clone -b v${FAISS_VERSION} --single-branch  https://github.com/facebookresearch/faiss.git && \
+      cd faiss && \
       cmake -B build -DCMAKE_BUILD_TYPE=Release -DFAISS_OPT_LEVEL=avx2 -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF -DFAISS_ENABLE_GPU=OFF . && \
       make -C build -j$(nproc) faiss && \
       make -C build install && \

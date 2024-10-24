@@ -118,12 +118,13 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
       git checkout tags/v1.4.0 && \
       mkdir build && cd build && \
       cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
-      make -j$(nproc) install
+      make -j$(nproc) install && \
+      rm ../../lcm/
 
 #Install Faiss
-RUN   git clone https://github.com/facebookresearch/faiss.git && \
-      cd faiss && git checkout tags/v${FAISS_VERSION} && \
-      cmake -B build -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF -DFAISS_ENABLE_GPU=OFF . && \
+RUN   git clone -b v${FAISS_VERSION} --single-branch  https://github.com/facebookresearch/faiss.git && \
+      cd faiss && \
+      cmake -B build -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_PYTHON=OFF  -DFAISS_OPT_LEVEL=NEON -DBUILD_TESTING=OFF -DFAISS_ENABLE_GPU=OFF . && \
       make -C build -j$(nproc) faiss && \
       make -C build install && \
       rm -rf ../faiss
@@ -131,7 +132,8 @@ RUN   git clone https://github.com/facebookresearch/faiss.git && \
 #Install OpenGV
 RUN   git clone https://github.com/HKUST-Swarm/opengv && \
       mkdir opengv/build && cd opengv/build && cmake .. && make -j$(nproc) && \
-      make install
+      make install && \
+      rm -rf ../../opengv
 
 #Install Backward
 RUN   wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp -O /usr/local/include/backward.hpp
