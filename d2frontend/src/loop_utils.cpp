@@ -7,16 +7,21 @@
 #include <d2common/utils.hpp>
 #include <fstream>
 #include <opencv2/core/eigen.hpp>
-#include <opencv2/cudafeatures2d.hpp>
-#include <opencv2/cudaimgproc.hpp>
-#include <opencv2/cudaoptflow.hpp>
-#include <opencv2/cudawarping.hpp>
 #include <opencv2/opencv.hpp>
 #include <opengv/absolute_pose/NoncentralAbsoluteAdapter.hpp>
 #include <opengv/absolute_pose/methods.hpp>
 #include <opengv/sac/Lmeds.hpp>
 #include <opengv/sac/Ransac.hpp>
 #include <opengv/sac_problems/absolute_pose/AbsolutePoseSacProblem.hpp>
+
+#ifdef USE_CUDA
+#include <opencv2/cudaimgproc.hpp>
+#include <opencv2/cudaoptflow.hpp>
+#include <opencv2/cudawarping.hpp>
+#include <opencv2/cudafeatures2d.hpp>
+#else
+#include <opencv2/optflow.hpp>
+#endif
 
 using namespace std::chrono;
 using namespace D2Common;
@@ -303,6 +308,7 @@ std::vector<cv::Point2f> opticalflowTrack(const cv::Mat &cur_img,
   std::vector<uchar> reverse_status;
   std::vector<cv::Point2f> reverse_pts;
   if (enable_cuda) {
+#ifdef USE_CUDA
     cv::cuda::GpuMat gpu_prev_img(prev_img);
     cv::cuda::GpuMat gpu_cur_img(cur_img);
     cv::cuda::GpuMat gpu_prev_pts(prev_pts);
@@ -330,6 +336,9 @@ std::vector<cv::Point2f> opticalflowTrack(const cv::Mat &cur_img,
                          reverse_gpu_pts, reverse_gpu_status);
     reverse_gpu_pts.download(reverse_pts);
     reverse_gpu_status.download(reverse_status);
+#else
+    SPDLOG_ERROR("CUDA is not enabled");
+#endif
   } else {
     cv::calcOpticalFlowPyrLK(
         prev_img, cur_img, prev_pts, cur_pts, status, err, WIN_SIZE, PYR_LEVEL,
@@ -373,6 +382,7 @@ std::vector<cv::Point2f> opticalflowTrack(const cv::Mat &cur_img,
   return cur_pts;
 }
 
+#ifdef USE_CUDA
 LKImageInfoGPU opticalflowTrackPyr(const cv::Mat &cur_img,
                                    const LKImageInfoGPU &prev_lk,
                                    TrackLRType type) {
@@ -479,6 +489,7 @@ LKImageInfoGPU opticalflowTrackPyr(const cv::Mat &cur_img,
   reduceVector(prev_local_index, status);
   return {cur_pts, lk_pts_3d_norm, ids, prev_local_index, prev_types, cur_pyr};
 }
+#endif
 
 void detectPoints(const cv::Mat &img, std::vector<cv::Point2f> &n_pts,
                   const std::vector<cv::Point2f> &cur_pts, int require_pts,
@@ -505,6 +516,7 @@ void detectPoints(const cv::Mat &img, std::vector<cv::Point2f> &n_pts,
     } else {
       // Use goodFeaturesToTrack
       if (enable_cuda) {
+#ifdef USE_CUDA
         cv::Ptr<cv::cuda::CornersDetector> detector =
             cv::cuda::createGoodFeaturesToTrackDetector(
                 img.type(), num_to_detect, 0.01, params->feature_min_dist);
@@ -512,6 +524,9 @@ void detectPoints(const cv::Mat &img, std::vector<cv::Point2f> &n_pts,
         cv::cuda::GpuMat img_cuda(img);
         detector->detect(img_cuda, d_prevPts_gpu);
         d_prevPts_gpu.download(d_prevPts);
+#else
+        SPDLOG_ERROR("CUDA is not enabled");
+#endif
       } else {
         cv::goodFeaturesToTrack(img, d_prevPts, num_to_detect, 0.01,
                                 params->feature_min_dist, mask);
@@ -551,9 +566,15 @@ std::vector<cv::Point2f> detectFastByRegion(cv::InputArray _img,
   int small_width = _img.cols() / cols;
   int small_height = _img.rows() / rows;
   int num_features = ceil((double)features * 1.5 / ((double)cols * rows));
+#ifdef USE_CUDA
   auto fast = cv::cuda::FastFeatureDetector::create(
       10, true, cv::FastFeatureDetector::TYPE_9_16, features);
   cv::cuda::GpuMat gpu_img(_img);
+#else
+    auto fast = cv::FastFeatureDetector::create(10, true,
+                                                cv::FastFeatureDetector::TYPE_9_16);
+    cv::Mat gpu_img = _img.getMat();
+#endif
   std::vector<cv::KeyPoint> total_kpts;
   for (int i = 0; i < cols; i++) {
     for (int j = 0; j < rows; j++) {
@@ -763,6 +784,7 @@ int computeRelativePosePnPnonCentral(
   return success;
 }
 
+#ifdef USE_CUDA
 std::vector<cv::cuda::GpuMat> buildImagePyramid(const cv::cuda::GpuMat &prevImg,
                                                 int maxLevel_) {
   std::vector<cv::cuda::GpuMat> prevPyr;
@@ -779,4 +801,5 @@ std::vector<cv::cuda::GpuMat> buildImagePyramid(const cv::cuda::GpuMat &prevImg,
 
   return prevPyr;
 }
+#endif
 }  // namespace D2FrontEnd

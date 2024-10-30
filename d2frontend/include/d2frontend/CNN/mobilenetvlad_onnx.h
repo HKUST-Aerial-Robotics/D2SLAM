@@ -1,3 +1,4 @@
+#pragma once
 #include "onnx_generic.h"
 #include "../utils.h"
 #include "d2common/utils.hpp"

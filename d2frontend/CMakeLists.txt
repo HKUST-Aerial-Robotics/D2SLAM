@@ -6,8 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-add_compile_options(-Wno-deprecated-declarations -Wno-reorder  -Wno-format -Wno-sign-compare)
-set(USE_ONNX on)
+add_compile_options(-Wno-deprecated-declarations -Wno-reorder -Wno-format -Wno-sign-compare)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -24,7 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
 )
 
-SET("OpenCV_DIR"  "/usr/local/share/OpenCV/")
+SET("OpenCV_DIR" "/usr/local/share/OpenCV/")
 SET("TENSORRT_UTILS_INC" "../tensorrt_utils/include/")
 
 find_package(OpenCV REQUIRED)
@@ -34,35 +33,38 @@ find_package(yaml-cpp REQUIRED)
 find_package(opengv REQUIRED)
 
 # if CUDA_TOOLKIT_ROOT_DIR not set in environment, set it here
-if (NOT DEFINED ENV{CUDA_TOOLKIT_ROOT_DIR})
+if(NOT DEFINED ENV{CUDA_TOOLKIT_ROOT_DIR})
   set(ENV{CUDA_TOOLKIT_ROOT_DIR} "/usr/local/cuda")
 endif()
 
-if (USE_CUDA)
+if(USE_CUDA)
   find_package(CUDA)
-  if (CUDA_FOUND)
+  if(CUDA_FOUND)
     message("CUDA found")
     add_definitions(-DUSE_CUDA)
-    add_definitions("-D USE_ONNX")
-  set(ONNXRUNTIME_LIB_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/lib/" CACHE STRING "Path of ONNXRUNTIME_LIB_DIR")
-  set(ONNXRUNTIME_INC_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/include/" CACHE STRING "Path of ONNXRUNTIME_INC_DIR")
+    set(ONNXRUNTIME_LIB_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/lib/" CACHE STRING "Path of ONNXRUNTIME_LIB_DIR")
+    set(ONNXRUNTIME_INC_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/include/" CACHE STRING "Path of ONNXRUNTIME_INC_DIR")
   else()
     message("CUDA not found")
   endif()
 endif()
 
+message("Torch_DIR: ${Torch_DIR}")
+message("TORCH_INSTALL_PREFIX: ${TORCH_INSTALL_PREFIX}")
+message("TORCH_INCLUDE_DIRS: ${TORCH_INCLUDE_DIRS}")
+
 find_package(Torch)
-if (Torch_FOUND)
+if(Torch_FOUND)
   message("Torch found")
   add_definitions(-DUSE_TORCH)
 else()
   message("Torch not found")
+  set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch" CACHE STRING "Path of libtorch")
+  set(TORCH_INSTALL_PREFIX "$ENV{HOME}/source/libtorch" CACHE STRING "Path of libtorch")
+  set(TORCH_INCLUDE_DIRS "/root/libtorch/include")
+  set(TORCH_LIBRARIES "/root/libtorch/lib")
 endif()
 
-set(Torch_DIR "$ENV{HOME}/source/libtorch/share/cmake/Torch" CACHE STRING "Path of libtorch")
-set(TORCH_INSTALL_PREFIX "$ENV{HOME}/source/libtorch" CACHE STRING "Path of libtorch")
-set(TORCH_INCLUDE_DIRS "/root/libtorch/include")
-set(TORCH_LIBRARIES "/root/libtorch/lib")
 #Find torch Optional
 find_package(Boost REQUIRED COMPONENTS program_options)
 include_directories(${TORCH_INCLUDE_DIRS})
@@ -71,14 +73,12 @@ link_directories(${ONNXRUNTIME_LIB_DIR})
 link_directories("/usr/local/lib/")
 
 catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES loop_cnn libd2frontend
+  INCLUDE_DIRS  LIBRARIES loop_cnn libd2frontend
   CATKIN_DEPENDS std_msgs cv_bridge roscpp rosmsg rospy swarm_msgs swarmcomm_msgs d2common
 )
 
 include_directories(
   /usr/local/include/
-  include
   ${opengv_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
@@ -97,49 +97,57 @@ add_library(libd2frontend
   src/d2landmark_manager.cpp
 )
 
-add_subdirectory(../tensorrt_utils  tensorrt_utils)
-
-add_executable(${PROJECT_NAME}_spy
-  src/d2frontend_spy.cpp
-)
-
-add_executable(${PROJECT_NAME}_net_tester
-  tests/d2frontend_network_tester.cpp
-)
+add_subdirectory(../tensorrt_utils tensorrt_utils)
 
 set_property(TARGET libd2frontend PROPERTY CXX_STANDARD 17)
 
-#Use tensorrt and onnx
-if (USE_ONNX AND USE_CUDA)
-    add_library(loop_cnn
-      src/CNN/superpoint_common.cpp
-      # src/CNN/superpoint_onnx.cpp
-      src/CNN/superpoint.cpp
-      src/CNN/superglue_onnx.cpp
-      src/loop_utils.cpp
-      src/d2frontend_params.cpp
-    )
-    set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 17)
+#Use onnx
+if(USE_CUDA)
+  add_library(loop_cnn
+    src/CNN/superpoint_common.cpp
+    src/CNN/superpoint_tensorrt.cpp
+    src/CNN/superglue_onnx.cpp
+    src/loop_utils.cpp
+    src/d2frontend_params.cpp
+  )
+  set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 17)
 
-    target_link_libraries(loop_cnn 
-        opencv_dnn 
-        onnxruntime
-        opengv
-        nvinfer
-        nvinfer_plugin
-        nvonnxparser
-        tensorrt_utils
-      )
-    target_include_directories(loop_cnn PUBLIC
-      /usr/include
-      /usr/local/include
-      ${CMAKE_CURRENT_SOURCE_DIR}/include
-      # ${ONNXRUNTIME_INC_DIR}
-      ${CUDA_INCLUDE_DIRS}
-      ${TENSORRT_UTILS_INC}
-      ${Boost_LIBRARIES}
-    )
+  target_link_libraries(loop_cnn
+    opencv_dnn
+    onnxruntime
+    opengv
+    nvinfer
+    nvinfer_plugin
+    nvonnxparser
+    tensorrt_utils
+  )
+else()
+  add_library(loop_cnn
+    src/CNN/superpoint_common.cpp
+    src/CNN/superpoint_onnx.cpp
+    src/CNN/superglue_onnx.cpp
+    src/loop_utils.cpp
+    src/d2frontend_params.cpp
+  )
+  set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 17)
+
+  target_link_libraries(loop_cnn
+    opencv_dnn
+    onnxruntime
+    opengv
+  )
 endif()
+
+target_include_directories(loop_cnn PUBLIC
+  /usr/include
+  /usr/local/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${ONNXRUNTIME_INC_DIR}
+  ${CUDA_INCLUDE_DIRS}
+  ${TENSORRT_UTILS_INC}
+  ${Boost_LIBRARIES}
+)
+
 
 add_executable(camera_undistort_test
   tests/camera_undistort_test.cpp
@@ -151,14 +159,18 @@ target_link_libraries(camera_undistort_test
   ${YAML_CPP_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${catkin_LIBRARIES}
-  ${Boost_LIBRARIES})
+  ${Boost_LIBRARIES}
+  onnxruntime
+  )
 
-add_dependencies(${PROJECT_NAME}_spy
-    ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_include_directories(camera_undistort_test PUBLIC
+  /usr/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CUDA_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+)
 
-# if USE_ONNX and USE_CUDA is ON
-if (USE_ONNX AND USE_CUDA)
-  target_link_libraries(libd2frontend
+target_link_libraries(libd2frontend
     ${catkin_LIBRARIES}
     ${OpenCV_LIBRARIES}
     ${TORCH_LIBRARIES}
@@ -168,33 +180,29 @@ if (USE_ONNX AND USE_CUDA)
     dw
     loop_cnn
     opengv
-  )
-else()
-  target_link_libraries(libd2frontend
-    ${catkin_LIBRARIES}
-    ${OpenCV_LIBRARIES}
-    ${YAML_CPP_LIBRARIES}
-    lcm
-    faiss
-    dw
-    opengv
-  )
-endif()
-
-target_link_libraries(${PROJECT_NAME}_net_tester
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
-  ${TORCH_LIBRARIES}
-  lcm
-  dw
-  libd2frontend
 )
 
-target_link_libraries(${PROJECT_NAME}_spy
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
-  lcm
-  dw
-  libd2frontend
-)
+# add_executable(${PROJECT_NAME}_net_tester
+#   tests/d2frontend_network_tester.cpp)
+# target_link_libraries(${PROJECT_NAME}_net_tester
+#   ${catkin_LIBRARIES}
+#   ${OpenCV_LIBRARIES}
+#   ${TORCH_LIBRARIES}
+#   lcm
+#   dw
+#   libd2frontend
+# )
 
+
+# add_executable(${PROJECT_NAME}_spy
+#   src/d2frontend_spy.cpp
+# )
+# add_dependencies(${PROJECT_NAME}_spy
+#   ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# target_link_libraries(${PROJECT_NAME}_spy
+#   ${catkin_LIBRARIES}
+#   ${OpenCV_LIBRARIES}
+#   lcm
+#   dw
+#   libd2frontend
+# )

@@ -1,4 +1,4 @@
-#include "d2frontend/CNN/superpoint.h"
+#include "d2frontend/CNN/superpoint_tensorrt.h"
 #include "d2common/utils.hpp"
 
 #include <NvInfer.h>

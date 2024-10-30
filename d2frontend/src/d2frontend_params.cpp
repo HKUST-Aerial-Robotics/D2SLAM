@@ -83,7 +83,7 @@ D2FrontendParams::D2FrontendParams(ros::NodeHandle& nh) {
 
   //superpoint configurations
   cv::FileNode fs_superpoint_config = fsSettings["superpoint_config"];
-  SuperPoint::SuperPointConfig superpoint_config;
+  SuperPointConfig superpoint_config;
   superpoint_config.max_keypoints  = static_cast<int32_t>(fsSettings["max_superpoint_cnt"]);
   superpoint_config.onnx_path = static_cast<std::string>(fs_superpoint_config["onnx_path"]);
   superpoint_config.engine_path = static_cast<std::string>(fs_superpoint_config["trt_engine_path"]);
@@ -286,7 +286,7 @@ void D2FrontendParams::generateCameraModels(cv::FileStorage& fsSettings,
     camera_ptrs.clear();
     for (auto cam : raw_camera_ptrs) {
       auto ptr = new FisheyeUndist(
-          cam, 0, undistort_fov, true, FisheyeUndist::UndistortCylindrical,
+          cam, 0, undistort_fov, FisheyeUndist::UndistortCylindrical,
           width_undistort, height_undistort, photometric);
       auto cylind_cam = ptr->cam_top;
       camera_ptrs.push_back(cylind_cam);

@@ -13,7 +13,8 @@
 #include <fstream>
 #include <memory>
 
-#include "CNN/superpoint.h"
+#include "CNN/superpoint_tensorrt.h"
+#include "CNN/superpoint_onnx.h"
 
 //#include <swarm_loop/HFNetSrv.h>
 
@@ -59,7 +60,7 @@ struct LoopCamConfig
     std::string netvlad_int8_calib_table_name;
     std::string superpoint_int8_calib_table_name;
 
-    SuperPoint::SuperPointConfig superpoint_config;
+    SuperPointConfig superpoint_config;
 };
 
 class LoopCam {
@@ -74,9 +75,11 @@ class LoopCam {
     std::fstream fsp;
     std::vector<FisheyeUndist*> undistortors;
     MobileNetVLADONNX * netvlad_onnx = nullptr;
-    // SuperPointONNX * superpoint_onnx = nullptr;
+#ifdef USE_CUDA
     std::unique_ptr<SuperPoint> superpoint_ptr = nullptr;
-
+#else
+    SuperPointONNX * superpoint_ptr = nullptr;
+#endif
 public:
     // LoopDetector * loop_detector = nullptr;
     LoopCam(LoopCamConfig config, ros::NodeHandle & nh);

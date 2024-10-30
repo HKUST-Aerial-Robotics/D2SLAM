@@ -6,6 +6,7 @@ ENV SWARM_WS=/root/swarm_ws
 ARG ROS_VERSION=noetic
 ARG FAISS_VERSION=1.7.4
 ARG CMAKE_VERSION=3.24.1
+ARG ONNX_VERSION=1.13.1
 
 #Some basic dependencies
 RUN  apt-get -y update && \
@@ -66,6 +67,14 @@ RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       make -j$(nproc) install && \
       rm -rf ../../ceres-solver
 
+#Install ONNXRuntime with CUDA and TensorRT
+RUN   wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-aarch64-${ONNX_VERSION}.tgz && \
+      tar -zxvf onnxruntime-linux-aarch64-${ONNX_VERSION}.tgz && \
+      cp -r onnxruntime-linux-aarch64-${ONNX_VERSION}/include/* /usr/local/include/ && \
+      cp -r onnxruntime-linux-aarch64-${ONNX_VERSION}/lib/* /usr/local/lib/ && \
+      rm -rf onnxruntime-linux-aarch64-${ONNX_VERSION} && \
+      rm onnxruntime-linux-aarch64-${ONNX_VERSION}.tgz
+
 #Install LCM
 RUN   git clone https://github.com/lcm-proj/lcm && \
       cd lcm && \
@@ -101,3 +110,5 @@ RUN   wget https://github.com/gabime/spdlog/archive/refs/tags/v1.12.0.tar.gz && 
       cmake .. && make -j$(nproc) && \
       make install && \
       rm -rf ../../spdlog-1.12.0
+
+RUN   pip3 install --no-cache torch==1.12

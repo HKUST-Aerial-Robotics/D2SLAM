@@ -13,7 +13,7 @@
 using namespace swarm_msgs;
 #define REMOTE_MAGIN_NUMBER 1000000
 
-namespace D2Common{
+namespace D2Common {
     class VisualImageDescArray;
     class VisualImageDesc;
     struct LandmarkPerId;

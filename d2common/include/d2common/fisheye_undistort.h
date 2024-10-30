@@ -5,8 +5,6 @@
 #include <camodocal/camera_models/PinholeCamera.h>
 
 #include <d2common/utils.hpp>
-#include <opencv2/core/cuda.hpp>
-#include <opencv2/cudawarping.hpp>
 
 #include "cv_bridge/cv_bridge.h"
 #include "opencv2/core/core.hpp"
@@ -14,8 +12,13 @@
 #include "opencv2/imgproc.hpp"
 #include "ros/ros.h"
 #include "sensor_msgs/Image.h"
+
+#ifdef USE_CUDA
+#include <opencv2/core/cuda.hpp>
+#include <opencv2/cudawarping.hpp>
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/cudaimgproc.hpp>
+#endif
 
 namespace D2Common {
 
@@ -51,7 +54,6 @@ class FisheyeUndist {
     int imgWidth = 0;
     double fov = 0;  // in degree
     Eigen::Vector3d cameraRotation;
-    bool enable_cuda = false;
     int cam_id = 0;
 
     double raw_width;
@@ -62,15 +64,18 @@ class FisheyeUndist {
     std::vector<Eigen::Quaterniond> t;
     std::vector<cv::Mat> photometics;
     std::vector<cv::Mat> photometics_bgr;
+
+#ifdef USE_CUDA
     std::vector<cv::cuda::GpuMat> photometics_gpu;
     std::vector<cv::cuda::GpuMat> photometics_gpu_bgr;
+    cv::cuda::GpuMat img_cuda;
+#endif
 
     FisheyeUndist(const std::string &camera_config_file, int _id, double _fov,
-                  bool _enable_cuda = true, int imgWidth = 600)
+                  int imgWidth = 600)
         : imgWidth(imgWidth),
           fov(_fov),
           cameraRotation(0, 0, 0),
-          enable_cuda(_enable_cuda),
           cam_id(_id) {
         cam = camodocal::CameraFactory::instance()->generateCameraFromYamlFile(
             camera_config_file);
@@ -81,24 +86,22 @@ class FisheyeUndist {
         fisheye2cam_id = fisheye2cam_id * 255;
         undistMaps = generateAllUndistMap(cam, cameraRotation, imgWidth, fov);
         // ROS_INFO("undismap size %ld", undistMaps.size());
-        if (enable_cuda) {
+#ifdef USE_CUDA
             for (auto mat : undistMaps) {
                 cv::Mat maps[2];
                 cv::split(mat.first, maps);
                 undistMapsGPUX.push_back(cv::cuda::GpuMat(maps[0]));
                 undistMapsGPUY.push_back(cv::cuda::GpuMat(maps[1]));
             }
-        }
+#endif
     }
 
     FisheyeUndist(camodocal::CameraPtr cam, int _id, double _fov,
-                  bool _enable_cuda = true,
                   UndistortType mode = UndistortPinhole5, int imgWidth = 600,
                   int imgHeight = 200, cv::Mat photomertic=cv::Mat())
         : imgWidth(imgWidth),
           fov(_fov),
           cameraRotation(0, 0, 0),
-          enable_cuda(_enable_cuda),
           cam_id(_id) {
         raw_width = cam->imageWidth();
         raw_height = cam->imageHeight();
@@ -116,18 +119,19 @@ class FisheyeUndist {
                                              imgHeight, fov);
         }
         // ROS_INFO("undismap size %ld", undistMaps.size());
-        if (enable_cuda) {
+#if USE_CUDA
             for (auto mat : undistMaps) {
                 cv::Mat maps[2];
                 cv::split(mat.first, maps);
                 undistMapsGPUX.push_back(cv::cuda::GpuMat(maps[0]));
                 undistMapsGPUY.push_back(cv::cuda::GpuMat(maps[1]));
             }
-        }
+#endif
         if (!photomertic.empty()) {
             auto _photometics = undist_all(photomertic, true);
-            auto _photometics_gpu = undist_all_cuda(photomertic, true);
             photometics = _photometics;
+#ifdef USE_CUDA
+            auto _photometics_gpu = undist_all_cuda(photomertic, true);
             photometics_gpu = _photometics_gpu;
             for (unsigned int i = 0; i < _photometics.size(); i++) {
                 cv::Mat bgr;
@@ -138,20 +142,20 @@ class FisheyeUndist {
                                    cv::COLOR_GRAY2BGR);
                 photometics_gpu_bgr.push_back(bgr_gpu);
             }
+#endif
         } else {
             printf("no photometric calibration file found\n");
         }
     }
 
+#ifdef USE_CUDA
     cv::cuda::GpuMat undist_id_cuda(cv::Mat image, int _id, bool calib_photometric=false) {
-#ifndef WITHOUT_CUDA
         cv::cuda::GpuMat img_cuda(image);
         return undist_id_cuda(img_cuda, _id, calib_photometric);
-#endif
+        assert(false && "CUDA not enabled");
     }
-    
+
     cv::cuda::GpuMat undist_id_cuda(cv::cuda::GpuMat img_cuda, int _id, bool calib_photometric=false) {
-#ifndef WITHOUT_CUDA
         cv::cuda::GpuMat output;
         cv::cuda::remap(img_cuda, output, undistMapsGPUX[_id],
                         undistMapsGPUY[_id], REMAP_FUNC);
@@ -168,14 +172,12 @@ class FisheyeUndist {
             }
         }
         return output;
-#endif
+        assert(false && "CUDA not enabled");
     }
 
-    cv::cuda::GpuMat img_cuda;
     std::vector<cv::Mat> undist_all_cuda_cpu(
         const cv::Mat &image, bool use_rgb = false,
         std::vector<bool> mask = std::vector<bool>(0)) {
-#ifndef WITHOUT_CUDA
         TicToc up;
         bool has_mask = mask.size() == undistMaps.size();
         if (use_rgb) {
@@ -212,13 +214,11 @@ class FisheyeUndist {
             ret.push_back(tmp);
         }
         return ret;
-#endif
     }
 
     std::vector<cv::cuda::GpuMat> undist_all_cuda(
         const cv::Mat &image, bool use_rgb = false,
         std::vector<bool> mask = std::vector<bool>(0)) {
-#ifndef WITHOUT_CUDA
         cv::cuda::GpuMat img_cuda;
         bool has_mask = mask.size() == undistMaps.size();
         if (use_rgb) {
@@ -247,8 +247,8 @@ class FisheyeUndist {
             ret.push_back(output);
         }
         return ret;
-#endif
     }
+#endif
 
     std::vector<cv::Mat> undist_all(const cv::Mat &image, bool use_rgb = false,
                                     bool enable_top = true,
@@ -658,17 +658,14 @@ class FisheyeUndist {
             rotation * Eigen::Vector3d(((double)0 - (double)imgWidth / 2),
                                        ((double)0 - (double)imgHeight / 2),
                                        f_center);
-        // std::cout << objPoint << std::endl;
 
         objPoint =
             rotation * Eigen::Vector3d(((double)imgWidth / 2),
                                        ((double)0 - (double)imgHeight / 2),
                                        f_center);
-        // std::cout << objPoint << std::endl;
         cv::Mat map1, map2;
         cv::convertMaps(map, cv::Mat(), map1, map2, CV_16SC2);
         return std::make_pair(map, cv::Mat());
-        // return std::make_pair(map1, map2);
     }
 };
 }  // namespace D2Common

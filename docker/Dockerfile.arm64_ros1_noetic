@@ -11,5 +11,6 @@ COPY ./ ${SWARM_WS}/src/D2SLAM
 WORKDIR $SWARM_WS
 RUN   source "/opt/ros/${ROS_VERSION}/setup.bash" && \
       catkin config -DCMAKE_BUILD_TYPE=Release \
+            -DTorch_DIR=/usr/local/lib/python3.8/dist-packages/torch/share/cmake/Torch \
             --cmake-args -DENABLE_CUDA=OFF -DUSE_ONNX=OFF && \
       catkin build

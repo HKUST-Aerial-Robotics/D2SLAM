@@ -14,7 +14,7 @@
 #include <d2common/fisheye_undistort.h>
 #include <d2frontend/d2featuretracker.h>
 #include <d2frontend/loop_cam.h>
-#include "d2frontend/CNN/superpoint.h"
+#include "d2frontend/CNN/superpoint_onnx.h"
 
 using namespace std::chrono;
 
@@ -37,23 +37,24 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh)
         config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8,
         config.netvlad_int8_calib_table_name);
         
-    SuperPoint::SuperPointConfig sp_config = config.superpoint_config;
+    SuperPointConfig sp_config = config.superpoint_config;
+
+#ifdef USE_CUDA
     superpoint_ptr = std::make_unique<SuperPoint>(sp_config);
     if (superpoint_ptr->build()){
       SPDLOG_INFO("SuperPoint build success");
     } else {
       SPDLOG_ERROR("SuperPoint build failed");
     }
-
-
-    // superpoint_onnx = new SuperPointONNX(
-    //     config.superpoint_model, ((int)(params->feature_min_dist / 2)),
-    //     config.pca_comp, config.pca_mean, img_width, img_height,
-    //     config.superpoint_thres, config.superpoint_max_num,
-    //     config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16,
-    //     config.cnn_enable_tensorrt_int8,
-    //     config.superpoint_int8_calib_table_name);
-    
+#else
+    superpoint_ptr = new SuperPointONNX(
+        config.superpoint_model, ((int)(params->feature_min_dist / 2)),
+        config.pca_comp, config.pca_mean, img_width, img_height,
+        config.superpoint_thres, config.superpoint_max_num,
+        config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16,
+        config.cnn_enable_tensorrt_int8,
+        config.superpoint_int8_calib_table_name);
+#endif    
 
   }
   undistortors = params->undistortors;
@@ -260,7 +261,11 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame &msg,
   cv::Mat undist = msg.left_images[vcam_id];
   TicToc tt;
   if (_config.enable_undistort_image) {
+#ifdef USE_CUDA
     undist = cv::Mat(undistortors[vcam_id]->undist_id_cuda(undist, 0, true));
+#else
+    SPDLOG_WARN("Undistort image not supported without CUDA");
+#endif
   }
   if (params->enable_perf_output) {
     SPDLOG_INFO("[D2Frontend::LoopCam] undist image cost {:.1f}ms", tt.toc());

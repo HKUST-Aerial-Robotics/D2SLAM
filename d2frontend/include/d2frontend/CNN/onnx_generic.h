@@ -1,5 +1,6 @@
 #pragma once
 #include "CNN_generic.h"
+
 #include <onnxruntime_cxx_api.h>
 namespace D2FrontEnd {
 class ONNXInferenceGeneric: public CNNInferenceGeneric {

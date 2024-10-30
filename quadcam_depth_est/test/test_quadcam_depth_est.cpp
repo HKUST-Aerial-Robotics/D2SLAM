@@ -66,8 +66,8 @@ int main(int argc, char** argv) {
     auto ret_right = D2FrontEnd::readCameraConfig(camera_name1, config[camera_name1]);
 
     //Initialize undistort
-    FisheyeUndist undistort2_0(ret_left.first, 0, fov, true, FisheyeUndist::UndistortPinhole2, width, height);
-    FisheyeUndist undistort2_1(ret_right.first, 0, fov, true, FisheyeUndist::UndistortPinhole2, width, height);
+    FisheyeUndist undistort2_0(ret_left.first, 0, fov, FisheyeUndist::UndistortPinhole2, width, height);
+    FisheyeUndist undistort2_1(ret_right.first, 0, fov, FisheyeUndist::UndistortPinhole2, width, height);
     auto imgs_left = undistort2_0.undist_all(img_l, true);
     auto imgs_right = undistort2_1.undist_all(img_r, true);
     cv::vconcat(imgs_left[idx0], imgs_right[idx1], show);
