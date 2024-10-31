@@ -1,0 +1,94 @@
+<launch>
+    <arg name="show" default="false" />
+    <arg name="output" default="screen" />
+    <arg name="manager"     default="swarm_manager"/>
+    <arg name="send_img"     default="false"/>
+    <arg name="send_whole_img_desc"     default="false"/>
+    <arg name="is_4dof"     default="false"/>
+    <arg name="self_id"     default="1"/>
+    <arg name="vins"     default="false"/>
+    <arg name="superpoint_model_path"     default="$(find d2frontend)/../models/superpoint_v1_dyn_size.onnx"/>
+    <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/mobilenetvlad_dyn_size.onnx" />
+    <arg name="superglue_model_path"     default="$(find d2frontend)/../models/superglue.onnx" />
+    <arg name="config" default="$(find d2vins)/../config/gopro/gopro.yaml" />
+    <arg name="match_index_dist" default="100" />
+    <arg name="match_index_dist_remote" default="20" />
+    <arg name="output_path" default="/home/dji/output/" />
+    <arg name="nonkeyframe_waitsec" default="5.0" />
+    <arg name="inter_drone_init_frames" default="3" />
+    <arg name="enable_loop" default="true" />
+    <arg name="enable_pgo" default="true" />
+    <arg name="rviz" default="false" />
+    <arg name="main_id" default="1" /> <!-- This only determine trust which drone to setup cooridinate frme -->
+    <arg name="taichislam" default="false" />
+    <arg name="taichislam_show" default="false" /> 
+    <arg name="skeleton_graph_gen" default="true" /> 
+    
+    <node pkg="d2vins" type="d2vins_node" name="d2vins" output="screen" launch-prefix="nice --20 ">
+        <rosparam>
+            lcm_uri: udpm://224.0.0.251:7667?ttl=1
+            jpg_quality: 75
+            
+            query_thres: 0.2
+            init_query_thres: 0.2
+
+            min_movement_keyframe: 0.1
+            enable_pub_remote_img: false
+            enable_sub_remote_img: false
+            accept_min_3d_pts: 30
+            recv_msg_duration: 0.5
+            superpoint_thres: 0.1
+            triangle_thres: 0.012
+            #triangle_thres: 0.008
+            min_direction_loop: 1
+            
+            detector_match_thres: 0.7
+            send_all_features: false
+            lower_cam_as_main: false
+            min_match_per_dir: 20
+            output_raw_superpoint_desc: false
+            depth_far_thres: 100
+            loop_cov_pos: 0.1
+            odometry_consistency_threshold: 3.0
+            pos_covariance_per_meter: 0.01
+            yaw_covariance_per_meter: 0.003
+            enable_network: true
+        </rosparam>
+        <param name="pca_comp_path" value="$(find d2frontend)/../models/components_.csv" type="string" />
+        <param name="pca_mean_path" value="$(find d2frontend)/../models/mean_.csv" type="string" />
+        <param name="pca_netvlad" value="$(find d2frontend)/../models/netvlad_pca.csv" type="string" />
+        <param name="output_path" value="$(arg output_path)" type="string" />
+        <param name="superpoint_model_path" value="$(arg superpoint_model_path)" type="string" />
+        <param name="netvlad_model_path" value="$(arg netvlad_model_path)" type="string" />
+        <param name="superglue_model_path" value="$(arg superglue_model_path)" type="string" />
+        <param name="show" value="$(arg show)" type="bool" />
+        <param name="send_img" value="$(arg send_img)" type="bool" />
+        <param name="send_whole_img_desc" value="$(arg send_whole_img_desc)" type="bool" />
+        <param name="self_id" value="$(arg self_id)" type="int" />
+        <param name="match_index_dist" value="$(arg match_index_dist)" type="int" />
+        <param name="match_index_dist_remote" value="$(arg match_index_dist_remote)" type="int" />
+        <param name="nonkeyframe_waitsec" value="$(arg nonkeyframe_waitsec)" type="double" />
+        <param name="inter_drone_init_frames" value="$(arg inter_drone_init_frames)" type="int" />
+        <param name="vins_config_path" value="$(arg config)" type="string" />
+        <param name="is_4dof" value="$(arg is_4dof)" type="bool" />
+        <param name="enable_loop" value="$(arg enable_loop)" type="bool" />
+    </node>
+    <include file="$(find d2pgo)/launch/d2pgo.launch" if="$(arg enable_pgo)" >
+        <arg name="config" value="$(arg config)" />
+        <arg name="self_id" value="$(arg self_id)" />
+        <arg name="is_4dof" value="$(arg is_4dof)" />
+    </include>
+    <include file="$(find d2comm)/launch/d2comm.launch" if="$(arg enable_loop)" >
+        <arg name="self_id" value="$(arg self_id)" />
+        <arg name="output" value="screen" />
+    </include>
+    <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2slam.rviz" if="$(arg rviz)" />
+    <include file="$(find taichislam)/launch/taichislam-d435.launch" if="$(arg taichislam)" >
+        <arg name="show" value="$(arg taichislam_show)" />
+        <arg name="skeleton_graph_gen" value="$(arg skeleton_graph_gen)" />
+        <arg name="drone_id" value="$(arg self_id)" />
+        <arg name="use_cuda" value="true" />
+        <arg name="output_map" value="true" />
+        <arg name="texture_enabled" value="false" />
+    </include>
+</launch>

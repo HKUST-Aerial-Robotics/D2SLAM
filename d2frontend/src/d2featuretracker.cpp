@@ -101,6 +101,9 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray &frames) {
     }
     frames.send_to_backend = true;
   }
+  if (params->camera_configuration == CameraConfig::MONOCULAR) {
+    report.compose(track(frames.images[0], frames.motion_prediction));
+  }
   if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
     report.compose(track(frames.images[0], frames.motion_prediction));
     if (_config.lr_match_use_lk) {
@@ -149,6 +152,9 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray &frames) {
                CameraConfig::FOURCORNER_FISHEYE) {
       draw(frames, iskeyframe, report);
     }
+    else if (params->camera_configuration == CameraConfig::MONOCULAR) {
+      draw(frames.images[0], iskeyframe, report);
+    }
   }
   if (report.stereo_point_num > _config.min_stereo_points) {
     frames.is_stereo = true;
@@ -164,7 +170,8 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(
     return false;
   }
   if (params->camera_configuration == CameraConfig::STEREO_PINHOLE ||
-      params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+      params->camera_configuration == CameraConfig::PINHOLE_DEPTH ||
+      params->camera_configuration == CameraConfig::MONOCULAR) {
     // Reverse seach in current keyframes
     for (int i = current_keyframes.size() - 1; i >= 0; i--) {
       const auto &last = current_keyframes[i];
@@ -249,7 +256,8 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray &frames) {
   //         frames.frame_id, frames.reference_frame_id, reference_frame_id,
   //         use_motion_predict);
   if (params->camera_configuration == CameraConfig::STEREO_PINHOLE ||
-      params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+      params->camera_configuration == CameraConfig::PINHOLE_DEPTH ||
+      params->camera_configuration == CameraConfig::MONOCULAR) {
     report.compose(trackRemote(frames.images[0], prev.images[0],
                                use_motion_predict, frames.pose_drone));
     if (report.remote_matched_num > 0 &&
@@ -284,7 +292,8 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray &frames) {
     }
   }
   if (params->show && params->send_whole_img_desc && params->send_img) {
-    if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
+    if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || 
+        params->camera_configuration == CameraConfig::MONOCULAR) {
       drawRemote(frames, report);
     }
   }
@@ -547,9 +556,9 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc &frame) {
     if (!pyr_has_built) {
 #ifdef USE_CUDA
       cv::cuda::GpuMat image_cuda(frame.raw_image);
-      cur_lk_info.pyr = buildImagePyramid(image_cuda);
+      cur_lk_info.pyr = buildImagePyramid(image_cuda, PYR_LEVEL);
 #else
-      cur_lk_info.pyr = buildImagePyramid(frame.raw_image);
+      cur_lk_info.pyr = buildImagePyramid(frame.raw_image, PYR_LEVEL);
 #endif
     }
   }

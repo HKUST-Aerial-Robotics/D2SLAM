@@ -174,7 +174,7 @@ private:
             break;
           }
         }
-        if (ret && D2FrontEnd::params->enable_network) {  // Only send keyframes
+        if (ret && D2FrontEnd::params->enable_network && D2FrontEnd::params->enable_loop) {  // Only send keyframes
           if (params->lazy_broadcast_keyframe && !viokf.is_keyframe &&
               !discover_mode) {
             continue;
@@ -254,7 +254,13 @@ private:
     D2Frontend::Init(nh);
     initParams(nh);
     estimator = new D2Estimator(params->self_id);
-    d2vins_net = new D2VINSNet(estimator, params->lcm_uri);
+    if (params->estimation_mode > D2Common::SINGLE_DRONE_MODE) {
+      d2vins_net = new D2VINSNet(estimator, params->lcm_uri);
+    }
+    else {
+      d2vins_net = nullptr;
+      SPDLOG_INFO("Disable d2vins network");
+    }
     estimator->init(nh, d2vins_net);
     visual_array_pub =
         nh.advertise<swarm_msgs::ImageArrayDescriptor>("image_array_desc", 1);
@@ -288,16 +294,18 @@ private:
     }
 
     thread_comm_running = true;
-    comm_rate_ptr_ = std::make_unique<ros::Rate>(1);
-    thread_comm = std::thread([&] {
-      SPDLOG_INFO("Starting d2vins_net lcm.");
-      while (thread_comm_running) {
-        //name thread
-        prctl(PR_SET_NAME, "D2VINS::lcm", 0, 0, 0);
-        while (0 == d2vins_net->lcmHandle());
-        comm_rate_ptr_->sleep();
-      }
-    });
+    if (params->estimation_mode > D2Common::SINGLE_DRONE_MODE) {
+      comm_rate_ptr_ = std::make_unique<ros::Rate>(1);
+      thread_comm = std::thread([&] {
+        SPDLOG_INFO("Starting d2vins_net lcm.");
+        while (thread_comm_running) {
+          //name thread
+          prctl(PR_SET_NAME, "D2VINS::lcm", 0, 0, 0);
+          while (0 == d2vins_net->lcmHandle());
+          comm_rate_ptr_->sleep();
+        }
+      });
+    }
     SPDLOG_INFO("D2VINS node {} initialized. Ready to start.", params->self_id);
   }
 

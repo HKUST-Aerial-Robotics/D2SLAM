@@ -46,6 +46,16 @@ struct StereoFrame {
         keyframe_id = generateKeyframeId(_stamp, self_id);
     }
 
+    StereoFrame(ros::Time _stamp, cv::Mat _left_image, Swarm::Pose _left_extrinsic, int self_id):
+        stamp(_stamp),
+        left_images{_left_image},
+        left_extrisincs{_left_extrinsic},
+        left_camera_indices{0},
+        left_camera_ids{generateCameraId(self_id, 0)} 
+    {
+        keyframe_id = generateKeyframeId(_stamp, self_id);
+    }
+
     StereoFrame(ros::Time _stamp, cv::Mat _left_image, cv::Mat _dep_image, 
         Swarm::Pose _left_extrinsic, int self_id):
         stamp(_stamp),

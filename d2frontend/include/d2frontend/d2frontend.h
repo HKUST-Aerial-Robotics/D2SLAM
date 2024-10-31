@@ -115,9 +115,12 @@ protected:
         stereo_frame_thread_running_ = true;
         stereo_frame_thread_ = std::thread(&D2Frontend::processStereoFrameThread, this);
         loop_detection_thread_running_ = true;
-        loop_detection_thread_ = std::thread(&D2Frontend::loopDetectionThread, this);
-        lcm_thread_running_ = true;
-        lcm_thread_ = std::thread(&D2Frontend::lcmThread, this);
+        if (params->enable_loop)
+        {
+            loop_detection_thread_ = std::thread(&D2Frontend::loopDetectionThread, this);
+            lcm_thread_running_ = true;
+            lcm_thread_ = std::thread(&D2Frontend::lcmThread, this);
+        }
     }
 
     void stopThreads(){

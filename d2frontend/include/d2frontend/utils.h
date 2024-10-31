@@ -9,6 +9,8 @@
 #include <ros/ros.h>
 #include <swarm_msgs/Pose.h>
 
+#define PYR_LEVEL 2
+
 namespace D2FrontEnd {
 using D2Common::LandmarkIdType;
 using LandmarkType = D2Common::LandmarkType;

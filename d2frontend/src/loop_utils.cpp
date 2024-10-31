@@ -27,7 +27,6 @@ using namespace std::chrono;
 using namespace D2Common;
 using D2Common::Utility::TicToc;
 
-#define PYR_LEVEL 3
 #define WIN_SIZE cv::Size(21, 21)
 
 namespace D2FrontEnd {
@@ -35,6 +34,8 @@ namespace D2FrontEnd {
 std::vector<cv::Point2f> detectFastByRegion(cv::InputArray _img,
                                             cv::InputArray _mask, int features,
                                             int cols, int rows);
+                                            
+bool checkPointsWithinBounds(const std::vector<cv::Point2f>& pts, const cv::Size& img_size, const cv::Size& win_size, std::vector<cv::Point2f>& filtered_pts);
 
 cv::Mat getImageFromMsg(const sensor_msgs::CompressedImageConstPtr &img_msg,
                         int flag) {
@@ -387,7 +388,7 @@ LKImageInfoGPU opticalflowTrackPyr(const cv::Mat &cur_img,
                                    const LKImageInfoGPU &prev_lk,
                                    TrackLRType type) {
   cv::cuda::GpuMat gpu_cur_img(cur_img);
-  auto cur_pyr = buildImagePyramid(gpu_cur_img);
+  auto cur_pyr = buildImagePyramid(gpu_cur_img, PYR_LEVEL);
   auto ids = prev_lk.lk_ids;
   auto prev_pts = prev_lk.lk_pts;
   auto prev_types = prev_lk.lk_types;
@@ -494,7 +495,7 @@ LKImageInfoGPU opticalflowTrackPyr(const cv::Mat &cur_img,
 LKImageInfoCPU opticalflowTrackPyr(const cv::Mat &cur_img,
                                    const LKImageInfoCPU &prev_lk,
                                    TrackLRType type) {
-  auto cur_pyr = buildImagePyramid(cur_img);
+  auto cur_pyr = buildImagePyramid(cur_img, PYR_LEVEL);
   auto ids = prev_lk.lk_ids;
   auto prev_pts = prev_lk.lk_pts;
   auto prev_types = prev_lk.lk_types;
@@ -550,43 +551,38 @@ LKImageInfoCPU opticalflowTrackPyr(const cv::Mat &cur_img,
   std::vector<float> err;
   std::vector<uchar> reverse_status;
   std::vector<cv::Point2f> reverse_pts;
-  std::vector<uchar> status_1;
-
-  cv::Ptr<cv::SparsePyrLKOpticalFlow> d_pyrLK_sparse =
-        cv::SparsePyrLKOpticalFlow::create(WIN_SIZE, PYR_LEVEL,
-            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), 30, true);
-  d_pyrLK_sparse->calc(prev_lk.pyr, cur_pyr, prev_pts, cur_pts,
-                       status_1);
+  //TODO: Use pyr correctly
+  cv::calcOpticalFlowPyrLK(prev_lk.pyr[0], cur_pyr[0], prev_pts, cur_pts, status, err, WIN_SIZE, PYR_LEVEL);
   reverse_pts = cur_pts;
   for (unsigned int i = 0; i < prev_pts.size(); i++) {
     auto &pt = reverse_pts[i];
-    if (type == LEFT_RIGHT_IMG_MATCH && status_1[i] == 1) {
+    if (type == LEFT_RIGHT_IMG_MATCH && status[i] == 1) {
       pt.x -= move_cols;
     }
-    if (type == RIGHT_LEFT_IMG_MATCH && status_1[i] == 1) {
+    if (type == RIGHT_LEFT_IMG_MATCH && status[i] == 1) {
       pt.x += move_cols;
     }
   }
-  d_pyrLK_sparse->calc(cur_pyr, prev_lk.pyr, cur_pts, reverse_pts,
-                       reverse_status);
+  //TODO: Use pyr correctly
+  cv::calcOpticalFlowPyrLK(cur_pyr[0], prev_lk.pyr[0], cur_pts, reverse_pts, reverse_status, err, WIN_SIZE, PYR_LEVEL);
 
-  for (size_t i = 0; i < status_1.size(); i++) {
-    if (status_1[i] && reverse_status[i] &&
+  for (size_t i = 0; i < status.size(); i++) {
+    if (status[i] && reverse_status[i] &&
         cv::norm(prev_pts[i] - reverse_pts[i]) <= 0.5) {
-      status_1[i] = 1;
+      status[i] = 1;
     } else
-      status_1[i] = 0;
+      status[i] = 0;
   }
 
   for (unsigned int i = 0; i < cur_pts.size(); i++) {
-    if (status_1[i] && !inBorder(cur_pts[i], cur_img.size())) {
-      status_1[i] = 0;
+    if (status[i] && !inBorder(cur_pts[i], cur_img.size())) {
+      status[i] = 0;
     }
   }
-  reduceVector(cur_pts, status_1);
-  reduceVector(ids, status_1);
-  reduceVector(prev_types, status_1);
-  reduceVector(prev_local_index, status_1);
+  reduceVector(cur_pts, status);
+  reduceVector(ids, status);
+  reduceVector(prev_types, status);
+  reduceVector(prev_local_index, status);
   return {cur_pts, lk_pts_3d_norm, ids, prev_local_index, prev_types, cur_pyr};
 }
 
@@ -707,6 +703,20 @@ std::vector<cv::Point2f> detectFastByRegion(cv::InputArray _img,
     }
   }
   return ret;
+}
+
+bool checkPointsWithinBounds(const std::vector<cv::Point2f>& pts, const cv::Size& img_size, const cv::Size& win_size, std::vector<cv::Point2f>& filtered_pts) {
+    bool all_points_within_bounds = true;
+    filtered_pts.clear();
+    for (size_t i = 0; i < pts.size(); ++i) {
+        cv::Point2f pt = pts[i];
+        if (pt.x >= win_size.width && pt.y >= win_size.height &&
+            pt.x + win_size.width < img_size.width &&
+            pt.y + win_size.height < img_size.height) {
+            filtered_pts.push_back(pt);
+        }
+    }
+    return all_points_within_bounds;
 }
 
 bool pnp_result_verify(bool pnp_success, int inliers, double rperr,

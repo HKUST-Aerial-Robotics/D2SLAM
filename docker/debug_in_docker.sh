@@ -51,11 +51,13 @@ else
         --net=host \
         --privileged \
         --rm \
+        --name="d2slam" \
         --env="DISPLAY" \
         --env="QT_X11_NO_MITSHM=1" \
         --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
         --volume="$(pwd)/../../d2slam_docker_ros_space:/root/swarm_ws" \
         --volume="$(pwd)/../:/root/swarm_ws/src/D2SLAM" \
+        --volume="/Users/xuhao/Dropbox/data:/root/data" \
         $DOCKER_IMAGE \
         /bin/bash
 fi

@@ -32,6 +32,7 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh)
 
   if (config.cnn_use_onnx) {
     SPDLOG_INFO("Init CNNs using onnx");
+#ifdef USE_CUDA
     netvlad_onnx = new MobileNetVLADONNX(
         config.netvlad_model, img_width, img_height, config.cnn_enable_tensorrt,
         config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8,
@@ -39,7 +40,6 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh)
         
     SuperPointConfig sp_config = config.superpoint_config;
 
-#ifdef USE_CUDA
     superpoint_ptr = std::make_unique<SuperPoint>(sp_config);
     if (superpoint_ptr->build()){
       SPDLOG_INFO("SuperPoint build success");
@@ -47,13 +47,17 @@ LoopCam::LoopCam(LoopCamConfig config, ros::NodeHandle &nh)
       SPDLOG_ERROR("SuperPoint build failed");
     }
 #else
-    superpoint_ptr = new SuperPointONNX(
-        config.superpoint_model, ((int)(params->feature_min_dist / 2)),
-        config.pca_comp, config.pca_mean, img_width, img_height,
-        config.superpoint_thres, config.superpoint_max_num,
-        config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16,
-        config.cnn_enable_tensorrt_int8,
-        config.superpoint_int8_calib_table_name);
+    // netvlad_onnx = new MobileNetVLADONNX(
+    //     config.netvlad_model, img_width, img_height, config.cnn_enable_tensorrt,
+    //     config.cnn_enable_tensorrt_fp16, config.cnn_enable_tensorrt_int8,
+    //     config.netvlad_int8_calib_table_name);
+    // superpoint_ptr = new SuperPointONNX(
+    //     config.superpoint_model, ((int)(params->feature_min_dist / 2)),
+    //     config.pca_comp, config.pca_mean, img_width, img_height,
+    //     config.superpoint_thres, config.superpoint_max_num,
+    //     config.cnn_enable_tensorrt, config.cnn_enable_tensorrt_fp16,
+    //     config.cnn_enable_tensorrt_int8,
+    //     config.superpoint_int8_calib_table_name);
 #endif    
 
   }
@@ -200,7 +204,9 @@ VisualImageDescArray LoopCam::processStereoframe(const StereoFrame &msg) {
   }
 
   for (unsigned int i = 0; i < msg.left_images.size(); i++) {
-    if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+    if (camera_configuration == CameraConfig::MONOCULAR) {
+      visual_array.images.push_back(generateImageDescriptor(msg, i, tmp));
+    } else if (camera_configuration == CameraConfig::PINHOLE_DEPTH) {
       visual_array.images.push_back(
           generateGrayDepthImageDescriptor(msg, i, tmp));
     } else if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
@@ -274,10 +280,8 @@ VisualImageDesc LoopCam::generateImageDescriptor(const StereoFrame &msg,
       msg.stamp, undist, msg.left_camera_indices[vcam_id],
       msg.left_camera_ids[vcam_id], false);
 
-  if (vframe.image_desc.size() == 0) {
+  if (vframe.image_desc.size() == 0 && _config.superpoint_max_num > 0) {
     SPDLOG_WARN("Failed on deepnet: vframe.image_desc.size() == 0.");
-    cv::Mat _img;
-    // return ides;
   }
 
   auto start = high_resolution_clock::now();
@@ -604,11 +608,11 @@ VisualImageDesc LoopCam::extractorImgDescDeepnet(ros::Time stamp, cv::Mat img,
     // otherwise, d2vins only uses LK optical flow feature.
     superpoint_ptr->infer(img, landmarks_2d, vframe.landmark_descriptor,
                                 vframe.landmark_scores);
-  }
-
-  if (!superpoint_mode) {
-    if (_config.cnn_use_onnx) {
-      vframe.image_desc = netvlad_onnx->inference(img);
+    // No superpoint, no netvlad.
+    if (!superpoint_mode) {
+      if (_config.cnn_use_onnx) {
+        vframe.image_desc = netvlad_onnx->inference(img);
+      }
     }
   }
 

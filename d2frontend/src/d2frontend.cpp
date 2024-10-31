@@ -110,33 +110,46 @@ void D2Frontend::depthImagesCallback(const sensor_msgs::ImageConstPtr left,
 void D2Frontend::monoImageCallback(const sensor_msgs::ImageConstPtr &image) {
   auto _l = getImageFromMsg(image);
   auto img = _l->image;
-  // Horizon split image to four images:
-  std::vector<cv::Mat> imgs;
-  const int num_imgs = 4;
-  for (int i = 0; i < 4; i++) {
-    imgs.emplace_back(img(
-        cv::Rect(i * img.cols / num_imgs, 0, img.cols / num_imgs, img.rows)));
-    if (imgs.back().channels() == 3) {
-      cv::cvtColor(imgs.back(), imgs.back(), cv::COLOR_BGR2GRAY);
+  if (params->camera_configuration == CameraConfig::MONOCULAR) {
+    if (img.channels() == 3) {
+      cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
+    }
+    if (stereo_frame_buffer_lock_.try_lock()) {
+      stereo_frame_q_.push(std::make_shared<StereoFrame>(image->header.stamp, img,
+                      params->extrinsics[0], params->self_id));
+      while (stereo_frame_q_.size() > visual_frame_size_) {
+        spdlog::warn("D2VINS frontend process is slow; dropping frames\n");
+        stereo_frame_q_.pop();
+      }
+      stereo_frame_buffer_lock_.unlock();
+    }
+  } else {
+    // Horizon split image to four images:
+    std::vector<cv::Mat> imgs;
+    const int num_imgs = 4;
+    for (int i = 0; i < 4; i++) {
+      imgs.emplace_back(img(
+          cv::Rect(i * img.cols / num_imgs, 0, img.cols / num_imgs, img.rows)));
+      if (imgs.back().channels() == 3) {
+        cv::cvtColor(imgs.back(), imgs.back(), cv::COLOR_BGR2GRAY);
+      }
+    }
+    if (params->show_raw_image) {
+      cv::namedWindow("raw_image", cv::WINDOW_NORMAL | cv::WINDOW_GUI_EXPANDED);
+      cv::imshow("RawImage", img);
+    }
+    // StereoFrame sframe(image->header.stamp, imgs, params->extrinsics,
+    //                    params->self_id);
+    if (stereo_frame_buffer_lock_.try_lock()) {
+      stereo_frame_q_.push(std::make_shared<StereoFrame>(image->header.stamp, imgs, params->extrinsics,
+                      params->self_id));
+      while (stereo_frame_q_.size() > visual_frame_size_) {
+        spdlog::warn("D2VINS frontend process is slow; dropping frames\n");
+        stereo_frame_q_.pop();
+      }
+      stereo_frame_buffer_lock_.unlock();
     }
   }
-  if (params->show_raw_image) {
-    cv::namedWindow("raw_image", cv::WINDOW_NORMAL | cv::WINDOW_GUI_EXPANDED);
-    cv::imshow("RawImage", img);
-  }
-  // StereoFrame sframe(image->header.stamp, imgs, params->extrinsics,
-  //                    params->self_id);
-  if (stereo_frame_buffer_lock_.try_lock()) {
-    stereo_frame_q_.push(std::make_shared<StereoFrame>(image->header.stamp, imgs, params->extrinsics,
-                     params->self_id));
-    while (stereo_frame_q_.size() > visual_frame_size_) {
-      spdlog::warn("D2VINS frontend process is slow; dropping frames\n");
-      stereo_frame_q_.pop();
-    }
-    stereo_frame_buffer_lock_.unlock();
-  }
-  return ;
-  // processStereoframe(sframe);
 }
 
 void D2Frontend::processStereoFrameThread() {
@@ -288,10 +301,36 @@ void D2Frontend::Init(ros::NodeHandle &nh) {
   params = new D2FrontendParams(nh);
   it_ = new image_transport::ImageTransport(nh);
   cv::setNumThreads(1);
-
-  loop_net =
+  if (params->enable_loop)
+  {
+    loop_net =
       new LoopNet(params->_lcm_uri, params->send_img,
                   params->send_whole_img_desc, params->recv_msg_duration);
+      loop_detector->broadcast_keyframe_cb = [&](VisualImageDescArray &viokf) {
+      loop_net->broadcastVisualImageDescArray(viokf, true);
+    };
+
+    loop_net->frame_desc_callback = [&](const VisualImageDescArray &frame_desc) {
+      if (received_image) {
+        if (params->enable_pub_remote_frame) {
+          remote_image_desc_pub.publish(frame_desc.toROS());
+        }
+        this->onRemoteImage(frame_desc);
+        this->pubNodeFrame(frame_desc);
+      }
+    };
+
+    loop_net->loopconn_callback = [&](const LoopEdge_t &loop_conn) {
+      auto loc = toROSLoopEdge(loop_conn);
+      onLoopConnection(loc, false);
+    };
+    timer = nh.createTimer(ros::Duration(0.01), [&](const ros::TimerEvent &e) {
+      loop_net->scanRecvPackets();
+    });
+  }
+  else {
+    loop_net = nullptr;
+  }
   loop_cam = new LoopCam(*(params->loopcamconfig), nh);
   feature_tracker = new D2FeatureTracker(*(params->ftconfig));
   feature_tracker->cams = loop_cam->cams;
@@ -303,24 +342,6 @@ void D2Frontend::Init(ros::NodeHandle &nh) {
     this->onLoopConnection(loop_con, true);
   };
 
-  loop_detector->broadcast_keyframe_cb = [&](VisualImageDescArray &viokf) {
-    loop_net->broadcastVisualImageDescArray(viokf, true);
-  };
-
-  loop_net->frame_desc_callback = [&](const VisualImageDescArray &frame_desc) {
-    if (received_image) {
-      if (params->enable_pub_remote_frame) {
-        remote_image_desc_pub.publish(frame_desc.toROS());
-      }
-      this->onRemoteImage(frame_desc);
-      this->pubNodeFrame(frame_desc);
-    }
-  };
-
-  loop_net->loopconn_callback = [&](const LoopEdge_t &loop_conn) {
-    auto loc = toROSLoopEdge(loop_conn);
-    onLoopConnection(loc, false);
-  };
   std::string format = "raw";
   if (params->is_comp_images) {
     format = "compressed";
@@ -340,7 +361,14 @@ void D2Frontend::Init(ros::NodeHandle &nh) {
         ApproSync(10), *image_sub_l, *image_sub_r);
     sync->registerCallback(
         boost::bind(&D2Frontend::stereoImagesCallback, this, _1, _2));
-  } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+  } 
+  if (params->camera_configuration == CameraConfig::MONOCULAR) {
+    SPDLOG_INFO("Input: images {}", params->image_topics[0]);
+    image_sub_single =
+        it_->subscribe(params->image_topics[0], 10,
+                       &D2Frontend::monoImageCallback, this, hints);
+  }
+  else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
     SPDLOG_INFO("Input: raw images {} and depth {}", params->image_topics[0],
                 params->depth_topics[0]);
     image_sub_l =
@@ -374,9 +402,6 @@ void D2Frontend::Init(ros::NodeHandle &nh) {
         nh.advertise<swarm_msgs::ImageArrayDescriptor>("remote_frame_desc", 10);
   }
 
-  timer = nh.createTimer(ros::Duration(0.01), [&](const ros::TimerEvent &e) {
-    loop_net->scanRecvPackets();
-  });
 
   stereo_frame_thread_rate_ptr_ = std::make_unique<ros::Rate>(params->ftconfig->stereo_frame_thread_rate); 
   loop_detection_thread_rate_ptr_ = std::make_unique<ros::Rate>(params->ftconfig->loop_detection_thread_rate);

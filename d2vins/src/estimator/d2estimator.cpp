@@ -34,13 +34,16 @@ void D2Estimator::init(ros::NodeHandle &nh, D2VINSNet *net) {
     SPDLOG_INFO("extrinsic {}: {}", cam_id, ext.toStr());
   }
   vinsnet = net;
-  vinsnet->DistributedVinsData_callback = [&](DistributedVinsData msg) {
-    onDistributedVinsData(msg);
-  };
-  vinsnet->DistributedSync_callback = [&](int drone_id, int signal,
-                                          int64_t token) {
-    onSyncSignal(drone_id, signal, token);
-  };
+  if (vinsnet != nullptr)
+  {
+    vinsnet->DistributedVinsData_callback = [&](DistributedVinsData msg) {
+      onDistributedVinsData(msg);
+    };
+    vinsnet->DistributedSync_callback = [&](int drone_id, int signal,
+                                            int64_t token) {
+      onSyncSignal(drone_id, signal, token);
+    };
+  }
 
   imu_bufs[self_id] = IMUBuffer();
   if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
@@ -444,11 +447,21 @@ void D2Estimator::onSyncSignal(int drone_id, int signal, int64_t token) {
 
 void D2Estimator::sendDistributedVinsData(DistributedVinsData data) {
   data.reference_frame_id = state.getReferenceFrameId();
-  vinsnet->sendDistributedVinsData(data);
+  if (vinsnet!=nullptr)
+  {
+    vinsnet->sendDistributedVinsData(data);
+  } else {
+    SPDLOG_WARN("D{} sendDistributedVinsData but net is nullptr", self_id);
+  }
 }
 
 void D2Estimator::sendSyncSignal(SyncSignal data, int64_t token) {
-  vinsnet->sendSyncSignal((int)data, token);
+  if (vinsnet)
+  {
+    vinsnet->sendSyncSignal((int)data, token);
+  } else {
+    SPDLOG_WARN("D{} sendSyncSignal but net is nullptr", self_id);
+  }
 }
 
 bool D2Estimator::readyForStart() {

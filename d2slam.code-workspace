@@ -46,6 +46,9 @@
 		},
 		{
 			"path": "../swarm_msgs"
+		},
+		{
+			"path": "quadcam_depth_est"
 		}
 	],
 	"settings": {
@@ -141,7 +144,13 @@
 			"dense": "cpp",
 			"__functional_base": "cpp",
 			"__config": "cpp",
-			"regex": "cpp"
+			"regex": "cpp",
+			"__node_handle": "cpp",
+			"__threading_support": "cpp",
+			"__verbose_abort": "cpp",
+			"charconv": "cpp",
+			"execution": "cpp",
+			"print": "cpp"
 		}
 	}
 }

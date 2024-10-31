@@ -232,7 +232,10 @@ D2FrontendParams::D2FrontendParams(ros::NodeHandle& nh) {
   SPDLOG_INFO("[D2Frontend] Using lazy broadcast keyframe: {}",
               lazy_broadcast_keyframe);
 
-  if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
+  if (camera_configuration == CameraConfig::MONOCULAR) {
+    loopdetectorconfig->MAX_DIRS = 1;
+    min_receive_images = 1;
+  } else if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
     loopdetectorconfig->MAX_DIRS = 1;
     min_receive_images = 2;
   } else if (camera_configuration == CameraConfig::STEREO_FISHEYE) {

@@ -368,14 +368,14 @@ bool LoopDetector::queryImageArrayFromDatabase(
   } else if (loop_cam->getCameraConfiguration() ==
                  CameraConfig::STEREO_PINHOLE ||
              loop_cam->getCameraConfiguration() ==
-                 CameraConfig::PINHOLE_DEPTH) {
+                 CameraConfig::PINHOLE_DEPTH || 
+                 loop_cam->getCameraConfiguration() == CameraConfig::MONOCULAR) {
     camera_index_new = 0;
   } else {
-    ROS_ERROR(
-        "[LoopDetector] Camera configuration %d not support yet in "
+    SPDLOG_ERROR(
+        "[LoopDetector] Camera configuration {} not support yet in "
         "queryImageArrayFromDatabase",
         loop_cam->getCameraConfiguration());
-    exit(-1);
   }
 
   if (img_desc_a.images[camera_index_new].spLandmarkNum() > 0 ||
