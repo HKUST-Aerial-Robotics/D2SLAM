@@ -57,6 +57,9 @@ void detectPoints(const cv::Mat &img, std::vector<cv::Point2f> &n_pts,
 std::vector<cv::cuda::GpuMat> buildImagePyramid(const cv::cuda::GpuMat &prevImg,
                                                 int maxLevel_ = 3);
 
+std::vector<cv::Mat> buildImagePyramid(const cv::Mat &prevImg,
+                                                int maxLevel_ = 3);
+
 std::vector<cv::Point2f> opticalflowTrack(const cv::Mat &cur_img,
                                           const cv::Mat &prev_img,
                                           std::vector<cv::Point2f> &prev_pts,
@@ -66,6 +69,10 @@ std::vector<cv::Point2f> opticalflowTrack(const cv::Mat &cur_img,
 
 LKImageInfoGPU opticalflowTrackPyr(
     const cv::Mat &cur_img, const LKImageInfoGPU& prev_lk,
+    TrackLRType type = WHOLE_IMG_MATCH);
+
+LKImageInfoCPU opticalflowTrackPyr(
+    const cv::Mat &cur_img, const LKImageInfoCPU& prev_lk,
     TrackLRType type = WHOLE_IMG_MATCH);
 
 std::vector<cv::DMatch>

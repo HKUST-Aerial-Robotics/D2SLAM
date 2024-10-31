@@ -479,7 +479,7 @@ const VisualImageDescArray &D2FeatureTracker::getLatestKeyframe() const {
 TrackReport D2FeatureTracker::trackLK(VisualImageDesc &frame) {
   // Track LK points
   TrackReport report;
-  LKImageInfoGPU cur_lk_info;
+  LKImageInfo cur_lk_info;
   auto cur_landmarks = frame.landmarks;
   auto cur_landmark_desc = frame.landmark_descriptor;
   auto cur_landmark_scores = frame.landmark_scores;
@@ -540,28 +540,17 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc &frame) {
           }
 
           report.sum_parallex += (lm.pt3d_norm - prev_lm.pt3d_norm).norm();
-          // spdlog::debug("LM {} prev_2d {:.1f} {:.1f} cur_2d {:.3f} {:.3f}
-          // para_2d {:.1f}%  prev_3d {:.3f} {:.3f} {:.3f} cur_3d {:.3f} {:.3f}
-          // {:.3f} para_3d {:.1f}%",
-          //         prev_lm.landmark_id, prev_lm.pt2d.x, prev_lm.pt2d.y,
-          //         lm.pt2d.x, lm.pt2d.y, cv::norm(prev_lm.pt2d -
-          //         lm.pt2d)*100.0, prev_lm.pt3d_norm.x(),
-          //         prev_lm.pt3d_norm.y(), prev_lm.pt3d_norm.z(),
-          //         lm.pt3d_norm.x(), lm.pt3d_norm.y(), lm.pt3d_norm.z(),
-          //         (prev_lm.pt3d_norm - lm.pt3d_norm).norm()*100.0);
           report.parallex_num++;
         }
-        // SPDLOG_INFO("[D2FeatureTracker::trackLK] track {} LK points, {} lost,
-        // track rate {:.1f}% para {:.2f}% num {} {}->{}",
-        //         prev_lk_num, prev_lk_num - cur_lk_info.lk_pts.size(),
-        //         cur_lk_info.lk_pts.size() * 100.0 / prev_lk_num,
-        //         report.meanParallex()*100, report.parallex_num,
-        //         prev_frame.frame_id, frame.frame_id);
       }
     }
     if (!pyr_has_built) {
+#ifdef USE_CUDA
       cv::cuda::GpuMat image_cuda(frame.raw_image);
       cur_lk_info.pyr = buildImagePyramid(image_cuda);
+#else
+      cur_lk_info.pyr = buildImagePyramid(frame.raw_image);
+#endif
     }
   }
   // Discover new points.

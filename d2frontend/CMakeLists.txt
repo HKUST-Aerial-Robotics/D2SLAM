@@ -49,10 +49,6 @@ if(USE_CUDA)
   endif()
 endif()
 
-message("Torch_DIR: ${Torch_DIR}")
-message("TORCH_INSTALL_PREFIX: ${TORCH_INSTALL_PREFIX}")
-message("TORCH_INCLUDE_DIRS: ${TORCH_INCLUDE_DIRS}")
-
 find_package(Torch)
 if(Torch_FOUND)
   message("Torch found")
@@ -65,6 +61,11 @@ else()
   set(TORCH_LIBRARIES "/root/libtorch/lib")
 endif()
 
+if (NOT USE_CUDA)
+  # This is because TORCH compile with wrong opencv with pip install torch==1.12, needs to be fixed
+  set(TORCH_LIBRARIES "")
+endif()
+
 #Find torch Optional
 find_package(Boost REQUIRED COMPONENTS program_options)
 include_directories(${TORCH_INCLUDE_DIRS})
@@ -73,11 +74,13 @@ link_directories(${ONNXRUNTIME_LIB_DIR})
 link_directories("/usr/local/lib/")
 
 catkin_package(
-  INCLUDE_DIRS  LIBRARIES loop_cnn libd2frontend
+  INCLUDE_DIRS include 
+  LIBRARIES loop_cnn libd2frontend 
   CATKIN_DEPENDS std_msgs cv_bridge roscpp rosmsg rospy swarm_msgs swarmcomm_msgs d2common
 )
 
 include_directories(
+  include/
   /usr/local/include/
   ${opengv_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
@@ -97,9 +100,19 @@ add_library(libd2frontend
   src/d2landmark_manager.cpp
 )
 
-add_subdirectory(../tensorrt_utils tensorrt_utils)
+target_link_libraries(libd2frontend
+    ${catkin_LIBRARIES}
+    ${OpenCV_LIBRARIES}
+    ${TORCH_LIBRARIES}
+    ${YAML_CPP_LIBRARIES}
+    lcm
+    faiss
+    dw
+    loop_cnn
+    opengv
+)
 
-set_property(TARGET libd2frontend PROPERTY CXX_STANDARD 17)
+add_subdirectory(../tensorrt_utils tensorrt_utils)
 
 #Use onnx
 if(USE_CUDA)
@@ -110,7 +123,6 @@ if(USE_CUDA)
     src/loop_utils.cpp
     src/d2frontend_params.cpp
   )
-  set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 17)
 
   target_link_libraries(loop_cnn
     opencv_dnn
@@ -129,7 +141,6 @@ else()
     src/loop_utils.cpp
     src/d2frontend_params.cpp
   )
-  set_property(TARGET loop_cnn PROPERTY CXX_STANDARD 17)
 
   target_link_libraries(loop_cnn
     opencv_dnn
@@ -170,17 +181,8 @@ target_include_directories(camera_undistort_test PUBLIC
   ${OpenCV_INCLUDE_DIRS}
 )
 
-target_link_libraries(libd2frontend
-    ${catkin_LIBRARIES}
-    ${OpenCV_LIBRARIES}
-    ${TORCH_LIBRARIES}
-    ${YAML_CPP_LIBRARIES}
-    lcm
-    faiss
-    dw
-    loop_cnn
-    opengv
-)
+message("OPencv: ${OpenCV_LIBRARIES}")
+message("catkin: ${catkin_LIBRARIES}")
 
 # add_executable(${PROJECT_NAME}_net_tester
 #   tests/d2frontend_network_tester.cpp)
@@ -193,16 +195,15 @@ target_link_libraries(libd2frontend
 #   libd2frontend
 # )
 
-
 # add_executable(${PROJECT_NAME}_spy
 #   src/d2frontend_spy.cpp
 # )
 # add_dependencies(${PROJECT_NAME}_spy
 #   ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(${PROJECT_NAME}_spy
+#   libd2frontend
 #   ${catkin_LIBRARIES}
 #   ${OpenCV_LIBRARIES}
 #   lcm
 #   dw
-#   libd2frontend
 # )

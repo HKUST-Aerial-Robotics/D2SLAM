@@ -24,11 +24,12 @@ catkin_package(
 
 find_package(Eigen3 REQUIRED)
 find_package(Ceres REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc calib3d)
 
 ## Your package locations should be listed before other locations
 include_directories(
   /usr/local/include/
-  include
+  include/
   ${catkin_INCLUDE_DIRS}
   ${d2frontend_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
@@ -68,8 +69,6 @@ target_link_libraries(${PROJECT_NAME}_estimator
   ${catkin_LIBRARIES}
 )
 
-add_dependencies(${PROJECT_NAME}_MSCKF ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
 add_executable(${PROJECT_NAME}_node 
   src/d2vins_node.cpp
 )
@@ -82,6 +81,7 @@ target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}_MSCKF
   ${PROJECT_NAME}_estimator
   ${CERES_LIBRARIES}
+  ${OpenCV_LIBRARIES}
   dw
   lcm
   spdlog

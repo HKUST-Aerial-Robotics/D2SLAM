@@ -491,6 +491,105 @@ LKImageInfoGPU opticalflowTrackPyr(const cv::Mat &cur_img,
 }
 #endif
 
+LKImageInfoCPU opticalflowTrackPyr(const cv::Mat &cur_img,
+                                   const LKImageInfoCPU &prev_lk,
+                                   TrackLRType type) {
+  auto cur_pyr = buildImagePyramid(cur_img);
+  auto ids = prev_lk.lk_ids;
+  auto prev_pts = prev_lk.lk_pts;
+  auto prev_types = prev_lk.lk_types;
+  std::vector<int> prev_local_index = prev_lk.lk_local_index;
+  std::vector<Eigen::Vector3d> lk_pts_3d_norm;
+  if (prev_pts.size() == 0) {
+    LKImageInfoCPU ret;
+    ret.pyr = cur_pyr;
+    return ret;
+  }
+  TicToc tic;
+  std::vector<uchar> status;
+  std::vector<cv::Point2f> cur_pts;
+  float move_cols =
+      cur_img.cols * 90.0 /
+      params->undistort_fov;  // slightly lower than 0.5 cols when fov=200
+
+  if (type == WHOLE_IMG_MATCH) {
+    cur_pts = prev_pts;
+  } else {
+    status.resize(prev_pts.size());
+    std::fill(status.begin(), status.end(), 0);
+    if (type == LEFT_RIGHT_IMG_MATCH) {
+      for (unsigned int i = 0; i < prev_pts.size(); i++) {
+        auto pt = prev_pts[i];
+        if (pt.x < cur_img.cols - move_cols) {
+          pt.x += move_cols;
+          status[i] = 1;
+          cur_pts.push_back(pt);
+        }
+      }
+    } else {
+      for (unsigned int i = 0; i < prev_pts.size(); i++) {
+        auto pt = prev_pts[i];
+        if (pt.x >= move_cols) {
+          pt.x -= move_cols;
+          status[i] = 1;
+          cur_pts.push_back(pt);
+        }
+      }
+    }
+    reduceVector(prev_pts, status);
+    reduceVector(prev_types, status);
+    reduceVector(prev_local_index, status);
+    reduceVector(ids, status);
+  }
+  status.resize(0);
+  if (cur_pts.size() == 0) {
+    LKImageInfoCPU ret;
+    ret.pyr = cur_pyr;
+    return ret;
+  }
+  std::vector<float> err;
+  std::vector<uchar> reverse_status;
+  std::vector<cv::Point2f> reverse_pts;
+  std::vector<uchar> status_1;
+
+  cv::Ptr<cv::SparsePyrLKOpticalFlow> d_pyrLK_sparse =
+        cv::SparsePyrLKOpticalFlow::create(WIN_SIZE, PYR_LEVEL,
+            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), 30, true);
+  d_pyrLK_sparse->calc(prev_lk.pyr, cur_pyr, prev_pts, cur_pts,
+                       status_1);
+  reverse_pts = cur_pts;
+  for (unsigned int i = 0; i < prev_pts.size(); i++) {
+    auto &pt = reverse_pts[i];
+    if (type == LEFT_RIGHT_IMG_MATCH && status_1[i] == 1) {
+      pt.x -= move_cols;
+    }
+    if (type == RIGHT_LEFT_IMG_MATCH && status_1[i] == 1) {
+      pt.x += move_cols;
+    }
+  }
+  d_pyrLK_sparse->calc(cur_pyr, prev_lk.pyr, cur_pts, reverse_pts,
+                       reverse_status);
+
+  for (size_t i = 0; i < status_1.size(); i++) {
+    if (status_1[i] && reverse_status[i] &&
+        cv::norm(prev_pts[i] - reverse_pts[i]) <= 0.5) {
+      status_1[i] = 1;
+    } else
+      status_1[i] = 0;
+  }
+
+  for (unsigned int i = 0; i < cur_pts.size(); i++) {
+    if (status_1[i] && !inBorder(cur_pts[i], cur_img.size())) {
+      status_1[i] = 0;
+    }
+  }
+  reduceVector(cur_pts, status_1);
+  reduceVector(ids, status_1);
+  reduceVector(prev_types, status_1);
+  reduceVector(prev_local_index, status_1);
+  return {cur_pts, lk_pts_3d_norm, ids, prev_local_index, prev_types, cur_pyr};
+}
+
 void detectPoints(const cv::Mat &img, std::vector<cv::Point2f> &n_pts,
                   const std::vector<cv::Point2f> &cur_pts, int require_pts,
                   bool enable_cuda, bool use_fast, int fast_rows,
@@ -782,6 +881,23 @@ int computeRelativePosePnPnonCentral(
       params->self_id, inliers.size(), lm_3d_norm_b.size(), success, tic.toc(),
       DP_b_to_a.toStr(), RPerr);
   return success;
+}
+
+std::vector<cv::Mat> buildImagePyramid(const cv::Mat &prevImg,
+                                                int maxLevel_) {
+  std::vector<cv::Mat> prevPyr;
+  prevPyr.resize(maxLevel_ + 1);
+
+  int cn = prevImg.channels();
+
+  CV_Assert(cn == 1 || cn == 3 || cn == 4);
+
+  prevPyr[0] = prevImg;
+  for (int level = 1; level <= maxLevel_; ++level) {
+    cv::pyrDown(prevPyr[level - 1], prevPyr[level]);
+  }
+
+  return prevPyr;
 }
 
 #ifdef USE_CUDA
