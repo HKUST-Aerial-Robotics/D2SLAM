@@ -100,7 +100,7 @@ remove_base_when_margin_remote: 2
 #  set to 0 those measurements (which on a landmark's baseFrame is not been removed) will be ignore.
 
 #feature tracker parameters
-max_cnt: 500            # max feature number in feature tracking
+max_cnt: 250            # max feature number in feature tracking
 max_superpoint_cnt: 0 # max feature extraction by superpoint
 max_solve_cnt: 500
 show_track_id: 0
