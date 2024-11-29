@@ -1,0 +1,130 @@
+# This is for x86 devices without cuda supported. For example RK3588
+FROM ros:noetic-perception-focal
+ARG CERES_VERSION=2.1.0
+ARG OPENCV_VERSION=4.6.0
+ENV SWARM_WS=/root/swarm_ws
+ARG ROS_VERSION=noetic
+ARG FAISS_VERSION=1.7.4
+ARG CMAKE_VERSION=3.24.1
+ARG ONNX_VERSION=1.13.1
+
+#Some basic dependencies
+RUN  apt-get -y update && \
+      DEBIAN_FRONTEND=noninteractive TZ=Asia/Beijing apt-get -y install tzdata && \
+      apt-get install -y wget curl lsb-release git \
+      libatlas-base-dev \
+      libeigen3-dev \
+      libgoogle-glog-dev \
+      libsuitesparse-dev \
+      libglib2.0-dev \
+      libyaml-cpp-dev \
+      libdw-dev \
+      lsb-release \
+      vim \
+      curl \
+      ca-certificates \
+      htop \
+      xterm \
+      gdb \
+      build-essential \
+      net-tools \
+      htop \
+      xterm \
+      gdb \
+      zip \
+      unzip
+
+#ROS
+RUN   apt-get install -y  --no-install-recommends \
+      ros-${ROS_VERSION}-ros-base \
+      ros-${ROS_VERSION}-nav-msgs \
+      ros-${ROS_VERSION}-sensor-msgs \
+      ros-${ROS_VERSION}-cv-bridge \
+      ros-${ROS_VERSION}-rviz \
+      ros-${ROS_VERSION}-image-transport-plugins \
+      ros-${ROS_VERSION}-pcl-ros \
+      build-essential \
+      libdw-dev \
+      ros-${ROS_VERSION}-catkin \
+      python3-catkin-tools python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential \
+      python3-pip && \
+      apt clean
+
+#Replace CMAKE
+RUN   rm /usr/bin/cmake && \
+      wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh \
+      -q -O /tmp/cmake-install.sh \
+      && chmod u+x /tmp/cmake-install.sh \
+      && /tmp/cmake-install.sh --skip-license --prefix=/usr/ \
+      && rm /tmp/cmake-install.sh \
+      && cmake --version
+
+#Install ceres
+RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
+      cd ceres-solver && \
+      mkdir build && cd build && \
+      cmake  -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
+      make -j$(nproc) install && \
+      rm -rf ../../ceres-solver
+
+#Install ONNXRuntime with CUDA and TensorRT
+RUN   wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-aarch64-${ONNX_VERSION}.tgz && \
+      tar -zxvf onnxruntime-linux-aarch64-${ONNX_VERSION}.tgz && \
+      cp -r onnxruntime-linux-aarch64-${ONNX_VERSION}/include/* /usr/local/include/ && \
+      cp -r onnxruntime-linux-aarch64-${ONNX_VERSION}/lib/* /usr/local/lib/ && \
+      rm -rf onnxruntime-linux-aarch64-${ONNX_VERSION} && \
+      rm onnxruntime-linux-aarch64-${ONNX_VERSION}.tgz
+
+#Install LCM
+RUN   git clone https://github.com/lcm-proj/lcm && \
+      cd lcm && \
+      git checkout tags/v1.4.0 && \
+      mkdir build && cd build && \
+      cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF .. && \
+      make -j$(nproc) install && \
+      pip3 install lcm && \
+      rm -rf ../../lcm/
+
+#Install Faiss
+RUN   git clone -b v${FAISS_VERSION} --single-branch  https://github.com/facebookresearch/faiss.git && \
+      cd faiss && \
+      cmake -B build -DCMAKE_BUILD_TYPE=Release -DFAISS_OPT_LEVEL=NEON -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF -DFAISS_ENABLE_GPU=OFF . && \
+      make -C build -j$(nproc) faiss && \
+      make -C build install && \
+      rm -rf ../faiss
+
+#Install OpenGV
+RUN git clone https://github.com/HKUST-Swarm/opengv && \
+      mkdir opengv/build && cd opengv/build && cmake .. && make -j$(nproc) && \
+      make install && \
+      rm -rf ../../opengv
+
+#Install Backward
+RUN   wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backward.hpp -O /usr/local/include/backward.hpp
+
+#Install spdlog
+RUN   wget https://github.com/gabime/spdlog/archive/refs/tags/v1.12.0.tar.gz && \
+      tar -zxvf v1.12.0.tar.gz && \
+      cd spdlog-1.12.0 && \
+      mkdir build && cd build && \
+      cmake .. && make -j$(nproc) && \
+      make install && \
+      rm -rf ../../spdlog-1.12.0
+
+RUN   wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.0.1%2Bcpu.zip && \
+      unzip libtorch-cxx11-abi-shared-with-deps-2.0.1+cpu.zip && \
+      rm libtorch-cxx11-abi-shared-with-deps-2.0.1+cpu.zip && \
+      cp -r libtorch/* /usr/local/
+
+#Build D2SLAM
+RUN   mkdir -p ${SWARM_WS}/src/ && \
+      cd ${SWARM_WS}/src/ && \
+      git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM && \
+      git clone https://github.com/HKUST-Swarm/sync_bag_player.git && \
+      git clone https://github.com/ros-perception/vision_opencv.git -b ${ROS_VERSION} --single-branch
+COPY ./ ${SWARM_WS}/src/D2SLAM
+WORKDIR $SWARM_WS
+RUN   . "/opt/ros/${ROS_VERSION}/setup.sh" && \
+      catkin config -DCMAKE_BUILD_TYPE=Release \
+            --cmake-args -DUSE_CUDA=OFF -DUSE_ONNX=OFF && \
+      catkin build

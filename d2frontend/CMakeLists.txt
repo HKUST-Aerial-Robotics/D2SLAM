@@ -144,7 +144,6 @@ else()
 
   target_link_libraries(loop_cnn
     opencv_dnn
-    onnxruntime
     opengv
   )
 endif()

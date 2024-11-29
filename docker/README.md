@@ -13,6 +13,7 @@ Our Docker image includes:
 - Backward 
 - $D^2$SLAM
 
+
 ## Docker PC
 
 To build the Docker image for PC, run the following command:
@@ -20,7 +21,6 @@ To build the Docker image for PC, run the following command:
 ```
 $ make pc
 ```
-
 
 ## Docker for Jetson
 
@@ -34,6 +34,18 @@ To build the Docker image for $D^2$ SLAM, run:
 $ make jetson
 ```
 
+# No-CUDA configuration
+
+Target arm64 (Dockerfile.arm64_ros1_noetic) and x86_no_cuda (Dockerfile.x86_no_cuda) provide non-cuda configuration for arm64 and X86-64 devices. Others will depends on CUDA.
+D2VINS only has fully abaility when using CUDA, features will be unsupported without CUDA:
+
+- Superpoint and NetVLAD. You can only work with LK optical tracking.
+- Loop clousure and pose graph
+- Multi-robot localization will be disabled without CUDA
+- Depth generation
+
+
+Basically, without CUDA, D2SLAM will become a mono/stereo/quad camera visual-inertial odometry (VIO).
 
 ### Build Base Container (Optional)
 

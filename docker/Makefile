@@ -12,6 +12,9 @@ help:
 x86:
 	@docker build  -t hkustswarm/d2slam:x86 -f ./Dockerfile.x86 ..
 
+x86_no_cuda:
+	@docker build  -t hkustswarm/d2slam:x86_no_cuda -f ./Dockerfile.x86_no_cuda ..
+
 jetson_orin:
 	@docker build  -t hkustswarm/d2slam:jetson_orin -f ./Dockerfile.jetson ..
 
