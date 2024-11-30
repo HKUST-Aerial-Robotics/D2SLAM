@@ -8,7 +8,7 @@ image0_topic: "/gopro/image_raw"
 is_compressed_images: 1
 
 imu_freq: 200
-image_freq: 25
+image_freq: 30
 frame_step: 2
 lcm_thread_freq: 10.0
 loop_detection_freq: 10.0
@@ -159,5 +159,5 @@ pcm_thres: 2.8
 output_path: "/root/output/"
 debug_print_sldwin: 0
 debug_print_states: 0
-enable_perf_output: 0
+enable_perf_output: 1
 debug_write_margin_matrix: 0
