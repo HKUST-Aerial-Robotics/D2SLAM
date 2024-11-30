@@ -40,6 +40,7 @@ void D2LandmarkManager::addKeyframe(const VisualImageDescArray &images,
 std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(
     int max_pts, int max_solve_measurements,
     const std::set<FrameIdType> &current_frames) const {
+  const Guard lock(state_lock);
   std::map<FrameIdType, int> current_landmark_num;
   std::map<FrameIdType, int> result_landmark_num;
   std::map<FrameIdType, std::set<D2Common::LandmarkIdType>>

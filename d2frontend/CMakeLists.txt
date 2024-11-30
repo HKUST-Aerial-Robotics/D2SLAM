@@ -145,6 +145,7 @@ else()
   target_link_libraries(loop_cnn
     opencv_dnn
     opengv
+    onnxruntime
   )
 endif()
 
@@ -179,9 +180,6 @@ target_include_directories(camera_undistort_test PUBLIC
   ${CUDA_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
 )
-
-message("OPencv: ${OpenCV_LIBRARIES}")
-message("catkin: ${catkin_LIBRARIES}")
 
 # add_executable(${PROJECT_NAME}_net_tester
 #   tests/d2frontend_network_tester.cpp)

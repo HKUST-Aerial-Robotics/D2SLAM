@@ -16,6 +16,7 @@ int LandmarkManager::addLandmark(const LandmarkPerFrame &lm) {
 }
 
 void LandmarkManager::updateLandmark(const LandmarkPerFrame &lm) {
+  const Guard lock(state_lock);
   if (lm.landmark_id < 0) {
     return;
   }
