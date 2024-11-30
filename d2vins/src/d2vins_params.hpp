@@ -72,7 +72,7 @@ struct D2VINSConfig {
     } landmark_param = LM_INV_DEP;
     bool always_fixed_first_pose = false;
     double process_input_timer = 100.0;
-    double estimator_timer_freq = 10.0;
+    double estimator_timer_freq = 100.0;
     int warn_pending_frames = 10;
     ESTIMATION_MODE estimation_mode;
     double estimate_extrinsic_vel_thres = 0.2;
