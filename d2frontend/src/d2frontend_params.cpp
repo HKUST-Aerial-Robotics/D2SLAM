@@ -151,7 +151,6 @@ D2FrontendParams::D2FrontendParams(ros::NodeHandle& nh) {
   ftconfig->long_track_frames = fsSettings["landmark_estimate_tracks"];
   ftconfig->check_essential = (int)fsSettings["check_essential"];
   ftconfig->enable_lk_optical_flow = (int)fsSettings["enable_lk_optical_flow"];
-  // ftconfig->lk_use_fast = (int)fsSettings["lk_use_fast"];
   ftconfig->remote_min_match_num = fsSettings["remote_min_match_num"];
   ftconfig->double_counting_common_feature =
       (int)fsSettings["double_counting_common_feature"];

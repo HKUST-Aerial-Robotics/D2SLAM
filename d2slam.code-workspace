@@ -1,26 +1,6 @@
 {
 	"folders": [
 		{
-			"name": "d2vins",
-			"path": "d2vins"
-		},
-		{
-			"name": "d2frontend",
-			"path": "d2frontend"
-		},
-		{
-			"name": "d2common",
-			"path": "d2common"
-		},
-		{
-			"name": "d2pgo",
-			"path": "d2pgo"
-		},
-		{
-			"name": "d2comm",
-			"path": "d2comm"
-		},
-		{
 			"name": "D2SLAM",
 			"path": "."
 		},
@@ -29,25 +9,7 @@
 			"path": "../sync_bag_player"
 		},
 		{
-			"name": "data",
-			"path": "../../../data"
-		},
-		{
-			"path": "../../../Swarm_Docker"
-		},
-		{
-			"path": "../../../SwarmConfig"
-		},
-		{
-			"path": "../swarm_pilot"
-		},
-		{
-			"path": "../swarmtal_control"
-		},
-		{
-			"path": "../swarm_msgs"
-		},
-		{
+			"name": "quadcam_depth_est",
 			"path": "quadcam_depth_est"
 		}
 	],
