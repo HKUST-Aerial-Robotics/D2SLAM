@@ -73,7 +73,7 @@ track_remote_netvlad_thres: 0.5
 
 #Initialization
 init_method: 0 #0 IMU, 1 PnP
-depth_estimate_baseline: -0.03
+depth_estimate_baseline: 0.03
 enable_sfm_initialization: 1
 
 #sliding window

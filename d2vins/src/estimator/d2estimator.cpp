@@ -644,16 +644,13 @@ void D2Estimator::solveNonDistrib() {
         sum_iteration / solve_count, sum_cost / solve_count);
   }
 
-  if (params->estimation_mode < D2Common::SERVER_MODE) {
-    auto last_odom = state.lastFrame().odom;
-    SPDLOG_INFO("C{} landmarks {} odom {} td {:.1f}ms opti_time {:.1f}ms",
-                solve_count, current_landmark_num, last_odom.toStr(),
-                state.td * 1000, report.total_time * 1000);
-  } else {
-    SPDLOG_INFO("C{} landmarks {} td {:1.f}ms opti_time {:.1f}ms", solve_count,
-                current_landmark_num, state.td * 1000,
-                report.total_time * 1000);
-  }
+  auto last_odom = state.lastFrame().odom;
+  auto Ba = state.lastFrame().Ba;
+  auto Bg = state.lastFrame().Bg;
+  spdlog::info("C{} landmarks {} odom {} Ba ({:.2f}, {:.2f}, {:.2f}) Bg ({:.2f}, {:.2f}, {:.2f}) td {:.1f}ms opti_time {:.1f}ms",
+              solve_count, current_landmark_num, last_odom.toStr(),
+              Ba.x(), Ba.y(), Ba.z(), Bg.x(), Bg.y(), Bg.z(),
+              state.td * 1000, report.total_time * 1000);
 
   // Reprogation
   for (auto drone_id : state.availableDrones()) {
