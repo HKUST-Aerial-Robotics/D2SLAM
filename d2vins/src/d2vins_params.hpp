@@ -99,6 +99,7 @@ struct D2VINSConfig {
     //Outlier rejection
     int perform_outlier_rejection_num = 50;
     double landmark_outlier_threshold = 10.0;
+    double remove_scale_outlier_threshold = 10.0; // Remove landmark with scale remove_scale_outlier_threshold * middle scale
 
     //Margin config
     bool margin_sparse_solver = true;

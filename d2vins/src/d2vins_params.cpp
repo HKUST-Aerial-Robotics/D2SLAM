@@ -118,6 +118,8 @@ void D2VINSConfig::init(const std::string& config_file) {
   // Outlier rejection
   perform_outlier_rejection_num = fsSettings["perform_outlier_rejection_num"];
   landmark_outlier_threshold = fsSettings["thres_outlier"];
+//   remove_scale_outlier_threshold = fsSettings["remove_scale_outlier_threshold"]
+   remove_scale_outlier_threshold = 5.0;
 
   // Marginalization
   margin_sparse_solver = (int)fsSettings["margin_sparse_solver"];

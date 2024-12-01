@@ -19,7 +19,9 @@ class D2LandmarkManager : public D2FrontEnd::LandmarkManager {
     double *getLandmarkState(LandmarkIdType landmark_id) const;
     void initialLandmarks(const D2EstimatorState *state);
     void syncState(const D2EstimatorState *state);
-    void outlierRejection(const D2EstimatorState *state,
+    int outlierRejection(const D2EstimatorState *state,
+                          const std::set<LandmarkIdType> &used_landmarks);
+    int outlierRejectionByScale(const D2EstimatorState *state,
                           const std::set<LandmarkIdType> &used_landmarks);
     void moveByPose(const Swarm::Pose &delta_pose);
     virtual void removeLandmark(const LandmarkIdType &id) override;

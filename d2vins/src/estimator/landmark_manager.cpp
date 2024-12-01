@@ -310,18 +310,68 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState *state) {
     }
   }
 
-  spdlog::debug("Total {} initialized {}", landmark_db.size(), inited_count);
+  SPDLOG_DEBUG("Total {} initialized {}", landmark_db.size(), inited_count);
 }
 
-void D2LandmarkManager::outlierRejection(
+int D2LandmarkManager::outlierRejectionByScale(const D2EstimatorState *state,
+                          const std::set<LandmarkIdType> &used_landmarks)
+{
+  int remove_count = 0;
+  if (estimated_landmark_size < params->perform_outlier_rejection_num ||
+      params->remove_scale_outlier_threshold <= 1.0) {
+    return 0;
+  }
+  // Filter by scale
+  std::vector<double> scales;
+  std::map<LandmarkIdType, double> scales_map;
+  for (const auto &[lm_id, lm] : landmark_db) {
+    if (lm.flag == LandmarkFlag::ESTIMATED &&
+      used_landmarks.find(lm_id) != used_landmarks.end()) {
+      // Calculate the scale to track[0]
+      auto lm_per_frame = lm.track[0];
+      auto firstFrame = state->getFramebyId(lm_per_frame.frame_id);
+      auto ext = state->getExtrinsic(lm_per_frame.camera_id);
+      Vector3d pos_cam = (firstFrame->odom.pose() * ext).inverse() * lm.position;
+      double scale = pos_cam.norm();
+      scales.push_back(scale);
+      scales_map[lm_id] = scale;
+    }
+  }
+
+  // Filter by nxmiddle point
+  double filter_out_thres = 0;
+  if (scales.size() > 0) {
+    std::sort(scales.begin(), scales.end());
+    double scale_median = scales[scales.size() / 2];
+    filter_out_thres = scale_median * params->remove_scale_outlier_threshold;
+    SPDLOG_DEBUG("Scale median {:.2f} thres {:.2f}", scale_median,
+                filter_out_thres);
+    for (const auto& [lm_id, scale] : scales_map) {
+      if (scale > filter_out_thres) {
+        auto &lm = landmark_db.at(lm_id);
+        lm.flag = LandmarkFlag::OUTLIER;
+        remove_count++;
+        SPDLOG_DEBUG("remove LM {} scale {:.2f} thres {:.2f}", lm_id, scale,
+                    filter_out_thres);
+      }
+    }
+  }
+  SPDLOG_INFO("outlierRejectionByScale remove {}/{} landmarks", remove_count,
+              scales.size());
+  return remove_count;
+}
+
+int D2LandmarkManager::outlierRejection(
     const D2EstimatorState *state,
     const std::set<LandmarkIdType> &used_landmarks) {
   const Guard lock(state_lock);
-  int remove_count = 0;
   int total_count = 0;
   if (estimated_landmark_size < params->perform_outlier_rejection_num) {
-    return;
+    return 0;
   }
+
+  int remove_count = outlierRejectionByScale(state, used_landmarks);
+    
   for (auto &it : landmark_db) {
     auto &lm = it.second;
     auto lm_id = it.first;
@@ -356,7 +406,7 @@ void D2LandmarkManager::outlierRejection(
             params->landmark_outlier_threshold) {
           remove_count++;
           lm.flag = LandmarkFlag::OUTLIER;
-          spdlog::debug(
+          SPDLOG_DEBUG(
               "remove LM {} inv_dep/dep "
               "{:.2f}/{:.2f} pos {:.2f} {:.2f} {:.2f} reproj_error "
               "{:.2f}",
@@ -367,8 +417,9 @@ void D2LandmarkManager::outlierRejection(
       }
     }
   }
-  spdlog::debug("outlierRejection remove {}/{} landmarks", remove_count,
+  SPDLOG_DEBUG("outlierRejection remove {}/{} landmarks", remove_count,
                 total_count);
+  return remove_count;
 }
 
 void D2LandmarkManager::syncState(const D2EstimatorState *state) {
@@ -382,7 +433,7 @@ void D2LandmarkManager::syncState(const D2EstimatorState *state) {
       if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
         auto inv_dep = *it.second;
         if (inv_dep < 0) {
-          spdlog::debug("[Warn] small inv dep {:.2f} found", inv_dep);
+          SPDLOG_DEBUG("[Warn] small inv dep {:.2f} found", inv_dep);
           lm.flag = LandmarkFlag::OUTLIER;
           continue;
         }
@@ -397,7 +448,7 @@ void D2LandmarkManager::syncState(const D2EstimatorState *state) {
         pos = firstFrame->odom.pose() * ext * pos;
         lm.position = pos;
         lm.flag = LandmarkFlag::ESTIMATED;
-        // spdlog::debug(
+        // SPDLOG_DEBUG(
         //     "update LM {:d} inv_dep/dep "
         //     "{:.2f}/{:.2f} depmea {:d} {:.2f} pt3d_n {:.2f} {:.2f} "
         //     "{:.2f} pos "
@@ -465,7 +516,7 @@ double triangulatePoint3DPts(const std::vector<Swarm::Pose> poses,
 
 std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
     const std::vector<VINSFrame *> frames, int camera_idx) {
-  spdlog::debug("SFMInitialization with camera {}", camera_idx);
+  SPDLOG_DEBUG("SFMInitialization with camera {}", camera_idx);
 
   // TODO: Add camera param? or consider multi-camera case
   // Here we assume we are using mono camera
