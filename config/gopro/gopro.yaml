@@ -28,25 +28,15 @@ body_T_cam0: !!opencv-matrix
        0.00579283,  0.00076879, -0.99998293, -0.00517814,
        -0.00336042, -0.99999404, -0.00078827, -0.01658675,
        0., 0., 0., 1. ]
-body_T_cam1: !!opencv-matrix
-   rows: 4
-   cols: 4
-   dt: d
-   data: [ 1.1640474721606342e-02, 1.1073794390204561e-02,
-       9.9987092688309498e-01, 9.9384303011965547e-02,
-       -9.9977540688348165e-01, -1.7580968119596196e-02,
-       1.1834075838302260e-02, -3.0007342732303328e-02,
-       1.7709747011874111e-02, -9.9978411701615943e-01,
-       1.0866656477233061e-02, 1.1217018588782747e-02, 0., 0., 0., 1. ]
 
 
 #estimation
-estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
-estimate_td: 0                      # online estimate time offset between camera and imu
+estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_td: 1                      # online estimate time offset between camera and imu
 td: 0                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 estimation_mode: 0 #0:single; 1:solve all; 2: distributed; 3:server
 double_counting_common_feature: 1
-not_estimate_first_extrinsic: 1
+not_estimate_first_extrinsic: 0
 
 #optimization parameters
 max_solver_time: 0.24 # max solver itration time (ms), to guarantee real time
@@ -91,7 +81,7 @@ tri_max_err: 0.2
 
 #Marginalization
 enable_marginalization: 1
-margin_sparse_solver: 1
+margin_sparse_solver: 0
 always_fixed_first_pose: 0
 remove_base_when_margin_remote: 2
 #  When set to 2, will use the all relevant measurements of the removing frames to compute the prior,
@@ -156,8 +146,8 @@ enable_pcm: 1
 pcm_thres: 2.8
 
 #outputs
-output_path: "/root/output/"
+output_path: "/home/xuhao/output/"
 debug_print_sldwin: 0
 debug_print_states: 0
-enable_perf_output: 1
+enable_perf_output: 0
 debug_write_margin_matrix: 0
