@@ -104,5 +104,10 @@ public:
     IMUData & operator[](int i) {
         return buf.at(i);
     }
+
+    void clear() {
+        buf.clear();
+        t_last = 0.0;
+    }
 };
 }

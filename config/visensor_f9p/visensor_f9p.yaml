@@ -1,0 +1,153 @@
+%YAML:1.0
+---
+#inputs
+imu: 1         
+imu_topic: "/imu0"
+image0_topic: "/cam1/image_raw"
+
+is_compressed_images: 0
+
+imu_freq: 200
+image_freq: 20
+frame_step: 1
+lcm_thread_freq: 10.0
+loop_detection_freq: 10.0
+
+#Camera configuration
+camera_configuration: 4  #STEREO_PINHOLE = 0, STEREO_FISHEYE = 1, PINHOLE_DEPTH = 2, FOURCORNER_FISHEYE = 3
+num_of_cam: 1
+cam0_calib: "camera.yaml"
+image_width: 752
+image_height: 480
+
+body_T_cam0: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [0.9999890386957373, -0.0043227774403168, 0.0017989117755288, -0.0759472920952561,
+          0.0043276579084841, 0.9999869417854389, -0.0027180205355500, -0.0039320527565750,
+         -0.0017871388870994, 0.0027257758172719, 0.9999946881262878, -0.0016395029500217,
+         0., 0., 0., 1.]
+
+
+#estimation
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_td: 0                      # online estimate time offset between camera and imu
+td: 0                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
+estimation_mode: 0 #0:single; 1:solve all; 2: distributed; 3:server
+double_counting_common_feature: 1
+not_estimate_first_extrinsic: 0
+
+#optimization parameters
+max_solver_time: 0.24 # max solver itration time (ms), to guarantee real time
+max_num_iterations: 8   # max solver itrations, to guarantee real time
+consensus_max_steps: 4
+timout_wait_sync: 100
+rho_landmark: 1.0
+rho_frame_T: 100
+rho_frame_theta: 100
+relaxation_alpha: 0.
+consensus_sync_for_averaging: 0
+consensus_sync_to_start: 0 #Is sync on start of the solving..
+consensus_trigger_time_err_us: 100
+
+#depth fusing
+depth_far_thres: 3.0 # The max depth in frontend
+depth_near_thres: 0.3 
+fuse_dep: 0 #if fuse depth measurement
+max_depth_to_fuse: 5.0
+min_depth_to_fuse: 0.3
+
+#Multi-drone
+track_remote_netvlad_thres: 0.5
+
+#Initialization
+init_method: 0 #0 IMU, 1 PnP
+depth_estimate_baseline: 0.03
+enable_sfm_initialization: 1
+
+#sliding window
+max_sld_win_size: 11
+landmark_estimate_tracks: 4 #when use depth or stereo, 3 is OK.
+min_solve_frames: 6
+
+#solver
+multiple_thread: 1
+
+#outlier rejection
+thres_outlier : 10.0
+perform_outlier_rejection_num: 30
+tri_max_err: 0.2
+
+#Marginalization
+enable_marginalization: 1
+margin_sparse_solver: 0
+always_fixed_first_pose: 0
+remove_base_when_margin_remote: 2
+#  When set to 2, will use the all relevant measurements of the removing frames to compute the prior,
+# and the baseFrame (where!=removeID) will not be removed. This may lead to double counting of this baseFrame measurement: but it's stable.
+#  When set to 1, will remove the baseframe's measurements of those measurements which is not base on current frame.
+#  set to 0 those measurements (which on a landmark's baseFrame is not been removed) will be ignore.
+
+#feature tracker parameters
+max_cnt: 250            # max feature number in feature tracking
+max_superpoint_cnt: 0 # max feature extraction by superpoint
+max_solve_cnt: 500
+show_track_id: 0
+check_essential: 0
+enable_lk_optical_flow: 1 #enable lk opticalflow featuretrack to enhance ego-motion estimation.
+remote_min_match_num: 40
+ransacReprojThreshold: 10.0
+parallex_thres: 0.012
+knn_match_ratio: 0.7 #This apply to superpoint feature track & loop clouse detection.
+feature_min_dist: 25
+
+#CNN
+cnn_use_onnx: 1
+enable_pca_superpoint: 1
+enable_pca_netvlad: 1
+superpoint_pca_dims: 64
+netvlad_pca_dims: 1024
+cnn_enable_tensorrt: 0
+cnn_enable_tensorrt_int8: 0
+netvlad_int8_calib_table_name: "mobilenetvlad_calibration.flatbuffers"
+superpoint_int8_calib_table_name: "superpoint_calibration.flatbuffers"
+
+# #Measurement parameters       The more accurate parameters you provide, the better performance
+acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2   0.04
+gyr_n: 0.05         # gyroscope measurement noise standard deviation.     #0.05  0.004
+acc_w: 0.002         # accelerometer bias random work noise standard deviation.  #0.002
+gyr_w: 0.0004       # gyroscope bias random work noise standard deviation.     #4.0e-5
+g_norm: 9.805         # gravity magnitude
+
+#Loop Closure Detection
+loop_detection_netvlad_thres: 0.85
+enable_homography_test: 0
+loop_inlier_feature_num: 20
+accept_loop_max_yaw: 10
+accept_loop_max_pos: 1.0
+lazy_broadcast_keyframe: 0 #If enable coarse-to-fine initialization mode. This is useful when communication is not good.
+gravity_check_thres: 0.06
+
+
+#PGO
+pgo_mode: 0 
+pgo_rho_frame_T: 0.7
+pgo_rho_frame_theta: 0.625
+pgo_eta_k: 0.1
+write_g2o: 0
+g2o_output_path: "output.g2o"
+write_pgo_to_file: 1
+enable_gravity_prior: 0
+gravity_sqrt_info: 10
+pgo_solver_time: 1.0
+solver_timer_freq: 1.0
+enable_pcm: 1
+pcm_thres: 2.8
+
+#outputs
+output_path: "/home/xuhao/output/"
+debug_print_sldwin: 0
+debug_print_states: 0
+enable_perf_output: 0
+debug_write_margin_matrix: 0

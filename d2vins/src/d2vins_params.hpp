@@ -61,6 +61,7 @@ struct D2VINSConfig {
     int solve_relative_pose_min_pts = 20;
     double solve_relative_pose_min_parallex = 30.0/460.0;
     bool enable_sfm_initialization = false;
+    double init_acc_bias_threshold = 0.2;
     
     //Estimation
     bool estimate_td = false;

@@ -10,7 +10,7 @@
     <arg name="superpoint_model_path"     default="$(find d2frontend)/../models/superpoint_v1_dyn_size.onnx"/>
     <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/mobilenetvlad_dyn_size.onnx" />
     <arg name="superglue_model_path"     default="$(find d2frontend)/../models/superglue.onnx" />
-    <arg name="config" default="$(find d2vins)/../config/gopro/gopro.yaml" />
+    <arg name="config" default="$(find d2vins)/../config/visensor_f9p/visensor_f9p.yaml" />
     <arg name="match_index_dist" default="100" />
     <arg name="match_index_dist_remote" default="20" />
     <arg name="output_path" default="/home/dji/output/" />

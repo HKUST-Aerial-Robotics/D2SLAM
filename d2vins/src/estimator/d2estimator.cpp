@@ -84,7 +84,13 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray &frame) {
   auto q0 = Utility::g2R(mean_acc);
   auto last_odom =
       Swarm::Odometry(frame.stamp, Swarm::Pose(q0, Vector3d::Zero()));
-
+  auto acc_bias = _imubuf.mean_acc() - q0.inverse() * IMUData::Gravity;
+  if (acc_bias.norm() > params->init_acc_bias_threshold) {
+    imu_bufs[self_id].clear();
+    SPDLOG_WARN("Robot not steady: acc bias too large {:.2f} > {:.2f}, init failed. clear buf and wait...", acc_bias.norm(),
+                params->init_acc_bias_threshold);
+    return false;
+  }
   // Easily use the average value as gyrobias now
   // Also the ba with average acc - g
   VINSFrame first_frame(frame, mean_acc - q0.inverse() * IMUData::Gravity,

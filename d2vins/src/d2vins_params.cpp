@@ -109,6 +109,7 @@ void D2VINSConfig::init(const std::string& config_file) {
   tri_max_err = fsSettings["tri_max_err"];
   add_vel_ba_prior = (int)fsSettings["add_vel_ba_prior"];
   enable_sfm_initialization = (int)fsSettings["enable_sfm_initialization"];
+  init_acc_bias_threshold = 0.1; // fsSettings["init_acc_bias_threshold"];
 
   // Sliding window
   max_sld_win_size = fsSettings["max_sld_win_size"];
