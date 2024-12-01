@@ -6,7 +6,7 @@ ENV SWARM_WS=/root/swarm_ws
 ARG ROS_VERSION=noetic
 ARG FAISS_VERSION=1.7.4
 ARG CMAKE_VERSION=3.24.1
-ARG ONNX_VERSION=1.13.1
+ARG ONNX_VERSION=1.20.1
 
 #Some basic dependencies
 RUN  apt-get -y update && \
