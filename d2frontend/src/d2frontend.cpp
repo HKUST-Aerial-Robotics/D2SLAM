@@ -301,6 +301,18 @@ void D2Frontend::Init(ros::NodeHandle &nh) {
   params = new D2FrontendParams(nh);
   it_ = new image_transport::ImageTransport(nh);
   cv::setNumThreads(1);
+
+  loop_cam = new LoopCam(*(params->loopcamconfig), nh);
+  feature_tracker = new D2FeatureTracker(*(params->ftconfig));
+  feature_tracker->cams = loop_cam->cams;
+  loop_detector =
+      new LoopDetector(params->self_id, *(params->loopdetectorconfig));
+  loop_detector->loop_cam = loop_cam;
+
+  loop_detector->on_loop_cb = [&](LoopEdge &loop_con) {
+    this->onLoopConnection(loop_con, true);
+  };
+
   if (params->enable_loop)
   {
     loop_net =
@@ -331,16 +343,6 @@ void D2Frontend::Init(ros::NodeHandle &nh) {
   else {
     loop_net = nullptr;
   }
-  loop_cam = new LoopCam(*(params->loopcamconfig), nh);
-  feature_tracker = new D2FeatureTracker(*(params->ftconfig));
-  feature_tracker->cams = loop_cam->cams;
-  loop_detector =
-      new LoopDetector(params->self_id, *(params->loopdetectorconfig));
-  loop_detector->loop_cam = loop_cam;
-
-  loop_detector->on_loop_cb = [&](LoopEdge &loop_con) {
-    this->onLoopConnection(loop_con, true);
-  };
 
   std::string format = "raw";
   if (params->is_comp_images) {
