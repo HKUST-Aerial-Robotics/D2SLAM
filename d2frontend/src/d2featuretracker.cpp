@@ -496,60 +496,64 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc &frame) {
     frame.clearLandmarks();
   }
 
-  if (_config.sp_track_use_lk || _config.lr_match_use_lk) {
+  if ((_config.sp_track_use_lk || _config.lr_match_use_lk)) {
     bool pyr_has_built = false;
     if (keyframe_lk_infos.size() > 0 && current_keyframes.size() > 0) {
       const auto &prev_frame = current_keyframes.back();
       const auto &prev_image = prev_frame.images[frame.camera_index];
       const auto &prev_keyframe = getLatestKeyframe();
-      const auto &prev_lk =
-          keyframe_lk_infos.at(prev_frame.frame_id).at(frame.camera_index);
-      if (!prev_lk.lk_ids.empty()) {
-        int prev_lk_num = prev_lk.lk_ids.size();
-        cur_lk_info = opticalflowTrackPyr(frame.raw_image, prev_lk,
-                                          TrackLRType::WHOLE_IMG_MATCH);
-        pyr_has_built = true;
-        cur_lk_info.lk_pts_3d_norm.resize(cur_lk_info.lk_pts.size());
-        for (unsigned int i = 0; i < cur_lk_info.lk_pts.size(); i++) {
-          auto ret =
-              createLKLandmark(frame, cur_lk_info.lk_pts[i],
-                               cur_lk_info.lk_ids[i], cur_lk_info.lk_types[i]);
-          cur_lk_info.lk_pts_3d_norm[i] = ret.second.pt3d_norm;
-          if (!ret.first) {
-            continue;
-          }
-          if (_config.sp_track_use_lk) {
-            // Copy the landmark descriptor from previous frame
-            frame.landmark_descriptor.insert(
-                frame.landmark_descriptor.end(),
-                prev_image.landmark_descriptor.begin() +
-                    cur_lk_info.lk_local_index[i] * params->superpoint_dims,
-                prev_image.landmark_descriptor.begin() +
-                    (cur_lk_info.lk_local_index[i] + 1) *
-                        params->superpoint_dims);
-            frame.landmark_scores.emplace_back(
-                prev_image.landmark_scores[cur_lk_info.lk_local_index[i]]);
-            cur_lk_info.lk_local_index[i] = frame.landmarks.size();
-          }
-          auto &lm = ret.second;
-          auto track = lmanager->at(cur_lk_info.lk_ids[i]).track;
-          lm.velocity = extractPointVelocity(lm);
-          frame.landmarks.emplace_back(lm);
-          auto [succ, prev_lm] =
-              getPreviousLandmarkFrame(lm, prev_keyframe.frame_id);
-          if (succ) {
-            lm.stamp_discover = prev_lm.stamp_discover;
-          } else {
-            // SPDLOG_INFO("getPreviousLandmarkFrame failed");
-            continue;
-          }
-          if (lmanager->at(cur_lk_info.lk_ids[i]).track.size() >=
-              _config.long_track_frames) {
-            report.long_track_num++;
-          }
+      if (keyframe_lk_infos.count(prev_frame.frame_id) > 0 && 
+        keyframe_lk_infos.at(prev_frame.frame_id).count(frame.camera_index) > 0)
+      {
+        const auto &prev_lk =
+            keyframe_lk_infos.at(prev_frame.frame_id).at(frame.camera_index);
+        if (!prev_lk.lk_ids.empty()) {
+          int prev_lk_num = prev_lk.lk_ids.size();
+          cur_lk_info = opticalflowTrackPyr(frame.raw_image, prev_lk,
+                                            TrackLRType::WHOLE_IMG_MATCH);
+          pyr_has_built = true;
+          cur_lk_info.lk_pts_3d_norm.resize(cur_lk_info.lk_pts.size());
+          for (unsigned int i = 0; i < cur_lk_info.lk_pts.size(); i++) {
+            auto ret =
+                createLKLandmark(frame, cur_lk_info.lk_pts[i],
+                                cur_lk_info.lk_ids[i], cur_lk_info.lk_types[i]);
+            cur_lk_info.lk_pts_3d_norm[i] = ret.second.pt3d_norm;
+            if (!ret.first) {
+              continue;
+            }
+            if (_config.sp_track_use_lk) {
+              // Copy the landmark descriptor from previous frame
+              frame.landmark_descriptor.insert(
+                  frame.landmark_descriptor.end(),
+                  prev_image.landmark_descriptor.begin() +
+                      cur_lk_info.lk_local_index[i] * params->superpoint_dims,
+                  prev_image.landmark_descriptor.begin() +
+                      (cur_lk_info.lk_local_index[i] + 1) *
+                          params->superpoint_dims);
+              frame.landmark_scores.emplace_back(
+                  prev_image.landmark_scores[cur_lk_info.lk_local_index[i]]);
+              cur_lk_info.lk_local_index[i] = frame.landmarks.size();
+            }
+            auto &lm = ret.second;
+            auto track = lmanager->at(cur_lk_info.lk_ids[i]).track;
+            lm.velocity = extractPointVelocity(lm);
+            frame.landmarks.emplace_back(lm);
+            auto [succ, prev_lm] =
+                getPreviousLandmarkFrame(lm, prev_keyframe.frame_id);
+            if (succ) {
+              lm.stamp_discover = prev_lm.stamp_discover;
+            } else {
+              // SPDLOG_INFO("getPreviousLandmarkFrame failed");
+              continue;
+            }
+            if (lmanager->at(cur_lk_info.lk_ids[i]).track.size() >=
+                _config.long_track_frames) {
+              report.long_track_num++;
+            }
 
-          report.sum_parallex += (lm.pt3d_norm - prev_lm.pt3d_norm).norm();
-          report.parallex_num++;
+            report.sum_parallex += (lm.pt3d_norm - prev_lm.pt3d_norm).norm();
+            report.parallex_num++;
+          }
         }
       }
     }
