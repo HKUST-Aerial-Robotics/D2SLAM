@@ -9,10 +9,10 @@ help:
 	@echo "   1. make clean              - remove all images"
 	@echo ""
 
-x86:
+amd64:
 	@docker build  -t hkustswarm/d2slam:x86 -f ./Dockerfile.x86 ..
 
-x86_no_cuda:
+amd64_no_cuda:
 	@docker build  -t hkustswarm/d2slam:x86_no_cuda -f ./Dockerfile.x86_no_cuda ..
 
 jetson_orin:
@@ -31,18 +31,18 @@ arm64:
 	@docker build  -t hkustswarm/d2slam:arm64_ros1_noetic -f ./Dockerfile.arm64_ros1_noetic ..
 
 clean:
-	@docker rmi -f d2slam:pc
+	@docker rmi -f d2slam:amd64
 	@docker rmi -f d2slam:jetson
 	@docker rmi -f d2slam:jetson_base_35.1.0
 	@docker rmi -f d2slam:jetson_orin_base_35.3.1
 	@docker rmi -f d2slam:arm64_base_ros1_noetic
 	@docker rmi -f d2slam:arm64_ros1_noetic
 
-upload_all: pc jetson_base jetson
-	@docker tag d2slam:pc $(name)/d2slam:pc
+upload_all: amd64 jetson_base jetson
+	@docker tag d2slam:amd64 $(name)/d2slam:amd64
 	@docker tag d2slam:jetson $(name)/d2slam:jetson
 	@docker tag d2slam:jetson_base_35.1.0 $(name)/d2slam:jetson_base_35.1.0
-	@docker push $(name)/d2slam:pc
+	@docker push $(name)/d2slam:amd64
 	@docker push $(name)/d2slam:jetson
 	@docker push $(name)/d2slam:jetson_base_35.1.0
 	@docker push $(name)/d2slam:jetson_orin_base_35.3.1

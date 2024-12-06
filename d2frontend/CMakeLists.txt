@@ -133,6 +133,7 @@ if(USE_CUDA)
     nvinfer_plugin
     nvonnxparser
     tensorrt_utils
+    cudart
   )
 else()
   add_library(loop_cnn

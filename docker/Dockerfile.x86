@@ -177,4 +177,4 @@ RUN   source "/opt/ros/${ROS_VERSION}/setup.bash" && \
       catkin config -DCMAKE_BUILD_TYPE=Release \
             --cmake-args -DONNXRUNTIME_LIB_DIR=/usr/local/lib \
             -DONNXRUNTIME_INC_DIR=/usr/local/include -DUSE_CUDA=On&& \
-      catkin build
+      catkin build -j8

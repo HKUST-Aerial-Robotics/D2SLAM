@@ -71,9 +71,11 @@ if(USE_CUDA)
     nvonnxparser
     tensorrt_utils
     yaml-cpp
+    cudart
   )
 
   add_definitions("-Wall -g")
+  add_definitions(-DUSE_CUDA)
 
   add_executable(${PROJECT_NAME}_node src/quadcam_depth_est_node.cpp)
 
