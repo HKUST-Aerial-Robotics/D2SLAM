@@ -2,7 +2,7 @@
 FROM nvcr.io/nvidia/tensorrt:23.04-py3
 ARG CERES_VERSION=2.1.0
 ARG CMAKE_VERSION=3.23.1
-ARG ONNX_VERSION=1.20.1
+ARG ONNX_VERSION=1.18.0
 ARG OPENCV_VERSION=4.10.0
 ENV SWARM_WS=/root/swarm_ws
 ARG ROS_VERSION=noetic
@@ -72,12 +72,12 @@ RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       rm -rf ../../ceres-solver && \
       apt-get clean all
 
-RUN   wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz && \
-      tar -zxvf onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz && \
+RUN   wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-gpu-cuda12-${ONNX_VERSION}.tgz -O onnxruntime.tgz  && \
+      tar -zxvf onnxruntime.tgz && \
       cp -r onnxruntime-linux-x64-gpu-${ONNX_VERSION}/include/* /usr/local/include/ && \
       cp -r onnxruntime-linux-x64-gpu-${ONNX_VERSION}/lib/* /usr/local/lib/ && \
       rm -rf onnxruntime-linux-x64-gpu-${ONNX_VERSION} && \
-      rm onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz
+      rm onnxruntime.tgz
 
 #Install Libtorch (CUDA)
 # RUN   wget https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-${LIBTORCH_VERSION}%2Bcpu.zip && \

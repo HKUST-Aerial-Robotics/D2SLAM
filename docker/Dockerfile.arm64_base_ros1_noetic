@@ -1,12 +1,12 @@
 # This is for arm64 devices without cuda supported. For example RK3588
 FROM ros:noetic-perception-focal
 ARG CERES_VERSION=2.1.0
-ARG OPENCV_VERSION=4.6.0
+ARG OPENCV_VERSION=4.10.0
 ENV SWARM_WS=/root/swarm_ws
 ARG ROS_VERSION=noetic
 ARG FAISS_VERSION=1.7.4
 ARG CMAKE_VERSION=3.24.1
-ARG ONNX_VERSION=1.20.1
+ARG ONNX_VERSION=1.18.0
 
 #Some basic dependencies
 RUN  apt-get -y update && \

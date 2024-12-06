@@ -97,9 +97,33 @@ parallex_thres: 0.012
 knn_match_ratio: 0.8 #This apply to superpoint feature track & loop clouse detection.
 
 #CNN
+cnn_engine: 1 # 0 use onnx; 1 use tensorrt raw engine
 cnn_use_onnx: 1
-enable_pca_superpoint: 1
-superpoint_pca_dims: 64
+
+nn_engine_type: 1 # 0 use onnx; 1 use tensorrt raw engine
+superpoint_trt_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_v1_dyn_size_onnx_200_300.trt"
+moblieNetVlad_trt_path: "/root/swarm_ws/src/D2SLAM/models/mobilenetvlad_dyn_size_onnx_200_300.trt"
+
+#Superpoint
+superpoint_config:
+  onnx_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_series/superpoint_v1_sim_int32.onnx"
+  trt_engine_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_series/superpoint_v1_sim_int32.trt"
+  enable_fp16: 1
+  input_width: 320
+  input_height: 160
+  input_tensor_names:
+    - "input"
+  output_tensor_names:
+    - "scores" # keypoint output
+    - "descriptors" # descriptor output
+    # these two parameters sequence must follow the given output sequence.
+  threshold: 0.15
+  nms_radius: 20
+  enable_pca: 1
+  pca_mean_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_series/mean_.csv"
+  pca_comp_path: "/root/swarm_ws/src/D2SLAM/models/superpoint_series/components_.csv"
+  superpoint_pca_dims: 64
+
 
 acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2   0.04
 gyr_n: 0.05         # gyroscope measurement noise standard deviation.     #0.05  0.004
