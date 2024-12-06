@@ -1,12 +1,12 @@
 # This is for x86 devices without cuda supported. For example RK3588
 FROM ros:noetic-perception-focal
 ARG CERES_VERSION=2.1.0
-ARG OPENCV_VERSION=4.6.0
+ARG OPENCV_VERSION=4.10.0
 ENV SWARM_WS=/root/swarm_ws
 ARG ROS_VERSION=noetic
 ARG FAISS_VERSION=1.7.4
 ARG CMAKE_VERSION=3.24.1
-ARG ONNX_VERSION=1.13.1
+ARG ONNX_VERSION=1.20.1
 
 #Some basic dependencies
 RUN  apt-get -y update && \
@@ -67,7 +67,7 @@ RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       make -j$(nproc) install && \
       rm -rf ../../ceres-solver
 
-#Install ONNXRuntime with CUDA and TensorRT
+#Install ONNXRuntime
 RUN   wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-aarch64-${ONNX_VERSION}.tgz && \
       tar -zxvf onnxruntime-linux-aarch64-${ONNX_VERSION}.tgz && \
       cp -r onnxruntime-linux-aarch64-${ONNX_VERSION}/include/* /usr/local/include/ && \

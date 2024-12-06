@@ -26,7 +26,8 @@ find_package(catkin REQUIRED COMPONENTS
 SET("OpenCV_DIR" "/usr/local/share/OpenCV/")
 SET("TENSORRT_UTILS_INC" "../tensorrt_utils/include/")
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV REQUIRED cudaoptflow)
+message("opencv: ", ${OpenCV_INCLUDE_DIRS})
 find_package(Eigen3 REQUIRED)
 find_package(lcm REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -44,6 +45,7 @@ if(USE_CUDA)
     add_definitions(-DUSE_CUDA)
     set(ONNXRUNTIME_LIB_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/lib/" CACHE STRING "Path of ONNXRUNTIME_LIB_DIR")
     set(ONNXRUNTIME_INC_DIR "/home/xuhao/source/onnxruntime-linux-x64-gpu-1.12.1/include/" CACHE STRING "Path of ONNXRUNTIME_INC_DIR")
+    add_subdirectory(../tensorrt_utils tensorrt_utils)
   else()
     message("CUDA not found")
   endif()
@@ -112,7 +114,6 @@ target_link_libraries(libd2frontend
     opengv
 )
 
-add_subdirectory(../tensorrt_utils tensorrt_utils)
 
 #Use onnx
 if(USE_CUDA)
@@ -179,6 +180,7 @@ target_include_directories(camera_undistort_test PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CUDA_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
+  ${TENSORRT_UTILS_INC}
 )
 
 # add_executable(${PROJECT_NAME}_net_tester

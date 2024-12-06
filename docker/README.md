@@ -69,3 +69,8 @@ FROM your-image-name/d2slam:jetson_base_35.1.0
 
 
 This Docker image has been tested on Jetpack 5.0.2/35.1.0 with Xavier NX.
+
+
+catkin config -DCMAKE_BUILD_TYPE=Release \
+            --cmake-args -DONNXRUNTIME_LIB_DIR=/usr/local/lib \
+            -DONNXRUNTIME_INC_DIR=/usr/local/include -DTorch_Dir=/usr/local/ -DOpencv_Dir=/usr/local/share/OpenCV4

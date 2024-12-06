@@ -1,9 +1,9 @@
 # FROM nvidia/cuda:11.6.1-cudnn8-devel-ubuntu20.04
-FROM nvcr.io/nvidia/tensorrt:22.08-py3
+FROM nvcr.io/nvidia/tensorrt:23.04-py3
 ARG CERES_VERSION=2.1.0
 ARG CMAKE_VERSION=3.23.1
-ARG ONNX_VERSION=1.12.1
-ARG OPENCV_VERSION=4.6.0
+ARG ONNX_VERSION=1.20.1
+ARG OPENCV_VERSION=4.10.0
 ENV SWARM_WS=/root/swarm_ws
 ARG ROS_VERSION=noetic
 ARG FAISS_VERSION=1.7.4
@@ -176,5 +176,5 @@ WORKDIR $SWARM_WS
 RUN   source "/opt/ros/${ROS_VERSION}/setup.bash" && \
       catkin config -DCMAKE_BUILD_TYPE=Release \
             --cmake-args -DONNXRUNTIME_LIB_DIR=/usr/local/lib \
-            -DONNXRUNTIME_INC_DIR=/usr/local/include && \
+            -DONNXRUNTIME_INC_DIR=/usr/local/include -DUSE_CUDA=On&& \
       catkin build
