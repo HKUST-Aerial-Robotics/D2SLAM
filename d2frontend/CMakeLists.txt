@@ -26,7 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
 SET("OpenCV_DIR" "/usr/local/share/OpenCV/")
 SET("TENSORRT_UTILS_INC" "../tensorrt_utils/include/")
 
-find_package(OpenCV REQUIRED cudaoptflow)
+find_package(OpenCV REQUIRED)
 message("opencv: ", ${OpenCV_INCLUDE_DIRS})
 find_package(Eigen3 REQUIRED)
 find_package(lcm REQUIRED)
