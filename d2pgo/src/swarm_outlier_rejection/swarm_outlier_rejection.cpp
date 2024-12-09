@@ -69,7 +69,7 @@ SwarmLocalOutlierRejection::OutlierRejectionLoopEdges(
     }
     all_loops_set.insert(edge.id);
   }
-  printf("[SWARM_LOCAL](OutlierRejection) %d new loops, %d total loops\n",
+  SPDLOG_INFO("(OutlierRejection) {} new loops, {} total loops",
          new_loop_count, all_loops_set.size());
 
   if (param.redundant) {
@@ -279,17 +279,17 @@ void SwarmLocalOutlierRejection::OutlierRejectionLoopEdgesPCM(
         good_loops_set[id_b][id_a].insert(_all_loops[i].id);
       }
     }
-    printf(
-        "[D2PGO](OutlierRejection) %d<->%d compute_pcm_errors %.1fms "
-        "maxCliqueHeuInc takes %.1fms ret %d(%d) loops %ld good %ld\n",
+    SPDLOG_INFO(
+        "(OutlierRejection) {}<->{} compute_pcm_errors {:.1f}ms "
+        "maxCliqueHeuInc takes {:.1f}ms ret {}({}) loops {} good {}",
         id_a, id_b, compute_pcm_erros, tic.toc(), ret, max_clique_data.size(),
         _all_loops.size(), good_loops_set[id_a][id_b].size());
   } else {
     TicToc tic;
     FMC::maxCliqueHeu(pcm_graph_fmc, max_clique_data);
-    printf(
-        "[D2PGO](OutlierRejection) %d<->%d compute_pcm_errors %.1fms "
-        "maxCliqueHeu takes %.1fms loops %ld good %ld\n",
+    SPDLOG_INFO(
+        "(OutlierRejection) {}<->{} compute_pcm_errors {:.1f}ms "
+        "maxCliqueHeu takes {:.1f}ms loops {} good {}",
         id_a, id_b, compute_pcm_erros, tic.toc(), _all_loops.size(),
         max_clique_data.size());
     // In non-incremental mode, we need to clear the good_loops_set

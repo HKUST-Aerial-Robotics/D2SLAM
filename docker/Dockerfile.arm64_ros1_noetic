@@ -10,7 +10,7 @@ RUN   mkdir -p ${SWARM_WS}/src/ && \
       git clone https://github.com/ros-perception/vision_opencv.git -b ${ROS_VERSION} --single-branch
 COPY ./ ${SWARM_WS}/src/D2SLAM
 WORKDIR $SWARM_WS
-RUN   source "/opt/ros/${ROS_VERSION}/setup.bash" && \
+RUN   . "/opt/ros/${ROS_VERSION}/setup.sh" && \
       catkin config -DCMAKE_BUILD_TYPE=Release \
             -DTorch_DIR=/usr/local/lib/python3.8/dist-packages/torch/share/cmake/Torch \
             --cmake-args -DUSE_CUDA=OFF -DUSE_ONNX=OFF && \

@@ -46,7 +46,7 @@ void D2PGO::addFrame(D2BaseFrame frame) {
 void D2PGO::addLoop(const Swarm::LoopEdge& loop_info, bool add_state_by_loop) {
   const Guard lock(state_lock);
   if (loop_info.relative_pose.pos().norm() > config.loop_distance_threshold) {
-    printf("[D2PGO@%d]loop distance %.1fm too large, ignore\n", self_id,
+    SPDLOG_INFO("[D2PGO@{}]loop distance {:.1f}m too large, ignore", self_id,
            loop_info.relative_pose.pos().norm());
     return;
   }
@@ -141,14 +141,14 @@ void D2PGO::waitForRotInitFinish() {
     if (count % 100 == 0) {
       sendSignal("ROT_INIT_FINISH");
       if (count % 1000 == 0)
-        printf("[D2PGO@%d]Waiting for rot init finish of other drones, %d/%d\n",
+        SPDLOG_INFO("[D2PGO@{}]Waiting for rot init finish of other drones, {}/{}",
                self_id, rot_init_finished_robots.size(),
                available_robots.size());
     }
     count++;
   }
   rot_init_finished = true;
-  printf("[D2PGO@%d]Rot init finish, %d/%d start perturb PGO\n", self_id,
+  SPDLOG_INFO("[D2PGO@{}]Rot init finish, {}/{} start perturb PGO", self_id,
          rot_init_finished_robots.size(), available_robots.size());
 }
 
@@ -178,7 +178,7 @@ bool D2PGO::solve_multi(bool force_solve) {
     D2Common::Utility::TicToc tic;
     auto good_loops =
         rejection.OutlierRejectionLoopEdges(ros::Time::now(), available_loops);
-    printf("[D2PGO] Pcm takes %3.1fms, good %ld/%ld loops\n", tic.toc(),
+    SPDLOG_INFO("[D2PGO] Pcm takes {:.1f}ms, good {}/{} loops", tic.toc(),
            good_loops.size(), available_loops.size());
     setupLoopFactors(solver, good_loops);
   } else {
@@ -244,9 +244,9 @@ bool D2PGO::solve_multi(bool force_solve) {
     saveG2O();
   }
   // std::cout << report.summary.FullReport() << std::endl;
-  printf(
-      "[D2PGO::solve@%d] solve_count %d mode [multi,%d] total frames %ld loops "
-      "%d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n",
+  SPDLOG_INFO(
+      "[D2PGO::solve@{}] solve_count {} mode [multi,{}] total frames {} loops "
+      "{} opti_time {:.1f}ms iters {} initial cost {:.2e} final cost {:.2e}",
       self_id, solve_count, config.mode, used_frames.size(), used_loops_count,
       report.total_time * 1000, report.total_iterations, report.initial_cost,
       report.final_cost);
@@ -317,9 +317,9 @@ bool D2PGO::solve_single() {
   if (config.write_g2o) {
     saveG2O();
   }
-  printf(
-      "[D2PGO::solve@%d] solve_count %d mode single,%d total frames %ld loops "
-      "%d opti_time %.1fms iters %d initial cost %.2e final cost %.2e\n",
+  SPDLOG_INFO(
+      "[D2PGO::solve@{}] solve_count {} mode single,{} total frames {} loops "
+      "{} opti_time {:.1f}ms iters {} initial cost {:.2e} final cost {:.2e}",
       self_id, solve_count, config.mode, used_frames.size(), used_loops_count,
       report.total_time * 1000, report.total_iterations, report.initial_cost,
       report.final_cost);
@@ -345,19 +345,18 @@ void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge>& good_loops) {
   }
   rot_init->addLoops(good_loops);
   if (isMain()) {
-    printf("[D2PGO@%d]rotInitial: set first frame fixed\n", self_id);
+    SPDLOG_INFO("[D2PGO@{}]rotInitial: set first frame fixed", self_id);
     rot_init->setFixedFrameId(state.headId(self_id));
   }
   SolverReport report = rot_init->solve();
   if (config.mode == PGO_MODE_NON_DIST ||
       (report.state_changes < config.rot_init_state_eps && solve_count > 10)) {
     is_rot_init_convergence = true;
-    printf("[D2PGO@%d]rotInitial: rot init convergence: %.1f%%\n", self_id,
+    SPDLOG_INFO("[D2PGO@{}]rotInitial: rot init convergence: {:.1f}%\n", self_id,
            report.state_changes * 100);
   } else {
-    printf(
-        "[D2PGO@%d]rotInitial: rot init not convergence: %.1f%% solve_count "
-        "%d\n",
+    SPDLOG_INFO(
+        "[D2PGO@{}]rotInitial: rot init not convergence: {:.1f}% solve_count {}",
         self_id, report.state_changes * 100, solve_count);
   }
 }
@@ -373,11 +372,11 @@ void D2PGO::saveG2O(bool only_self) {
       frames.emplace_back(state.getFramebyId(frame_id));
     }
   }
-  printf("[D2PGO::saveG2O@%d] save %ld frames\n", self_id, frames.size());
+  SPDLOG_INFO("[D2PGO::saveG2O@{}] save {} frames", self_id, frames.size());
   std::string path = config.g2o_output_path + "g2o_drone_" +
                      std::to_string(self_id) + "_iter_" +
                      std::to_string(save_count) + ".g2o";
-  std::cout << "save g2o to " << path << std::endl;
+  SPDLOG_INFO("Save g2o to {}", path);
   write_result_to_g2o(path, frames, used_loops, config.g2o_use_raw_data);
   path = config.g2o_output_path + "frame_timestamp.txt";
   // output the timestamp of the frames.
@@ -402,12 +401,12 @@ void D2PGO::evalLoop(const Swarm::LoopEdge& loop) {
   auto pose_a = kf_a->odom.pose();
   auto pose_b = kf_b->odom.pose();
   (*factor)(pose_ptr_a, pose_ptr_b, residuals.data());
-  printf("Loop %ld->%ld, RelPose %s\n", loop.keyframe_id_a, loop.keyframe_id_b,
-         loop.relative_pose.toStr().c_str());
-  printf("RelPose            Est %s\n",
+  SPDLOG_INFO("Loop %ld->%ld, RelPose {}", loop.keyframe_id_a, loop.keyframe_id_b,
+         loop.relative_pose.toStr());
+  SPDLOG_INFO("RelPose            Est {}",
          Swarm::Pose::DeltaPose(pose_a, pose_b).toStr().c_str());
   std::cout << "sqrt_info\n:" << loop.getSqrtInfoMat4D() << std::endl;
-  printf("PoseA %s PoseB %s residual:", kf_a->odom.pose().toStr().c_str(),
+  SPDLOG_INFO("PoseA %s PoseB %s residual:", kf_a->odom.pose().toStr().c_str(),
          kf_b->odom.pose().toStr().c_str());
   std::cout << residuals.transpose() << "\n" << std::endl;
 }
@@ -533,7 +532,7 @@ void D2PGO::setupGravityPriorFactors(SolverWrapper* solver) {
   if (config.pgo_pose_dof == PGO_POSE_4D) {
     return;
   }
-  printf("[D2PGO::setupGravityPriorFactors] %ld frames\n", used_frames.size());
+  SPDLOG_INFO("[D2PGO::setupGravityPriorFactors] {} frames", used_frames.size());
 
   Eigen::Matrix3d gravity_sqrt_info =
       config.rot_init_config.gravity_sqrt_info * Matrix3d::Identity();
@@ -546,7 +545,7 @@ void D2PGO::setupGravityPriorFactors(SolverWrapper* solver) {
       factor = GravityPriorPerturbAD::Create(ego_motion, gravity_sqrt_info, qa);
     } else {
       // Not implemented
-      ROS_ERROR(
+      SPDLOG_ERROR(
           "[D2PGO::setupGravityPriorFactors] non perturb_mode not implemented");
     }
     auto res_info = GravityPriorResInfo::create(factor, nullptr, frame,
@@ -667,7 +666,7 @@ std::map<int, Swarm::Odometry> D2PGO::getPredictedOdoms() const {
   std::map<int, Swarm::Odometry> ret;
   for (auto drone_id : state.availableDrones()) {
     if (!state.hasEgomotionTraj(drone_id)) {
-      printf("[D2PGO::getPredictedOdoms] no egomotion traj for drone %d\n",
+      SPDLOG_INFO("[D2PGO::getPredictedOdoms] no egomotion traj for drone {}",
              drone_id);
       continue;
     }
