@@ -189,6 +189,12 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
     Eigen::Vector3d _min = (firstFrame.odom.pose() * ext_base).pos();
     Eigen::Vector3d _max = (firstFrame.odom.pose() * ext_base).pos();
     for (auto &it : lm.track) {
+      if (!state->hasFrame(it.frame_id)) {
+        SPDLOG_ERROR(
+            "Critical error: Frame {} not found in state, landmark {} tracks {}",
+            it.frame_id, lm_id, lm.track.size());
+        continue;
+      }
       auto frame = *state->getFramebyId(it.frame_id);
       auto ext = state->getExtrinsic(it.camera_id);
       auto cam_pose = frame.odom.pose() * ext;

@@ -85,7 +85,6 @@
     <include file="$(find quadcam_depth_est)/launch/depth-node.launch" if="$(arg depth_gen)" >
         <arg name="output" value="screen" />
         <arg name="show" value="$(arg show)" />
-        <arg name="config" value="$(arg config_depth)" />
     </include>
     <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find d2vins)/../config/d2slam.rviz" if="$(arg rviz)" />
     <include file="$(find taichislam)/launch/taichislam-quadcam.launch" if="$(arg taichislam)" >   

@@ -70,6 +70,7 @@ std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(
 }
 
 void D2EstimatorState::init(std::vector<Swarm::Pose> _extrinsic, double _td) {
+  const Guard lock(state_lock);
   for (unsigned int i = 0; i < _extrinsic.size(); i++) {
     auto pose = _extrinsic[i];
     auto cam_id = addCamera(pose, i, self_id);
@@ -80,6 +81,7 @@ void D2EstimatorState::init(std::vector<Swarm::Pose> _extrinsic, double _td) {
 
 CamIdType D2EstimatorState::addCamera(const Swarm::Pose &pose, int camera_index,
                                       int drone_id, CamIdType camera_id) {
+  const Guard lock(state_lock);
   if (camera_id < 0) {
     camera_id = generateCameraId(self_id, camera_index);
   }
@@ -92,6 +94,7 @@ CamIdType D2EstimatorState::addCamera(const Swarm::Pose &pose, int camera_index,
 }
 
 std::vector<Swarm::Pose> D2EstimatorState::localCameraExtrinsics() const {
+  const Guard lock(state_lock);
   std::vector<Swarm::Pose> ret;
   for (auto &camera_id : local_camera_ids) {
     ret.push_back(extrinsic.at(camera_id));
@@ -99,23 +102,35 @@ std::vector<Swarm::Pose> D2EstimatorState::localCameraExtrinsics() const {
   return ret;
 }
 
-size_t D2EstimatorState::size() const { return size(self_id); }
+size_t D2EstimatorState::size() const { 
+  const Guard lock(state_lock);
+  return size(self_id); 
+}
 
 VINSFrame &D2EstimatorState::getFrame(int index) {
+  const Guard lock(state_lock);
   return getFrame(self_id, index);
 }
 
 const VINSFrame &D2EstimatorState::getFrame(int index) const {
+  const Guard lock(state_lock);
   return getFrame(self_id, index);
 }
 
-VINSFrame &D2EstimatorState::firstFrame() { return firstFrame(self_id); }
+VINSFrame &D2EstimatorState::firstFrame() { 
+  const Guard lock(state_lock);
+  return firstFrame(self_id); 
+}
 
 const VINSFrame &D2EstimatorState::lastFrame() const {
+  const Guard lock(state_lock);
   return lastFrame(self_id);
 }
 
-VINSFrame &D2EstimatorState::lastFrame() { return lastFrame(self_id); }
+VINSFrame &D2EstimatorState::lastFrame() {
+  const Guard lock(state_lock);
+  return lastFrame(self_id);
+}
 
 VINSFrame &D2EstimatorState::getFrame(int drone_id, int index) {
   const Guard lock(state_lock);
@@ -128,15 +143,18 @@ const VINSFrame &D2EstimatorState::getFrame(int drone_id, int index) const {
 }
 
 Swarm::Pose D2EstimatorState::getEstimatedPose(int drone_id, int index) const {
+  const Guard lock(state_lock);
   return getFrame(drone_id, index).odom.pose();
 }
 
 Swarm::Pose D2EstimatorState::getEstimatedPose(FrameIdType frame_id) const {
+  const Guard lock(state_lock);
   auto drone_id = getFrame(frame_id).drone_id;
   return getFramebyId(frame_id)->odom.pose();
 }
 
 Swarm::Odometry D2EstimatorState::getEstimatedOdom(FrameIdType frame_id) const {
+  const Guard lock(state_lock);
   auto drone_id = getFrame(frame_id).drone_id;
   return getFramebyId(frame_id)->odom;
 }
@@ -184,6 +202,7 @@ double *D2EstimatorState::getTdState(int drone_id) { return &td; }
 double D2EstimatorState::getTd(int drone_id) { return td; }
 
 double *D2EstimatorState::getExtrinsicState(int cam_id) const {
+  const Guard lock(state_lock);
   if (_camera_extrinsic_state.find(cam_id) == _camera_extrinsic_state.end()) {
     printf("[D2VINS::D2EstimatorState] Camera %d not found!\n");
     assert(false && "Camera_id not found");
@@ -192,25 +211,33 @@ double *D2EstimatorState::getExtrinsicState(int cam_id) const {
 }
 
 double *D2EstimatorState::getSpdBiasState(FrameIdType frame_id) const {
+  const Guard lock(state_lock);
   return _frame_spd_Bias_state.at(frame_id);
 }
 
 double *D2EstimatorState::getLandmarkState(LandmarkIdType landmark_id) const {
+  const Guard lock(state_lock);
   return lmanager.getLandmarkState(landmark_id);
 }
 
 FrameIdType D2EstimatorState::getLandmarkBaseFrame(
     LandmarkIdType landmark_id) const {
+  const Guard lock(state_lock);
   return lmanager.getLandmarkBaseFrame(landmark_id);
 }
 
 Swarm::Pose D2EstimatorState::getExtrinsic(CamIdType cam_id) const {
+  const Guard lock(state_lock);
   return extrinsic.at(cam_id);
 }
 
-PriorFactor *D2EstimatorState::getPrior() const { return prior_factor; }
+PriorFactor *D2EstimatorState::getPrior() const {
+  const Guard lock(state_lock);
+  return prior_factor;
+}
 
 std::set<CamIdType> D2EstimatorState::getAvailableCameraIds() const {
+  const Guard lock(state_lock);
   // Return all camera ids
   std::set<CamIdType> ids;
   for (auto &it : _camera_extrinsic_state) {
@@ -221,6 +248,7 @@ std::set<CamIdType> D2EstimatorState::getAvailableCameraIds() const {
 
 std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements(
     int max_pts, int max_measurement) const {
+  const Guard lock(state_lock);
   std::set<FrameIdType> current_frames;
   for (auto &it : sld_wins) {
     for (auto &it2 : it.second) {
@@ -232,6 +260,7 @@ std::vector<LandmarkPerId> D2EstimatorState::availableLandmarkMeasurements(
 }
 
 int D2EstimatorState::getCameraBelonging(CamIdType cam_id) const {
+  const Guard lock(state_lock);
   return camera_drone.at(cam_id);
 }
 
@@ -368,6 +397,7 @@ void D2EstimatorState::updateSldwin(int drone_id,
 
 void D2EstimatorState::updateSldWinsIMU(
     const std::map<int, IMUBuffer> &remote_imu_bufs) {
+  const Guard lock(state_lock);
   if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS ||
       params->estimation_mode == D2Common::SINGLE_DRONE_MODE) {
     auto &_sld_win = sld_wins[self_id];
@@ -484,6 +514,7 @@ VINSFrame *D2EstimatorState::addFrame(const VisualImageDescArray &images,
 }
 
 void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame *frame) {
+  const Guard lock(state_lock);
   // Prior is in form of A \delta x = b
   // A is a 6x6 matrix, A = diag([a_p, a_p, a_p, 0, 0, a_yaw])
   // b is zero vector
@@ -570,6 +601,7 @@ void D2EstimatorState::syncFromState(
 }
 
 void D2EstimatorState::repropagateIMU() {
+  const Guard lock(state_lock);
   if (sld_wins[self_id].size() > 1) {
     for (size_t i = 0; i < sld_wins[self_id].size() - 1; i++) {
       auto frame_a = sld_wins[self_id][i];
@@ -615,33 +647,40 @@ void D2EstimatorState::moveAllPoses(int new_ref_frame_id,
 
 void D2EstimatorState::outlierRejection(
     const std::set<LandmarkIdType> &used_landmarks) {
+  const Guard lock(state_lock);
   // Perform outlier rejection of landmarks
   lmanager.outlierRejection(this, used_landmarks);
 }
 
 void D2EstimatorState::preSolve(
     const std::map<int, IMUBuffer> &remote_imu_bufs) {
+  const Guard lock(state_lock);
   // updateSldWinsIMU(remote_imu_bufs); Useless when IMU bufs are correctly set
   lmanager.initialLandmarks(this);
 }
 
 std::vector<LandmarkPerId> D2EstimatorState::getInitializedLandmarks() const {
+  const Guard lock(state_lock);
   return lmanager.getInitializedLandmarks(params->landmark_estimate_tracks);
 }
 
 LandmarkPerId &D2EstimatorState::getLandmarkbyId(LandmarkIdType id) {
+  const Guard lock(state_lock);
   return lmanager.at(id);
 }
 
 bool D2EstimatorState::hasLandmark(LandmarkIdType id) const {
+  const Guard lock(state_lock);
   return lmanager.hasLandmark(id);
 }
 
 bool D2EstimatorState::hasCamera(CamIdType frame_id) const {
+  const Guard lock(state_lock);
   return extrinsic.find(frame_id) != extrinsic.end();
 }
 
 int D2EstimatorState::numKeyframes() const {
+  const Guard lock(state_lock);
   int ret = 0;
   for (auto it : sld_wins) {
     for (auto frame : it.second) {
@@ -674,6 +713,7 @@ void D2EstimatorState::printSldWin(
 
 const std::vector<VINSFrame *> &D2EstimatorState::getSldWin(
     int drone_id) const {
+  const Guard lock(state_lock);
   return sld_wins.at(self_id);
 }
 
@@ -690,6 +730,7 @@ void D2EstimatorState::updateEgoMotion() {
 }
 
 void D2EstimatorState::printLandmarkReport(FrameIdType frame_id) const {
+  const Guard lock(state_lock);
   auto related_landmarks = lmanager.getRelatedLandmarks(frame_id);
   printf("Related landmarks of frame %ld:\n");
   for (auto lm_id : related_landmarks) {
@@ -729,6 +770,7 @@ void D2EstimatorState::setBias(FrameIdType frame_id, const Vector3d &Ba,
 }
 
 bool D2EstimatorState::monoInitialization() {
+  const Guard lock(state_lock);
   // SFM
   std::map<FrameIdType, int> keyframe_measurments;
   printSldWin(keyframe_measurments);
@@ -772,6 +814,7 @@ bool D2EstimatorState::solveGyroscopeBias(
     std::vector<VINSFrame *> sld_win,
     const std::map<FrameIdType, Swarm::Pose> &sfm_poses,
     Swarm::Pose extrinsic) {
+  const Guard lock(state_lock);
   // Migrating from VINS-Mono
   Matrix3d A;
   Vector3d b;
@@ -810,6 +853,7 @@ bool D2EstimatorState::LinearAlignment(
     std::vector<VINSFrame *> sld_win,
     const std::map<FrameIdType, Swarm::Pose> &sfm_poses,
     Swarm::Pose extrinsic) {
+  const Guard lock(state_lock);
   // Migrating from VINS-Mono
   int all_frame_count = sld_win.size();
   int n_state = all_frame_count * 3 + 3 + 1;
@@ -934,6 +978,7 @@ void D2EstimatorState::RefineGravity(
     std::vector<VINSFrame *> sld_win,
     const std::map<FrameIdType, Swarm::Pose> &sfm_poses, Swarm::Pose extrinsic,
     Vector3d &g, VectorXd &x) {
+  const Guard lock(state_lock);
   Vector3d g0 = g.normalized() * IMUData::Gravity.norm();
   Vector3d lx, ly;
   // VectorXd x;

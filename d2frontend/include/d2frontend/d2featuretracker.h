@@ -60,6 +60,7 @@ struct D2FTConfig {
     float  stereo_frame_thread_rate = 20.0;
     float loop_detection_thread_rate = 1.0;
     float lcm_thread_rate = 1.0;
+    float near_lk_thread_rate = 5.0;
 };
 
 struct TrackReport {

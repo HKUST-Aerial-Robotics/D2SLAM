@@ -4,6 +4,8 @@
 #include <chrono>
 #include <d2common/d2basetypes.h>
 #include <d2common/d2landmarks.h>
+#include <d2frontend/utils.h>
+#include <spdlog/spdlog.h>
 
 #define PYR_LEVEL 2
 
@@ -55,5 +57,35 @@ matchKNN(const cv::Mat &desc_a, const cv::Mat &desc_b,
          const std::vector<cv::Point2f> pts_a = std::vector<cv::Point2f>(),
          const std::vector<cv::Point2f> pts_b = std::vector<cv::Point2f>(),
          double search_local_dist = -1);
+
+template <typename LKImageInfo>
+void removeNearPoints(LKImageInfo& info, float near_lk_thread_rate) {
+    std::vector<cv::Point2f> new_pts;
+    std::vector<bool> status;
+    int remove_count = 0;
+    for (size_t i = 0; i < info.lk_pts.size(); i++) {
+        bool has_nearby = false;
+        for (size_t j = 0; j < new_pts.size(); j++) {
+            if (cv::norm(info.lk_pts[i] - new_pts[j]) < near_lk_thread_rate) {
+                has_nearby = true;
+                break;
+            }
+        }
+        if (!has_nearby) {
+            new_pts.push_back(info.lk_pts[i]);
+            status.push_back(true);
+        }
+        else {
+            status.push_back(false);
+            remove_count++;
+        }
+    }
+    reduceVector(info.lk_pts, status);
+    reduceVector(info.lk_pts_3d_norm, status);
+    reduceVector(info.lk_ids, status);
+    reduceVector(info.lk_local_index, status);
+    reduceVector(info.lk_types, status);
+    SPDLOG_DEBUG("removeNearPoints {}->{} thre: {}", info.lk_pts.size() + remove_count, info.lk_pts.size(), near_lk_thread_rate);
+}
 
 } // namespace D2FrontEnd

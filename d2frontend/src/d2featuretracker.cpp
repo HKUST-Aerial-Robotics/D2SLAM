@@ -480,7 +480,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc &frame) {
     frame.clearLandmarks();
   }
 
-  if ((_config.sp_track_use_lk || _config.lr_match_use_lk)) {
+  if (_config.sp_track_use_lk || _config.lr_match_use_lk) {
     bool pyr_has_built = false;
     if (keyframe_lk_infos.size() > 0 && current_keyframes.size() > 0) {
       const auto &prev_frame = current_keyframes.back();
@@ -495,6 +495,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc &frame) {
           int prev_lk_num = prev_lk.lk_ids.size();
           cur_lk_info = opticalflowTrackPyr(frame.raw_image, prev_lk,
                                             TrackLRType::WHOLE_IMG_MATCH);
+          removeNearPoints(cur_lk_info, _config.near_lk_thread_rate);
           pyr_has_built = true;
           cur_lk_info.lk_pts_3d_norm.resize(cur_lk_info.lk_pts.size());
           for (unsigned int i = 0; i < cur_lk_info.lk_pts.size(); i++) {
