@@ -8,6 +8,7 @@
 #include "d2frontend/utils.h"
 #include "d2vinsstate.hpp"
 #include "spdlog/spdlog.h"
+#include "d2frontend/pnp_utils.h"
 
 namespace D2VINS {
 

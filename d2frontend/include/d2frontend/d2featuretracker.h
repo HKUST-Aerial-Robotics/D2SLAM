@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <d2common/d2frontend_types.h>
-#include <d2frontend/utils.h>
+#include <d2frontend/opticaltrack_utils.h>
 
 using namespace Eigen;
 

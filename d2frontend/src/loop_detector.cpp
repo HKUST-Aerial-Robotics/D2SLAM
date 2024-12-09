@@ -3,16 +3,13 @@
 #include <d2frontend/loop_cam.h>
 #include <d2frontend/loop_detector.h>
 #include <d2frontend/utils.h>
+#include <d2frontend/feature_matcher.h>
+#include <d2frontend/pnp_utils.h>
 #include <faiss/IndexFlat.h>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <chrono>
-#include <opengv/absolute_pose/NoncentralAbsoluteAdapter.hpp>
-#include <opengv/absolute_pose/methods.hpp>
-#include <opengv/sac/Lmeds.hpp>
-#include <opengv/sac/Ransac.hpp>
-#include <opengv/sac_problems/absolute_pose/AbsolutePoseSacProblem.hpp>
 #include <swarm_msgs/relative_measurments.hpp>
 
 using namespace std::chrono;

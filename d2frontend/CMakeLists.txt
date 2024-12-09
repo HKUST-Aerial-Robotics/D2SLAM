@@ -99,7 +99,10 @@ add_library(libd2frontend
   src/d2frontend.cpp
   src/d2featuretracker.cpp
   src/loop_utils.cpp
+  src/opticaltrack_utils.cpp
+  src/pnp_utils.cpp
   src/d2landmark_manager.cpp
+  src/feature_matcher.cpp
 )
 
 target_link_libraries(libd2frontend
@@ -140,7 +143,6 @@ else()
     src/CNN/superpoint_common.cpp
     src/CNN/superpoint_onnx.cpp
     src/CNN/superglue_onnx.cpp
-    src/loop_utils.cpp
     src/d2frontend_params.cpp
   )
 

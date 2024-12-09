@@ -1,7 +1,7 @@
 #include "d2estimator.hpp"
 
 #include <d2common/solver/pose_local_parameterization.h>
-#include <d2frontend/utils.h>
+#include <d2frontend/pnp_utils.h>
 
 #include <d2common/utils.hpp>
 

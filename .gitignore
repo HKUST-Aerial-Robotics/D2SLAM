@@ -29,3 +29,4 @@ d2pgo/scripts/notebooks/posegraph-graphviz.*
 */.DS_Store
 .DS_Store
 build/
+*.trt
