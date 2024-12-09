@@ -4,6 +4,7 @@
 namespace D2FrontEnd {
 
 int LandmarkManager::addLandmark(const LandmarkPerFrame &lm) {
+  const Guard lock(state_lock);
   auto _id = count + MAX_FEATURE_NUM * params->self_id;
   count++;
   LandmarkPerFrame lm_copy = lm;
@@ -32,6 +33,7 @@ void LandmarkManager::updateLandmark(const LandmarkPerFrame &lm) {
 }
 
 void LandmarkManager::removeLandmark(const LandmarkIdType &id) {
+  const Guard lock(state_lock);
   landmark_db.erase(id);
 }
 
@@ -76,8 +78,8 @@ std::vector<LandmarkPerId> LandmarkManager::getInitializedLandmarks(
     int min_tracks) const {
   const Guard lock(state_lock);
   std::vector<LandmarkPerId> lm_per_frame_vec;
-  for (auto it : landmark_db) {
-    auto &lm = it.second;
+  for (const auto &it: landmark_db) {
+    const auto &lm = it.second;
     if (lm.track.size() >= min_tracks && lm.flag >= LandmarkFlag::INITIALIZED) {
       lm_per_frame_vec.push_back(lm);
     }
@@ -98,6 +100,7 @@ FrameIdType LandmarkManager::getLandmarkBaseFrame(
 
 std::vector<LandmarkIdType> LandmarkManager::findCommonLandmarkIds(
     FrameIdType frame_id1, FrameIdType frame_id2) const {
+  const Guard lock(state_lock);
   auto lm_last = getRelatedLandmarks(frame_id1);
   auto lm_second_last = getRelatedLandmarks(frame_id2);
   std::set<LandmarkIdType> common_lm;
@@ -110,6 +113,7 @@ std::vector<LandmarkIdType> LandmarkManager::findCommonLandmarkIds(
 std::vector<std::pair<LandmarkPerFrame, LandmarkPerFrame>>
 LandmarkManager::findCommonLandmarkPerFrames(FrameIdType frame_id1,
                                              FrameIdType frame_id2) const {
+  const Guard lock(state_lock);
   auto lm_common = findCommonLandmarkIds(frame_id1, frame_id2);
   std::vector<std::pair<LandmarkPerFrame, LandmarkPerFrame>> ret;
   for (auto lm_id : lm_common) {

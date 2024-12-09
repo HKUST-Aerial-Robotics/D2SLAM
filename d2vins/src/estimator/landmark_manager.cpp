@@ -289,6 +289,7 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState *state) {
             "Initialize landmark "
             "{} failed, no track.",
             lm_id);
+        lm.flag = LandmarkFlag::UNINITIALIZED;
         continue;
       }
       initialLandmarkState(lm, state);
@@ -316,6 +317,7 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState *state) {
 int D2LandmarkManager::outlierRejectionByScale(const D2EstimatorState *state,
                           const std::set<LandmarkIdType> &used_landmarks)
 {
+  const Guard lock(state_lock);
   int remove_count = 0;
   if (estimated_landmark_size < params->perform_outlier_rejection_num ||
       params->remove_scale_outlier_threshold <= 1.0) {
@@ -470,6 +472,7 @@ void D2LandmarkManager::syncState(const D2EstimatorState *state) {
 }
 
 void D2LandmarkManager::removeLandmark(const LandmarkIdType &id) {
+  const Guard lock(state_lock);
   landmark_db.erase(id);
   landmark_state.erase(id);
 }
@@ -583,6 +586,7 @@ const std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::PerformBA(
     const std::map<FrameIdType, Swarm::Pose> &initial, VINSFrame *last_frame,
     VINSFrame *head_frame_for_match,
     std::map<LandmarkIdType, Vector3d> initial_pts, int camera_idx) const {
+  const Guard lock(state_lock);
   SPDLOG_INFO("{} points initialized. Now start BA", initial_pts.size());
   std::map<FrameIdType, Swarm::Pose> ret;
 
@@ -668,6 +672,7 @@ bool D2LandmarkManager::InitFramePoseWithPts(
     Swarm::Pose &ret,
     std::map<LandmarkIdType, Vector3d> &last_triangluation_pts,
     FrameIdType frame_id, int camera_idx) {
+  const Guard lock(state_lock);
   auto landmark_ids = getRelatedLandmarks(frame_id);
   std::vector<cv::Point3f> points_3d;
   std::vector<cv::Point2f> points_undist;
@@ -720,6 +725,7 @@ bool D2LandmarkManager::InitFramePoseWithPts(
 bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
                                               FrameIdType frame1_id,
                                               FrameIdType frame2_id) {
+  const Guard lock(state_lock);
   // Get their landmarks and find the common
   auto common_lm = findCommonLandmarkPerFrames(frame1_id, frame2_id);
 
@@ -765,6 +771,7 @@ bool D2LandmarkManager::SolveRelativePose5Pts(Swarm::Pose &ret, int camera_idx,
 std::map<FrameIdType, Vector3d> D2LandmarkManager::triangulationFrames(
     FrameIdType frame1_id, const Swarm::Pose &pose1, FrameIdType frame2_id,
     const Swarm::Pose &pose2, int camera_idx) {
+  const Guard lock(state_lock);
   auto common_lm = findCommonLandmarkPerFrames(frame1_id, frame2_id);
   // triangluate these points use the pose
   std::map<FrameIdType, Vector3d> points3d;
@@ -788,6 +795,7 @@ std::map<FrameIdType, Vector3d> D2LandmarkManager::triangulationFrames(
 std::map<LandmarkIdType, Vector3d> D2LandmarkManager::triangulationFrames(
     const std::map<FrameIdType, Swarm::Pose> &frame_poses, int camera_idx,
     int min_tracks) {
+  const Guard lock(state_lock);
   std::map<LandmarkIdType, Vector3d> ret;
   for (auto &it : landmark_db) {
     auto &lm = it.second;

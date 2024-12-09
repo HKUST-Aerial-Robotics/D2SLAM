@@ -3,8 +3,9 @@ project(d2common)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 set(CMAKE_CXX_STANDARD 17)
-add_compile_options(-g -O3 -Wall -Wno-deprecated-declarations -Wno-format -Wno-reorder)
-
+add_compile_options(-Wall -Wno-deprecated-declarations -Wno-format -Wno-reorder)
+set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rosmsg
