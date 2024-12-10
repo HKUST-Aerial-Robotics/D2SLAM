@@ -29,7 +29,6 @@ void LandmarkManager::updateLandmark(const LandmarkPerFrame &lm) {
   total_lm_per_frame_num++;
   related_landmarks[lm.frame_id][lm.landmark_id] =
       related_landmarks[lm.frame_id][lm.landmark_id] + 1;
-  assert(lm.landmark_id >= 0 && "landmark id must > 0");
 }
 
 void LandmarkManager::removeLandmark(const LandmarkIdType &id) {

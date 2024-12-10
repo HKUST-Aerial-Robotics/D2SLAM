@@ -375,7 +375,7 @@ bool LoopDetector::queryImageArrayFromDatabase(
         loop_cam->getCameraConfiguration());
   }
 
-  if (img_desc_a.images[camera_index_new].spLandmarkNum() > 0 ||
+  if (img_desc_a.images[camera_index_new].spLandmarkNum() > 0 && img_desc_a.images[camera_index_new].hasImageDesc() ||
       img_desc_a.is_lazy_frame) {
     double similarity = -1;
     int index = queryFrameIndexFromDatabase(

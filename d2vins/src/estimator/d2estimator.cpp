@@ -55,6 +55,7 @@ void D2Estimator::init(ros::NodeHandle &nh, D2VINSNet *net) {
 }
 
 void D2Estimator::inputImu(IMUData data) {
+  std::lock_guard<std::recursive_mutex> lock(imu_prop_lock);
   IMUData last = data;
   if (imu_bufs[self_id].size() > 0) {
     last = imu_bufs[self_id].buf.back();
@@ -64,10 +65,9 @@ void D2Estimator::inputImu(IMUData data) {
     return;
   }
   // Propagation current with last Bias.
-  auto last_frame = state.lastFrame(self_id);
-  std::lock_guard<std::recursive_mutex> lock(imu_prop_lock);
-  data.propagation(last_prop_odom[params->self_id], last_frame.Ba,
-                   last_frame.Bg, last);
+  Eigen::Vector3d Ba = state.getBa();
+  Eigen::Vector3d Bg = state.getBg();
+  data.propagation(last_prop_odom[params->self_id], Ba, Bg, last);
   visual.pubIMUProp(last_prop_odom[params->self_id]);
 }
 
@@ -567,7 +567,7 @@ void D2Estimator::solveinDistributedMode() {
 
   auto last_odom = state.lastFrame().odom;
   SPDLOG_INFO(
-      "D{}({}) odom {}@ref{} landmarks {}/{} v_mea {}/{} drone_num {} "
+      "D{}({}) {}@ref{} landmarks {}/{} v_mea {}/{} drone_num {} "
       "opti_time {:.1f}ms steps {} td {:.1f}ms",
       self_id, solve_count, last_odom.toStr(), state.getReferenceFrameId(),
       used_landmarks.size(), current_landmark_num, current_measurement_num,
@@ -626,7 +626,7 @@ void D2Estimator::solveNonDistrib() {
   setupImuFactors();
   setupLandmarkFactors();
   if (current_measurement_num < params->min_solve_cnt) {
-    SPDLOG_WARN("Landmark too less, skip optimization");
+    SPDLOG_WARN("Landmark too less: {}, skip optimization", current_measurement_num);
     return;
   }
   setupPriorFactor();
@@ -653,7 +653,7 @@ void D2Estimator::solveNonDistrib() {
   auto last_odom = state.lastFrame().odom;
   auto Ba = state.lastFrame().Ba;
   auto Bg = state.lastFrame().Bg;
-  spdlog::info("C{} landmarks {} odom {} Ba ({:.2f}, {:.2f}, {:.2f}) Bg ({:.2f}, {:.2f}, {:.2f}) td {:.1f}ms opti_time {:.1f}ms",
+  spdlog::info("C{} landmarks {} {} Ba ({:.2f}, {:.2f}, {:.2f}) Bg ({:.2f}, {:.2f}, {:.2f}) td {:.1f}ms opti_time {:.1f}ms",
               solve_count, current_landmark_num, last_odom.toStr(),
               Ba.x(), Ba.y(), Ba.z(), Bg.x(), Bg.y(), Bg.z(),
               state.td * 1000, report.total_time * 1000);

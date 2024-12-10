@@ -153,6 +153,10 @@ struct VisualImageDesc {
         }
         return size;
     }
+
+    bool hasImageDesc() const {
+        return image_desc.size() > 0;
+    }
     
     void releaseRawImage() {
         raw_image.release();

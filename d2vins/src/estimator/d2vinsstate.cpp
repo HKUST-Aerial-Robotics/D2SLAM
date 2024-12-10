@@ -586,6 +586,10 @@ void D2EstimatorState::syncFromState(
       frame->fromVector(it.second, _frame_spd_Bias_state.at(frame_id));
     }
   }
+  
+  Ba = lastFrame(self_id).Ba;
+  Bg = lastFrame(self_id).Bg;
+
   for (auto it : _camera_extrinsic_state) {
     auto cam_id = it.first;
     extrinsic.at(cam_id).from_vector(_camera_extrinsic_state.at(cam_id));

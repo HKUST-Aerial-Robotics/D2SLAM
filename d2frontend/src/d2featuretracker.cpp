@@ -137,7 +137,7 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray &frames) {
   }
   processFrame(frames, iskeyframe);
   report.ft_time = tic.toc();
-  spdlog::info(
+  spdlog::debug(
       "[Track] frame_id: {} is_kf {}, landmark_num: {}/{}, mean_para {:.2f}%, "
       "time_cost: {:.1f}ms ",
       frames.frame_id, iskeyframe, report.parallex_num, frames.landmarkNum(),

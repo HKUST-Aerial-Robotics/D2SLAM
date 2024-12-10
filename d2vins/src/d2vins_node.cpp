@@ -270,11 +270,6 @@ private:
     pgo_fused_sub = nh.subscribe("/d2pgo/swarm_fused", 1,
                                  &D2VINSNode::pgoSwarmFusedCallback, this,
                                  ros::TransportHints().tcpNoDelay());
-    // thread_viokf = std::thread([&] {
-    //   processVIOKFThread();
-    //   SPDLOG_INFO("[D2VINS] processVIOKFThread exit.");
-    // });
-
     thread_viokf_running = true;
     viokf_rate_ptr_ = std::make_unique<ros::Rate>(params->estimator_timer_freq);
     thread_viokf = std::thread([&] {
