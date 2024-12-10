@@ -134,6 +134,7 @@ target_link_libraries(loop_cnn
   nvinfer_plugin
   nvonnxparser
   tensorrt_utils
+  cudart
 )
 
 target_include_directories(loop_cnn PUBLIC
