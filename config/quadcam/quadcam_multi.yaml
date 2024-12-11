@@ -65,9 +65,6 @@ max_sld_win_size: 11
 landmark_estimate_tracks: 4 #when use depth or stereo, 3 is OK.
 min_solve_frames: 6
 
-#solver
-multiple_thread: 1
-
 #outlier rejection
 thres_outlier : 10.0
 perform_outlier_rejection_num: 100
