@@ -89,15 +89,6 @@ bool PriorFactor::Evaluate(double const *const *parameters, double *residuals,
   return true;
 }
 
-std::vector<state_type *> PriorFactor::getKeepParamsPointers() const {
-  std::vector<state_type *> pointers;
-  // printf("prior blocks %d\n", keep_param_blk_num);
-  for (auto &info : keep_params_list) {
-    pointers.push_back(info.pointer);
-  }
-  return pointers;
-}
-
 void PriorFactor::moveByPose(const Swarm::Pose &delta_pose) {
   for (auto &info : keep_params_list) {
     if (info.type == ParamsType::POSE) {

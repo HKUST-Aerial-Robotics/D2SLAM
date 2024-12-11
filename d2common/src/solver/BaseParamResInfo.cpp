@@ -52,7 +52,7 @@ void ResidualInfo::Evaluate(const std::vector<ParamInfo> &param_infos,
     }
   } else {
     for (auto info : param_infos) {
-      params.push_back(info.pointer.get());
+      params.push_back(CheckGetPtr(info.pointer));
     }
   }
 

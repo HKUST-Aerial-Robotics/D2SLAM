@@ -16,7 +16,7 @@ void D2VINSConsensusSolver::broadcastData() {
     if (!it.second.local_only) {
       remote_params[pointer] = std::map<int, VectorXd>();
       remote_params[pointer][self_id] = VectorXd(consenus_param.global_size);
-      memcpy(remote_params.at(pointer).at(self_id).data(), pointer,
+      memcpy(remote_params.at(pointer).at(self_id).data(), CheckGetPtr(pointer),
              consenus_param.global_size * sizeof(state_type));
       // printf("set to pose id %d\n", params[pointer].id);
       // std::cout << "remote_params[pointer][self_id]: " <<

@@ -105,34 +105,35 @@ swarm_msgs::VIOFrame VINSFrame::toROS(const std::vector<Swarm::Pose>& exts) {
   return msg;
 }
 
-void VINSFrame::toVector(state_type* _pose, state_type* _spd_bias) const {
-  odom.pose().to_vector(_pose);
-  _spd_bias[0] = odom.vel().x();
-  _spd_bias[1] = odom.vel().y();
-  _spd_bias[2] = odom.vel().z();
+void VINSFrame::toVector(const StatePtr& pose, const StatePtr& spd_bias) const {
+  odom.pose().to_vector(pose);
+  auto spd_bias_ptr = CheckGetPtr(spd_bias);
+  spd_bias_ptr[0] = odom.vel().x();
+  spd_bias_ptr[1] = odom.vel().y();
+  spd_bias_ptr[2] = odom.vel().z();
 
-  _spd_bias[3] = Ba.x();
-  _spd_bias[4] = Ba.y();
-  _spd_bias[5] = Ba.z();
+  spd_bias_ptr[3] = Ba.x();
+  spd_bias_ptr[4] = Ba.y();
+  spd_bias_ptr[5] = Ba.z();
 
-  _spd_bias[6] = Bg.x();
-  _spd_bias[7] = Bg.y();
-  _spd_bias[8] = Bg.z();
+  spd_bias_ptr[6] = Bg.x();
+  spd_bias_ptr[7] = Bg.y();
+  spd_bias_ptr[8] = Bg.z();
 }
 
-void VINSFrame::fromVector(state_type* _pose, state_type* _spd_bias) {
-  odom.pose().from_vector(_pose);
+void VINSFrame::fromVector(const StatePtr& pose, const StatePtr& spd_bias) {
+  odom.pose().from_vector(pose);
+  auto spd_bias_ptr = CheckGetPtr(spd_bias);
+  odom.vel().x() = spd_bias_ptr[0];
+  odom.vel().y() = spd_bias_ptr[1];
+  odom.vel().z() = spd_bias_ptr[2];
 
-  odom.vel().x() = _spd_bias[0];
-  odom.vel().y() = _spd_bias[1];
-  odom.vel().z() = _spd_bias[2];
+  Ba.x() = spd_bias_ptr[3];
+  Ba.y() = spd_bias_ptr[4];
+  Ba.z() = spd_bias_ptr[5];
 
-  Ba.x() = _spd_bias[3];
-  Ba.y() = _spd_bias[4];
-  Ba.z() = _spd_bias[5];
-
-  Bg.x() = _spd_bias[6];
-  Bg.y() = _spd_bias[7];
-  Bg.z() = _spd_bias[8];
+  Bg.x() = spd_bias_ptr[6];
+  Bg.y() = spd_bias_ptr[7];
+  Bg.z() = spd_bias_ptr[8];
 }
 }  // namespace D2Common

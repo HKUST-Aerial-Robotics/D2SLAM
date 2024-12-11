@@ -35,7 +35,7 @@ struct ParamInfo {
     FrameIdType id;
     ParamInfo() {}
     state_type * getPointer() {
-        return pointer.get();
+        return CheckGetPtr(pointer);
     }
 };
 
@@ -68,7 +68,7 @@ public:
     virtual std::vector<state_type*> paramsPointerList(D2State * state) const {
         std::vector<state_type*> params;
         for (auto info : paramsList(state)) {
-            params.push_back(info.pointer.get());
+            params.push_back(CheckGetPtr(info.pointer));
         }
         return params;
     }

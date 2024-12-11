@@ -42,8 +42,8 @@ protected:
 
     Vector3d Ba = Vector3d::Zero();
     Vector3d Bg = Vector3d::Zero();
-public:
     StatePtr td = nullptr;
+public:
     D2EstimatorState(int _self_id);
 
     void init(std::vector<Swarm::Pose> _extrinsic, double _td);
@@ -52,9 +52,10 @@ public:
     int getPoseIndex(FrameIdType frame_id) const;
     StatePtr getExtrinsicState(int i) const;
     StatePtr getSpdBiasState(FrameIdType frame_id) const;
-    double * getLandmarkState(LandmarkIdType landmark_id) const;
+    StatePtr getLandmarkState(LandmarkIdType landmark_id) const;
     StatePtr getTdState(int drone_id);
-    double getTd(int drone_id);
+    double getTd(int drone_id) const;
+    double getTd() const;
     PriorFactor * getPrior() const;
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;
     Swarm::Pose getExtrinsic(CamIdType cam_id) const;

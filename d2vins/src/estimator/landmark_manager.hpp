@@ -7,7 +7,7 @@
 namespace D2VINS {
 class D2EstimatorState;
 class D2LandmarkManager : public D2FrontEnd::LandmarkManager {
-    std::map<LandmarkIdType, state_type *> landmark_state;
+    std::map<LandmarkIdType, StatePtr> landmark_state;
     int estimated_landmark_size = 0;
     void initialLandmarkState(LandmarkPerId &lm, const D2EstimatorState *state);
 
@@ -16,7 +16,7 @@ class D2LandmarkManager : public D2FrontEnd::LandmarkManager {
     std::vector<LandmarkPerId>
     availableMeasurements(int max_pts, int max_solve_measurements,
                           const std::set<FrameIdType> &current_frames) const;
-    double *getLandmarkState(LandmarkIdType landmark_id) const;
+    StatePtr getLandmarkState(LandmarkIdType landmark_id) const;
     void initialLandmarks(const D2EstimatorState *state);
     void syncState(const D2EstimatorState *state);
     int outlierRejection(const D2EstimatorState *state,

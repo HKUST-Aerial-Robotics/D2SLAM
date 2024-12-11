@@ -122,7 +122,7 @@ void ConsensusSolver::updateTilde() {
         // Not implement yet
       }
       auto factor = new ceres::NormalPrior(A, prior_ref);
-      problem->AddResidualBlock(factor, nullptr, pointer.get());
+      problem->AddResidualBlock(factor, nullptr, CheckGetPtr(pointer));
     } else {
       if (IsSE3(paraminfo.type)) {
         // Is SE(3) pose.
@@ -140,13 +140,13 @@ void ConsensusSolver::updateTilde() {
         auto factor = new ConsenusPoseFactor(
             pose_global.pos(), pose_global.att(), tilde.segment<3>(0),
             tilde.segment<3>(3), rho_T, rho_theta);
-        problem->AddResidualBlock(factor, nullptr, pointer.get());
+        problem->AddResidualBlock(factor, nullptr, CheckGetPtr(pointer));
       } else {
         // Is euclidean.
         printf("[updateTilde] unknow param type %d id %d", paraminfo.type,
                paraminfo.id);
         VectorXd x_global = consenus_param.param_global;
-        Eigen::Map<VectorXd> x_local(pointer.get(), consenus_param.global_size);
+        Eigen::Map<VectorXd> x_local(CheckGetPtr(pointer), consenus_param.global_size);
         auto& tilde = consenus_param.param_tilde;
         tilde += x_local - x_global;
         MatrixXd A(paraminfo.size, paraminfo.size);
@@ -157,7 +157,7 @@ void ConsensusSolver::updateTilde() {
           // Not implement yet
         }
         auto factor = new ceres::NormalPrior(A, x_global - tilde);
-        problem->AddResidualBlock(factor, nullptr, pointer.get());
+        problem->AddResidualBlock(factor, nullptr, CheckGetPtr(pointer));
       }
     }
   }

@@ -18,7 +18,7 @@ std::pair<MatrixXd, VectorXd> toJacRes(const MatrixXd & A, const VectorXd & b);
 
 class PriorFactor : public ceres::CostFunction {
     std::vector<ParamInfo> keep_params_list;
-    std::map<state_type*, ParamInfo> keep_params_map;
+    std::map<StatePtr, ParamInfo> keep_params_map;
     int keep_param_blk_num = 0;
     Eigen::MatrixXd linearized_jac;
     Eigen::VectorXd linearized_res;
@@ -48,7 +48,6 @@ public:
     }
 
     virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const;
-    virtual std::vector<state_type *> getKeepParamsPointers() const;
     virtual std::vector<ParamInfo> getKeepParams() const;
     void removeFrame(int frame_id);
     int getEffParamsDim() const;

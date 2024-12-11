@@ -235,7 +235,7 @@ VINSFrame *D2Estimator::addFrameRemote(const VisualImageDescArray &_frame) {
         params->estimation_mode == D2Common::SERVER_MODE) {
       auto &imu_buf = imu_bufs.at(_frame.drone_id);
       auto ret =
-          imu_buf.periodIMU(last_frame.imu_buf_index, _frame.stamp + state.td);
+          imu_buf.periodIMU(last_frame.imu_buf_index, _frame.stamp + state.getTd());
       auto _imu = ret.first;
       if (fabs(_imu.size() / (_frame.stamp - last_frame.stamp) -
                params->IMU_FREQ) > 15) {
@@ -243,7 +243,7 @@ VINSFrame *D2Estimator::addFrameRemote(const VisualImageDescArray &_frame) {
             "Remote IMU error freq: {:.3f} start_t "
             "{:.3f}/{:.3f} end_t {:.3f}/{:.3f}",
             _imu.size() / (_frame.stamp - last_frame.stamp),
-            last_frame.stamp + state.td, _imu[0].t, _frame.stamp + state.td,
+            last_frame.stamp + state.getTd(), _imu[0].t, _frame.stamp + state.getTd(),
             _imu[_imu.size() - 1].t);
       }
       vinsframe = VINSFrame(_frame, ret, last_frame);
@@ -334,7 +334,7 @@ bool D2Estimator::inputImage(VisualImageDescArray &_frame) {
     return false;
   }
 
-  double t_imu_frame = _frame.stamp + state.td;
+  double t_imu_frame = _frame.stamp + state.getTd();
   while (!imu_bufs[self_id].available(t_imu_frame)) {
     // Wait for IMU
     usleep(2000);
@@ -364,8 +364,8 @@ void D2Estimator::setStateProperties() {
       for (size_t i = 0; i < state.size(drone_id); i++) {
         auto frame_a = state.getFrame(drone_id, i);
         auto pointer = state.getPoseState(frame_a.frame_id);
-        if (problem.HasParameterBlock(pointer)) {
-          problem.SetParameterization(pointer, pose_local_param);
+        if (problem.HasParameterBlock(CheckGetPtr(pointer))) {
+          problem.SetParameterization(CheckGetPtr(pointer), pose_local_param);
         }
       }
     }
@@ -376,8 +376,8 @@ void D2Estimator::setStateProperties() {
     auto pointer = state.getExtrinsicState(cam_id);
     if (is_first && params->not_estimate_first_extrinsic &&
         state.getCameraBelonging(cam_id) == self_id) {
-      if (problem.HasParameterBlock(pointer)) {
-        problem.SetParameterBlockConstant(pointer);
+      if (problem.HasParameterBlock(CheckGetPtr(pointer))) {
+        problem.SetParameterBlockConstant(CheckGetPtr(pointer));
         is_first = false;
       } else {
         SPDLOG_CRITICAL(
@@ -388,7 +388,7 @@ void D2Estimator::setStateProperties() {
         state.printSldWin(keyframe_measurements);
       }
     }
-    if (!problem.HasParameterBlock(pointer)) {
+    if (!problem.HasParameterBlock(CheckGetPtr(pointer))) {
       continue;
     }
     int drone_id = state.getCameraBelonging(cam_id);
@@ -396,15 +396,15 @@ void D2Estimator::setStateProperties() {
         state.size(drone_id) < params->max_sld_win_size ||
         state.lastFrame().odom.vel().norm() <
             params->estimate_extrinsic_vel_thres) {
-      problem.SetParameterBlockConstant(state.getExtrinsicState(cam_id));
+      problem.SetParameterBlockConstant(CheckGetPtr(state.getExtrinsicState(cam_id)));
     }
-    problem.SetParameterization(state.getExtrinsicState(cam_id),
+    problem.SetParameterization(CheckGetPtr(state.getExtrinsicState(cam_id)),
                                 pose_local_param);
   }
 
   for (auto lm_id : used_landmarks) {
     auto pointer = state.getLandmarkState(lm_id);
-    if (!problem.HasParameterBlock(pointer)) {
+    if (!problem.HasParameterBlock(CheckGetPtr(pointer))) {
       continue;
     }
   }
@@ -412,13 +412,13 @@ void D2Estimator::setStateProperties() {
   if (!params->estimate_td || state.size() < params->max_sld_win_size ||
       state.lastFrame().odom.vel().norm() <
           params->estimate_extrinsic_vel_thres) {
-    problem.SetParameterBlockConstant(state.getTdState(self_id));
+    problem.SetParameterBlockConstant(CheckGetPtr(state.getTdState(self_id)));
   }
 
   if (!state.getPrior() || params->always_fixed_first_pose) {
     // As we added prior for first pose, we do not need to fix it.
     problem.SetParameterBlockConstant(
-        state.getPoseState(state.firstFrame(self_id).frame_id));
+        CheckGetPtr(state.getPoseState(state.firstFrame(self_id).frame_id)));
   }
 }
 
@@ -570,7 +570,7 @@ void D2Estimator::solveinDistributedMode() {
       self_id, solve_count, last_odom.toStr(), state.getReferenceFrameId(),
       used_landmarks.size(), current_landmark_num, current_measurement_num,
       params->max_solve_measurements, state.availableDrones().size(),
-      report.total_time * 1000, report.total_iterations, state.td * 1000);
+      report.total_time * 1000, report.total_iterations, state.getTd() * 1000);
 
   // Reprogation
   for (auto drone_id : state.availableDrones()) {
@@ -579,7 +579,7 @@ void D2Estimator::solveinDistributedMode() {
       continue;
     }
     auto _imu =
-        imu_bufs[self_id].tail(state.lastFrame(drone_id).stamp + state.td);
+        imu_bufs[self_id].tail(state.lastFrame(drone_id).stamp + state.getTd());
     std::lock_guard<std::recursive_mutex> lock(imu_prop_lock);
     last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
   }
@@ -654,12 +654,12 @@ void D2Estimator::solveNonDistrib() {
   spdlog::info("C{} landmarks {} {} Ba ({:.2f}, {:.2f}, {:.2f}) Bg ({:.2f}, {:.2f}, {:.2f}) td {:.1f}ms opti_time {:.1f}ms",
               solve_count, current_landmark_num, last_odom.toStr(),
               Ba.x(), Ba.y(), Ba.z(), Bg.x(), Bg.y(), Bg.z(),
-              state.td * 1000, report.total_time * 1000);
+              state.getTd() * 1000, report.total_time * 1000);
 
   // Reprogation
   for (auto drone_id : state.availableDrones()) {
     auto _imu =
-        imu_bufs[self_id].tail(state.lastFrame(drone_id).stamp + state.td);
+        imu_bufs[self_id].tail(state.lastFrame(drone_id).stamp + state.getTd());
     std::lock_guard<std::recursive_mutex> lock(imu_prop_lock);
     last_prop_odom[drone_id] = _imu.propagation(state.lastFrame(drone_id));
   }
@@ -911,7 +911,7 @@ Swarm::Odometry D2Estimator::getOdometry() const {
 Swarm::Odometry D2Estimator::getOdometry(int drone_id) const {
   // Attention! We output IMU stamp!
   auto odom = state.lastFrame(drone_id).odom;
-  odom.stamp = odom.stamp + state.td;
+  odom.stamp = odom.stamp + state.getTd();
   return odom;
 }
 
@@ -981,15 +981,15 @@ D2Estimator::getMotionPredict(double stamp) const {
   }
   const auto &last_frame = state.lastFrame();
   auto ret = imu_bufs.at(self_id).periodIMU(last_frame.imu_buf_index,
-                                            stamp + state.td);
+                                            stamp + state.getTd());
   auto _imu = ret.first;
   auto index = ret.second;
   if (fabs(_imu.size() / (stamp - last_frame.stamp) - params->IMU_FREQ) > 15) {
     SPDLOG_WARN(
         "Local IMU error freq: {:.3f} start_t {:.3f}/{:.3f} end_t "
         "{:.3f}/{:.3f}",
-        _imu.size() / (stamp - last_frame.stamp), last_frame.stamp + state.td,
-        _imu[0].t, stamp + state.td, _imu[_imu.size() - 1].t);
+        _imu.size() / (stamp - last_frame.stamp), last_frame.stamp + state.getTd(),
+        _imu[0].t, stamp + state.getTd(), _imu[_imu.size() - 1].t);
   }
   return std::make_pair(_imu.propagation(last_frame), ret);
 }

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <Eigen/Eigen>
 #include <opencv2/opencv.hpp>
+#include <spdlog/spdlog.h>
 
 #define POSE_SIZE 7
 #define POSE4D_SIZE 4
@@ -19,6 +20,7 @@ typedef int64_t LandmarkIdType;
 typedef int32_t CamIdType;
 using state_type = double;
 using StatePtr = std::shared_ptr<state_type>;
+
 typedef SparseMatrix<state_type> SparseMat;
 typedef std::vector<cv::Point3f> Point3fVector;
 typedef std::vector<cv::Point2f> Point2fVector;
@@ -47,5 +49,19 @@ enum PGO_POSE_DOF {
     PGO_POSE_4D,
     PGO_POSE_6D
 };
+
+inline StatePtr makeSharedStateArray(int n) {
+    return std::shared_ptr<state_type>(new state_type[n], [](state_type* p) { delete[] p; });
+}
+template <typename T>
+inline T* CheckGetPtr(std::shared_ptr<T> ptr) {
+    if (ptr)
+        return ptr.get();
+    else {
+        spdlog::error("CheckGetPtr: nullptr");
+        assert(false && "CheckGetPtr: nullptr");
+    }
+    return nullptr;
+}
 
 };

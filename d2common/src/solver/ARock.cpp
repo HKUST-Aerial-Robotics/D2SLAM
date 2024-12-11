@@ -50,7 +50,7 @@ void ARockBase::updateDualStates() {
         VectorXd dual_state_remote =
             dual_states_remote.at(remote_drone_id).at(state_pointer);
         VectorXd avg_state = (dual_state_local + dual_state_remote) / 2;
-        Map<VectorXd> cur_est_state(state_pointer.get(), param_info.size);
+        Map<VectorXd> cur_est_state(CheckGetPtr(state_pointer), param_info.size);
         VectorXd delta = (avg_state - cur_est_state) * config.eta_k;
         dual_state_local = dual_state_local - delta;
         if (dual_state_local(3) > M_PI || dual_state_local(3) < -M_PI) {
@@ -71,7 +71,7 @@ void ARockBase::updateDualStates() {
         // dual_state_local.transpose() << std::endl;
         VectorXd avg_state = (dual_state_local + dual_state_remote) / 2;
         // std::cout << "avg_state: \n" << avg_state.transpose() << std::endl;
-        Map<VectorXd> cur_est_state(state_pointer.get(), param_info.size);
+        Map<VectorXd> cur_est_state(CheckGetPtr(state_pointer), param_info.size);
         VectorXd delta = (avg_state - cur_est_state) * config.eta_k;
         // std::cout << "cur_est_state: \n" << cur_est_state.transpose() <<
         // std::endl; std::cout << "delta: \n" << delta.transpose() <<
@@ -129,9 +129,9 @@ void ARockBase::createDualState(const ParamInfo& param_info, int drone_id,
         VectorXd::Zero(param_info.size);
   } else {
     dual_states_remote[drone_id][param_info.pointer] =
-        Map<VectorXd>(param_info.pointer.get(), param_info.size);
+        Map<VectorXd>(CheckGetPtr(param_info.pointer), param_info.size);
     dual_states_local[drone_id][param_info.pointer] =
-        Map<VectorXd>(param_info.pointer.get(), param_info.size);
+        Map<VectorXd>(CheckGetPtr(param_info.pointer), param_info.size);
   }
   updated = true;
 }
@@ -268,7 +268,7 @@ void ARockSolver::setDualStateFactors() {
         // pose_dual %s pose_cur %s\n",
         //     param_info.id, param_pair.first, pose_dual.toStr().c_str(),
         //     Swarm::Pose(state_pointer).toStr().c_str());
-        problem->AddResidualBlock(factor, nullptr, state_pointer.get());
+        problem->AddResidualBlock(factor, nullptr, CheckGetPtr(state_pointer));
         dual_factors.push_back(factor);
       } else if (IsPose4D(param_info.type)) {
         Swarm::Pose pose_dual(dual_state);
@@ -278,7 +278,7 @@ void ARockSolver::setDualStateFactors() {
         //     Swarm::Pose(state_pointer, true).toStr().c_str());
         auto factor =
             ConsenusPoseFactor4D::Create(pose_dual, rho_T, rho_theta, true);
-        problem->AddResidualBlock(factor, nullptr, state_pointer.get());
+        problem->AddResidualBlock(factor, nullptr, CheckGetPtr(state_pointer));
         dual_factors.push_back(factor);
       } else if (param_info.type == D2Common::POSE_PERTURB_6D) {
         MatrixXd A(param_info.size, param_info.size);
@@ -286,7 +286,7 @@ void ARockSolver::setDualStateFactors() {
         A.block<3, 3>(0, 0) *= sqrt(rho_T);
         A.block<3, 3>(3, 3) *= sqrt(rho_theta);
         auto factor = new ceres::NormalPrior(A, dual_state);
-        problem->AddResidualBlock(factor, nullptr, state_pointer.get());
+        problem->AddResidualBlock(factor, nullptr, CheckGetPtr(state_pointer));
         dual_factors.push_back(factor);
         // if (self_id == 0) {
         //     printf("[ARockSolver] ConsenusPosePerturbFactor param %ld,
@@ -305,7 +305,7 @@ void ARockSolver::setDualStateFactors() {
           // Not implement yet
         }
         auto factor = new ceres::NormalPrior(A, dual_state);
-        problem->AddResidualBlock(factor, nullptr, state_pointer.get());
+        problem->AddResidualBlock(factor, nullptr, CheckGetPtr(state_pointer));
         dual_factors.push_back(factor);
       }
     }

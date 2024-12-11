@@ -20,6 +20,7 @@ D2EstimatorState::D2EstimatorState(int _self_id) : D2State(_self_id) {
   if (params->estimation_mode != D2Common::SERVER_MODE) {
     all_drones.insert(self_id);
   }
+  td = std::make_shared<state_type>(0);
 }
 
 std::vector<LandmarkPerId> D2EstimatorState::popFrame(int index) {
@@ -38,7 +39,7 @@ VINSFrame *D2EstimatorState::addVINSFrame(const VINSFrame &_frame) {
   auto *frame = new VINSFrame;
   *frame = _frame;
   frame_db[frame->frame_id] = frame;
-  _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
+  _frame_pose_state[frame->frame_id] = makeSharedStateArray(POSE_SIZE);
   _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
   frame->reference_frame_id = reference_frame_id;
   all_drones.insert(_frame.drone_id);
@@ -83,9 +84,8 @@ CamIdType D2EstimatorState::addCamera(const Swarm::Pose &pose, int camera_index,
   if (camera_id < 0) {
     camera_id = generateCameraId(self_id, camera_index);
   }
-  auto _p = new state_type[POSE_SIZE];
-  pose.to_vector(_p);
-  _camera_extrinsic_state[camera_id] = _p;
+  _camera_extrinsic_state[camera_id] = makeSharedStateArray(POSE_SIZE);
+  pose.to_vector(CheckGetPtr(_camera_extrinsic_state[camera_id]));
   extrinsic[camera_id] = pose;
   camera_drone[camera_id] = drone_id;
   return camera_id;
@@ -197,7 +197,8 @@ int D2EstimatorState::getPoseIndex(FrameIdType frame_id) const {
 
 StatePtr D2EstimatorState::getTdState(int drone_id) { return td; }
 
-double D2EstimatorState::getTd(int drone_id) { return *td; }
+double D2EstimatorState::getTd(int drone_id) const { return *td; }
+double D2EstimatorState::getTd() const { return *td; }
 
 StatePtr D2EstimatorState::getExtrinsicState(int cam_id) const {
   const Guard lock(state_lock);
@@ -213,7 +214,7 @@ StatePtr D2EstimatorState::getSpdBiasState(FrameIdType frame_id) const {
   return _frame_spd_Bias_state.at(frame_id);
 }
 
-double * D2EstimatorState::getLandmarkState(LandmarkIdType landmark_id) const {
+StatePtr D2EstimatorState::getLandmarkState(LandmarkIdType landmark_id) const {
   const Guard lock(state_lock);
   return lmanager.getLandmarkState(landmark_id);
 }
@@ -489,12 +490,12 @@ VINSFrame *D2EstimatorState::addFrame(const VisualImageDescArray &images,
     // been estimated on remote
     _frame.odom.pose().to_vector(_frame_pose_state.at(frame->frame_id));
   } else {
-    _frame_spd_Bias_state[frame->frame_id] = new state_type[FRAME_SPDBIAS_SIZE];
+    _frame_spd_Bias_state[frame->frame_id] = makeSharedStateArray(FRAME_SPDBIAS_SIZE);
     frame->toVector(_frame_pose_state.at(frame->frame_id),
                     _frame_spd_Bias_state.at(frame->frame_id));
   }
 
-  lmanager.addKeyframe(images, td);
+  lmanager.addKeyframe(images, *td);
   spdlog::debug(
       "[D2VINS::D2EstimatorState{}] add frame {}@{} ref {} iskeyframe {} with "
       "{} images, current {} frame\n",

@@ -27,8 +27,8 @@ struct VINSFrame: public D2BaseFrame {
     swarm_msgs::VIOFrame toROS();
     swarm_msgs::VIOFrame toROS(const std::vector<Swarm::Pose> & exts);
 
-    void toVector(state_type * _pose, state_type * _spd_bias) const;
-    void fromVector(state_type * _pose, state_type * _spd_bias);
+    void toVector(const StatePtr& pose, const StatePtr& spd_bias) const;
+    void fromVector(const StatePtr& pose, const StatePtr& spd_bias);
     D2BaseFrame toBaseFrame() {
         return D2BaseFrame(stamp, frame_id, drone_id, reference_frame_id, is_keyframe, odom, initial_ego_pose);
     }

@@ -29,9 +29,9 @@ void D2LandmarkManager::addKeyframe(const VisualImageDescArray &images,
       updateLandmark(lm);
       if (landmark_state.find(lm.landmark_id) == landmark_state.end()) {
         if (params->landmark_param == D2VINSConfig::LM_INV_DEP) {
-          landmark_state[lm.landmark_id] = new state_type[INV_DEP_SIZE];
+          landmark_state[lm.landmark_id] = makeSharedStateArray(INV_DEP_SIZE);
         } else {
-          landmark_state[lm.landmark_id] = new state_type[POS_SIZE];
+          landmark_state[lm.landmark_id] = makeSharedStateArray(POS_SIZE);
         }
       }
     }
@@ -130,7 +130,7 @@ std::vector<LandmarkPerId> D2LandmarkManager::availableMeasurements(
   return ret_set;
 }
 
-double *D2LandmarkManager::getLandmarkState(LandmarkIdType landmark_id) const {
+StatePtr D2LandmarkManager::getLandmarkState(LandmarkIdType landmark_id) const {
   const Guard lock(state_lock);
   return landmark_state.at(landmark_id);
 }
@@ -176,7 +176,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
             lm_id, pos.x(), pos.y(), pos.z(), 1 / lm_first.depth);
       }
     } else {
-      memcpy(landmark_state[lm_id], lm.position.data(),
+      memcpy(CheckGetPtr(landmark_state[lm_id]), lm.position.data(),
              sizeof(state_type) * POS_SIZE);
     }
     lm.flag = LandmarkFlag::INITIALIZED;
@@ -255,7 +255,7 @@ void D2LandmarkManager::initialLandmarkState(LandmarkPerId &lm,
           }
         } else {
           lm.flag = LandmarkFlag::INITIALIZED;
-          memcpy(landmark_state[lm_id], lm.position.data(),
+          memcpy(CheckGetPtr(landmark_state[lm_id]), lm.position.data(),
                  sizeof(state_type) * POS_SIZE);
         }
         // Some debug code
@@ -312,7 +312,7 @@ void D2LandmarkManager::initialLandmarks(const D2EstimatorState *state) {
             (firstFrame->odom.pose() * ext).inverse() * lm.position;
         *landmark_state[lm_id] = 1.0 / pos_cam.norm();
       } else {
-        memcpy(landmark_state[lm_id], lm.position.data(),
+        memcpy(CheckGetPtr(landmark_state[lm_id]), lm.position.data(),
                sizeof(state_type) * POS_SIZE);
       }
     }
@@ -468,9 +468,7 @@ void D2LandmarkManager::syncState(const D2EstimatorState *state) {
         //     firstFrame->odom.pose().toStr().c_str(),
         //     ext.toStr().c_str());
       } else {
-        lm.position.x() = it.second[0];
-        lm.position.y() = it.second[1];
-        lm.position.z() = it.second[2];
+        lm.position = Map<Vector3d>(CheckGetPtr(it.second));
         lm.flag = LandmarkFlag::ESTIMATED;
       }
       estimated_landmark_size++;

@@ -27,7 +27,7 @@ ParamInfo createExtrinsic(D2EstimatorState* state, int camera_id) {
   info.eff_size = POSE_EFF_SIZE;
   info.type = EXTRINSIC;
   info.id = camera_id;
-  info.data_copied = Map<VectorXd>(info.pointer, info.size);
+  info.data_copied = Map<VectorXd>(CheckGetPtr(info.pointer), info.size);
   return info;
 }
 
@@ -45,7 +45,7 @@ ParamInfo createLandmark(D2EstimatorState* state, int landmark_id,
   }
   info.type = LANDMARK;
   info.id = landmark_id;
-  info.data_copied = Map<VectorXd>(info.pointer, info.size);
+  info.data_copied = Map<VectorXd>(CheckGetPtr(info.pointer), info.size);
   return info;
 }
 
@@ -57,7 +57,7 @@ ParamInfo createSpeedBias(D2EstimatorState* state, FrameIdType id) {
   info.eff_size = FRAME_SPDBIAS_SIZE;
   info.type = SPEED_BIAS;
   info.id = id;
-  info.data_copied = Map<VectorXd>(info.pointer, info.size);
+  info.data_copied = Map<VectorXd>(CheckGetPtr(info.pointer), info.size);
   return info;
 }
 
@@ -69,7 +69,7 @@ ParamInfo createTd(D2EstimatorState* state, int camera_id) {
   info.eff_size = TD_SIZE;
   info.type = TD;
   info.id = camera_id;
-  info.data_copied = Map<VectorXd>(info.pointer, info.size);
+  info.data_copied = Map<VectorXd>(CheckGetPtr(info.pointer), info.size);
   return info;
 }
 

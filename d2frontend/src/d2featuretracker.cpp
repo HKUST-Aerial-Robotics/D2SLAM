@@ -646,8 +646,8 @@ Vector3d D2FeatureTracker::extractPointVelocity(
   if (succ) {
     Vector3d movement = lpf.pt3d_norm - lm.pt3d_norm;
     auto vel = movement / (lpf.stamp - lm.stamp);
-    SPDLOG_DEBUG("[D2FeatureTracker::extractPointVelocity] landmark {}, frame
-    {}->{}, movement {} {} {} vel {} {} {}",
+    SPDLOG_DEBUG("[D2FeatureTracker::extractPointVelocity] landmark {}, frame"
+      "{}->{}, movement {} {} {} vel {} {} {}",
         landmark_id, lm.frame_id, lpf.frame_id, movement.x(), movement.y(),
         movement.z(), vel.x(), vel.y(), vel.z());
     return vel;
@@ -1307,7 +1307,7 @@ D2FeatureTracker::predictLandmarksWithExtrinsic(
     Vector2d pt2d_pred;
     Vector3d pos_cam_b_pred = cam_pose_b.inverse() * pt3d;
     cam->spaceToPlane(pos_cam_b_pred, pt2d_pred);
-    pts_a_pred_on_b[pts_ids[i]] = {pt2d_pred.x(), pt2d_pred.y()};
+    pts_a_pred_on_b[pts_ids[i]] = {static_cast<float>(pt2d_pred.x()), static_cast<float>(pt2d_pred.y())};
   }
   return pts_a_pred_on_b;
 }

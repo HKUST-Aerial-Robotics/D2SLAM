@@ -15,7 +15,7 @@ protected:
     //Interal params
     //sorted params
     std::vector<ParamInfo> params_list; //[parameters... remove_params...] true if remove
-    std::map<state_type*, ParamInfo> _params; // indx of parameters in params vector as sortd by params_list
+    std::map<StatePtr, ParamInfo> _params; // indx of parameters in params vector as sortd by params_list
 
     int remove_state_dim = 0;
     int total_eff_state_dim = 0;
