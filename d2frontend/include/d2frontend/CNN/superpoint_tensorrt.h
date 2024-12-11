@@ -1,36 +1,41 @@
-#ifndef SUPER_POINT_H_
-#define SUPER_POINT_H_
+#pragma once
 
 #include <vector>
 #include <memory>
+
+#ifdef USE_CUDA
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
+#include "tensorrt_utils/buffers.h"
+#endif
+
 #include <opencv2/opencv.hpp>
 #include <Eigen/Dense>
 #include "d2frontend/utils.h"
 
-#include "tensorrt_utils/buffers.h"
-
 namespace D2FrontEnd {
+  struct SuperPointConfig {
+  int32_t max_keypoints = 100;
+  int32_t remove_borders = 1;
+  int32_t dla_core;
+  int32_t fp_16;
+  int32_t input_width;
+  int32_t input_height;
+  int32_t superpoint_pca_dims = -1;
+  float keypoint_threshold = 0.015;
+  std::vector<std::string> input_tensor_names;
+  std::vector<std::string> output_tensor_names;
+  std::string onnx_path;
+  std::string engine_path;
+  std::string pca_mean_path;
+  std::string pca_comp_path;
+  bool enable_pca;
+};
+
+#ifdef USE_CUDA
 class  SuperPoint {
 public:
-  struct SuperPointConfig {
-    int32_t max_keypoints = 100;
-    int32_t remove_borders = 1;
-    int32_t dla_core;
-    int32_t fp_16;
-    int32_t input_width;
-    int32_t input_height;
-    int32_t superpoint_pca_dims = -1;
-    float keypoint_threshold = 0.015;
-    std::vector<std::string> input_tensor_names;
-    std::vector<std::string> output_tensor_names;
-    std::string onnx_path;
-    std::string engine_path;
-    std::string pca_mean_path;
-    std::string pca_comp_path;
-    bool enable_pca;
-  };
+
   explicit SuperPoint(const SuperPointConfig &super_point_config);
   bool build();
   // bool infer(const cv::Mat &image, Eigen::Matrix<double, 259, Eigen::Dynamic> &features);
@@ -83,7 +88,6 @@ private:
                           std::vector<Eigen::VectorXf> &descriptors, int dim, int h, int w, int s = 8);
 };
 
+#endif
 
 } // namespace D2FrontEnd
-
-#endif

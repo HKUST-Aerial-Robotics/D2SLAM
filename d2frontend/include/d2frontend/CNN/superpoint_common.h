@@ -1,8 +1,9 @@
 #pragma once
-#include <ATen/ATen.h>
-#include <torch/csrc/api/include/torch/types.h>
 #include <opencv2/opencv.hpp>
 #include <Eigen/Eigen>
+
+#include <torch/csrc/api/include/torch/types.h>
+#include <ATen/ATen.h>
 
 #define SP_DESC_RAW_LEN 256
 

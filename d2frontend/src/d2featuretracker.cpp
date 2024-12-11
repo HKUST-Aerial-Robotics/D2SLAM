@@ -4,6 +4,7 @@
 #include <d2frontend/d2featuretracker.h>
 #include <d2frontend/loop_cam.h>
 #include <d2frontend/utils.h>
+#include <d2frontend/opticaltrack_utils.h>
 #include <spdlog/spdlog.h>
 
 #include <opencv2/core/cuda.hpp>
@@ -101,6 +102,9 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray &frames) {
     }
     frames.send_to_backend = true;
   }
+  if (params->camera_configuration == CameraConfig::MONOCULAR) {
+    report.compose(track(frames.images[0], frames.motion_prediction));
+  }
   if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
     report.compose(track(frames.images[0], frames.motion_prediction));
     if (_config.lr_match_use_lk) {
@@ -133,8 +137,8 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray &frames) {
   }
   processFrame(frames, iskeyframe);
   report.ft_time = tic.toc();
-  SPDLOG_INFO(
-      "frame_id: {} is_kf {}, landmark_num: {}/{}, mean_para {:.2f}%, "
+  spdlog::debug(
+      "[Track] frame_id: {} is_kf {}, landmark_num: {}/{}, mean_para {:.2f}%, "
       "time_cost: {:.1f}ms ",
       frames.frame_id, iskeyframe, report.parallex_num, frames.landmarkNum(),
       report.meanParallex() * 100, report.ft_time);
@@ -148,6 +152,9 @@ bool D2FeatureTracker::trackLocalFrames(VisualImageDescArray &frames) {
     } else if (params->camera_configuration ==
                CameraConfig::FOURCORNER_FISHEYE) {
       draw(frames, iskeyframe, report);
+    }
+    else if (params->camera_configuration == CameraConfig::MONOCULAR) {
+      draw(frames.images[0], iskeyframe, report);
     }
   }
   if (report.stereo_point_num > _config.min_stereo_points) {
@@ -164,7 +171,8 @@ bool D2FeatureTracker::getMatchedPrevKeyframe(
     return false;
   }
   if (params->camera_configuration == CameraConfig::STEREO_PINHOLE ||
-      params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+      params->camera_configuration == CameraConfig::PINHOLE_DEPTH ||
+      params->camera_configuration == CameraConfig::MONOCULAR) {
     // Reverse seach in current keyframes
     for (int i = current_keyframes.size() - 1; i >= 0; i--) {
       const auto &last = current_keyframes[i];
@@ -244,12 +252,12 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray &frames) {
   }
   bool use_motion_predict = frames.reference_frame_id == reference_frame_id &&
                             _config.enable_search_local_aera_remote;
-  // printf("[D2FeatureTracker::trackRemoteFrames] frame %ld ref %d cur_ref %d
-  // use_motion_predict %d\n",
-  //         frames.frame_id, frames.reference_frame_id, reference_frame_id,
-  //         use_motion_predict);
+  SPDLOG_DEBUG("frame {} ref {} cur_ref {} use_motion_predict {}",
+          frames.frame_id, frames.reference_frame_id, reference_frame_id,
+          use_motion_predict);
   if (params->camera_configuration == CameraConfig::STEREO_PINHOLE ||
-      params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+      params->camera_configuration == CameraConfig::PINHOLE_DEPTH ||
+      params->camera_configuration == CameraConfig::MONOCULAR) {
     report.compose(trackRemote(frames.images[0], prev.images[0],
                                use_motion_predict, frames.pose_drone));
     if (report.remote_matched_num > 0 &&
@@ -277,14 +285,14 @@ bool D2FeatureTracker::trackRemoteFrames(VisualImageDescArray &frames) {
     for (size_t i = 0; i < dirs_cur.size(); i++) {
       int dir_cur = dirs_cur[i];
       int dir_prev = dirs_prev[i];
-      // printf("[D2FeatureTracker::trackRemoteFrames] dir %d:%d\n", dir_cur,
-      // dir_prev);
+      SPDLOG_DEBUG("dir {}:{}", dir_cur, dir_prev);
       report.compose(trackRemote(frames.images[dir_cur], prev.images[dir_prev],
                                  use_motion_predict, frames.pose_drone));
     }
   }
   if (params->show && params->send_whole_img_desc && params->send_img) {
-    if (params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
+    if (params->camera_configuration == CameraConfig::STEREO_PINHOLE || 
+        params->camera_configuration == CameraConfig::MONOCULAR) {
       drawRemote(frames, report);
     }
   }
@@ -345,10 +353,9 @@ TrackReport D2FeatureTracker::trackRemote(
                   local_to_remote[local_lm.landmark_id].end() &&
               local_to_remote[local_lm.landmark_id][frame.drone_id] !=
                   remote_lm.landmark_id) {
-            // printf("[D2FeatureTracker::trackRemote] Possible ambiguous local
-            // landmark %ld for drone %ld prev matched to %ld now %ld \n",
-            //     local_lm.landmark_id, frame.drone_id, remote_lm.landmark_id,
-            //     remote_lm.landmark_id);
+            SPDLOG_DEBUG("[D2FeatureTracker::trackRemote] Possible ambiguous local landmark {} for drone {} prev matched to {} now {}",
+                local_lm.landmark_id, frame.drone_id, remote_lm.landmark_id,
+                remote_lm.landmark_id);
           }
           remote_to_local[remote_lm.landmark_id] = local_lm.landmark_id;
           // printf("[D2FeatureTracker::trackRemote] remote landmark %ld (prev
@@ -365,18 +372,15 @@ TrackReport D2FeatureTracker::trackRemote(
           } else {
             remote_lm.solver_id = frame.drone_id;
           }
-          // printf("[D2FeatureTracker::trackRemote] landmark %ld will solve by
-          // %ld stamp %.3f:%.3f\n",
-          //         remote_lm.landmark_id, remote_lm.solver_id,
-          //         local_lm.stamp_discover, remote_lm.stamp_discover);
+          SPDLOG_DEBUG("[D2FeatureTracker::trackRemote] landmark {} will solve by {} stamp {:.3f}:{:.3f}",
+                  remote_lm.landmark_id, remote_lm.solver_id,
+                  local_lm.stamp_discover, remote_lm.stamp_discover);
           report.remote_matched_num++;
         }
       }
     }
   }
-  spdlog::debug(
-      "[D2Frontend::D2FeatureTracker] match {}@cam{}<->{}@cam{} "
-      "report.remote_matched_num {}",
+  SPDLOG_DEBUG("match {}@cam{}<->{}@cam{} report.remote_matched_num {}",
       frame.drone_id, frame.camera_index, prev_frame.drone_id,
       frame.camera_index, report.remote_matched_num);
   return report;
@@ -387,14 +391,13 @@ void D2FeatureTracker::cvtRemoteLandmarkId(VisualImageDesc &frame) const {
   for (auto &lm : frame.landmarks) {
     if (lm.landmark_id > 0 &&
         remote_to_local.find(lm.landmark_id) != remote_to_local.end()) {
-      // printf("Lm remote %ld -> %ld camera %ld\n", lm.landmark_id,
-      // remote_to_local.at(lm.landmark_id), lm.camera_id);
+      SPDLOG_DEBUG("Lm remote {} -> {} camera {}", lm.landmark_id, remote_to_local.at(lm.landmark_id), lm.camera_id);
       lm.landmark_id = remote_to_local.at(lm.landmark_id);
       count++;
     }
   }
-  // printf("[D2FeatureTracker::cvtRemoteLandmarkId] Remote eff stereo %d\n",
-  // count);
+  SPDLOG_DEBUG("Remote eff stereo {}",
+  count);
 }
 
 TrackReport D2FeatureTracker::track(VisualImageDesc &frame,
@@ -434,16 +437,6 @@ TrackReport D2FeatureTracker::track(VisualImageDesc &frame,
         cur_lm.stamp_discover = prev_lm.stamp_discover;
         lmanager->updateLandmark(cur_lm);
         report.sum_parallex += (prev_lm.pt3d_norm - cur_lm.pt3d_norm).norm();
-        // printf("[D2FeatureTracker::track] landmark %ld cam_idx %d<->%d
-        // frame_cam_idx %d<->%d parallex %.1f%% prev_2d %.1f %.1f cur_2d %.3f
-        // %.3f prev_3d %.3f %.3f %.3f cur_3d %.3f %.3f %.3f\n",
-        //     landmark_id, prev_lm.camera_index, cur_lm.camera_index,
-        //     previous.camera_index, frame.camera_index, (prev_lm.pt3d_norm -
-        //     cur_lm.pt3d_norm).norm()*100, prev_lm.pt2d.x, prev_lm.pt2d.y,
-        //     cur_lm.pt2d.x, cur_lm.pt2d.y, prev_lm.pt3d_norm.x(),
-        //     prev_lm.pt3d_norm.y(), prev_lm.pt3d_norm.z(),
-        //     cur_lm.pt3d_norm.x(), cur_lm.pt3d_norm.y(),
-        //     cur_lm.pt3d_norm.z());
         report.parallex_num++;
         if (lmanager->at(landmark_id).track.size() >=
             _config.long_track_frames) {
@@ -468,18 +461,18 @@ const VisualImageDescArray &D2FeatureTracker::getLatestKeyframe() const {
   for (auto it = current_keyframes.rbegin(); it != current_keyframes.rend();
        it++) {
     if (it->is_keyframe) {
-      spdlog::debug("Found previous keyframe {}", it->frame_id);
+      SPDLOG_DEBUG("Found previous keyframe {}", it->frame_id);
       return *it;
     }
   }
-  spdlog::debug("Not found previous keyframe {}, returning beginning");
+  SPDLOG_DEBUG("Not found previous keyframe {}, returning beginning");
   return *current_keyframes.begin();
 }
 
 TrackReport D2FeatureTracker::trackLK(VisualImageDesc &frame) {
   // Track LK points
   TrackReport report;
-  LKImageInfoGPU cur_lk_info;
+  LKImageInfo cur_lk_info;
   auto cur_landmarks = frame.landmarks;
   auto cur_landmark_desc = frame.landmark_descriptor;
   auto cur_landmark_scores = frame.landmark_scores;
@@ -493,75 +486,69 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc &frame) {
       const auto &prev_frame = current_keyframes.back();
       const auto &prev_image = prev_frame.images[frame.camera_index];
       const auto &prev_keyframe = getLatestKeyframe();
-      const auto &prev_lk =
-          keyframe_lk_infos.at(prev_frame.frame_id).at(frame.camera_index);
-      if (!prev_lk.lk_ids.empty()) {
-        int prev_lk_num = prev_lk.lk_ids.size();
-        cur_lk_info = opticalflowTrackPyr(frame.raw_image, prev_lk,
-                                          TrackLRType::WHOLE_IMG_MATCH);
-        pyr_has_built = true;
-        cur_lk_info.lk_pts_3d_norm.resize(cur_lk_info.lk_pts.size());
-        for (unsigned int i = 0; i < cur_lk_info.lk_pts.size(); i++) {
-          auto ret =
-              createLKLandmark(frame, cur_lk_info.lk_pts[i],
-                               cur_lk_info.lk_ids[i], cur_lk_info.lk_types[i]);
-          cur_lk_info.lk_pts_3d_norm[i] = ret.second.pt3d_norm;
-          if (!ret.first) {
-            continue;
-          }
-          if (_config.sp_track_use_lk) {
-            // Copy the landmark descriptor from previous frame
-            frame.landmark_descriptor.insert(
-                frame.landmark_descriptor.end(),
-                prev_image.landmark_descriptor.begin() +
-                    cur_lk_info.lk_local_index[i] * params->superpoint_dims,
-                prev_image.landmark_descriptor.begin() +
-                    (cur_lk_info.lk_local_index[i] + 1) *
-                        params->superpoint_dims);
-            frame.landmark_scores.emplace_back(
-                prev_image.landmark_scores[cur_lk_info.lk_local_index[i]]);
-            cur_lk_info.lk_local_index[i] = frame.landmarks.size();
-          }
-          auto &lm = ret.second;
-          auto track = lmanager->at(cur_lk_info.lk_ids[i]).track;
-          lm.velocity = extractPointVelocity(lm);
-          frame.landmarks.emplace_back(lm);
-          auto [succ, prev_lm] =
-              getPreviousLandmarkFrame(lm, prev_keyframe.frame_id);
-          if (succ) {
-            lm.stamp_discover = prev_lm.stamp_discover;
-          } else {
-            // SPDLOG_INFO("getPreviousLandmarkFrame failed");
-            continue;
-          }
-          if (lmanager->at(cur_lk_info.lk_ids[i]).track.size() >=
-              _config.long_track_frames) {
-            report.long_track_num++;
-          }
+      if (keyframe_lk_infos.count(prev_frame.frame_id) > 0 && 
+        keyframe_lk_infos.at(prev_frame.frame_id).count(frame.camera_index) > 0)
+      {
+        const auto &prev_lk =
+            keyframe_lk_infos.at(prev_frame.frame_id).at(frame.camera_index);
+        if (!prev_lk.lk_ids.empty()) {
+          int prev_lk_num = prev_lk.lk_ids.size();
+          cur_lk_info = opticalflowTrackPyr(frame.raw_image, prev_lk,
+                                            TrackLRType::WHOLE_IMG_MATCH);
+          removeNearPoints(cur_lk_info, _config.near_lk_thread_rate);
+          pyr_has_built = true;
+          cur_lk_info.lk_pts_3d_norm.resize(cur_lk_info.lk_pts.size());
+          for (unsigned int i = 0; i < cur_lk_info.lk_pts.size(); i++) {
+            auto ret =
+                createLKLandmark(frame, cur_lk_info.lk_pts[i],
+                                cur_lk_info.lk_ids[i], cur_lk_info.lk_types[i]);
+            cur_lk_info.lk_pts_3d_norm[i] = ret.second.pt3d_norm;
+            if (!ret.first) {
+              continue;
+            }
+            if (_config.sp_track_use_lk) {
+              // Copy the landmark descriptor from previous frame
+              frame.landmark_descriptor.insert(
+                  frame.landmark_descriptor.end(),
+                  prev_image.landmark_descriptor.begin() +
+                      cur_lk_info.lk_local_index[i] * params->superpoint_dims,
+                  prev_image.landmark_descriptor.begin() +
+                      (cur_lk_info.lk_local_index[i] + 1) *
+                          params->superpoint_dims);
+              frame.landmark_scores.emplace_back(
+                  prev_image.landmark_scores[cur_lk_info.lk_local_index[i]]);
+              cur_lk_info.lk_local_index[i] = frame.landmarks.size();
+            }
+            auto &lm = ret.second;
+            auto track = lmanager->at(cur_lk_info.lk_ids[i]).track;
+            lm.velocity = extractPointVelocity(lm);
+            frame.landmarks.emplace_back(lm);
+            auto [succ, prev_lm] =
+                getPreviousLandmarkFrame(lm, prev_keyframe.frame_id);
+            if (succ) {
+              lm.stamp_discover = prev_lm.stamp_discover;
+            } else {
+              // SPDLOG_INFO("getPreviousLandmarkFrame failed");
+              continue;
+            }
+            if (lmanager->at(cur_lk_info.lk_ids[i]).track.size() >=
+                _config.long_track_frames) {
+              report.long_track_num++;
+            }
 
-          report.sum_parallex += (lm.pt3d_norm - prev_lm.pt3d_norm).norm();
-          // spdlog::debug("LM {} prev_2d {:.1f} {:.1f} cur_2d {:.3f} {:.3f}
-          // para_2d {:.1f}%  prev_3d {:.3f} {:.3f} {:.3f} cur_3d {:.3f} {:.3f}
-          // {:.3f} para_3d {:.1f}%",
-          //         prev_lm.landmark_id, prev_lm.pt2d.x, prev_lm.pt2d.y,
-          //         lm.pt2d.x, lm.pt2d.y, cv::norm(prev_lm.pt2d -
-          //         lm.pt2d)*100.0, prev_lm.pt3d_norm.x(),
-          //         prev_lm.pt3d_norm.y(), prev_lm.pt3d_norm.z(),
-          //         lm.pt3d_norm.x(), lm.pt3d_norm.y(), lm.pt3d_norm.z(),
-          //         (prev_lm.pt3d_norm - lm.pt3d_norm).norm()*100.0);
-          report.parallex_num++;
+            report.sum_parallex += (lm.pt3d_norm - prev_lm.pt3d_norm).norm();
+            report.parallex_num++;
+          }
         }
-        // SPDLOG_INFO("[D2FeatureTracker::trackLK] track {} LK points, {} lost,
-        // track rate {:.1f}% para {:.2f}% num {} {}->{}",
-        //         prev_lk_num, prev_lk_num - cur_lk_info.lk_pts.size(),
-        //         cur_lk_info.lk_pts.size() * 100.0 / prev_lk_num,
-        //         report.meanParallex()*100, report.parallex_num,
-        //         prev_frame.frame_id, frame.frame_id);
       }
     }
     if (!pyr_has_built) {
+#ifdef USE_CUDA
       cv::cuda::GpuMat image_cuda(frame.raw_image);
-      cur_lk_info.pyr = buildImagePyramid(image_cuda);
+      cur_lk_info.pyr = buildImagePyramid(image_cuda, PYR_LEVEL);
+#else
+      cur_lk_info.pyr = buildImagePyramid(frame.raw_image, PYR_LEVEL);
+#endif
     }
   }
   // Discover new points.
@@ -600,16 +587,14 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc &frame) {
           count_new++;
         }
       }
-      spdlog::debug("{} new points added", cur_lk_info.lk_pts.size(),
+      SPDLOG_DEBUG("{} new points added", cur_lk_info.lk_pts.size(),
                     count_new);
     } else {
       std::vector<cv::Point2f> n_pts;
       TicToc t_det;
       detectPoints(frame.raw_image, n_pts, frame.landmarks2D(),
                    params->total_feature_num, true, _config.lk_use_fast);
-      spdlog::debug(
-          "[D2FeatureTracker::trackLK] detect {} points in {:.2f}ms\n",
-          n_pts.size(), t_det.toc());
+      SPDLOG_DEBUG("detect {} points in {:.2f}ms",  n_pts.size(), t_det.toc());
       report.unmatched_num += n_pts.size();
       for (auto &pt : n_pts) {
         auto ret = createLKLandmark(frame, pt);
@@ -638,8 +623,7 @@ TrackReport D2FeatureTracker::trackLK(VisualImageDesc &frame) {
 std::pair<bool, LandmarkPerFrame> D2FeatureTracker::getPreviousLandmarkFrame(
     const LandmarkPerFrame &lpf, FrameIdType keyframe_id) const {
   auto landmark_id = lpf.landmark_id;
-  // printf("[D2FeatureTracker::extractPointVelocity] landmark_id %d\n",
-  // landmark_id);
+  SPDLOG_DEBUG("[D2FeatureTracker::extractPointVelocity] landmark_id {}", landmark_id);
   if (lmanager->hasLandmark(landmark_id) &&
       lmanager->at(landmark_id).track.size() > 0) {
     auto lm_per_id = lmanager->at(landmark_id);
@@ -658,16 +642,14 @@ std::pair<bool, LandmarkPerFrame> D2FeatureTracker::getPreviousLandmarkFrame(
 Vector3d D2FeatureTracker::extractPointVelocity(
     const LandmarkPerFrame &lpf) const {
   auto landmark_id = lpf.landmark_id;
-  // printf("[D2FeatureTracker::extractPointVelocity] landmark_id %d\n",
-  // landmark_id);
   auto [succ, lm] = getPreviousLandmarkFrame(lpf);
   if (succ) {
     Vector3d movement = lpf.pt3d_norm - lm.pt3d_norm;
     auto vel = movement / (lpf.stamp - lm.stamp);
-    // printf("[D2FeatureTracker::extractPointVelocity] landmark %d, frame
-    // %d->%d, movement %f %f %f vel  %f %f %f \n",
-    //     landmark_id, lm.frame_id, lpf.frame_id, movement.x(), movement.y(),
-    //     movement.z(), vel.x(), vel.y(), vel.z());
+    SPDLOG_DEBUG("[D2FeatureTracker::extractPointVelocity] landmark {}, frame
+    {}->{}, movement {} {} {} vel {} {} {}",
+        landmark_id, lm.frame_id, lpf.frame_id, movement.x(), movement.y(),
+        movement.z(), vel.x(), vel.y(), vel.z());
     return vel;
   }
   return Vector3d(0, 0, 0);
@@ -773,7 +755,7 @@ bool D2FeatureTracker::isKeyframe(const TrackReport &report) {
   int prev_num =
       current_keyframes.size() > 0 ? current_keyframes.back().landmarkNum() : 0;
   if (report.meanParallex() > 0.5) {
-    printf("unexcepted mean parallex %f\n", report.meanParallex());
+    SPDLOG_WARN("unexcepted mean parallex {:.2f}", report.meanParallex());
   }
   if (report.parallex_num < _config.min_keyframe_num ||
       report.long_track_num < _config.long_track_thres ||
@@ -782,7 +764,7 @@ bool D2FeatureTracker::isKeyframe(const TrackReport &report) {
                                  prev_num ||  // Unmatched is assumed to be new
       report.meanParallex() >
           _config.parallex_thres) {  // Attenion, if mismatch this will be big
-    spdlog::debug(
+    SPDLOG_DEBUG(
         "New KF: keyframe_count: {}, long_track_num: {}, prev_num: {}, "
         "unmatched_num: {}, parallex: {:.1f}%",
         keyframe_count, report.long_track_num, prev_num, report.unmatched_num,
@@ -848,9 +830,7 @@ void D2FeatureTracker::processFrame(VisualImageDescArray &frames,
   }
   frames.pose_drone = frames.motion_prediction;
   if (is_keyframe || !_config.track_from_keyframe) {
-    spdlog::debug(
-        "[D2FeatureTracker::processFrame] Add to keyframe list, frame_id: {}",
-        frames.frame_id);
+    SPDLOG_DEBUG("Add to keyframe list, frame_id: {}", frames.frame_id);
     if (current_keyframes.size() > 0) {
       keyframe_lk_infos.erase(current_keyframes.back().frame_id);
     }
@@ -999,9 +979,9 @@ void D2FeatureTracker::drawRemote(const VisualImageDescArray &frames,
   cv::Mat img = drawToImage(frames.images[0], false, report, false, true);
   cv::Mat img_r = drawToImage(frames.images[1], false, report, true, true);
   if (img.empty()) {
-    printf(
+    SPDLOG_WARN(
         "[D2FeatureTracker::drawRemote] Unable to draw remote image, empty "
-        "image found\n");
+        "image found");
     return;
   }
   char buf[64] = {0};
@@ -1111,7 +1091,7 @@ bool D2FeatureTracker::matchLocalFeatures(
   ids_b_to_a.resize(pts_b.size());
   std::fill(ids_b_to_a.begin(), ids_b_to_a.end(), -1);
   double search_radius = param.search_radius;
-  spdlog::debug(
+  SPDLOG_DEBUG(
       "Match {}<->{} enable_prediction {} pose_a {} enable_search_in_local {} "
       "motion_prediction {} prediction_using_extrinsic {}",
       img_desc_a.frame_id, img_desc_b.frame_id, param.enable_prediction,
@@ -1169,7 +1149,7 @@ bool D2FeatureTracker::matchLocalFeatures(
       auto features_b = getFeatureHalfImg(
           pts_b, raw_desc_b, param.type == RIGHT_LEFT_IMG_MATCH, tmp_to_idx_b);
       if (tmp_to_idx_a.size() == 0 || tmp_to_idx_b.size() == 0) {
-        spdlog::debug("matchLocalFeatures failed: no feature to match.\n");
+        SPDLOG_DEBUG("matchLocalFeatures failed: no feature to match.\n");
         return false;
       }
       cv::BFMatcher bfmatcher(cv::NORM_L2, true);
@@ -1231,7 +1211,7 @@ bool D2FeatureTracker::matchLocalFeatures(
     // only perform this for remote
     std::vector<unsigned char> mask;
     if (matched_pts_a_normed.size() < MIN_HOMOGRAPHY) {
-      spdlog::debug(
+      SPDLOG_DEBUG(
           "matchLocalFeatures failed only %ld pts not meet MIN_HOMOGRAPHY",
           matched_pts_a_normed.size());
       return false;
@@ -1299,7 +1279,7 @@ bool D2FeatureTracker::matchLocalFeatures(
     }
   }
 
-  spdlog::debug(
+  SPDLOG_DEBUG(
       "match features {}:{} matched inliers{}/all{} frame {}:{} t: {:.3f}ms "
       "enable_knn {} kNN ratio {} search_dist {:.2f} check_essential {} "
       "sp_dims {}",
@@ -1361,10 +1341,9 @@ std::vector<cv::Point2f> D2FeatureTracker::predictLandmarks(
     Vector3d pos_cam_b_pred = cam_pose_b.inverse() * pt3d;
     cam->spaceToPlane(pos_cam_b_pred, pt2d_pred);
     pts_a_pred_on_b.emplace_back(pt2d_pred.x(), pt2d_pred.y());
-    // printf("[D2FT] Frame_a %ld landmark %ld find_pos:%d position %.2f %.2f
-    // %.2f pred %.2f %.2f\n",
-    //     img_desc_a.frame_id, landmark_id, find_position, pt3d.x(), pt3d.y(),
-    //     pt3d.z(), pt2d_pred.x(), pt2d_pred.y());
+    SPDLOG_DEBUG("Frame_a {} landmark {} find_pos:{} position {:.2f} {:.2f} {:.2f} pred {:.2f} {:.2f}",
+        img_desc_a.frame_id, landmark_id, find_position, pt3d.x(), pt3d.y(),
+        pt3d.z(), pt2d_pred.x(), pt2d_pred.y());
   }
   return pts_a_pred_on_b;
 }

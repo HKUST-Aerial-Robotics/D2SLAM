@@ -205,6 +205,8 @@ def plot_fused(nodes, poses_fused, poses_gt=None, poses_pgo=None , output_path="
         ax2.set_ylabel("Roll (deg)")
         ax3.legend()
         plt.savefig(output_path+f"est_by_t{i}_attitude.png")
+        max_vel = np.max(np.linalg.norm(poses_fused[i].vel, axis=1))
+        print(f"Trajetory {i} length {poses_fused[i].length():.1f} max vel: {max_vel:.1f}m/s")
 
 def plot_relative_pose_err(main_id, target_ids, poses_fused, poses_gt, poses_vo=None,outlier_thres=100, 
         outlier_yaw_thres=10, dte=1000000, show=True, figsize=(6, 6), verbose=True, common_time_dt=0.2):

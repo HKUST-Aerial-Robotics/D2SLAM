@@ -46,23 +46,23 @@ int main(int argc, char** argv) {
   int undistort_width = img.cols;
   int undistort_height = img.cols / 2;
   int pinhole2_height = img.cols * 0.75;
-  FisheyeUndist undistort(ret.first, 0, fov, true,
-                          FisheyeUndist::UndistortCylindrical, undistort_width,
+  FisheyeUndist undistort(ret.first, 0, fov, FisheyeUndist::UndistortCylindrical, undistort_width,
                           undistort_height);
   auto imgs = undistort.undist_all(img, true);
   cv::imshow("UndistortCylindrical", imgs[0]);
+
+#ifdef USE_CUDA
   auto img_cuda = undistort.undist_id_cuda(img, 0);
   cv::Mat img_cpu(img_cuda);
   cv::imshow("UndistortCylindrical_cuda", img_cpu);
+#endif
 
-  FisheyeUndist undistort5(ret.first, 0, fov, true,
-                           FisheyeUndist::UndistortPinhole5, undistort_width,
+  FisheyeUndist undistort5(ret.first, 0, fov, FisheyeUndist::UndistortPinhole5, undistort_width,
                            undistort_height);
   imgs = undistort5.undist_all(img, true);
   cv::imshow("UndistortPinhole5", imgs[0]);
 
-  FisheyeUndist undistort2(ret.first, 0, fov, true,
-                           FisheyeUndist::UndistortPinhole2, undistort_width,
+  FisheyeUndist undistort2(ret.first, 0, fov, FisheyeUndist::UndistortPinhole2, undistort_width,
                            pinhole2_height);
   imgs = undistort2.undist_all(img, true);
   cv::hconcat(imgs[0], imgs[1], img);

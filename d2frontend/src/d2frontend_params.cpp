@@ -83,7 +83,7 @@ D2FrontendParams::D2FrontendParams(ros::NodeHandle& nh) {
 
   //superpoint configurations
   cv::FileNode fs_superpoint_config = fsSettings["superpoint_config"];
-  SuperPoint::SuperPointConfig superpoint_config;
+  SuperPointConfig superpoint_config;
   superpoint_config.max_keypoints  = static_cast<int32_t>(fsSettings["max_superpoint_cnt"]);
   superpoint_config.onnx_path = static_cast<std::string>(fs_superpoint_config["onnx_path"]);
   superpoint_config.engine_path = static_cast<std::string>(fs_superpoint_config["trt_engine_path"]);
@@ -151,7 +151,6 @@ D2FrontendParams::D2FrontendParams(ros::NodeHandle& nh) {
   ftconfig->long_track_frames = fsSettings["landmark_estimate_tracks"];
   ftconfig->check_essential = (int)fsSettings["check_essential"];
   ftconfig->enable_lk_optical_flow = (int)fsSettings["enable_lk_optical_flow"];
-  ftconfig->lk_use_fast = (int)fsSettings["lk_use_fast"];
   ftconfig->remote_min_match_num = fsSettings["remote_min_match_num"];
   ftconfig->double_counting_common_feature =
       (int)fsSettings["double_counting_common_feature"];
@@ -232,7 +231,10 @@ D2FrontendParams::D2FrontendParams(ros::NodeHandle& nh) {
   SPDLOG_INFO("[D2Frontend] Using lazy broadcast keyframe: {}",
               lazy_broadcast_keyframe);
 
-  if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
+  if (camera_configuration == CameraConfig::MONOCULAR) {
+    loopdetectorconfig->MAX_DIRS = 1;
+    min_receive_images = 1;
+  } else if (camera_configuration == CameraConfig::STEREO_PINHOLE) {
     loopdetectorconfig->MAX_DIRS = 1;
     min_receive_images = 2;
   } else if (camera_configuration == CameraConfig::STEREO_FISHEYE) {
@@ -286,7 +288,7 @@ void D2FrontendParams::generateCameraModels(cv::FileStorage& fsSettings,
     camera_ptrs.clear();
     for (auto cam : raw_camera_ptrs) {
       auto ptr = new FisheyeUndist(
-          cam, 0, undistort_fov, true, FisheyeUndist::UndistortCylindrical,
+          cam, 0, undistort_fov, FisheyeUndist::UndistortCylindrical,
           width_undistort, height_undistort, photometric);
       auto cylind_cam = ptr->cam_top;
       camera_ptrs.push_back(cylind_cam);

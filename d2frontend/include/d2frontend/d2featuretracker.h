@@ -5,9 +5,15 @@
 #include <unordered_map>
 #include <mutex>
 #include <d2common/d2frontend_types.h>
-#include <d2frontend/utils.h>
+#include <d2frontend/opticaltrack_utils.h>
 
 using namespace Eigen;
+
+#ifdef USE_CUDA
+#define LKImageInfo LKImageInfoGPU
+#else
+#define LKImageInfo LKImageInfoCPU
+#endif
 
 namespace D2FrontEnd {
 using D2Common::VisualImageDescArray;
@@ -26,7 +32,7 @@ struct D2FTConfig {
     bool write_to_file = false;
     bool check_essential = false;
     bool enable_lk_optical_flow = true;
-    bool lk_use_fast = false;
+    bool lk_use_fast = true;
     double ransacReprojThreshold = 10;
     double max_pts_velocity_time=0.3;
     int remote_min_match_num = 30;
@@ -54,6 +60,7 @@ struct D2FTConfig {
     float  stereo_frame_thread_rate = 20.0;
     float loop_detection_thread_rate = 1.0;
     float lcm_thread_rate = 1.0;
+    float near_lk_thread_rate = 5.0;
 };
 
 struct TrackReport {
@@ -105,7 +112,7 @@ protected:
     int keyframe_count = 0;
     int frame_count = 0;
     bool inited = false;
-    std::map<int, std::map<int, LKImageInfoGPU>> keyframe_lk_infos; //frame.camera_index->image
+    std::map<int, std::map<int, LKImageInfo>> keyframe_lk_infos; //frame.camera_index->image
     std::pair<bool, LandmarkPerFrame> createLKLandmark(const VisualImageDesc & frame,
         cv::Point2f pt, LandmarkIdType landmark_id = -1, LandmarkType type=LandmarkType::FlowLandmark);
     std::recursive_mutex track_lock;

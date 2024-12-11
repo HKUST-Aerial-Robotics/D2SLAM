@@ -1,3 +1,5 @@
+#include <opencv2/calib3d.hpp>
+
 #include "solve_5pts.h"
 
 #include "spdlog/spdlog.h"
@@ -26,7 +28,7 @@ bool MotionEstimator::solveRelativeRT(
         (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
     cv::Mat mask;
     cv::Mat E = cv::findEssentialMat(ll, rr, cameraMatrix, cv::RANSAC, 0.99,
-                                     0.3 / 460, 1000, mask);
+                                     0.3 / 460);
     // cv::Mat E = cv::findFundamentalMat(ll, rr, cv::FM_RANSAC, 0.3 / 460,
     // 0.99, mask);
     cv::Mat rot, trans;

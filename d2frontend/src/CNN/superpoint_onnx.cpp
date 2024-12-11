@@ -22,7 +22,9 @@ SuperPointONNX::SuperPointONNX(std::string engine_path, int _nms_dist,
       thres(_thres),
       max_num(_max_num),
       nms_dist(_nms_dist) {
+#ifdef USE_CUDA
   at::set_num_threads(1);
+#endif
   std::cout << "Init SuperPointONNX: " << engine_path << " size " << _width
             << " " << _height << std::endl;
 
@@ -64,6 +66,7 @@ void SuperPointONNX::infer(const cv::Mat& input,
                                std::vector<cv::Point2f>& keypoints,
                                std::vector<float>& local_descriptors,
                                std::vector<float>& scores) {
+#ifdef USE_CUDA
   TicToc tic;
   cv::Mat _input;
   keypoints.clear();
@@ -104,5 +107,8 @@ void SuperPointONNX::infer(const cv::Mat& input,
         "%f ms, desc time: %f ms\n",
         inference_time, copy_time, nms_time, desc_time);
   }
+#else
+  SPDLOG_ERROR("SuperPointONNX not supported without CUDA");
+#endif
 }
 }  // namespace D2FrontEnd

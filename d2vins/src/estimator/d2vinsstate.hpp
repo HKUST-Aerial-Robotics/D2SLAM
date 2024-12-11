@@ -39,6 +39,9 @@ protected:
         const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic);
     void RefineGravity(std::vector<VINSFrame * > sld_win, 
         const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic, Vector3d &g, VectorXd &x);
+
+    Vector3d Ba = Vector3d::Zero();
+    Vector3d Bg = Vector3d::Zero();
 public:
     state_type td = 0.0;
     D2EstimatorState(int _self_id);
@@ -99,6 +102,14 @@ public:
     void setPose(FrameIdType frame_id, const Swarm::Pose & pose);
     void setVelocity(FrameIdType frame_id, const Vector3d & velocity);
     void setBias(FrameIdType frame_id, const Vector3d & ba, const Vector3d & bg);
+
+    Eigen::Vector3d getBa() const {
+        return Ba;
+    }
+
+    Eigen::Vector3d getBg() const {
+        return Bg;
+    }
 
     int numKeyframes() const;
 

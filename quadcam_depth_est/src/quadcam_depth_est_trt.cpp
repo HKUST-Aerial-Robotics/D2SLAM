@@ -138,7 +138,7 @@ void QuadcamDepthEstTrt::loadVirtualCameras(YAML::Node & config, std::string con
           photometric_inv_idx = 0;
       }
       printf("[Debug ]undistortor matrix init with size width:%d height:%d\n",this->width_,this->height_);
-      this->undistortors_.push_back(new D2Common::FisheyeUndist(cam_model.first, 0, fov, true,
+      this->undistortors_.push_back(new D2Common::FisheyeUndist(cam_model.first, 0, fov,
           D2Common::FisheyeUndist::UndistortPinhole2, this->width_, this->height_, photometric_inv_vingette_[photometric_inv_idx]));
       printf("[Debug] undistorter width and height:%d %d\n",this->width_,this->height_);
       photometric_inv_idx++;

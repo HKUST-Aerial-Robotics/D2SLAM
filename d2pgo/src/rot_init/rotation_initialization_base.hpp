@@ -325,6 +325,7 @@ protected:
             b.segment(row_id, 9) = right_vec; // Rp
             return row_id + 9;
         }
+        return row_id;
     }
 
     double solveLinearPose6d(bool finetune_rot = false) {

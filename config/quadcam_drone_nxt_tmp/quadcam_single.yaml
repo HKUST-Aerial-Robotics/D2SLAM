@@ -40,7 +40,6 @@ estimate_td: 1                     # online estimate time offset between camera 
 td: -0.05                           # For new datasets with filter
 estimation_mode: 0
 double_counting_common_feature: 0
-min_inv_dep: 0.01 #100 meter away.
 
 #optimization parameters
 max_solver_time: 0.04 # max solver itration time (ms), to guarantee real time 0.04 normal running
@@ -74,9 +73,6 @@ depth_estimate_baseline: 0.03
 max_sld_win_size: 10
 landmark_estimate_tracks: 4 #when use depth or stereo, 3 is OK.
 min_solve_frames: 6
-
-#solver
-multiple_thread: 4
 
 #outlier rejection
 thres_outlier : 10.0

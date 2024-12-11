@@ -117,8 +117,6 @@ max_sld_win_size: 11 # This parameter specifies the maximum length of the slidin
 landmark_estimate_tracks: 4 # This parameter specifies the threshold for the number of measurements of a landmark to be used for estimation in D2SLAM.
 min_solve_frames: 6 # This parameter specifies the number of keyframes in the sliding window to start the estimation process in D2SLAM.
 
-#solver
-multiple_thread: 1 #  This parameter specifies whether to use multiple threads in the Ceres solver in D2VINS.
 
 #outlier rejection
 thres_outlier : 10.0 # This parameter specifies the threshold to enable outlier detection in D2SLAM.

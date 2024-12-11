@@ -5,6 +5,7 @@
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/cudastereo.hpp>
 #include <opencv2/calib3d.hpp>
+#include <opencv2/cudawarping.hpp>
 #include <camodocal/camera_models/CataCamera.h>
 #include <opencv2/ccalib/omnidir.hpp>
 

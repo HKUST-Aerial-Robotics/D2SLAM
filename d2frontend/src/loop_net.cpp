@@ -66,7 +66,8 @@ void LoopNet::broadcastVisualImageDescArray(VisualImageDescArray& image_array,
     }
   } else {
     if (!need_send_features &&
-        params->camera_configuration == CameraConfig::STEREO_PINHOLE) {
+        params->camera_configuration == CameraConfig::STEREO_PINHOLE||
+        params->camera_configuration == CameraConfig::MONOCULAR) {
       auto& img = fisheye_desc.images[0];
       img.header.is_keyframe = fisheye_desc.is_keyframe;
       broadcastImgDesc(img, fisheye_desc.sld_win_status, need_send_features);
@@ -252,7 +253,8 @@ void LoopNet::processRecvImageDesc(const ImageDescriptor_t& image,
       } else {
         frame_desc.image_num = 2;
       }
-    } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH) {
+    } else if (params->camera_configuration == CameraConfig::PINHOLE_DEPTH || 
+               params->camera_configuration == CameraConfig::MONOCULAR) {
       frame_desc.image_num = 1;
     } else if (params->camera_configuration ==
                CameraConfig::FOURCORNER_FISHEYE) {
@@ -429,7 +431,9 @@ void LoopNet::scanRecvPackets() {
         (tnow - frame_header_recv_time[image_array_idx] > recv_period ||
          count_images >= params->min_receive_images ||
          (count_images == 1 && frame_desc.is_lazy_frame &&
-          params->camera_configuration == CameraConfig::STEREO_PINHOLE))) {
+          params->camera_configuration == CameraConfig::STEREO_PINHOLE ||
+          params->camera_configuration == CameraConfig::MONOCULAR ||
+          params->camera_configuration == CameraConfig::PINHOLE_DEPTH))) {
       // When stereo and lazy frame, only one image is enough
       finish_recv_image_array_idx.push_back(image_array_idx);
     }

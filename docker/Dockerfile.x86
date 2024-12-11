@@ -1,9 +1,9 @@
 # FROM nvidia/cuda:11.6.1-cudnn8-devel-ubuntu20.04
-FROM nvcr.io/nvidia/tensorrt:22.08-py3
+FROM nvcr.io/nvidia/tensorrt:23.04-py3
 ARG CERES_VERSION=2.1.0
 ARG CMAKE_VERSION=3.23.1
-ARG ONNX_VERSION=1.12.1
-ARG OPENCV_VERSION=4.6.0
+ARG ONNX_VERSION=1.18.0
+ARG OPENCV_VERSION=4.10.0
 ENV SWARM_WS=/root/swarm_ws
 ARG ROS_VERSION=noetic
 ARG FAISS_VERSION=1.7.4
@@ -72,12 +72,12 @@ RUN   git clone https://github.com/HKUST-Swarm/ceres-solver -b D2SLAM && \
       rm -rf ../../ceres-solver && \
       apt-get clean all
 
-RUN   wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz && \
-      tar -zxvf onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz && \
+RUN   wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-gpu-cuda12-${ONNX_VERSION}.tgz -O onnxruntime.tgz  && \
+      tar -zxvf onnxruntime.tgz && \
       cp -r onnxruntime-linux-x64-gpu-${ONNX_VERSION}/include/* /usr/local/include/ && \
       cp -r onnxruntime-linux-x64-gpu-${ONNX_VERSION}/lib/* /usr/local/lib/ && \
       rm -rf onnxruntime-linux-x64-gpu-${ONNX_VERSION} && \
-      rm onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz
+      rm onnxruntime.tgz
 
 #Install Libtorch (CUDA)
 # RUN   wget https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-${LIBTORCH_VERSION}%2Bcpu.zip && \
@@ -101,8 +101,8 @@ RUN   git clone https://github.com/lcm-proj/lcm && \
       pip install lcm
 
 #Install Faiss
-RUN   git clone https://github.com/facebookresearch/faiss.git && \
-      cd faiss && git checkout tags/v${FAISS_VERSION} && \
+RUN   git clone -b v${FAISS_VERSION} --single-branch  https://github.com/facebookresearch/faiss.git && \
+      cd faiss && \
       cmake -B build -DCMAKE_BUILD_TYPE=Release -DFAISS_OPT_LEVEL=avx2 -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF -DFAISS_ENABLE_GPU=OFF . && \
       make -C build -j$(nproc) faiss && \
       make -C build install && \
@@ -176,5 +176,5 @@ WORKDIR $SWARM_WS
 RUN   source "/opt/ros/${ROS_VERSION}/setup.bash" && \
       catkin config -DCMAKE_BUILD_TYPE=Release \
             --cmake-args -DONNXRUNTIME_LIB_DIR=/usr/local/lib \
-            -DONNXRUNTIME_INC_DIR=/usr/local/include && \
-      catkin build
+            -DONNXRUNTIME_INC_DIR=/usr/local/include -DUSE_CUDA=On&& \
+      catkin build -j8

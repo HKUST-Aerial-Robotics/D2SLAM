@@ -4,6 +4,7 @@
 #include <ceres/ceres.h>
 #include <d2common/d2state.hpp>
 #include <d2common/solver/BaseParamResInfo.hpp>
+#include "spdlog/spdlog.h"
 
 namespace D2Common {
 class ResidualInfo;
@@ -37,28 +38,16 @@ struct SolverReport {
 class SolverWrapper {
 protected:
     ceres::Problem * problem = nullptr;
+    ceres::Problem::Options problem_options;
     D2State * state;
     std::vector<ResidualInfo*> residuals;
     virtual void setStateProperties() {}
 public:
-    SolverWrapper(D2State * _state): state(_state) {
-        problem = new ceres::Problem();
-    }
-    virtual void addResidual(ResidualInfo*residual_info) {
-        residuals.push_back(residual_info);
-    }
+    SolverWrapper(D2State * _state);
+    virtual void addResidual(ResidualInfo*residual_info);
     virtual SolverReport solve() = 0;
-    ceres::Problem & getProblem() {
-        return *problem;
-    }
-    virtual void reset() {
-        delete problem;
-        problem = new ceres::Problem();
-        for (auto residual : residuals) {
-            delete residual;
-        }
-        residuals.clear();
-    }
+    ceres::Problem & getProblem();
+    virtual void reset();
 };
 
 class CeresSolver : public SolverWrapper {

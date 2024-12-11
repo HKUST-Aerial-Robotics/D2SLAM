@@ -36,14 +36,14 @@ struct LandmarkPerFrame {
     int drone_id = -1; //-1 is intra landmark
     int solver_id = -1;
     LandmarkFlag flag = UNINITIALIZED;
-    cv::Point2f pt2d;
-    Eigen::Vector3d pt3d_norm; //[x, y, 1]
-    Eigen::Vector3d pt3d;  //Note this is initialized by frontend in cam frame and will not be modified by estimator.
-    Eigen::Vector3d velocity;
+    cv::Point2f pt2d = cv::Point2f(0, 0);
+    Eigen::Vector3d pt3d_norm = Eigen::Vector3d::Zero(); //[x, y, 1]
+    Eigen::Vector3d pt3d = Eigen::Vector3d::Zero();  //Note this is initialized by frontend in cam frame and will not be modified by estimator.
+    Eigen::Vector3d velocity = Eigen::Vector3d::Zero();
     double depth = -1;
     double cur_td = 0.0;
     bool depth_mea = false;
-    cv::Vec3b color;
+    cv::Vec3b color = cv::Vec3b(0, 0, 0);
 
     void setLandmarkId(LandmarkIdType id) {
         landmark_id = id;
@@ -226,7 +226,6 @@ struct LandmarkPerId {
             //Update the solver id
             solver_id = Landmark.solver_id;
         }
-         
     }
 
     bool shouldBeSolve(int self_id) const {

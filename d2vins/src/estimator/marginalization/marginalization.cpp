@@ -39,9 +39,8 @@ VectorXd Marginalizer::evaluate(SparseMat& J, int eff_residual_size,
     residual_vec.segment(cul_res_size, residual_size) = info->residuals;
     if (std::isnan(info->residuals.maxCoeff()) ||
         std::isnan(info->residuals.minCoeff())) {
-      printf(
-          "\033[0;31m[D2VINS::Marginalizer] Residual type %d residuals is "
-          "nan:\033[0m\n",
+      SPDLOG_ERROR(
+          "[Marginalization] Residual type {} residuals is nan",
           info->residual_type);
       std::cout << info->residuals.transpose() << std::endl;
       continue;
@@ -54,9 +53,9 @@ VectorXd Marginalizer::evaluate(SparseMat& J, int eff_residual_size,
       auto param_size = params[param_blk_i].size;
       auto blk_eff_param_size = params[param_blk_i].eff_size;
       if (std::isnan(J_blk.maxCoeff()) || std::isnan(J_blk.minCoeff())) {
-        printf(
-            "\033[0;31m[D2VINS::Marginalizer] Residual type %d param_blk %d "
-            "jacobians is nan\033[0m:\n",
+        SPDLOG_ERROR(
+            "[Marginalization] Residual type {} param_blk {} "
+            "jacobians is nan",
             info->residual_type, param_blk_i);
         std::cout << J_blk << std::endl;
         continue;
@@ -181,7 +180,7 @@ PriorFactor* Marginalizer::marginalize(
   // We first remove all factors that does not evolved frame
   if (params->verbose) {
     for (auto frame_id : remove_frame_ids) {
-      printf("[D2VINS::Marginalizer::marginalize] remove frame %d\n", frame_id);
+      SPDLOG_INFO("[Marginalization] remove frame {}", frame_id);
     }
   }
 
@@ -189,9 +188,9 @@ PriorFactor* Marginalizer::marginalize(
 
   sortParams();  // sort the parameters
   if (keep_block_size == 0 || remove_state_dim == 0) {
-    printf(
-        "\033[0;31m[D2VINS::Marginalizer::marginalize] keep_block_size=%d "
-        "remove_state_dim%d\033[0m\n",
+    SPDLOG_INFO(
+        "[Marginalization] keep_block_size={} "
+        "remove_state_dim {}",
         keep_block_size, remove_state_dim);
     return nullptr;
   }
@@ -205,7 +204,7 @@ PriorFactor* Marginalizer::marginalize(
       J.transpose() * b;  // Ignore -b here and also in prior_factor.cpp
                           // toJacRes to reduce compuation
   if (params->enable_perf_output) {
-    printf("[D2VINS::marginalize] evaluation %.1fms JtJ cost %.1fms\n", t_eval,
+    SPDLOG_INFO("[D2VINS::marginalize] evaluation {:.1f}ms JtJ cost {:.1f}ms\n", t_eval,
            tt.toc() - t_eval);
   }
   std::vector<ParamInfo> keep_params_list(
@@ -215,31 +214,28 @@ PriorFactor* Marginalizer::marginalize(
   }
   // Compute the schur complement, by sparse LLT.
   PriorFactor* prior = nullptr;
+  tt.tic();
+  double t_schur = 0.0;
   if (params->margin_sparse_solver) {
-    tt.tic();
     auto Ab = Utility::schurComplement(H, g, keep_state_dim);
-    if (params->enable_perf_output) {
-      printf("[D2VINS::marginalize] schurComplement cost %.1fms\n", tt.toc());
-    }
+    t_schur = tt.toc();
     prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
-    // showDeltaXofschurComplement(keep_params_list, Ab.first, Ab.second);
   } else {
-    Utility::TicToc tt;
     auto Ab = Utility::schurComplement(H.toDense(), g, keep_state_dim);
-    double t_schur = tt.toc();
+    t_schur = tt.toc();
     prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
-    if (params->enable_perf_output) {
-      printf(
-          "[D2VINS::marginalize] schurComplement cost %.1fms newPrior %.1fms\n",
+  }
+  if (params->enable_perf_output) {
+    SPDLOG_INFO(
+          "[Marginalization] SchurComplement cost {:.1f}ms newPrior {:.1f}ms",
           t_schur, tt.toc() - t_schur);
-    }
   }
 
   if (params->enable_perf_output || params->verbose) {
-    printf(
-        "[D2VINS::marginalize] time cost %.1fms frame_id %ld "
-        "total_eff_state_dim: %d keep_size %d remove size %d "
-        "eff_residual_size: %d keep_block_size %d \n",
+    SPDLOG_INFO(
+        "[Marginalization] time cost {:.1f}ms frame_id {} "
+        "total_eff_state_dim: {} keep_size {} remove size {} "
+        "eff_residual_size: {} keep_block_size {}",
         tic.toc(), *remove_frame_ids.begin(), total_eff_state_dim,
         keep_state_dim, remove_state_dim, eff_residual_size, keep_block_size);
   }
@@ -250,8 +246,8 @@ PriorFactor* Marginalizer::marginalize(
   }
 
   if (prior->hasNan()) {
-    printf(
-        "\033[0;31m[D2VINS::Marginalizer::marginalize] prior has nan\033[0m\n");
+    SPDLOG_ERROR(
+        "[D2VINS::Marginalizer::marginalize] prior has nan");
     return nullptr;
   }
   return prior;
@@ -279,12 +275,6 @@ void Marginalizer::sortParams() {
     auto& _param = _params.at(params_list[i].pointer);
     _param.index = total_eff_state_dim;
     total_eff_state_dim += _param.eff_size;
-    // if (!_param.is_remove) {
-    //     printf("Param %p type %d id %d size %d index %d cul_param_size %d is
-    //     remove %d\n",
-    //         params_list[i].pointer, _param.type, _param.id, _param.size,
-    //         _param.index, total_eff_state_dim, _param.is_remove);
-    // }
     if (_param.is_remove) {
       remove_state_dim += _param.eff_size;
     } else {

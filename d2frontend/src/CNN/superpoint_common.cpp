@@ -44,6 +44,7 @@ void computeDescriptors(const torch::Tensor& mProb, const torch::Tensor& mDesc,
                         std::vector<float>& local_descriptors, int width,
                         int height, const Eigen::MatrixXf& pca_comp_T,
                         const Eigen::RowVectorXf& pca_mean) {
+#ifdef USE_CUDA
   TicToc tic;
   cv::Mat kpt_mat(keypoints.size(), 2, CV_32F);  // [n_keypoints, 2]  (y, x)
   for (size_t i = 0; i < keypoints.size(); i++) {
@@ -92,6 +93,9 @@ void computeDescriptors(const torch::Tensor& mProb, const torch::Tensor& mDesc,
   if (params->enable_perf_output) {
     std::cout << " computeDescriptors full " << tic.toc() << std::endl;
   }
+#else
+  SPDLOG_ERROR("CUDA is not enabled in this build");
+#endif
 }
 
 bool pt_conf_comp(std::pair<cv::Point2f, double> i1,

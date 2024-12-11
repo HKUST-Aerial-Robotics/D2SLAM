@@ -61,6 +61,7 @@ struct D2VINSConfig {
     int solve_relative_pose_min_pts = 20;
     double solve_relative_pose_min_parallex = 30.0/460.0;
     bool enable_sfm_initialization = false;
+    double init_acc_bias_threshold = 0.2;
     
     //Estimation
     bool estimate_td = false;
@@ -72,7 +73,7 @@ struct D2VINSConfig {
     } landmark_param = LM_INV_DEP;
     bool always_fixed_first_pose = false;
     double process_input_timer = 100.0;
-    double estimator_timer_freq = 10.0;
+    double estimator_timer_freq = 100.0;
     int warn_pending_frames = 10;
     ESTIMATION_MODE estimation_mode;
     double estimate_extrinsic_vel_thres = 0.2;
@@ -99,6 +100,7 @@ struct D2VINSConfig {
     //Outlier rejection
     int perform_outlier_rejection_num = 50;
     double landmark_outlier_threshold = 10.0;
+    double remove_scale_outlier_threshold = 10.0; // Remove landmark with scale remove_scale_outlier_threshold * middle scale
 
     //Margin config
     bool margin_sparse_solver = true;

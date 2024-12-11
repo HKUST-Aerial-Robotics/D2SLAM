@@ -4,6 +4,7 @@
 #include <swarm_msgs/swarm_lcm_converter.hpp>
 #include "d2landmarks.h"
 #include "d2imu.h"
+#include <spdlog/spdlog.h>
 
 namespace D2Common {
 inline FrameIdType generateKeyframeId(ros::Time stamp, int self_id) {
@@ -42,6 +43,16 @@ struct StereoFrame {
         right_camera_indices{1},
         left_camera_ids{generateCameraId(self_id, 0)},
         right_camera_ids{generateCameraId(self_id, 1)}
+    {
+        keyframe_id = generateKeyframeId(_stamp, self_id);
+    }
+
+    StereoFrame(ros::Time _stamp, cv::Mat _left_image, Swarm::Pose _left_extrinsic, int self_id):
+        stamp(_stamp),
+        left_images{_left_image},
+        left_extrisincs{_left_extrinsic},
+        left_camera_indices{0},
+        left_camera_ids{generateCameraId(self_id, 0)} 
     {
         keyframe_id = generateKeyframeId(_stamp, self_id);
     }
@@ -99,34 +110,34 @@ struct VisualImageDesc {
     double cur_td = 0;
 
     void printSize() {
-        printf("Dir %d Landmarks: %d:", camera_index, landmarks.size());
+        SPDLOG_INFO("Dir {} Landmarks: {}:", camera_index, landmarks.size());
         int size = 0;
         int landmark_per_frame_size = sizeof(LandmarkPerFrame)*landmarks.size();
         size+= landmark_per_frame_size;
-        printf("LandmarkPerFrame: %d (%dx%d)", landmark_per_frame_size, landmarks.size(), sizeof(LandmarkPerFrame));
+        SPDLOG_INFO("LandmarkPerFrame: {} ({}x{})", landmark_per_frame_size, landmarks.size(), sizeof(LandmarkPerFrame));
         int image_desc_size = sizeof(float)*image_desc.size();
         size+= image_desc_size;
-        printf("ImageDesc: %d ", image_desc_size);
+        SPDLOG_INFO("ImageDesc: {} ", image_desc_size);
         int landmark_desc_size = sizeof(float)*landmark_descriptor.size();
         size+= landmark_desc_size;
-        printf("LandmarkDesc: %d ", landmark_desc_size);
+        SPDLOG_INFO("LandmarkDesc: {} ", landmark_desc_size);
         int landmark_score_size = sizeof(float)*landmark_scores.size();
         size+= landmark_score_size;
-        printf("LandmarkScore: %d ", landmark_score_size);
+        SPDLOG_INFO("LandmarkScore: {} ", landmark_score_size);
         int image_size = sizeof(uint8_t)*image.size();
         size+= image_size;
-        printf("Image: %d ", image_size);
+        SPDLOG_INFO("Image: {} ", image_size);
         if (!raw_image.empty()) {
             int raw_image_size = raw_image.total()*raw_image.elemSize();
             size+= raw_image_size;
-            printf("RawImage: %d ", raw_image_size);
+            SPDLOG_INFO("RawImage: {} ", raw_image_size);
         }
         if (!raw_depth_image.empty()) {
             int raw_depth_image_size = raw_depth_image.total()*raw_depth_image.elemSize();
             size+= raw_depth_image_size;
-            printf("RawDepthImage: %d ", raw_depth_image_size);
+            SPDLOG_INFO("RawDepthImage: {} ", raw_depth_image_size);
         }
-        printf("Total: %.1fkB\n", size/1024.0f);
+        SPDLOG_INFO("Total: {:.1f}kB\n", size/1024.0f);
     }
 
     int landmarkNum() const {
@@ -141,6 +152,10 @@ struct VisualImageDesc {
             }
         }
         return size;
+    }
+
+    bool hasImageDesc() const {
+        return image_desc.size() > 0;
     }
     
     void releaseRawImage() {
@@ -371,11 +386,11 @@ struct VisualImageDescArray {
     }
 
     void printSize() {
-        printf("Frame id %ld landmark num %d image num %ld:\n", frame_id, landmarkNum(), images.size());
+        SPDLOG_INFO("Frame id {} landmark num {} image num {}:", frame_id, landmarkNum(), images.size());
         for (auto & image : images) {
             image.printSize();
         }
-        printf("========================================\n");
+        SPDLOG_INFO("========================================");
     }
     
     int landmarkNum() const {

@@ -3,16 +3,13 @@
 #include <d2frontend/loop_cam.h>
 #include <d2frontend/loop_detector.h>
 #include <d2frontend/utils.h>
+#include <d2frontend/feature_matcher.h>
+#include <d2frontend/pnp_utils.h>
 #include <faiss/IndexFlat.h>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <chrono>
-#include <opengv/absolute_pose/NoncentralAbsoluteAdapter.hpp>
-#include <opengv/absolute_pose/methods.hpp>
-#include <opengv/sac/Lmeds.hpp>
-#include <opengv/sac/Ransac.hpp>
-#include <opengv/sac_problems/absolute_pose/AbsolutePoseSacProblem.hpp>
 #include <swarm_msgs/relative_measurments.hpp>
 
 using namespace std::chrono;
@@ -368,17 +365,17 @@ bool LoopDetector::queryImageArrayFromDatabase(
   } else if (loop_cam->getCameraConfiguration() ==
                  CameraConfig::STEREO_PINHOLE ||
              loop_cam->getCameraConfiguration() ==
-                 CameraConfig::PINHOLE_DEPTH) {
+                 CameraConfig::PINHOLE_DEPTH || 
+                 loop_cam->getCameraConfiguration() == CameraConfig::MONOCULAR) {
     camera_index_new = 0;
   } else {
-    ROS_ERROR(
-        "[LoopDetector] Camera configuration %d not support yet in "
+    SPDLOG_ERROR(
+        "[LoopDetector] Camera configuration {} not support yet in "
         "queryImageArrayFromDatabase",
         loop_cam->getCameraConfiguration());
-    exit(-1);
   }
 
-  if (img_desc_a.images[camera_index_new].spLandmarkNum() > 0 ||
+  if (img_desc_a.images[camera_index_new].spLandmarkNum() > 0 && img_desc_a.images[camera_index_new].hasImageDesc() ||
       img_desc_a.is_lazy_frame) {
     double similarity = -1;
     int index = queryFrameIndexFromDatabase(

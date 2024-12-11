@@ -1,7 +1,7 @@
 #include "d2estimator.hpp"
 
 #include <d2common/solver/pose_local_parameterization.h>
-#include <d2frontend/utils.h>
+#include <d2frontend/pnp_utils.h>
 
 #include <d2common/utils.hpp>
 
@@ -34,13 +34,16 @@ void D2Estimator::init(ros::NodeHandle &nh, D2VINSNet *net) {
     SPDLOG_INFO("extrinsic {}: {}", cam_id, ext.toStr());
   }
   vinsnet = net;
-  vinsnet->DistributedVinsData_callback = [&](DistributedVinsData msg) {
-    onDistributedVinsData(msg);
-  };
-  vinsnet->DistributedSync_callback = [&](int drone_id, int signal,
-                                          int64_t token) {
-    onSyncSignal(drone_id, signal, token);
-  };
+  if (vinsnet != nullptr)
+  {
+    vinsnet->DistributedVinsData_callback = [&](DistributedVinsData msg) {
+      onDistributedVinsData(msg);
+    };
+    vinsnet->DistributedSync_callback = [&](int drone_id, int signal,
+                                            int64_t token) {
+      onSyncSignal(drone_id, signal, token);
+    };
+  }
 
   imu_bufs[self_id] = IMUBuffer();
   if (params->estimation_mode == D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
@@ -52,6 +55,7 @@ void D2Estimator::init(ros::NodeHandle &nh, D2VINSNet *net) {
 }
 
 void D2Estimator::inputImu(IMUData data) {
+  std::lock_guard<std::recursive_mutex> lock(imu_prop_lock);
   IMUData last = data;
   if (imu_bufs[self_id].size() > 0) {
     last = imu_bufs[self_id].buf.back();
@@ -61,10 +65,9 @@ void D2Estimator::inputImu(IMUData data) {
     return;
   }
   // Propagation current with last Bias.
-  auto last_frame = state.lastFrame(self_id);
-  std::lock_guard<std::recursive_mutex> lock(imu_prop_lock);
-  data.propagation(last_prop_odom[params->self_id], last_frame.Ba,
-                   last_frame.Bg, last);
+  Eigen::Vector3d Ba = state.getBa();
+  Eigen::Vector3d Bg = state.getBg();
+  data.propagation(last_prop_odom[params->self_id], Ba, Bg, last);
   visual.pubIMUProp(last_prop_odom[params->self_id]);
 }
 
@@ -81,7 +84,13 @@ bool D2Estimator::tryinitFirstPose(VisualImageDescArray &frame) {
   auto q0 = Utility::g2R(mean_acc);
   auto last_odom =
       Swarm::Odometry(frame.stamp, Swarm::Pose(q0, Vector3d::Zero()));
-
+  auto acc_bias = _imubuf.mean_acc() - q0.inverse() * IMUData::Gravity;
+  if (acc_bias.norm() > params->init_acc_bias_threshold) {
+    imu_bufs[self_id].clear();
+    SPDLOG_WARN("Robot not steady: acc bias too large {:.2f} > {:.2f}, init failed. clear buf and wait...", acc_bias.norm(),
+                params->init_acc_bias_threshold);
+    return false;
+  }
   // Easily use the average value as gyrobias now
   // Also the ba with average acc - g
   VINSFrame first_frame(frame, mean_acc - q0.inverse() * IMUData::Gravity,
@@ -444,11 +453,21 @@ void D2Estimator::onSyncSignal(int drone_id, int signal, int64_t token) {
 
 void D2Estimator::sendDistributedVinsData(DistributedVinsData data) {
   data.reference_frame_id = state.getReferenceFrameId();
-  vinsnet->sendDistributedVinsData(data);
+  if (vinsnet!=nullptr)
+  {
+    vinsnet->sendDistributedVinsData(data);
+  } else {
+    SPDLOG_WARN("D{} sendDistributedVinsData but net is nullptr", self_id);
+  }
 }
 
 void D2Estimator::sendSyncSignal(SyncSignal data, int64_t token) {
-  vinsnet->sendSyncSignal((int)data, token);
+  if (vinsnet)
+  {
+    vinsnet->sendSyncSignal((int)data, token);
+  } else {
+    SPDLOG_WARN("D{} sendSyncSignal but net is nullptr", self_id);
+  }
 }
 
 bool D2Estimator::readyForStart() {
@@ -548,7 +567,7 @@ void D2Estimator::solveinDistributedMode() {
 
   auto last_odom = state.lastFrame().odom;
   SPDLOG_INFO(
-      "D{}({}) odom {}@ref{} landmarks {}/{} v_mea {}/{} drone_num {} "
+      "D{}({}) {}@ref{} landmarks {}/{} v_mea {}/{} drone_num {} "
       "opti_time {:.1f}ms steps {} td {:.1f}ms",
       self_id, solve_count, last_odom.toStr(), state.getReferenceFrameId(),
       used_landmarks.size(), current_landmark_num, current_measurement_num,
@@ -607,7 +626,7 @@ void D2Estimator::solveNonDistrib() {
   setupImuFactors();
   setupLandmarkFactors();
   if (current_measurement_num < params->min_solve_cnt) {
-    SPDLOG_WARN("Landmark too less, skip optimization");
+    SPDLOG_WARN("Landmark too less: {}, skip optimization", current_measurement_num);
     return;
   }
   setupPriorFactor();
@@ -631,16 +650,13 @@ void D2Estimator::solveNonDistrib() {
         sum_iteration / solve_count, sum_cost / solve_count);
   }
 
-  if (params->estimation_mode < D2Common::SERVER_MODE) {
-    auto last_odom = state.lastFrame().odom;
-    SPDLOG_INFO("C{} landmarks {} odom {} td {:.1f}ms opti_time {:.1f}ms",
-                solve_count, current_landmark_num, last_odom.toStr(),
-                state.td * 1000, report.total_time * 1000);
-  } else {
-    SPDLOG_INFO("C{} landmarks {} td {:1.f}ms opti_time {:.1f}ms", solve_count,
-                current_landmark_num, state.td * 1000,
-                report.total_time * 1000);
-  }
+  auto last_odom = state.lastFrame().odom;
+  auto Ba = state.lastFrame().Ba;
+  auto Bg = state.lastFrame().Bg;
+  spdlog::info("C{} landmarks {} {} Ba ({:.2f}, {:.2f}, {:.2f}) Bg ({:.2f}, {:.2f}, {:.2f}) td {:.1f}ms opti_time {:.1f}ms",
+              solve_count, current_landmark_num, last_odom.toStr(),
+              Ba.x(), Ba.y(), Ba.z(), Bg.x(), Bg.y(), Bg.z(),
+              state.td * 1000, report.total_time * 1000);
 
   // Reprogation
   for (auto drone_id : state.availableDrones()) {

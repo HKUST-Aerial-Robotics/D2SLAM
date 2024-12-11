@@ -1,0 +1,17 @@
+FROM hkustswarm/d2slam:arm64_base_ros1_noetic
+ARG ROS_VERSION=noetic
+ENV SWARM_WS=/root/swarm_ws
+
+#Build D2SLAM
+RUN   mkdir -p ${SWARM_WS}/src/ && \
+      cd ${SWARM_WS}/src/ && \
+      git clone https://github.com/HKUST-Swarm/swarm_msgs.git -b D2SLAM && \
+      git clone https://github.com/HKUST-Swarm/sync_bag_player.git && \
+      git clone https://github.com/ros-perception/vision_opencv.git -b ${ROS_VERSION} --single-branch
+COPY ./ ${SWARM_WS}/src/D2SLAM
+WORKDIR $SWARM_WS
+RUN   . "/opt/ros/${ROS_VERSION}/setup.sh" && \
+      catkin config -DCMAKE_BUILD_TYPE=Release \
+            -DTorch_DIR=/usr/local/lib/python3.8/dist-packages/torch/share/cmake/Torch \
+            --cmake-args -DUSE_CUDA=OFF -DUSE_ONNX=OFF && \
+      catkin build

@@ -38,7 +38,8 @@ enum CameraConfig{
     STEREO_PINHOLE = 0,
     STEREO_FISHEYE = 1,
     PINHOLE_DEPTH = 2,
-    FOURCORNER_FISHEYE = 3
+    FOURCORNER_FISHEYE = 3,
+    MONOCULAR = 4,
 };
 
 enum PGO_POSE_DOF {
