@@ -10,17 +10,17 @@ protected:
     std::set<int> all_drones;
     int reference_frame_id = -1;
     std::map<FrameIdType, D2BaseFrame*> frame_db;
-    std::map<FrameIdType, state_type*> _frame_pose_state; 
+    std::map<FrameIdType, StatePtr> _frame_pose_state; 
 
     //This returns the perturb of the frame. per = [T, v], where v is the rotation vector representation of a small R.
     //v = \theta * unit(v)
     //pose = (T, R0*exp(\theta * K)), where K = skewMatrix(unit(v))
-    std::map<FrameIdType, state_type*> _frame_pose_pertub_state;
+    std::map<FrameIdType, StatePtr> _frame_pose_pertub_state;
 
     //This returns the R matrix pointer which is the rotation of the frame.
     // Note that this rot state is not esstentially a rotation matrix. 
     // To get real rotation matrix from it, use recoverRotationSVD.
-    std::map<FrameIdType, state_type*> _frame_rot_state; 
+    std::map<FrameIdType, StatePtr> _frame_rot_state; 
 
     mutable std::recursive_mutex state_lock;
     bool is_4dof = false;
@@ -79,7 +79,7 @@ public:
         }
     }
 
-    double * getPoseState(FrameIdType frame_id) const {
+    StatePtr getPoseState(FrameIdType frame_id) const {
         const Guard lock(state_lock);
         if (_frame_pose_state.find(frame_id) == _frame_pose_state.end()) {
             printf("\033[0;31m[D2State::getPoseState] frame %ld not found\033[0m\n", frame_id);
@@ -88,7 +88,7 @@ public:
         return _frame_pose_state.at(frame_id);
     }
 
-    double * getRotState(FrameIdType frame_id) const {
+    StatePtr getRotState(FrameIdType frame_id) const {
         const Guard lock(state_lock);
         if (_frame_rot_state.find(frame_id) == _frame_rot_state.end()) {
             printf("\033[0;31m[D2State::getRotState] frame %ld not found\033[0m\n", frame_id);
@@ -97,7 +97,7 @@ public:
         return _frame_rot_state.at(frame_id);
     }
 
-    double * getPerturbState(FrameIdType frame_id) const {
+    StatePtr getPerturbState(FrameIdType frame_id) const {
         const Guard lock(state_lock);
         if (_frame_pose_pertub_state.find(frame_id) == _frame_pose_pertub_state.end()) {
             printf("\033[0;31m[D2State::getRotState] frame %ld not found\033[0m\n", frame_id);

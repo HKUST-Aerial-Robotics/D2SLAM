@@ -15,7 +15,7 @@ ParamInfo createFramePose(D2State *state, FrameIdType id, bool is_perturb) {
   info.index = -1;
   info.eff_size = POSE_EFF_SIZE;
   info.id = id;
-  info.data_copied = Map<VectorXd>(info.pointer, info.size);
+  info.data_copied = Map<VectorXd>(info.getPointer(), info.size);
   return info;
 }
 
@@ -27,7 +27,7 @@ ParamInfo createFrameRotMat(D2State *state, FrameIdType id) {
   info.eff_size = ROTMAT_SIZE;
   info.type = ROTMAT;
   info.id = id;
-  info.data_copied = Map<VectorXd>(info.pointer, info.size);
+  info.data_copied = Map<VectorXd>(info.getPointer(), info.size);
   return info;
 }
 
@@ -39,7 +39,7 @@ ParamInfo createFramePose4D(D2State *state, FrameIdType id) {
   info.eff_size = POSE4D_SIZE;
   info.type = POSE_4D;
   info.id = id;
-  info.data_copied = Map<VectorXd>(info.pointer, info.size);
+  info.data_copied = Map<VectorXd>(info.getPointer(), info.size);
   return info;
 }
 
@@ -52,7 +52,7 @@ void ResidualInfo::Evaluate(const std::vector<ParamInfo> &param_infos,
     }
   } else {
     for (auto info : param_infos) {
-      params.push_back(info.pointer);
+      params.push_back(info.pointer.get());
     }
   }
 

@@ -382,7 +382,7 @@ protected:
                 auto q = Quaternion<T>(R).template cast<double>();
                 pose.att() = q;
                 state->setAttitudeInit(frame_id, q);
-                pose.to_vector(state->getPoseState(frame_id));
+                pose.toVector(state->getPoseState(frame_id));
             }
         }
         return state_changes_sum/count;

@@ -60,10 +60,8 @@ std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(
 
   delete _frame;
   frame_db.erase(frame_id);
-  delete _frame_pose_state.at(frame_id);
   _frame_pose_state.erase(frame_id);
   if (_frame_spd_Bias_state.find(frame_id) != _frame_spd_Bias_state.end()) {
-    delete _frame_spd_Bias_state.at(frame_id);
     _frame_spd_Bias_state.erase(frame_id);
   }
   return ret;
@@ -76,7 +74,7 @@ void D2EstimatorState::init(std::vector<Swarm::Pose> _extrinsic, double _td) {
     auto cam_id = addCamera(pose, i, self_id);
     local_camera_ids.push_back(cam_id);
   }
-  td = _td;
+  *td = _td;
 }
 
 CamIdType D2EstimatorState::addCamera(const Swarm::Pose &pose, int camera_index,
@@ -197,25 +195,25 @@ int D2EstimatorState::getPoseIndex(FrameIdType frame_id) const {
   return frame_indices.at(frame_id);
 }
 
-double *D2EstimatorState::getTdState(int drone_id) { return &td; }
+StatePtr D2EstimatorState::getTdState(int drone_id) { return td; }
 
-double D2EstimatorState::getTd(int drone_id) { return td; }
+double D2EstimatorState::getTd(int drone_id) { return *td; }
 
-double *D2EstimatorState::getExtrinsicState(int cam_id) const {
+StatePtr D2EstimatorState::getExtrinsicState(int cam_id) const {
   const Guard lock(state_lock);
   if (_camera_extrinsic_state.find(cam_id) == _camera_extrinsic_state.end()) {
-    printf("[D2VINS::D2EstimatorState] Camera %d not found!\n");
+    SPDLOG_ERROR("Camera {} not found!", cam_id);
     assert(false && "Camera_id not found");
   }
   return _camera_extrinsic_state.at(cam_id);
 }
 
-double *D2EstimatorState::getSpdBiasState(FrameIdType frame_id) const {
+StatePtr D2EstimatorState::getSpdBiasState(FrameIdType frame_id) const {
   const Guard lock(state_lock);
   return _frame_spd_Bias_state.at(frame_id);
 }
 
-double *D2EstimatorState::getLandmarkState(LandmarkIdType landmark_id) const {
+double * D2EstimatorState::getLandmarkState(LandmarkIdType landmark_id) const {
   const Guard lock(state_lock);
   return lmanager.getLandmarkState(landmark_id);
 }

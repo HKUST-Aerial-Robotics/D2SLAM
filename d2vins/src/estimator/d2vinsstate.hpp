@@ -15,8 +15,8 @@ protected:
     std::map<int, std::vector<FrameIdType>> latest_remote_sld_wins;
     std::map<FrameIdType, int> frame_indices;
     D2LandmarkManager lmanager;
-    std::map<FrameIdType, state_type*> _frame_spd_Bias_state;
-    std::map<CamIdType, state_type*> _camera_extrinsic_state;
+    std::map<FrameIdType, StatePtr> _frame_spd_Bias_state;
+    std::map<CamIdType, StatePtr> _camera_extrinsic_state;
     std::vector<CamIdType> local_camera_ids;
     std::map<CamIdType, int> camera_drone;
     std::map<CamIdType, Swarm::Pose> extrinsic; //extrinsic of cameras by ID
@@ -43,17 +43,17 @@ protected:
     Vector3d Ba = Vector3d::Zero();
     Vector3d Bg = Vector3d::Zero();
 public:
-    state_type td = 0.0;
+    StatePtr td = nullptr;
     D2EstimatorState(int _self_id);
 
     void init(std::vector<Swarm::Pose> _extrinsic, double _td);
 
     //Get states
     int getPoseIndex(FrameIdType frame_id) const;
-    double * getExtrinsicState(int i) const;
-    double * getSpdBiasState(FrameIdType frame_id) const;
+    StatePtr getExtrinsicState(int i) const;
+    StatePtr getSpdBiasState(FrameIdType frame_id) const;
     double * getLandmarkState(LandmarkIdType landmark_id) const;
-    double * getTdState(int drone_id);
+    StatePtr getTdState(int drone_id);
     double getTd(int drone_id);
     PriorFactor * getPrior() const;
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;

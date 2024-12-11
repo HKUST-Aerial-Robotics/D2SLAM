@@ -17,7 +17,8 @@ namespace D2Common {
 typedef int64_t FrameIdType;
 typedef int64_t LandmarkIdType;
 typedef int32_t CamIdType;
-typedef double state_type;
+using state_type = double;
+using StatePtr = std::shared_ptr<state_type>;
 typedef SparseMatrix<state_type> SparseMat;
 typedef std::vector<cv::Point3f> Point3fVector;
 typedef std::vector<cv::Point2f> Point2fVector;

@@ -17,7 +17,7 @@ void ARockPGO::processPGOData(const DPGOData& data) {
     auto frame_id = it.first;
     auto& dual = it.second;
     if (SolverWrapper::state->hasFrame(frame_id)) {
-      state_type* ptr;
+      StatePtr ptr;
       if (perturb_mode) {
         ptr = SolverWrapper::state->getPerturbState(frame_id);
       } else {

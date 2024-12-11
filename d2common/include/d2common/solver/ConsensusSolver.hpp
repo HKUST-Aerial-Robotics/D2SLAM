@@ -31,7 +31,7 @@ struct ConsenusParamState {
     static ConsenusParamState create(ParamInfo info) {
         ConsenusParamState state;
         state.param_global = VectorXd(info.size);
-        memcpy(state.param_global.data(), info.pointer, sizeof(state_type) * info.size);
+        memcpy(state.param_global.data(), info.getPointer(), sizeof(state_type) * info.size);
         state.param_tilde = VectorXd(info.eff_size);
         state.param_tilde.setZero();
         state.global_size = info.size;
@@ -48,10 +48,10 @@ struct ConsenusParamState {
 class ConsensusSolver : public SolverWrapper {
 protected:
     ConsensusSolverConfig config;
-    std::map<state_type*, ParamInfo> all_estimating_params;
-    std::map<state_type*, ConsenusParamState> consenus_params;
-    std::map<state_type*, std::map<int, VectorXd>> remote_params;
-    std::set<state_type*> active_params;
+    std::map<StatePtr, ParamInfo> all_estimating_params;
+    std::map<StatePtr, ConsenusParamState> consenus_params;
+    std::map<StatePtr, std::map<int, VectorXd>> remote_params;
+    std::set<StatePtr> active_params;
     double rho_landmark = 0.1;
     double rho_T = 0.1;
     double rho_theta = 0.1;

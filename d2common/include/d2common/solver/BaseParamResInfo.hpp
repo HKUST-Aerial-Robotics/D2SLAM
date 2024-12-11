@@ -25,7 +25,7 @@ inline bool IsPose4D(ParamsType type) {
 }
 
 struct ParamInfo {
-    state_type * pointer = nullptr;
+    StatePtr pointer = nullptr;
     Matrix<state_type, -1, 1> data_copied;
     int index = -1;
     int size = 0;
@@ -34,6 +34,9 @@ struct ParamInfo {
     ParamsType type;
     FrameIdType id;
     ParamInfo() {}
+    state_type * getPointer() {
+        return pointer.get();
+    }
 };
 
 enum ResidualType {
@@ -65,7 +68,7 @@ public:
     virtual std::vector<state_type*> paramsPointerList(D2State * state) const {
         std::vector<state_type*> params;
         for (auto info : paramsList(state)) {
-            params.push_back(info.pointer);
+            params.push_back(info.pointer.get());
         }
         return params;
     }

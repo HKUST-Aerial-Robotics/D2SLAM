@@ -25,12 +25,12 @@ protected:
     ARockSolverConfig config;
     int iteration_count = 0;
     int self_id = 0;
-    std::map<int, std::map<state_type*, VectorXd>> dual_states_local;
-    std::map<int, std::map<state_type*, VectorXd>> dual_states_remote;
-    std::map<state_type*, ParamInfo> all_estimating_params;
+    std::map<int, std::map<StatePtr, VectorXd>> dual_states_local;
+    std::map<int, std::map<StatePtr, VectorXd>> dual_states_remote;
+    std::map<StatePtr, ParamInfo> all_estimating_params;
     void addParam(const ParamInfo & param_info);
     void updateDualStates();
-    bool hasDualState(state_type* param, int drone_id);
+    bool hasDualState(StatePtr param, int drone_id);
     void createDualState(const ParamInfo & param_info, int drone_id, bool init_to_zero = false);
     virtual bool isRemoteParam(const ParamInfo & param);
     virtual int solverId(const ParamInfo & param);
