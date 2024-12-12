@@ -147,7 +147,7 @@ class RotationInitARock : public RotationInitialization<T>, public ARockBase {
             auto frame_id = it.first;
             auto &dual = it.second;
             if (state->hasFrame(frame_id)) {
-                state_type *ptr;
+                StatePtr ptr;
                 if (solve_6d) {
                     ptr = state->getPerturbState(frame_id);
                 } else {

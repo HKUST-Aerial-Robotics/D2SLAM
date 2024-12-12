@@ -371,7 +371,7 @@ protected:
             auto & pose = frame->odom.pose();
             Map<const Matrix<T, 3, 3, RowMajor>> M(X.data() + idx*ROTMAT_SIZE);
             //Note in X the rotation is stored in row major order.
-            Map<Matrix<double, 3, 3, RowMajor>> R_state(state->getRotState(frame_id));
+            Map<Matrix<double, 3, 3, RowMajor>> R_state(CheckGetPtr(state->getRotState(frame_id)));
             auto Md = M.template cast<double>();
             double changes = (R_state-Md).norm()/R_state.norm();
             state_changes_sum += changes;
@@ -382,7 +382,7 @@ protected:
                 auto q = Quaternion<T>(R).template cast<double>();
                 pose.att() = q;
                 state->setAttitudeInit(frame_id, q);
-                pose.toVector(state->getPoseState(frame_id));
+                pose.to_vector(state->getPoseState(frame_id));
             }
         }
         return state_changes_sum/count;
@@ -404,7 +404,7 @@ protected:
             auto frame = state->getFramebyId(frame_id);
             Matrix3d R0 = state->getAttitudeInit(frame_id).toRotationMatrix().template cast<double>();
             Vec3 t = X.segment(idx*pose_size, POS_SIZE);
-            Map<Vector6d> perturb_state(state->getPerturbState(frame_id));
+            Map<Vector6d> perturb_state(CheckGetPtr(state->getPerturbState(frame_id)));
             double changes = (t.template cast<double>()-perturb_state.segment(0, POS_SIZE)).norm()/t.norm();
             perturb_state.segment(0, POS_SIZE) = t.template cast<double>();
             state_changes_sum += changes;

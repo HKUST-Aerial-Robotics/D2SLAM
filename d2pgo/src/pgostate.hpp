@@ -31,17 +31,17 @@ public:
         *frame = _frame;
         frame_db[frame->frame_id] = frame;
         if (is_4dof) {
-            _frame_pose_state[frame->frame_id] = new state_type[POSE4D_SIZE];
+            _frame_pose_state[frame->frame_id] = makeSharedStateArray(POSE4D_SIZE);
             _frame.odom.pose().to_vector_xyzyaw(_frame_pose_state[frame->frame_id]);
         } else {
-            _frame_pose_state[frame->frame_id] = new state_type[POSE_SIZE];
-            _frame_rot_state[frame->frame_id] = new state_type[ROTMAT_SIZE];
-            _frame_pose_pertub_state[frame->frame_id] = new state_type[POSE_EFF_SIZE];
+            _frame_pose_state[frame->frame_id] = makeSharedStateArray(POSE_SIZE);
+            _frame_rot_state[frame->frame_id] = makeSharedStateArray(ROTMAT_SIZE);
+            _frame_pose_pertub_state[frame->frame_id] = makeSharedStateArray(POSE_EFF_SIZE);
             _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
-            Map<Matrix<state_type, 3, 3, RowMajor>> rot(_frame_rot_state[frame->frame_id]);
+            Map<Matrix<state_type, 3, 3, RowMajor>> rot(CheckGetPtr(_frame_rot_state[frame->frame_id]));
             rot = _frame.odom.pose().R();
 
-            Map<Eigen::Vector6d> pose_pertub(_frame_pose_pertub_state[frame->frame_id]);
+            Map<Eigen::Vector6d> pose_pertub(CheckGetPtr(_frame_pose_pertub_state[frame->frame_id]));
             pose_pertub.setZero();
             pose_pertub.segment<3>(0) = _frame.T();
 

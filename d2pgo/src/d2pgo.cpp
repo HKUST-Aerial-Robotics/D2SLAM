@@ -400,14 +400,14 @@ void D2PGO::evalLoop(const Swarm::LoopEdge& loop) {
   VectorXd residuals(4);
   auto pose_a = kf_a->odom.pose();
   auto pose_b = kf_b->odom.pose();
-  (*factor)(pose_ptr_a, pose_ptr_b, residuals.data());
-  SPDLOG_INFO("Loop %ld->%ld, RelPose {}", loop.keyframe_id_a, loop.keyframe_id_b,
+  (*factor)(CheckGetPtr(pose_ptr_a), CheckGetPtr(pose_ptr_b), residuals.data());
+  SPDLOG_INFO("Loop {}->{}, RelPose {}", loop.keyframe_id_a, loop.keyframe_id_b,
          loop.relative_pose.toStr());
   SPDLOG_INFO("RelPose            Est {}",
-         Swarm::Pose::DeltaPose(pose_a, pose_b).toStr().c_str());
+         Swarm::Pose::DeltaPose(pose_a, pose_b).toStr());
   std::cout << "sqrt_info\n:" << loop.getSqrtInfoMat4D() << std::endl;
-  SPDLOG_INFO("PoseA %s PoseB %s residual:", kf_a->odom.pose().toStr().c_str(),
-         kf_b->odom.pose().toStr().c_str());
+  SPDLOG_INFO("PoseA {} PoseB {} residual:", kf_a->odom.pose().toStr(),
+         kf_b->odom.pose().toStr());
   std::cout << residuals.transpose() << "\n" << std::endl;
 }
 
@@ -590,13 +590,13 @@ void D2PGO::setStateProperties(ceres::Problem& problem) {
   if (!config.perturb_mode) {
     for (auto frame_id : used_frames) {
       auto pointer = state.getPoseState(frame_id);
-      if (!problem.HasParameterBlock(pointer)) {
+      if (!problem.HasParameterBlock(CheckGetPtr(pointer))) {
         continue;
       }
       if (config.pgo_pose_dof == PGO_POSE_4D || config.pgo_use_autodiff) {
-        problem.SetManifold(pointer, manifold);
+        problem.SetManifold(CheckGetPtr(pointer), manifold);
       } else {
-        problem.SetParameterization(pointer, local_parameterization);
+        problem.SetParameterization(CheckGetPtr(pointer), local_parameterization);
       }
     }
   }
@@ -605,12 +605,12 @@ void D2PGO::setStateProperties(ceres::Problem& problem) {
     auto frame_id = state.headId(self_id);
     if (config.perturb_mode) {
       auto pointer = state.getPerturbState(frame_id);
-      problem.SetParameterBlockConstant(pointer);
+      problem.SetParameterBlockConstant(CheckGetPtr(pointer));
       // printf("[D2PGO::setStateProperties@%d] set perturb state %ld to
       // constant\n", self_id, frame_id);
     } else {
       auto pointer = state.getPoseState(frame_id);
-      problem.SetParameterBlockConstant(pointer);
+      problem.SetParameterBlockConstant(CheckGetPtr(pointer));
     }
   }
 }
@@ -618,8 +618,8 @@ void D2PGO::setStateProperties(ceres::Problem& problem) {
 void D2PGO::postPerturbSolve() {
   for (auto frame_id : used_frames) {
     auto pointer = state.getPerturbState(frame_id);
-    Map<Vector3d> pos(pointer);
-    Map<Vector3d> perturb_theta(pointer + 3);
+    Map<Vector3d> pos(CheckGetPtr(pointer));
+    Map<Vector3d> perturb_theta(CheckGetPtr(pointer) + 3);
     Quaterniond q_perturb = Utility::quatfromRotationVector(perturb_theta);
     Swarm::Pose optimized_pose(pos,
                                state.getAttitudeInit(frame_id) * q_perturb);
@@ -646,8 +646,8 @@ std::map<int, Swarm::DroneTrajectory> D2PGO::getOptimizedTrajs() {
       }
       if (config.perturb_mode) {
         auto pointer = state.getPerturbState(frame->frame_id);
-        Map<Vector3d> pos(pointer);
-        Map<Vector3d> perturb_theta(pointer + 3);
+        Map<Vector3d> pos(CheckGetPtr(pointer));
+        Map<Vector3d> perturb_theta(CheckGetPtr(pointer) + 3);
         Quaterniond q_perturb = Utility::quatfromRotationVector(perturb_theta);
         pose = Swarm::Pose(pos,
                            state.getAttitudeInit(frame->frame_id) * q_perturb);
