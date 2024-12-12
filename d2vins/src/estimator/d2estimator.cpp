@@ -672,7 +672,7 @@ void D2Estimator::solveNonDistrib() {
 
   if (!report.succ) {
     std::cout << report.message << std::endl;
-    exit(1);
+    assert(false && "Optimization failed");
   }
   if (solve_count == 0) {
     // Publish the initialized frames uisng visual.pubFrame
@@ -684,8 +684,8 @@ void D2Estimator::solveNonDistrib() {
 }
 
 void D2Estimator::addIMUFactor(FrameIdType frame_ida, FrameIdType frame_idb,
-                               IntegrationBase *pre_integrations) {
-  IMUFactor *imu_factor = new IMUFactor(pre_integrations);
+                               const IntegrationBasePtr& pre_integrations) {
+  auto imu_factor = std::make_shared<IMUFactor>(pre_integrations);
   auto info = ImuResInfo::create(imu_factor, frame_ida, frame_idb);
   solver->addResidual(info);
   if (params->always_fixed_first_pose) {
@@ -762,7 +762,7 @@ void D2Estimator::setupLandmarkFactors() {
       params->max_solve_cnt, params->max_solve_measurements);
   current_landmark_num = lms.size();
   current_measurement_num = 0;
-  auto loss_function = new ceres::HuberLoss(1.0);
+  auto loss_function = std::make_shared<ceres::HuberLoss>(1.0);
   keyframe_measurements.clear();
   spdlog::debug("{} landmarks", lms.size());
   // We first count keyframe_measurements
@@ -820,19 +820,19 @@ void D2Estimator::setupLandmarkFactors() {
         continue;
       }
       auto mea1 = lm_per_frame.measurement();
-      ResidualInfo *info = nullptr;
+      std::shared_ptr<ResidualInfo> info = nullptr;
       if (lm_per_frame.camera_id == base_camera_id) {
-        ceres::CostFunction *f_td = nullptr;
+        std::shared_ptr<ceres::CostFunction> f_td = nullptr;
         bool enable_depth_mea = false;
         if (lm_per_frame.depth_mea && params->fuse_dep &&
             lm_per_frame.depth < params->max_depth_to_fuse &&
             lm_per_frame.depth > params->min_depth_to_fuse) {
           enable_depth_mea = true;
-          f_td = new ProjectionTwoFrameOneCamDepthFactor(
+          f_td = std::make_shared<ProjectionTwoFrameOneCamDepthFactor>(
               mea0, mea1, firstObs.velocity, lm_per_frame.velocity,
               firstObs.cur_td, lm_per_frame.cur_td, lm_per_frame.depth);
         } else {
-          f_td = new ProjectionTwoFrameOneCamFactor(
+          f_td = std::make_shared<ProjectionTwoFrameOneCamFactor>(
               mea0, mea1, firstObs.velocity, lm_per_frame.velocity,
               firstObs.cur_td, lm_per_frame.cur_td);
         }
@@ -849,14 +849,14 @@ void D2Estimator::setupLandmarkFactors() {
             lm_id, firstObs.camera_id, enable_depth_mea);
       } else {
         if (lm_per_frame.frame_id == firstObs.frame_id) {
-          auto f_td = new ProjectionOneFrameTwoCamFactor(
+          auto f_td = std::make_shared<ProjectionOneFrameTwoCamFactor>(
               mea0, mea1, firstObs.velocity, lm_per_frame.velocity,
               firstObs.cur_td, lm_per_frame.cur_td);
           info = LandmarkOneFrameTwoCamResInfo::create(
               f_td, loss_function, firstObs.frame_id, lm_id, firstObs.camera_id,
               lm_per_frame.camera_id);
         } else {
-          auto f_td = new ProjectionTwoFrameTwoCamFactor(
+          auto f_td = std::make_shared<ProjectionTwoFrameTwoCamFactor>(
               mea0, mea1, firstObs.velocity, lm_per_frame.velocity,
               firstObs.cur_td, lm_per_frame.cur_td);
           info = LandmarkTwoFrameTwoCamResInfo::create(
@@ -888,8 +888,9 @@ const std::vector<VINSFrame *> &D2Estimator::getSelfSldWin() const {
 void D2Estimator::setupPriorFactor() {
   auto prior_factor = state.getPrior();
   if (prior_factor != nullptr) {
-    auto pfactor = new PriorFactor(*prior_factor);
-    auto info = PriorResInfo::create(pfactor);
+    // Make a copy of the prior factor
+    auto pfactor = std::make_shared<PriorFactor>(*prior_factor);
+    auto info = std::make_shared<PriorResInfo>(pfactor);
     solver->addResidual(info);
     marginalizer->addResidualInfo(info);
   }

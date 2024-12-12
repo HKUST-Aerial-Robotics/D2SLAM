@@ -33,4 +33,7 @@ class ProjectionTwoFrameOneCamDepthFactor : public ceres::SizedCostFunction<3, 7
     static Eigen::Matrix3d sqrt_info;
     static double sum_t;
 };
+
+using ProjectionTwoFrameOneCamDepthFactorPtr = std::shared_ptr<ProjectionTwoFrameOneCamDepthFactor>;
+
 }

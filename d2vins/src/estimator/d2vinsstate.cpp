@@ -55,9 +55,6 @@ std::vector<LandmarkPerId> D2EstimatorState::removeFrameById(
   }
   auto ret = lmanager.popFrame(frame_id, remove_base);
   auto _frame = static_cast<VINSFrame *>(frame_db.at(frame_id));
-  if (_frame->pre_integrations) {
-    delete _frame->pre_integrations;
-  }
 
   delete _frame;
   frame_db.erase(frame_id);
@@ -230,7 +227,7 @@ Swarm::Pose D2EstimatorState::getExtrinsic(CamIdType cam_id) const {
   return extrinsic.at(cam_id);
 }
 
-PriorFactor *D2EstimatorState::getPrior() const {
+std::shared_ptr<PriorFactor> D2EstimatorState::getPrior() const {
   const Guard lock(state_lock);
   return prior_factor;
 }
@@ -300,7 +297,7 @@ std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames(
       count_removed = 1;
       // Here we attach the intergation base of the remove frame to the last
       // frame
-      IntegrationBase *last_pre_int =
+      IntegrationBasePtr last_pre_int =
           self_sld_win[sld_win_size - 2]->pre_integrations;
       auto remove_pre = self_sld_win[sld_win_size - 3]->pre_integrations;
       remove_pre->push_back(last_pre_int);
@@ -309,8 +306,6 @@ std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames(
           self_sld_win[sld_win_size - 3]->prev_frame_id;
       self_sld_win[sld_win_size - 3]->pre_integrations =
           nullptr;  // To avoid delete
-      // then we delete the useless last_pre_int
-      delete last_pre_int;
     }
     if (sld_win_size - count_removed > require_sld_win_size) {
       clear_key_frames.insert(self_sld_win[0]->frame_id);
@@ -323,9 +318,6 @@ std::vector<LandmarkPerId> D2EstimatorState::clearUselessFrames(
       if (marginalizer != nullptr) {
         auto prior_return = marginalizer->marginalize(clear_key_frames);
         if (prior_return != nullptr) {
-          if (prior_factor != nullptr) {
-            delete prior_factor;
-          }
           prior_factor = prior_return;
         }
       }
@@ -409,21 +401,17 @@ void D2EstimatorState::updateSldWinsIMU(
         auto ret = remote_imu_bufs.at(self_id).periodIMU(frame_a->imu_buf_index,
                                                          frame_b->stamp + td);
         auto _imu_buf = ret.first;
-        if (frame_b->pre_integrations != nullptr) {
-          delete frame_b->pre_integrations;
-        }
         frame_b->pre_integrations =
-            new IntegrationBase(_imu_buf, frame_a->Ba, frame_a->Bg);
+            std::make_shared<IntegrationBase>(_imu_buf, frame_a->Ba, frame_a->Bg);
         frame_b->prev_frame_id = frame_a->frame_id;
         frame_b->imu_buf_index = ret.second;
         if (fabs(_imu_buf.size() / (frame_b->stamp - frame_a->stamp) -
                  params->IMU_FREQ) > 10) {
-          printf(
-              "\033[0;31m[D2VINS::D2Estimator] Remote IMU error freq: %.3f in "
-              "updateRemoteSldIMU \033[0m\n",
+          SPDLOG_WARN(
+              "Remote IMU error freq: {:.3f} in updateRemoteSldIMU",
               _imu_buf.size() / (frame_b->stamp - frame_a->stamp));
         }
-        printf("[D2VINS] Update IMU for %d<->%d\n", frame_a->frame_id,
+        SPDLOG_DEBUG("[D2VINS] Update IMU for {}<->{}", frame_a->frame_id,
                frame_b->frame_id);
       }
     }
@@ -442,17 +430,13 @@ void D2EstimatorState::updateSldWinsIMU(
             frame_a->imu_buf_index, frame_b->stamp + td);
         auto _imu_buf = ret.first;
         frame_b->pre_integrations =
-            new IntegrationBase(_imu_buf, frame_a->Ba, frame_a->Bg);
+            std::make_shared<IntegrationBase>(_imu_buf, frame_a->Ba, frame_a->Bg);
         frame_b->prev_frame_id = frame_a->frame_id;
         frame_b->imu_buf_index = ret.second;
-        if (frame_b->pre_integrations != nullptr) {
-          delete frame_b->pre_integrations;
-        }
         if (fabs(_imu_buf.size() / (frame_b->stamp - frame_a->stamp) -
                  params->IMU_FREQ) > 10) {
-          printf(
-              "\033[0;31m[D2VINS::D2Estimator] Remote IMU error freq: %.3f in "
-              "updateRemoteSldIMU \033[0m\n",
+          SPDLOG_WARN(
+              "Remote IMU error freq: {:.3f} in updateRemoteSldIMU",
               _imu_buf.size() / (frame_b->stamp - frame_a->stamp));
         }
       }
@@ -496,9 +480,9 @@ VINSFrame *D2EstimatorState::addFrame(const VisualImageDescArray &images,
   }
 
   lmanager.addKeyframe(images, *td);
-  spdlog::debug(
+  SPDLOG_DEBUG(
       "[D2VINS::D2EstimatorState{}] add frame {}@{} ref {} iskeyframe {} with "
-      "{} images, current {} frame\n",
+      "{} images, current {} frame",
       self_id, images.frame_id, _frame.drone_id, frame->reference_frame_id,
       frame->is_keyframe, images.images.size(), sld_wins[self_id].size());
   // If first frame we need to add a prior here
@@ -563,7 +547,7 @@ void D2EstimatorState::createPriorFactor4FirstFrame(VINSFrame *frame) {
       need_fix_params.emplace_back(param_info);
     }
   }
-  prior_factor = new PriorFactor(need_fix_params, A, b);
+  prior_factor = std::make_shared<PriorFactor>(need_fix_params, A, b);
 }
 
 void D2EstimatorState::syncFromState(

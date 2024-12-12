@@ -11,7 +11,7 @@ VINSFrame::VINSFrame(const VisualImageDescArray& frame, const IMUBuffer& buf,
       Ba(prev_frame.Ba),
       Bg(prev_frame.Bg),
       prev_frame_id(prev_frame.frame_id) {
-  pre_integrations = new IntegrationBase(buf, Ba, Bg);
+  pre_integrations = std::make_shared<IntegrationBase>(buf, Ba, Bg);
   if (t0 == 0) {
     t0 = stamp;
   }
@@ -27,7 +27,7 @@ VINSFrame::VINSFrame(const VisualImageDescArray& frame,
       Bg(prev_frame.Bg),
       prev_frame_id(prev_frame.frame_id),
       imu_buf_index(buf.second) {
-  pre_integrations = new IntegrationBase(buf.first, Ba, Bg);
+  pre_integrations = std::make_shared<IntegrationBase>(buf.first, Ba, Bg);
   if (t0 == 0) {
     t0 = stamp;
   }

@@ -24,7 +24,7 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
   public:
     bool debug = false;
     IMUFactor() = delete;
-    IMUFactor(IntegrationBase* _pre_integration):pre_integration(_pre_integration)
+    IMUFactor(const IntegrationBasePtr& _pre_integration):pre_integration(_pre_integration)
     {
         sqrt_info = Eigen::LLT<Eigen::Matrix<double, 15, 15>>(pre_integration->covariance.inverse()).matrixL().transpose();
         // std::cout << "intergation sum_dt" << pre_integration->sum_dt << "cov\n" << pre_integration->covariance.block<3, 3>(O_BA, O_BA) << std::endl << 
@@ -212,12 +212,9 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
         return true;
     }
 
-    //bool Evaluate_Direct(double const *const *parameters, Eigen::Matrix<double, 15, 1> &residuals, Eigen::Matrix<double, 15, 30> &jacobians);
-
-    //void checkCorrection();
-    //void checkTransition();
-    //void checkJacobian(double **parameters);
-    IntegrationBase* pre_integration;
+    IntegrationBasePtr pre_integration;
 
 };
+
+using IMUFactorPtr = std::shared_ptr<IMUFactor>;
 }

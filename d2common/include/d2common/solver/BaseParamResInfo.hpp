@@ -78,6 +78,8 @@ public:
     virtual ~ResidualInfo(){}
 };
 
+using ResidualInfoPtr = std::shared_ptr<ResidualInfo>;
+
 ParamInfo createFramePose(D2State * state, FrameIdType id, bool is_perturb=false);
 ParamInfo createFrameRotMat(D2State * state, FrameIdType id);
 ParamInfo createFramePose4D(D2State * state, FrameIdType id);

@@ -5,7 +5,7 @@
 
 namespace D2VINS {
 
-PriorResInfo::PriorResInfo(PriorFactor* _factor) : ResidualInfo(PriorResidual) {
+PriorResInfo::PriorResInfo(const PriorFactorPtr& _factor) : ResidualInfo(PriorResidual) {
   cost_function = _factor;
   factor = _factor;
 }

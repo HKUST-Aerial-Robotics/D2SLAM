@@ -33,4 +33,6 @@ public:
     static double sum_t;
 };
 
+using ProjectionTwoFrameOneCamFactorPtr = std::shared_ptr<ProjectionTwoFrameOneCamFactor>;
+
 }

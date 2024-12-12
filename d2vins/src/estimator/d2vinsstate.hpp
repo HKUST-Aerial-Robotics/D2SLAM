@@ -9,6 +9,8 @@ using namespace D2Common;
 namespace D2VINS {
 class Marginalizer;
 class PriorFactor;
+using PriorFactorPtr = std::shared_ptr<PriorFactor>;
+
 class D2EstimatorState : public D2State {
 protected:
     std::map<int, std::vector<VINSFrame*>> sld_wins;
@@ -25,7 +27,7 @@ protected:
     FrameIdType last_ego_frame_id;
 
     Marginalizer * marginalizer = nullptr;
-    PriorFactor * prior_factor = nullptr;
+    PriorFactorPtr prior_factor = nullptr;
 
     std::vector<LandmarkPerId> popFrame(int index);
     std::vector<LandmarkPerId> removeFrameById(FrameIdType frame_id, bool remove_base=false); 
@@ -56,7 +58,7 @@ public:
     StatePtr getTdState(int drone_id);
     double getTd(int drone_id) const;
     double getTd() const;
-    PriorFactor * getPrior() const;
+    PriorFactorPtr getPrior() const;
     FrameIdType getLandmarkBaseFrame(LandmarkIdType landmark_id) const;
     Swarm::Pose getExtrinsic(CamIdType cam_id) const;
     std::set<CamIdType> getAvailableCameraIds() const;

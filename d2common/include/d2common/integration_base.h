@@ -66,7 +66,7 @@ class IntegrationBase
         propagate(dt, acc, gyr);
     }
 
-    void push_back(IntegrationBase * other) 
+    void push_back(const std::shared_ptr<IntegrationBase>& other) 
     {
         for (size_t i = 0; i < other->dt_buf.size(); i ++ ) {
             auto dt = other->dt_buf[i];
@@ -247,4 +247,6 @@ class IntegrationBase
     std::vector<Eigen::Vector3d> gyr_buf;
 
 };
+
+using IntegrationBasePtr = std::shared_ptr<IntegrationBase>;
 }

@@ -10,7 +10,7 @@
 using namespace D2Common;
 
 namespace D2VINS {
-void Marginalizer::addResidualInfo(ResidualInfo* info) {
+void Marginalizer::addResidualInfo(const std::shared_ptr<ResidualInfo>& info) {
   residual_info_list.push_back(info);
 }
 
@@ -170,7 +170,7 @@ void Marginalizer::showDeltaXofschurComplement(
   }
 }
 
-PriorFactor* Marginalizer::marginalize(
+PriorFactorPtr Marginalizer::marginalize(
     std::set<FrameIdType> _remove_frame_ids) {
   Utility::TicToc tic;
   remove_frame_ids = _remove_frame_ids;
@@ -213,17 +213,17 @@ PriorFactor* Marginalizer::marginalize(
     last_prior->replacetoPrevLinearizedPoints(keep_params_list);
   }
   // Compute the schur complement, by sparse LLT.
-  PriorFactor* prior = nullptr;
+  PriorFactorPtr prior = nullptr;
   tt.tic();
   double t_schur = 0.0;
   if (params->margin_sparse_solver) {
     auto Ab = Utility::schurComplement(H, g, keep_state_dim);
     t_schur = tt.toc();
-    prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
+    prior = std::make_shared<PriorFactor>(keep_params_list, Ab.first, Ab.second);
   } else {
     auto Ab = Utility::schurComplement(H.toDense(), g, keep_state_dim);
     t_schur = tt.toc();
-    prior = new PriorFactor(keep_params_list, Ab.first, Ab.second);
+    prior = std::make_shared<PriorFactor>(keep_params_list, Ab.first, Ab.second);
   }
   if (params->enable_perf_output) {
     SPDLOG_INFO(

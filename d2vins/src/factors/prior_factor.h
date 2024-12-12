@@ -56,4 +56,6 @@ public:
     void replacetoPrevLinearizedPoints(std::vector<ParamInfo> & params);
 };
 
+using PriorFactorPtr = std::shared_ptr<PriorFactor>;
+
 }

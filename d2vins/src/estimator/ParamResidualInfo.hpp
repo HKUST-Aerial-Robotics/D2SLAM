@@ -41,9 +41,9 @@ public:
         return params_list;
     }
 
-    static LandmarkTwoFrameOneCamResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+    static std::shared_ptr<LandmarkTwoFrameOneCamResInfo> create(std::shared_ptr<ceres::CostFunction> cost_function, std::shared_ptr<ceres::LossFunction> loss_function,
         FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id, bool enable_depth_mea) {
-            auto * info = new LandmarkTwoFrameOneCamResInfo();
+            auto info = std::make_shared<LandmarkTwoFrameOneCamResInfo>();
             info->frame_ida = frame_ida;
             info->frame_idb = frame_idb;
             info->landmark_id = landmark_id;
@@ -81,9 +81,9 @@ public:
         params_list.push_back(createTd(_state, camera_id_a));
         return params_list;
     }
-    static LandmarkTwoFrameTwoCamResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+    static std::shared_ptr<LandmarkTwoFrameTwoCamResInfo> create(std::shared_ptr<ceres::CostFunction> cost_function, std::shared_ptr<ceres::LossFunction> loss_function,
         FrameIdType frame_ida, FrameIdType frame_idb, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b) {
-        auto * info = new LandmarkTwoFrameTwoCamResInfo();
+        auto info = std::make_shared<LandmarkTwoFrameTwoCamResInfo>();
         info->frame_ida = frame_ida;
         info->frame_idb = frame_idb;
         info->landmark_id = landmark_id;
@@ -115,9 +115,9 @@ public:
         return params_list;
     }
 
-    static LandmarkOneFrameTwoCamResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+    static std::shared_ptr<LandmarkOneFrameTwoCamResInfo> create(std::shared_ptr<ceres::CostFunction> cost_function, std::shared_ptr<ceres::LossFunction> loss_function,
         FrameIdType frame_ida, LandmarkIdType landmark_id, int camera_id_a, int camera_id_b) {
-        auto * info = new LandmarkOneFrameTwoCamResInfo();
+        auto info = std::make_shared<LandmarkOneFrameTwoCamResInfo>();
         info->frame_ida = frame_ida;
         info->landmark_id = landmark_id;
         info->camera_id_a = camera_id_a;
@@ -145,8 +145,8 @@ public:
         params_list.push_back(createSpeedBias(_state, frame_idb));
         return params_list;
     }
-    static ImuResInfo * create(ceres::CostFunction * cost_function,  FrameIdType frame_ida, FrameIdType frame_idb) {
-        auto * info = new ImuResInfo();
+    static std::shared_ptr<ImuResInfo> create(std::shared_ptr<ceres::CostFunction> cost_function,  FrameIdType frame_ida, FrameIdType frame_idb) {
+        auto info = std::make_shared<ImuResInfo>();
         info->frame_ida = frame_ida;
         info->frame_idb = frame_idb;
         info->cost_function = cost_function;
@@ -168,9 +168,9 @@ public:
         std::vector<ParamInfo> params_list{createLandmark(_state, landmark_id)};
         return params_list;
     }
-    static DepthResInfo * create(ceres::CostFunction * cost_function, ceres::LossFunction * loss_function,
+    static std::shared_ptr<DepthResInfo> create(std::shared_ptr<ceres::CostFunction> cost_function, std::shared_ptr<ceres::LossFunction> loss_function,
         FrameIdType frame_ida, LandmarkIdType landmark_id) {
-        auto * info = new DepthResInfo();
+        auto info = std::make_shared<DepthResInfo>();
         info->base_frame_id = frame_ida;
         info->landmark_id = landmark_id;
         info->cost_function = cost_function;
@@ -180,16 +180,11 @@ public:
 };
 
 class PriorResInfo : public ResidualInfo {
-    PriorFactor * factor;
-    std::set<state_type*> params_set;
+    PriorFactorPtr factor;
 public:
-    PriorResInfo(PriorFactor * _factor);
+    PriorResInfo(const PriorFactorPtr&  _factor);
     virtual std::vector<ParamInfo> paramsList(D2State * state) const override;
     bool relavant(const std::set<FrameIdType> & frame_ids) const override;
-    static PriorResInfo * create(PriorFactor * _factor) {
-        auto * info = new PriorResInfo(_factor);
-        return info;
-    }
 };
 
 }

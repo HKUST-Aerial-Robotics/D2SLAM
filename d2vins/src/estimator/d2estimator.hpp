@@ -58,7 +58,7 @@ protected:
     void solveNonDistrib();
     void setupImuFactors();
     void setupLandmarkFactors();
-    void addIMUFactor(FrameIdType frame_ida, FrameIdType frame_idb, IntegrationBase* _pre_integration);
+    void addIMUFactor(FrameIdType frame_ida, FrameIdType frame_idb, const IntegrationBasePtr& _pre_integration);
     void setupPriorFactor();
     std::pair<bool, Swarm::Pose> initialFramePnP(const VisualImageDescArray & frame, 
         const Swarm::Pose & initial_pose);

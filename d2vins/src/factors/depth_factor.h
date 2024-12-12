@@ -20,9 +20,11 @@ class OneFrameDepth {
     double _inv_dep;
     double sqrt_inf = 10.0;
 
-    static ceres::CostFunction * Create(double depth) {
-        return (new ceres::AutoDiffCostFunction<OneFrameDepth, 1, 1>(
-            new OneFrameDepth(depth)));
+    static std::shared_ptr<ceres::CostFunction> Create(double depth) {
+        return std::shared_ptr<ceres::CostFunction>(
+            new ceres::AutoDiffCostFunction<OneFrameDepth, 1, 1>(
+                new OneFrameDepth(depth)),
+            [](ceres::CostFunction* ptr) { delete ptr; });
     }
 };
 }
