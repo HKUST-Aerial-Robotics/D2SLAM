@@ -131,8 +131,8 @@ std::pair<IMUBuffer, int> IMUBuffer::periodIMU(int i0, double t1) const {
   return std::make_pair(slice(i0 + 1, i1 + 1), i1 + 1);
 }
 
-Swarm::Odometry IMUBuffer::propagation(const VINSFrame& baseframe) const {
-  return propagation(baseframe.odom, baseframe.Ba, baseframe.Bg);
+Swarm::Odometry IMUBuffer::propagation(const VINSFramePtr& baseframe) const {
+  return propagation(baseframe->odom, baseframe->Ba, baseframe->Bg);
 }
 
 Swarm::Odometry IMUBuffer::propagation(const Swarm::Odometry& prev_odom,

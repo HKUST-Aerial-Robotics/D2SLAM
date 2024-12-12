@@ -180,10 +180,10 @@ void D2Visualization::postSolve() {
   CameraPoseVisualization sld_win_visual;
   for (auto drone_id : state.availableDrones()) {
     for (unsigned int i = 0; i < state.size(drone_id); i++) {
-      auto& frame = state.getFrame(drone_id, i);
+      auto frame = state.getFrame(drone_id, i);
       CamIdType camera_id = *state.getAvailableCameraIds().begin();
-      auto frame_pose = frame.odom.pose();
-      auto cam_pose = frame.odom.pose() * state.getExtrinsic(camera_id);
+      auto frame_pose = frame->odom.pose();
+      auto cam_pose = frame->odom.pose() * state.getExtrinsic(camera_id);
       sld_win_visual.addPose(cam_pose.pos(), cam_pose.att(),
                              drone_colors[drone_id], display_alpha);
     }

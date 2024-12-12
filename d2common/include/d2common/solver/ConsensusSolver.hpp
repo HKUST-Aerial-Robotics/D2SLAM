@@ -81,6 +81,7 @@ public:
 
     virtual void addResidual(const std::shared_ptr<ResidualInfo>& residual_info) override;
     SolverReport solve() override;
+    virtual SolverReport solve(std::function<void()> func_set_properties) override { assert(false && "Unused");}
     void setToken(int token) {
         solver_token = token;
     }

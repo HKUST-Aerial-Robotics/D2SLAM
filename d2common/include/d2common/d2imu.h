@@ -10,6 +10,7 @@ namespace D2Common {
 typedef std::lock_guard<std::recursive_mutex> Guard;
 
 struct VINSFrame;
+using VINSFramePtr = std::shared_ptr<VINSFrame>;
 
 struct IMUData {
     static Vector3d Gravity;
@@ -96,7 +97,7 @@ public:
     std::pair<IMUBuffer, int> periodIMU(int i0, double t1) const;
 
     Swarm::Odometry propagation(const Swarm::Odometry & odom, const Vector3d & Ba, const Vector3d & Bg) const;
-    Swarm::Odometry propagation(const VINSFrame & baseframe) const;
+    Swarm::Odometry propagation(const VINSFramePtr & baseframe) const;
     IMUData operator[](int i) const {
         return buf.at(i);
     }

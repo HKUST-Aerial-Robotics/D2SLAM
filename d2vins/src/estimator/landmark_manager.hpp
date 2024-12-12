@@ -26,7 +26,7 @@ class D2LandmarkManager : public D2FrontEnd::LandmarkManager {
     void moveByPose(const Swarm::Pose &delta_pose);
     virtual void removeLandmark(const LandmarkIdType &id) override;
     std::map<FrameIdType, Swarm::Pose>
-    SFMInitialization(const std::vector<VINSFrame *> frames, int camera_idx);
+    SFMInitialization(const std::vector<VINSFramePtr>& frames, int camera_idx);
     std::map<LandmarkIdType, Vector3d>
     triangulationFrames(FrameIdType frame1_id, const Swarm::Pose &frame1,
                         FrameIdType frame2_id, const Swarm::Pose &frame2,
@@ -42,7 +42,7 @@ class D2LandmarkManager : public D2FrontEnd::LandmarkManager {
         FrameIdType frame_id, int camera_idx);
     const std::map<FrameIdType, Swarm::Pose>
     PerformBA(const std::map<FrameIdType, Swarm::Pose> &initial,
-              VINSFrame *last_frame, VINSFrame *head_frame_for_match,
+              const VINSFramePtr& last_frame, const VINSFramePtr& head_frame_for_match,
               std::map<LandmarkIdType, Vector3d> initial_pts,
               int camera_idx) const;
 };

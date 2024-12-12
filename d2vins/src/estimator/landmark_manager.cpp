@@ -523,7 +523,7 @@ double triangulatePoint3DPts(const std::vector<Swarm::Pose> poses,
 }
 
 std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
-    const std::vector<VINSFrame *> frames, int camera_idx) {
+    const std::vector<VINSFramePtr>& frames, int camera_idx) {
   SPDLOG_DEBUG("SFMInitialization with camera {}", camera_idx);
 
   // TODO: Add camera param? or consider multi-camera case
@@ -532,7 +532,7 @@ std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
   std::map<FrameIdType, Swarm::Pose> initial;
   assert(frames.size() > 2);
   auto last_frame = frames[frames.size() - 1];
-  VINSFrame *head_frame_for_match = nullptr;
+  VINSFramePtr head_frame_for_match = nullptr;
   Swarm::Pose relative_pose;
   // Start the scale with solve5pts
   for (size_t i = 0; i < frames.size() - 1; i++) {
@@ -588,8 +588,8 @@ std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::SFMInitialization(
 }
 
 const std::map<FrameIdType, Swarm::Pose> D2LandmarkManager::PerformBA(
-    const std::map<FrameIdType, Swarm::Pose> &initial, VINSFrame *last_frame,
-    VINSFrame *head_frame_for_match,
+    const std::map<FrameIdType, Swarm::Pose> &initial, const VINSFramePtr& last_frame,
+    const VINSFramePtr& head_frame_for_match,
     std::map<LandmarkIdType, Vector3d> initial_pts, int camera_idx) const {
   const Guard lock(state_lock);
   SPDLOG_INFO("{} points initialized. Now start BA", initial_pts.size());

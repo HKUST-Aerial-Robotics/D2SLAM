@@ -23,15 +23,18 @@ void SolverWrapper::reset() {
     residuals.clear();
 }
 
-void CeresSolver::addResidual(const std::shared_ptr<ResidualInfo>& residual_info) {
-  auto pointers = residual_info->paramsPointerList(state);
-  // printf("Add residual info %d", residual_info->residual_type);
-  problem->AddResidualBlock(CheckGetPtr(residual_info->cost_function),
+SolverReport CeresSolver::solve(std::function<void()> func_set_properties) {
+  for (auto residual_info: residuals)
+  {
+    // Put here to avoid unable to check pointer been free
+    auto pointers = residual_info->paramsPointerList(state);
+    problem->AddResidualBlock(CheckGetPtr(residual_info->cost_function),
                             residual_info->loss_function.get(), pointers); // loss_function maybe nullptr
-  SolverWrapper::addResidual(residual_info);
-}
-
-SolverReport CeresSolver::solve() {
+  }
+  if (func_set_properties)
+  {
+    func_set_properties();
+  }
   ceres::Solver::Summary summary;
   ceres::Solve(options, problem, &summary);
   SolverReport report;

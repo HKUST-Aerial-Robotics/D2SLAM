@@ -16,12 +16,12 @@ void D2VINSNet::pubSlidingWindow() {
     return;
   }
   SlidingWindow_t sld_win;
-  sld_win.timestamp = toLCMTime(ros::Time(state.lastFrame().stamp));
+  sld_win.timestamp = toLCMTime(ros::Time(state.lastFrame()->stamp));
   sld_win.sld_win_len = state.size();
   sld_win.drone_id = params->self_id;
   for (unsigned int i = 0; i < state.size(); i++) {
-    auto& frame = state.getFrame(i);
-    sld_win.frame_ids.push_back(frame.frame_id);
+    auto frame = state.getFrame(i);
+    sld_win.frame_ids.push_back(frame->frame_id);
   }
   lcm.publish("SYNC_SLDWIN", &sld_win);
 }

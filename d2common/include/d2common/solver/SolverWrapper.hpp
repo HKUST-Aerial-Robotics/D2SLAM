@@ -5,6 +5,7 @@
 #include <d2common/d2state.hpp>
 #include <d2common/solver/BaseParamResInfo.hpp>
 #include "spdlog/spdlog.h"
+#include <functional>
 
 namespace D2Common {
 class ResidualInfo;
@@ -45,7 +46,8 @@ protected:
 public:
     SolverWrapper(D2State * _state);
     virtual void addResidual(const std::shared_ptr<ResidualInfo>& residual_info);
-    virtual SolverReport solve() = 0;
+    virtual SolverReport solve() = 0; // TODO: remove
+    virtual SolverReport solve(std::function<void()> func_set_properties) = 0;
     ceres::Problem & getProblem();
     virtual void reset();
 };
@@ -56,8 +58,9 @@ protected:
 public:
     CeresSolver(D2State * _state, ceres::Solver::Options _options): 
             SolverWrapper(_state), options(_options)  {}
-    virtual void addResidual(const std::shared_ptr<ResidualInfo>& residual_info) override;
-    SolverReport solve() override;
+    //TODO: set as override
+    virtual SolverReport solve() override { assert(false && "Unused");};
+    virtual SolverReport solve(std::function<void()> func_set_properties) override;
 };
 
 }

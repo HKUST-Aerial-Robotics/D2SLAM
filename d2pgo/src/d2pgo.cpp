@@ -304,8 +304,7 @@ bool D2PGO::solve_single() {
   if (config.enable_gravity_prior) {
     setupGravityPriorFactors(solver);
   }
-  setStateProperties(solver->getProblem());
-  auto report = solver->solve();
+  auto report = solver->solve([&](){setStateProperties(solver->getProblem());});
   if (config.perturb_mode) {
     postPerturbSolve();
   } else {

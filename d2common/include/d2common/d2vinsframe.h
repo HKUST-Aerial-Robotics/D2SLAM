@@ -18,8 +18,8 @@ struct VINSFrame: public D2BaseFrame {
     VINSFrame():Ba(0., 0., 0.), Bg(0., 0., 0.)
     {}
     
-    VINSFrame(const VisualImageDescArray & frame, const IMUBuffer & buf, const VINSFrame & prev_frame);
-    VINSFrame(const VisualImageDescArray & frame, const std::pair<IMUBuffer, int> & buf, const VINSFrame & prev_frame);
+    VINSFrame(const VisualImageDescArray & frame, const IMUBuffer & buf, const std::shared_ptr<VINSFrame>& prev_frame);
+    VINSFrame(const VisualImageDescArray & frame, const std::pair<IMUBuffer, int> & buf, const std::shared_ptr<VINSFrame>& prev_frame);
     
     VINSFrame(const VisualImageDescArray & frame, const Vector3d & _Ba, const Vector3d & _Bg);
     VINSFrame(const VisualImageDescArray & frame);

@@ -4,13 +4,13 @@
 namespace D2Common {
 double t0 = 0;
 VINSFrame::VINSFrame(const VisualImageDescArray& frame, const IMUBuffer& buf,
-                     const VINSFrame& prev_frame)
+                     const std::shared_ptr<VINSFrame>& prev_frame)
     : D2BaseFrame(frame.stamp, frame.frame_id, frame.drone_id,
                   frame.reference_frame_id, frame.is_keyframe,
                   frame.pose_drone),
-      Ba(prev_frame.Ba),
-      Bg(prev_frame.Bg),
-      prev_frame_id(prev_frame.frame_id) {
+      Ba(prev_frame->Ba),
+      Bg(prev_frame->Bg),
+      prev_frame_id(prev_frame->frame_id) {
   pre_integrations = std::make_shared<IntegrationBase>(buf, Ba, Bg);
   if (t0 == 0) {
     t0 = stamp;
@@ -19,13 +19,13 @@ VINSFrame::VINSFrame(const VisualImageDescArray& frame, const IMUBuffer& buf,
 
 VINSFrame::VINSFrame(const VisualImageDescArray& frame,
                      const std::pair<IMUBuffer, int>& buf,
-                     const VINSFrame& prev_frame)
+                     const std::shared_ptr<VINSFrame>& prev_frame)
     : D2BaseFrame(frame.stamp, frame.frame_id, frame.drone_id,
                   frame.reference_frame_id, frame.is_keyframe,
                   frame.pose_drone),
-      Ba(prev_frame.Ba),
-      Bg(prev_frame.Bg),
-      prev_frame_id(prev_frame.frame_id),
+      Ba(prev_frame->Ba),
+      Bg(prev_frame->Bg),
+      prev_frame_id(prev_frame->frame_id),
       imu_buf_index(buf.second) {
   pre_integrations = std::make_shared<IntegrationBase>(buf.first, Ba, Bg);
   if (t0 == 0) {
