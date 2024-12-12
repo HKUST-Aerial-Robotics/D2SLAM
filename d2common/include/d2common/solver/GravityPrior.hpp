@@ -28,10 +28,10 @@ public:
         ego_motion_R_3 = ego_motion_R.block<1, 3>(2, 0);
     }
 
-    static ceres::CostFunction* Create(const Swarm::Pose & _ego_motion_pose,
+    static std::shared_ptr<ceres::CostFunction> Create(const Swarm::Pose & _ego_motion_pose,
                          const Eigen::Matrix3d & _sqrt_information, 
                          const Eigen::Quaterniond & q0) {
-        return new ceres::AutoDiffCostFunction<GravityPriorPerturbAD, 3, 6>(
+        return std::make_shared<ceres::AutoDiffCostFunction<GravityPriorPerturbAD, 3, 6>>(
             new GravityPriorPerturbAD(_ego_motion_pose, _sqrt_information, q0));
     }
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -58,10 +58,11 @@ public:
         params_list.push_back(createFramePose(state, frame_ida, is_perturb));
         return params_list;
     }
-    static GravityPriorResInfo * create(
-            ceres::CostFunction * cost_function, ceres::LossFunction * loss_function, 
+    static std::shared_ptr<GravityPriorResInfo> create(
+            const std::shared_ptr<ceres::CostFunction>& cost_function,
+            const std::shared_ptr<ceres::LossFunction>& loss_function, 
             FrameIdType frame_ida, bool is_perturb=true) {
-        auto * info = new GravityPriorResInfo();
+        auto info = std::make_shared<GravityPriorResInfo>();
         info->frame_ida = frame_ida;
         info->cost_function = cost_function;
         info->loss_function = loss_function;

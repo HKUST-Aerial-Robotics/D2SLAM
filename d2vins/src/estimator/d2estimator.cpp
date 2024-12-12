@@ -794,9 +794,10 @@ void D2Estimator::setupLandmarkFactors() {
     }
   }
 
-  for (auto lm : lms) {
+  for (const auto& lm : lms) {
     auto lm_id = lm.landmark_id;
-    LandmarkPerFrame firstObs = lm.track[0];
+    assert(lm.track.size() > 1 && "Landmark has no observation");
+    const LandmarkPerFrame& firstObs = lm.track[0];
     if (ignore_frames.find(firstObs.frame_id) != ignore_frames.end()) {
       continue;
     }

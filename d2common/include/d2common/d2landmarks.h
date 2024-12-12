@@ -163,8 +163,8 @@ struct LandmarkPerFrame {
         return ret;
     }
 
-    Vector3d measurement() {
-        return Vector3d(pt3d_norm.x(), pt3d_norm.y(), pt3d_norm.z());
+    Vector3d measurement() const {
+        return pt3d_norm;
     }
 };
 

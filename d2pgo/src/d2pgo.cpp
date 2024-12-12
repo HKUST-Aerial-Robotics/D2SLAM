@@ -419,7 +419,7 @@ void D2PGO::setupLoopFactors(SolverWrapper* solver,
   for (auto loop : good_loops) {
     if (state.hasFrame(loop.keyframe_id_a) &&
         state.hasFrame(loop.keyframe_id_b)) {
-      ceres::CostFunction* loop_factor = nullptr;
+      std::shared_ptr<ceres::CostFunction> loop_factor = nullptr;
       if (config.pgo_pose_dof == PGO_POSE_4D) {
         loop_factor = RelPoseFactor4D::Create(loop);
         // this->evalLoop(loop);
@@ -500,7 +500,7 @@ void D2PGO::setupEgoMotionFactors(SolverWrapper* solver, int drone_id) {
                                              frame_b->frame_id, true);
       solver->addResidual(res_info);
     } else if (config.pgo_pose_dof == PGO_POSE_6D) {
-      ceres::CostFunction* factor;
+      std::shared_ptr<ceres::CostFunction> factor = nullptr;
       if (config.pgo_use_autodiff) {
         if (config.perturb_mode && isRotInitConvergence()) {
           auto qa = state.getAttitudeInit(frame_a->frame_id);
@@ -539,7 +539,7 @@ void D2PGO::setupGravityPriorFactors(SolverWrapper* solver) {
   for (auto& frame : used_frames) {
     auto frame_ptr = state.getFramebyId(frame);
     auto ego_motion = frame_ptr->initial_ego_pose;
-    ceres::CostFunction* factor;
+    std::shared_ptr<ceres::CostFunction> factor = nullptr;
     if (config.perturb_mode && isRotInitConvergence()) {
       auto qa = state.getAttitudeInit(frame);
       factor = GravityPriorPerturbAD::Create(ego_motion, gravity_sqrt_info, qa);
