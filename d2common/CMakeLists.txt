@@ -39,7 +39,7 @@ add_library(${PROJECT_NAME}
   src/d2vinsframe.cpp
   src/d2pgo_types.cpp
   src/solver/BaseParamResInfo.cpp
-  src/solver/BaseSolverWrapper.cpp
+  src/solver/SolverWrapper.cpp
   src/solver/ConsensusSolver.cpp
   src/solver/consenus_factor.cpp
   src/solver/ARock.cpp

@@ -69,7 +69,7 @@ public:
     }
     void reset() override;
     void scanAndCreateDualStates() override;
-    virtual void addResidual(ResidualInfo*residual_info) override;
+    virtual void addResidual(const std::shared_ptr<ResidualInfo>& residual_info) override;
     SolverReport solve() override;
     void resetResiduals();
 };

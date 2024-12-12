@@ -211,7 +211,7 @@ void ARockSolver::reset() {
   ARockBase::reset();
 }
 
-void ARockSolver::addResidual(ResidualInfo* residual_info) {
+void ARockSolver::addResidual(const std::shared_ptr<ResidualInfo>& residual_info) {
   for (auto param : residual_info->paramsList(SolverWrapper::state)) {
     addParam(param);
   }
@@ -230,7 +230,7 @@ void ARockSolver::prepareSolverInIter(bool final_iter) {
   problem = new ceres::Problem(problem_options);
   for (auto residual_info : residuals) {
     problem->AddResidualBlock(
-        residual_info->cost_function, residual_info->loss_function,
+        CheckGetPtr(residual_info->cost_function), residual_info->loss_function.get(), // loss_function maybe nullptr
         residual_info->paramsPointerList(SolverWrapper::state));
   }
   setStateProperties();

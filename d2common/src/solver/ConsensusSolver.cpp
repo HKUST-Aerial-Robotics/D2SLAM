@@ -5,7 +5,7 @@
 #include <d2common/solver/ConsensusSolver.hpp>
 
 namespace D2Common {
-void ConsensusSolver::addResidual(ResidualInfo* residual_info) {
+void ConsensusSolver::addResidual(const std::shared_ptr<ResidualInfo>& residual_info) {
   for (auto param : residual_info->paramsList(state)) {
     addParam(param);
   }
@@ -55,8 +55,8 @@ SolverReport ConsensusSolver::solve() {
     }
     problem = new ceres::Problem(problem_options);
     for (auto residual_info : residuals) {
-      problem->AddResidualBlock(residual_info->cost_function,
-                                residual_info->loss_function,
+      problem->AddResidualBlock(CheckGetPtr(residual_info->cost_function),
+                                residual_info->loss_function.get(), // loss_function maybe nullptr
                                 residual_info->paramsPointerList(state));
     }
     // removeDeactivatedParams();

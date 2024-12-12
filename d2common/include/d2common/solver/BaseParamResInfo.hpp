@@ -56,8 +56,8 @@ enum ResidualType {
 class ResidualInfo {
 public:
     ResidualType residual_type;
-    ceres::CostFunction * cost_function = nullptr;
-    ceres::LossFunction * loss_function = nullptr;
+    std::shared_ptr<ceres::CostFunction> cost_function = nullptr;
+    std::shared_ptr<ceres::LossFunction> loss_function = nullptr;
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> jacobians; //Jacobian of each parameter blocks
     VectorXd residuals;
     ResidualInfo(ResidualType type) : residual_type(type) {} 

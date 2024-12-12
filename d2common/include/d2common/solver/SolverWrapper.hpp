@@ -40,11 +40,11 @@ protected:
     ceres::Problem * problem = nullptr;
     ceres::Problem::Options problem_options;
     D2State * state;
-    std::vector<ResidualInfo*> residuals;
+    std::vector<std::shared_ptr<ResidualInfo>> residuals;
     virtual void setStateProperties() {}
 public:
     SolverWrapper(D2State * _state);
-    virtual void addResidual(ResidualInfo*residual_info);
+    virtual void addResidual(const std::shared_ptr<ResidualInfo>& residual_info);
     virtual SolverReport solve() = 0;
     ceres::Problem & getProblem();
     virtual void reset();
@@ -56,7 +56,7 @@ protected:
 public:
     CeresSolver(D2State * _state, ceres::Solver::Options _options): 
             SolverWrapper(_state), options(_options)  {}
-    virtual void addResidual(ResidualInfo*residual_info) override;
+    virtual void addResidual(const std::shared_ptr<ResidualInfo>& residual_info) override;
     SolverReport solve() override;
 };
 

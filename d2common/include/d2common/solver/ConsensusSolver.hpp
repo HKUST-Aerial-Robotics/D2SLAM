@@ -79,7 +79,7 @@ public:
 
     void reset() override;
 
-    virtual void addResidual(ResidualInfo*residual_info) override;
+    virtual void addResidual(const std::shared_ptr<ResidualInfo>& residual_info) override;
     SolverReport solve() override;
     void setToken(int token) {
         solver_token = token;
