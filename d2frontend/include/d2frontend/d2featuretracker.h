@@ -15,11 +15,17 @@ using namespace Eigen;
 #define LKImageInfo LKImageInfoCPU
 #endif
 
+namespace D2Common {
+struct VINSFrame;
+using VINSFramePtr = std::shared_ptr<VINSFrame>;
+}
+
 namespace D2FrontEnd {
 using D2Common::VisualImageDescArray;
 using D2Common::VisualImageDesc;
 using D2Common::LandmarkIdType;
 using D2Common::FrameIdType;
+using D2Common::VINSFramePtr;
 
 struct D2FTConfig {
     bool show_feature_id = true;
@@ -156,7 +162,7 @@ public:
     D2FeatureTracker(D2FTConfig config);
     bool trackLocalFrames(VisualImageDescArray & frames);
     bool trackRemoteFrames(VisualImageDescArray & frames);
-    void updatebySldWin(const std::vector<VINSFrame*> sld_win);
+    void updatebySldWin(const std::vector<VINSFramePtr> sld_win);
     void updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPerId> & vins_landmark_db);
     std::vector<camodocal::CameraPtr> cams;
 };

@@ -142,7 +142,7 @@ void D2Visualization::pubOdometry(int drone_id, const Swarm::Odometry& odom) {
   path_pubs[drone_id].publish(path);
 }
 
-void D2Visualization::pubFrame(D2Common::VINSFrame* frame) {
+void D2Visualization::pubFrame(const std::shared_ptr<D2Common::VINSFrame>& frame) {
   if (frame == nullptr) {
     return;
   }

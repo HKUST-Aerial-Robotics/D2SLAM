@@ -18,6 +18,7 @@ namespace D2Common {
     class VisualImageDesc;
     struct LandmarkPerId;
     struct VINSFrame;
+    using VINSFramePtr = std::shared_ptr<VINSFrame>;
 }
 
 namespace D2FrontEnd {
@@ -28,6 +29,7 @@ using D2Common::LandmarkPerId;
 using D2Common::VisualImageDesc;
 using D2Common::VisualImageDescArray;
 using D2Common::VINSFrame;
+using D2Common::VINSFramePtr;
 using D2Common::Point2fVector;
 
 class LoopCam;
@@ -116,7 +118,7 @@ public:
     LoopCam * loop_cam = nullptr;
     cv::Mat decode_image(const VisualImageDesc & _img_desc);
     void updatebyLandmarkDB(const std::map<LandmarkIdType, LandmarkPerId> & vins_landmark_db);
-    void updatebySldWin(const std::vector<VINSFrame*> sld_win);
+    void updatebySldWin(const std::vector<VINSFramePtr> sld_win);
     bool hasFrame(FrameIdType frame_id);
 
     int databaseSize() const;

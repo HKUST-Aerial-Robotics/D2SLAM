@@ -839,7 +839,7 @@ void LoopDetector::updatebyLandmarkDB(
   }
 }
 
-void LoopDetector::updatebySldWin(const std::vector<VINSFrame *> sld_win) {
+void LoopDetector::updatebySldWin(const std::vector<VINSFramePtr> sld_win) {
   const std::lock_guard<std::mutex> lock(keyframe_database_mutex);
   for (auto frame : sld_win) {
     auto frame_id = frame->frame_id;

@@ -362,7 +362,7 @@ void D2PGO::rotInitial(const std::vector<Swarm::LoopEdge>& good_loops) {
 }
 
 void D2PGO::saveG2O(bool only_self) {
-  std::vector<D2BaseFrame*> frames;
+  std::vector<std::shared_ptr<D2BaseFrame>> frames;
   for (auto frame_id : used_frames) {
     if (only_self) {
       if (state.getFramebyId(frame_id)->drone_id == self_id) {

@@ -53,8 +53,8 @@ protected:
     
     //Internal functions
     bool tryinitFirstPose(VisualImageDescArray & frame);
-    VINSFrame * addFrame(VisualImageDescArray & _frame);
-    VINSFrame * addFrameRemote(const VisualImageDescArray & _frame);
+    VINSFramePtr addFrame(VisualImageDescArray & _frame);
+    VINSFramePtr addFrameRemote(const VisualImageDescArray & _frame);
     void solveNonDistrib();
     void setupImuFactors();
     void setupLandmarkFactors();
@@ -94,7 +94,7 @@ public:
     void sendSyncSignal(SyncSignal data, int64_t token);
     bool readyForStart();
     const std::map<LandmarkIdType, LandmarkPerId> & getLandmarkDB() const;
-    const std::vector<VINSFrame*> & getSelfSldWin() const;
+    const std::vector<VINSFramePtr> & getSelfSldWin() const;
     D2Visualization & getVisualizer();
     void setPGOPoses(const std::map<int, Swarm::Pose> & poses);
     std::set<int> getNearbyDronesbyPGOData(const std::map<int, std::pair<int, Swarm::Pose>> & vins_poses);

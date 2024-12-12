@@ -34,7 +34,7 @@ D2FeatureTracker::D2FeatureTracker(D2FTConfig config) : _config(config) {
               _config.sp_track_use_lk);
 }
 
-void D2FeatureTracker::updatebySldWin(const std::vector<VINSFrame *> sld_win) {
+void D2FeatureTracker::updatebySldWin(const std::vector<VINSFramePtr> sld_win) {
   // update by sliding window
   const Guard lock(keyframe_lock);
   const Guard guard2(lmanager_lock);

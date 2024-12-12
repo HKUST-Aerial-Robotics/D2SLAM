@@ -13,7 +13,7 @@ using PriorFactorPtr = std::shared_ptr<PriorFactor>;
 
 class D2EstimatorState : public D2State {
 protected:
-    std::map<int, std::vector<VINSFrame*>> sld_wins;
+    std::map<int, std::vector<VINSFramePtr>> sld_wins;
     std::map<int, std::vector<FrameIdType>> latest_remote_sld_wins;
     std::map<FrameIdType, int> frame_indices;
     D2LandmarkManager lmanager;
@@ -35,11 +35,11 @@ protected:
         //This is for marginal the keyframes that not is baseframe of all landmarks (in multi-drone)
     void outlierRejection(const std::set<LandmarkIdType> & used_landmarks);
     void updateSldWinsIMU(const std::map<int, IMUBuffer> & remote_imu_bufs);
-    void createPriorFactor4FirstFrame(VINSFrame * frame);
-    bool solveGyroscopeBias(std::vector<VINSFrame * > sld_win, const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic);
-    bool LinearAlignment(std::vector<VINSFrame * > sld_win, 
+    void createPriorFactor4FirstFrame(const VINSFramePtr& frame);
+    bool solveGyroscopeBias(const std::vector<VINSFramePtr>& sld_win, const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic);
+    bool LinearAlignment(const std::vector<VINSFramePtr>& sld_win, 
         const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic);
-    void RefineGravity(std::vector<VINSFrame * > sld_win, 
+    void RefineGravity(const std::vector<VINSFramePtr>& sld_win, 
         const std::map<FrameIdType, Swarm::Pose>& sfm_poses, Swarm::Pose extrinsic, Vector3d &g, VectorXd &x);
 
     Vector3d Ba = Vector3d::Zero();
@@ -75,27 +75,29 @@ public:
    
     //Frame operations
     std::vector<LandmarkPerId> clearUselessFrames(bool marginalization=true);
-    VINSFrame * addFrame(const VisualImageDescArray & images, const VINSFrame & _frame);
+    void addFrame(const VisualImageDescArray & images, const VINSFramePtr & _frame);
     void updateSldwin(int drone_id, const std::vector<FrameIdType> & sld_win);
     virtual void moveAllPoses(int new_ref_frame_id, const Swarm::Pose & delta_pose) override;
-    const std::vector<VINSFrame*> & getSldWin(int drone_id) const;
-    VINSFrame * addVINSFrame(const VINSFrame & _frame);
+    const std::vector<VINSFramePtr> & getSldWin(int drone_id) const;
+    void addVINSFrame(const VINSFramePtr & _frame);
 
     //Frame access    
-    VINSFrame & getFrame(int index);
-    const VINSFrame & getFrame(int index) const;
-    VINSFrame & firstFrame();
-    const VINSFrame & lastFrame() const;
-    VINSFrame & lastFrame();
+    const std::shared_ptr<VINSFrame> getVINSFramebyId(FrameIdType frame_id) const;
+    std::shared_ptr<VINSFrame> getVINSFramebyId(FrameIdType frame_id);
+    std::shared_ptr<VINSFrame> getFrame(int index);
+    const std::shared_ptr<VINSFrame> getFrame(int index) const;
+    const std::shared_ptr<VINSFrame> getFrame(int drone_id, int index) const;
+    std::shared_ptr<VINSFrame> getFrame(int drone_id, int index);
+    std::shared_ptr<VINSFrame> firstFrame();
+    std::shared_ptr<VINSFrame> firstFrame(int drone_id);
+    const std::shared_ptr<VINSFrame> lastFrame() const;
+    std::shared_ptr<VINSFrame> lastFrame();
+    std::shared_ptr<VINSFrame> lastFrame(int drone_id);
+    const std::shared_ptr<VINSFrame> lastFrame(int drone_id) const;
     size_t size() const;
-    VINSFrame & getFrame(int drone_id, int index);
     Swarm::Pose getEstimatedPose(int drone_id, int index) const;
     Swarm::Pose getEstimatedPose(FrameIdType frame_id) const;
     Swarm::Odometry getEstimatedOdom(FrameIdType frame_id) const;
-    const VINSFrame & getFrame(int drone_id, int index) const;
-    VINSFrame & firstFrame(int drone_id);
-    const VINSFrame &  lastFrame(int drone_id) const;
-    VINSFrame & lastFrame(int drone_id);
     size_t size(int drone_id) const;
 
     //Solving process

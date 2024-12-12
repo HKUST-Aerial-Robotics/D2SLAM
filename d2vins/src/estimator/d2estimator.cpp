@@ -156,45 +156,45 @@ std::pair<bool, Swarm::Pose> D2Estimator::initialFramePnP(
   return std::make_pair(success, pose_imu);
 }
 
-VINSFrame *D2Estimator::addFrame(VisualImageDescArray &_frame) {
+VINSFramePtr D2Estimator::addFrame(VisualImageDescArray& vframe) {
   // First we init corresponding pose for with IMU
-  auto &last_frame = state.lastFrame();
+  auto &lastvframe = state.lastFrame();
   auto motion_predict = getMotionPredict(
-      _frame.stamp);  // Redo motion predict for get latest initial pose
-  VINSFrame frame(_frame, motion_predict.second, last_frame);
+      vframe.stamp);  // Redo motion predict for get latest initial pose
+  auto frame = std::make_shared<VINSFrame>(vframe, motion_predict.second, lastvframe);
   if (params->init_method == D2VINSConfig::INIT_POSE_IMU) {
-    frame.odom = motion_predict.first;
+    frame->odom = motion_predict.first;
   } else {
     auto odom_imu = motion_predict.first;
-    auto pnp_init = initialFramePnP(_frame, last_frame.odom.pose());
+    auto pnp_init = initialFramePnP(vframe, lastvframe.odom.pose());
     if (!pnp_init.first) {
       // Use IMU
       SPDLOG_WARN("Initialization failed, use IMU instead.");
     } else {
       odom_imu.pose() = pnp_init.second;
     }
-    frame.odom = odom_imu;
+    frame->odom = odom_imu;
   }
-  frame.odom.stamp = _frame.stamp;
-  frame.reference_frame_id = state.getReferenceFrameId();
+  frame->odom.stamp = vframe.stamp;
+  frame->referencevframe_id = state.getReferenceFrameId();
 
-  auto frame_ret = state.addFrame(_frame, frame);
+  state.addFrame(vframe, frame);
   // Clear old frames after add
   if (params->estimation_mode != D2Common::DISTRIBUTED_CAMERA_CONSENUS) {
     margined_landmarks = state.clearUselessFrames(
         isInitialized());  // Only marginlization when solved
   }
-  _frame.setTd(state.getTd(_frame.drone_id));
+  vframe.setTd(state.getTd(vframe.drone_id));
   // Assign IMU and initialization to VisualImageDescArray for broadcasting.
-  _frame.imu_buf = motion_predict.second.first;
-  _frame.pose_drone = frame.odom.pose();
-  _frame.Ba = frame.Ba;
-  _frame.Bg = frame.Bg;
-  _frame.reference_frame_id = frame.reference_frame_id;
+  vframe.imu_buf = motion_predict.second.first;
+  vframe.pose_drone = frame->odom.pose();
+  vframe.Ba = frame->Ba;
+  vframe.Bg = frame->Bg;
+  vframe.referencevframe_id = frame->referencevframe_id;
 
   spdlog::debug("Initialize VINSFrame with {}: {}", params->init_method,
                 frame.toStr().c_str());
-  return frame_ret;
+  return frame;
 }
 
 void D2Estimator::addRemoteImuBuf(int drone_id, const IMUBuffer &imu_) {
@@ -221,7 +221,7 @@ void D2Estimator::addRemoteImuBuf(int drone_id, const IMUBuffer &imu_) {
   }
 }
 
-VINSFrame *D2Estimator::addFrameRemote(const VisualImageDescArray &_frame) {
+VINSFramePtr D2Estimator::addFrameRemote(const VisualImageDescArray &_frame) {
   if (params->estimation_mode == D2Common::SOLVE_ALL_MODE ||
       params->estimation_mode == D2Common::SERVER_MODE) {
     addRemoteImuBuf(_frame.drone_id, _frame.imu_buf);
@@ -235,15 +235,15 @@ VINSFrame *D2Estimator::addFrameRemote(const VisualImageDescArray &_frame) {
         params->estimation_mode == D2Common::SERVER_MODE) {
       auto &imu_buf = imu_bufs.at(_frame.drone_id);
       auto ret =
-          imu_buf.periodIMU(last_frame.imu_buf_index, _frame.stamp + state.getTd());
+          imu_buf.periodIMU(frame->imu_buf_index, _frame.stamp + state.getTd());
       auto _imu = ret.first;
-      if (fabs(_imu.size() / (_frame.stamp - last_frame.stamp) -
+      if (fabs(_imu.size() / (_frame.stamp - frame->stamp) -
                params->IMU_FREQ) > 15) {
         SPDLOG_WARN(
             "Remote IMU error freq: {:.3f} start_t "
             "{:.3f}/{:.3f} end_t {:.3f}/{:.3f}",
-            _imu.size() / (_frame.stamp - last_frame.stamp),
-            last_frame.stamp + state.getTd(), _imu[0].t, _frame.stamp + state.getTd(),
+            _imu.size() / (_frame.stamp - frame->stamp),
+            frame->stamp + state.getTd(), _imu[0].t, _frame.stamp + state.getTd(),
             _imu[_imu.size() - 1].t);
       }
       vinsframe = VINSFrame(_frame, ret, last_frame);
@@ -251,10 +251,10 @@ VINSFrame *D2Estimator::addFrameRemote(const VisualImageDescArray &_frame) {
       vinsframe = VINSFrame(_frame, _frame.Ba, _frame.Bg);
     }
     if (_frame.reference_frame_id != state.getReferenceFrameId()) {
-      auto ego_last = last_frame.initial_ego_pose;
+      auto ego_last = frame->initial_ego_pose;
       auto pose_local_cur = _frame.pose_drone;
       auto pred_cur_pose =
-          last_frame.odom.pose() * ego_last.inverse() * pose_local_cur;
+          frame->odom.pose() * ego_last.inverse() * pose_local_cur;
       vinsframe.odom.pose() = pred_cur_pose;
       spdlog::debug("Initial remoteframe {}@{} with ego-motion: {}",
                     _frame.frame_id, r_drone_id, pred_cur_pose.toStr());
@@ -294,7 +294,7 @@ VINSFrame *D2Estimator::addFrameRemote(const VisualImageDescArray &_frame) {
 
 void D2Estimator::addSldWinToFrame(VisualImageDescArray &frame) {
   for (unsigned int i = 0; i < state.size(); i++) {
-    frame.sld_win_status.push_back(state.getFrame(i).frame_id);
+    frame.sld_win_status.push_back(state.getFrame(i)->frame_id);
   }
 }
 
@@ -699,14 +699,12 @@ void D2Estimator::addIMUFactor(FrameIdType frame_ida, FrameIdType frame_idb,
 void D2Estimator::setupImuFactors() {
   if (state.size() > 1) {
     for (size_t i = 0; i < state.size() - 1; i++) {
-      auto &frame_a = state.getFrame(i);
-      auto &frame_b = state.getFrame(i + 1);
-      auto pre_integrations = frame_b.pre_integrations;  // Prev to current
-      // printf("IMU Factor %d<->%d prev %d\n", frame_a.frame_id,
-      // frame_b.frame_id, frame_b.prev_frame_id);
-      assert(frame_b.prev_frame_id == frame_a.frame_id &&
+      auto frame_a = state.getFrame(i);
+      auto frame_b = state.getFrame(i + 1);
+      auto pre_integrations = frame_b->pre_integrations;  // Prev to current
+      assert(frame_b->prev_frame_id == frame_a->frame_id &&
              "Wrong prev frame id");
-      addIMUFactor(frame_a.frame_id, frame_b.frame_id, pre_integrations);
+      addIMUFactor(frame_a->frame_id, frame_b->frame_id, pre_integrations);
     }
   }
 
@@ -719,17 +717,17 @@ void D2Estimator::setupImuFactors() {
       }
       if (state.size(drone_id) > 1) {
         for (size_t i = 0; i < state.size(drone_id) - 1; i++) {
-          auto &frame_a = state.getFrame(drone_id, i);
-          auto &frame_b = state.getFrame(drone_id, i + 1);
+          auto frame_a = state.getFrame(drone_id, i);
+          auto frame_b = state.getFrame(drone_id, i + 1);
           auto pre_integrations = frame_b.pre_integrations;  // Prev to current
           if (pre_integrations == nullptr) {
             SPDLOG_WARN("frame {}<->{}@{} pre_integrations is nullptr.",
-                        frame_a.frame_id, frame_b.frame_id, drone_id);
+                        frame_a->frame_id, frame_b->frame_id, drone_id);
             continue;
           }
-          assert(frame_b.prev_frame_id == frame_a.frame_id &&
+          assert(frame_b->prev_frame_id == frame_a->frame_id &&
                  "Wrong prev frame id on remote");
-          addIMUFactor(frame_a.frame_id, frame_b.frame_id, pre_integrations);
+          addIMUFactor(frame_a->frame_id, frame_b->frame_id, pre_integrations);
         }
       }
     }
@@ -882,7 +880,7 @@ const std::map<LandmarkIdType, LandmarkPerId> &D2Estimator::getLandmarkDB()
   return state.getLandmarkDB();
 }
 
-const std::vector<VINSFrame *> &D2Estimator::getSelfSldWin() const {
+const std::vector<VINSFramePtr> &D2Estimator::getSelfSldWin() const {
   return state.getSldWin(self_id);
 }
 
@@ -912,7 +910,7 @@ Swarm::Odometry D2Estimator::getOdometry() const {
 
 Swarm::Odometry D2Estimator::getOdometry(int drone_id) const {
   // Attention! We output IMU stamp!
-  auto odom = state.lastFrame(drone_id).odom;
+  auto odom = state.lastFrame(drone_id)->odom;
   odom.stamp = odom.stamp + state.getTd();
   return odom;
 }
@@ -950,7 +948,7 @@ std::set<int> D2Estimator::getNearbyDronesbyPGOData(
     // Check using D2VINS pose
     state.lock_state();
     if (state.size(p.first) > 0) {
-      auto d2vins_pose = state.lastFrame(p.first).odom.pose();
+      auto d2vins_pose = state.lastFrame(p.first)->odom.pose();
       dist = (d2vins_pose.pos() - self_pose.pos()).norm();
       dist_yaw = std::abs(d2vins_pose.yaw() - self_pose.yaw());
     }
@@ -981,16 +979,16 @@ D2Estimator::getMotionPredict(double stamp) const {
   if (!initFirstPoseFlag) {
     return std::make_pair(Swarm::Odometry(), std::make_pair(IMUBuffer(), -1));
   }
-  const auto &last_frame = state.lastFrame();
-  auto ret = imu_bufs.at(self_id).periodIMU(last_frame.imu_buf_index,
+  auto last_frame = state.lastFrame();
+  auto ret = imu_bufs.at(self_id).periodIMU(last_frame->imu_buf_index,
                                             stamp + state.getTd());
   auto _imu = ret.first;
   auto index = ret.second;
-  if (fabs(_imu.size() / (stamp - last_frame.stamp) - params->IMU_FREQ) > 15) {
+  if (fabs(_imu.size() / (stamp - last_frame->stamp) - params->IMU_FREQ) > 15) {
     SPDLOG_WARN(
         "Local IMU error freq: {:.3f} start_t {:.3f}/{:.3f} end_t "
         "{:.3f}/{:.3f}",
-        _imu.size() / (stamp - last_frame.stamp), last_frame.stamp + state.getTd(),
+        _imu.size() / (stamp - last_frame->stamp), last_frame->stamp + state.getTd(),
         _imu[0].t, stamp + state.getTd(), _imu[_imu.size() - 1].t);
   }
   return std::make_pair(_imu.propagation(last_frame), ret);

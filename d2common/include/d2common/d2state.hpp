@@ -2,6 +2,7 @@
 #include <set>
 #include <map>
 #include <d2common/d2vinsframe.h>
+#include <spdlog/spdlog.h>
 
 namespace D2Common {
 class D2State {
@@ -9,7 +10,7 @@ protected:
     int self_id;
     std::set<int> all_drones;
     int reference_frame_id = -1;
-    std::map<FrameIdType, D2BaseFrame*> frame_db;
+    std::map<FrameIdType, std::shared_ptr<D2BaseFrame>> frame_db;
     std::map<FrameIdType, StatePtr> _frame_pose_state; 
 
     //This returns the perturb of the frame. per = [T, v], where v is the rotation vector representation of a small R.
@@ -44,18 +45,22 @@ public:
         return frame_db.find(frame_id) != frame_db.end();
     }
 
-    const D2BaseFrame * getFramebyId(int frame_id) const {
+    const std::shared_ptr<D2BaseFrame> getFramebyId(int frame_id) const {
+        const Guard lock(state_lock);
         if (frame_db.find(frame_id) == frame_db.end()) {
-            printf("\033[0;31m[D2EstimatorState::getFramebyId] Frame %d not found in database\033[0m\n", frame_id);
+            SPDLOG_ERROR("Frame {} not found in database", frame_id);
             assert(true && "Frame not found in database");
+            return nullptr;
         }
         return frame_db.at(frame_id);
     }
 
-    D2BaseFrame * getFramebyId(int frame_id) {
+    std::shared_ptr<D2BaseFrame> getFramebyId(int frame_id) {
+        const Guard lock(state_lock);
         if (frame_db.find(frame_id) == frame_db.end()) {
-            printf("\033[0;31m[D2EstimatorState::getFramebyId] Frame %d not found in database\033[0m\n", frame_id);
+            SPDLOG_ERROR("Frame {} not found in database", frame_id);
             assert(true && "Frame not found in database");
+            return nullptr;
         }
         return frame_db.at(frame_id);
     }

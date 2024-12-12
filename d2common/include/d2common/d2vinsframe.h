@@ -34,5 +34,6 @@ struct VINSFrame: public D2BaseFrame {
         return D2BaseFrame(stamp, frame_id, drone_id, reference_frame_id, is_keyframe, odom, initial_ego_pose);
     }
 };
-   
+
+using VINSFramePtr = std::shared_ptr<VINSFrame>;  
 }

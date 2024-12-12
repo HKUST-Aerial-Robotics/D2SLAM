@@ -24,7 +24,7 @@ public:
     D2Visualization();
     void init(ros::NodeHandle & nh, D2Estimator * estimator);
     void postSolve();
-    void pubFrame(D2Common::VINSFrame* frame);
+    void pubFrame(const std::shared_ptr<D2Common::VINSFrame>& frame);
     void pubIMUProp(const Swarm::Odometry & odom);
     void pubOdometry(int drone_id, const Swarm::Odometry & odom);
     static std::vector<Eigen::Vector3d> drone_colors;

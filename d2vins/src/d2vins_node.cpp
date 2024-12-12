@@ -102,8 +102,8 @@ private:
         estimator->updateSldwin(frame_desc.drone_id, frame_desc.sld_win_status);
       }
       if (frame_desc.matched_frame < 0) {
-        VINSFrame frame(frame_desc);
-        estimator->getVisualizer().pubFrame(&frame);
+        auto frame = std::make_shared<VINSFrame>(frame_desc);
+        estimator->getVisualizer().pubFrame(frame);
       }
     }
     D2Frontend::processRemoteImage(frame_desc, succ_track);
