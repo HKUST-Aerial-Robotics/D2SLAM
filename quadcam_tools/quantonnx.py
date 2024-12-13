@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     width = 400
     height = 200
-    model_fp32 = "../models/superpoint_v1_dyn_size.onnx"
+    model_fp32 = "../models/superpoint_series/superpoint_v1_dyn_size.onnx"
     augmented_model_path = f"../models/superpoint_v1_{width}x{height}_augmented_model.onnx"
     print(f"Quantization for TensorRT of superpoint {width}x{height}...")
     calibrator = create_calibrator(model_fp32, [], augmented_model_path=augmented_model_path, 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     os.rename("calibration.json", "../models/superpoint_calibration.json")
 
     print(f"Quantization for TensorRT of MobileNetVLAD {width}x{height}...")
-    model_fp32 = "../models/mobilenetvlad_dyn_size.onnx"
+    model_fp32 = "../models/netvlad_series/mobilenetvlad_dyn_size.onnx"
     augmented_model_path = f"../models/mobilenetvlad_{width}x{height}_augmented_model.onnx"
     calibrator = create_calibrator(model_fp32, [], augmented_model_path=augmented_model_path, 
             calibrate_method = CalibrationMethod.Entropy)

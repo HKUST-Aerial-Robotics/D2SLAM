@@ -4,8 +4,8 @@
     <arg name="send_img"     default="false"/>
     <arg name="send_whole_img_desc"     default="false"/>
     <arg name="self_id"     default="1"/>
-    <arg name="superpoint_model_path"     default="$(find d2frontend)/../models/superpoint_v1_dyn_size.onnx"/>
-    <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/mobilenetvlad_dyn_size.onnx" />
+    <arg name="superpoint_model_path"     default="$(find d2frontend)/../models/superpoint_series/superpoint_v1_dyn_size.onnx"/>
+    <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/netvlad_series/mobilenetvlad_dyn_size.onnx" />
     <arg name="superglue_model_path"     default="$(find d2frontend)/../models/superglue.onnx" />
     <arg name="config" default="$(find d2vins)/../config/NTU_VIRAL/NTU_VIRAL_single.yaml" />
     <arg name="match_index_dist" default="200" />

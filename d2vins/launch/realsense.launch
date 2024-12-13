@@ -7,8 +7,8 @@
     <arg name="is_4dof"     default="false"/>
     <arg name="self_id"     default="1"/>
     <arg name="vins"     default="false"/>
-    <arg name="superpoint_model_path"     default="$(find d2frontend)/../models/superpoint_v1_dyn_size.onnx"/>
-    <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/mobilenetvlad_dyn_size.onnx" />
+    <arg name="superpoint_model_path"     default="$(find d2frontend)/../models/superpoint_series/superpoint_v1_dyn_size.onnx"/>
+    <arg name="netvlad_model_path"     default="$(find d2frontend)/../models/netvlad_series/mobilenetvlad_dyn_size.onnx" />
     <arg name="superglue_model_path"     default="$(find d2frontend)/../models/superglue.onnx" />
     <arg name="config" default="$(find d2vins)/../config/realsense_d435/d435_single.yaml" />
     <arg name="match_index_dist" default="100" />
