@@ -58,7 +58,7 @@ public:
         available_robots{_config.self_id} {
     }
     void evalLoop(const Swarm::LoopEdge & loop);
-    void addFrame(D2BaseFrame frame_desc);
+    void addFrame(const D2BaseFramePtr& frame_desc);
     void addLoop(const Swarm::LoopEdge & loop_info, bool add_state_by_loop=false);
     void setStateProperties(ceres::Problem & problem);
     bool solve_multi(bool force_solve=false);
@@ -69,7 +69,7 @@ public:
     void sendSignal(const std::string & signal);
     void rotInitial(const std::vector<Swarm::LoopEdge> & good_loops);
     std::map<int, Swarm::DroneTrajectory> getOptimizedTrajs();
-    std::vector<D2BaseFrame*> getAllLocalFrames();
+    std::vector<D2BaseFramePtr> getAllLocalFrames();
     void setAvailableRobots(const std::set<int> & _available_robots) {
         available_robots = _available_robots;
     }

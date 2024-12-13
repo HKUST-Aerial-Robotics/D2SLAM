@@ -24,19 +24,19 @@ struct G2oParseParam {
 
 void read_g2o_agent(
     std::string path,
-    std::map<FrameIdType, D2BaseFrame> & keyframeid_agent_pose,
+    std::map<FrameIdType, D2BaseFramePtr> & keyframeid_agent_pose,
     std::vector<Swarm::LoopEdge> & edges,
     bool is_4dof, int max_agent_id=100000, int drone_id=-1, bool ignore_infor=false);
 
 void read_g2o_multi_agents(
     std::string path,
-    std::map<int, std::map<FrameIdType, D2BaseFrame>> & keyframeid_agent_pose,
+    std::map<int, std::map<FrameIdType, D2BaseFramePtr>> & keyframeid_agent_pose,
     std::map<int, std::vector<Swarm::LoopEdge>> & edges,
     G2oParseParam param
 );
 
 void write_result_to_g2o(const std::string & path, 
-    const std::vector<D2BaseFrame*> & frames, 
+    const std::vector<D2BaseFramePtr> & frames, 
     const std::vector<Swarm::LoopEdge> & edges,
     bool write_ego_pose=false);
 }

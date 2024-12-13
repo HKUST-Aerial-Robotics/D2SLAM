@@ -1,6 +1,7 @@
 #include <ceres/normal_prior.h>
 #include <d2common/solver/consenus_factor.h>
 #include <d2common/solver/consenus_factor_4d.h>
+#include <spdlog/spdlog.h>
 
 #include <d2common/solver/ARock.hpp>
 

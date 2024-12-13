@@ -58,4 +58,7 @@ struct D2BaseFrame {
         return odom.pos();
     }
 };
-}
+
+using D2BaseFramePtr = std::shared_ptr<D2Common::D2BaseFrame>;
+
+} // namespace D2Common

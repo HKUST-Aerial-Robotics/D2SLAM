@@ -7,7 +7,7 @@ using namespace D2Common;
 namespace D2PGO {
 class PGOState : public D2State {
 protected:
-    std::map<int, std::vector<D2BaseFrame*>> drone_frames;
+    std::map<int, std::vector<D2BaseFramePtr>> drone_frames;
     std::map<int, Swarm::DroneTrajectory> ego_drone_trajs;
     std::map<int, Eigen::Quaterniond> initial_attitude;
 
@@ -19,40 +19,38 @@ public:
         } else {
             printf("[D2PGO] PGOState: is 6dof\n");
         }
-        drone_frames[self_id] = std::vector<D2BaseFrame*>();
+        drone_frames[self_id] = std::vector<D2BaseFramePtr>();
     }
 
-    void addFrame(const D2BaseFrame & _frame) {
+    void addFrame(const D2BaseFramePtr & frame) {
         const Guard lock(state_lock);
         // printf("[D2PGO@%d] PGOState: add frame %ld for drone %d: %s\n", self_id, 
-        //         _frame.frame_id, _frame.drone_id, _frame.odom.pose().toStr().c_str());
-        all_drones.insert(_frame.drone_id);
-        auto * frame = new D2BaseFrame;
-        *frame = _frame;
+        //         frame->frame_id, frame->drone_id, frame->odom.pose().toStr().c_str());
+        all_drones.insert(frame->drone_id);
         frame_db[frame->frame_id] = frame;
         if (is_4dof) {
             _frame_pose_state[frame->frame_id] = makeSharedStateArray(POSE4D_SIZE);
-            _frame.odom.pose().to_vector_xyzyaw(_frame_pose_state[frame->frame_id]);
+            frame->odom.pose().to_vector_xyzyaw(_frame_pose_state[frame->frame_id]);
         } else {
             _frame_pose_state[frame->frame_id] = makeSharedStateArray(POSE_SIZE);
             _frame_rot_state[frame->frame_id] = makeSharedStateArray(ROTMAT_SIZE);
             _frame_pose_pertub_state[frame->frame_id] = makeSharedStateArray(POSE_EFF_SIZE);
-            _frame.odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
+            frame->odom.pose().to_vector(_frame_pose_state[frame->frame_id]);
             Map<Matrix<state_type, 3, 3, RowMajor>> rot(CheckGetPtr(_frame_rot_state[frame->frame_id]));
-            rot = _frame.odom.pose().R();
+            rot = frame->odom.pose().R();
 
             Map<Eigen::Vector6d> pose_pertub(CheckGetPtr(_frame_pose_pertub_state[frame->frame_id]));
             pose_pertub.setZero();
-            pose_pertub.segment<3>(0) = _frame.T();
+            pose_pertub.segment<3>(0) = frame->T();
 
-            initial_attitude[frame->frame_id] = _frame.odom.att();
+            initial_attitude[frame->frame_id] = frame->odom.att();
         }
-        if (drone_frames.find(_frame.drone_id) == drone_frames.end()) {
-            drone_frames[_frame.drone_id] = std::vector<D2BaseFrame*>();
-            ego_drone_trajs[_frame.drone_id] = Swarm::DroneTrajectory();
+        if (drone_frames.find(frame->drone_id) == drone_frames.end()) {
+            drone_frames[frame->drone_id] = std::vector<D2BaseFramePtr>();
+            ego_drone_trajs[frame->drone_id] = Swarm::DroneTrajectory();
         }
-        drone_frames.at(_frame.drone_id).push_back(frame);
-        ego_drone_trajs[_frame.drone_id].push(frame->stamp, frame->initial_ego_pose, frame->frame_id);
+        drone_frames.at(frame->drone_id).push_back(frame);
+        ego_drone_trajs[frame->drone_id].push(frame->stamp, frame->initial_ego_pose, frame->frame_id);
     }
 
     int size(int drone_id) {
@@ -62,7 +60,7 @@ public:
         return drone_frames.at(drone_id).size();
     }
 
-    std::vector<D2BaseFrame*> & getFrames(int drone_id) {
+    std::vector<D2BaseFramePtr> & getFrames(int drone_id) {
         return drone_frames.at(drone_id);
     }
 

@@ -40,7 +40,7 @@ class D2PGOTester {
 
   std::map<int, ros::Publisher> path_pubs;
   std::vector<Swarm::LoopEdge> edges;
-  std::map<FrameIdType, D2BaseFrame> keyframeid_agent_pose;
+  std::map<FrameIdType, D2BaseFramePtr> keyframeid_agent_pose;
   std::map<double, D2Common::DPGOData> buf_for_simulate_delay;
 
  public:

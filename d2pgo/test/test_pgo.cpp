@@ -15,10 +15,10 @@ void testDummy() {
   config.main_id = 0;
   config.loop_distance_threshold = 10000;
   D2PGO::D2PGO* pgo = new D2PGO::D2PGO(config);
-  D2BaseFrame frame0(0.0, 0, 0, 0, true, Swarm::Pose::Identity());
-  D2BaseFrame frame1(1.0, 1, 0, 0, true,
+  auto frame0 = std::make_shared<D2BaseFrame>(0.0, 0, 0, 0, true, Swarm::Pose::Identity());
+  auto frame1 = std::make_shared<D2BaseFrame>(1.0, 1, 0, 0, true,
                      Swarm::Pose(Vector3d(1, 0, 0), Quaterniond(1, 0, 0, 0)));
-  D2BaseFrame frame2(2.0, 2, 0, 0, true,
+  auto frame2 = std::make_shared<D2BaseFrame>(2.0, 2, 0, 0, true,
                      Swarm::Pose(Vector3d(2, 0, 0), Quaterniond(1, 0, 0, 0)));
   Swarm::LoopEdge edge(0, 1,
                        Swarm::Pose(Vector3d(1, 0, 0), Quaterniond(1, 0, 0, 0)),

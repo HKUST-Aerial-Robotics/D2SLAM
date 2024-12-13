@@ -33,7 +33,7 @@ class D2PGONode {
  protected:
   void processImageArray(const swarm_msgs::VIOFrame &vioframe) {
     if (vioframe.is_keyframe) {
-      D2BaseFrame frame(vioframe);
+      auto frame = std::make_shared<D2BaseFrame>(vioframe);
       pgo->addFrame(frame);
     }
   }

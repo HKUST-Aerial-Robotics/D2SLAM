@@ -128,7 +128,7 @@ bool match_edge_se3(std::string line, int& agent_ida, FrameIdType& ida,
 }
 
 void read_g2o_agent(std::string path,
-                    std::map<FrameIdType, D2BaseFrame>& keyframeid_agent_pose,
+                    std::map<FrameIdType, D2BaseFramePtr>& keyframeid_agent_pose,
                     std::vector<Swarm::LoopEdge>& edges, bool is_4dof,
                     int max_agent_id, int drone_id, bool ignore_infor) {
   std::ifstream infile(path);
@@ -141,12 +141,12 @@ void read_g2o_agent(std::string path,
     auto success = match_vertex_se3(line, agent_id, id_a, pose, max_agent_id);
     if (success) {
       // Add new vertex here
-      D2BaseFrame frame;
-      frame.drone_id = agent_id;
-      frame.odom.pose() = pose;
-      frame.initial_ego_pose = pose;
-      frame.frame_id = id_a;
-      frame.reference_frame_id = 0;
+      D2BaseFramePtr frame = std::make_shared<D2BaseFrame>();
+      frame->drone_id = agent_id;
+      frame->odom.pose() = pose;
+      frame->initial_ego_pose = pose;
+      frame->frame_id = id_a;
+      frame->reference_frame_id = 0;
       keyframeid_agent_pose[id_a] = frame;
     } else {
       Eigen::Matrix6d information;
@@ -172,7 +172,7 @@ void read_g2o_agent(std::string path,
 
 void read_g2o_multi_agents(
     std::string path,
-    std::map<int, std::map<FrameIdType, D2BaseFrame>>& keyframeid_agent_pose,
+    std::map<int, std::map<FrameIdType, D2BaseFramePtr>>& keyframeid_agent_pose,
     std::map<int, std::vector<Swarm::LoopEdge>>& edges, G2oParseParam param) {
   auto files = get_all(path, ".g2o");
   std::sort(files.begin(), files.end());
@@ -182,7 +182,7 @@ void read_g2o_multi_agents(
       break;
     }
     auto file = files[i].second;
-    keyframeid_agent_pose[i] = std::map<FrameIdType, D2BaseFrame>();
+    keyframeid_agent_pose[i] = std::map<FrameIdType, D2BaseFramePtr>();
     edges[i] = std::vector<Swarm::LoopEdge>();
     read_g2o_agent(file, keyframeid_agent_pose[i], edges[i], param.is_4dof,
                    param.agents_num - 1);
@@ -192,7 +192,7 @@ void read_g2o_multi_agents(
 }
 
 void write_result_to_g2o(const std::string& path,
-                         const std::vector<D2BaseFrame*>& frames,
+                         const std::vector<D2BaseFramePtr>& frames,
                          const std::vector<Swarm::LoopEdge>& edges,
                          bool write_ego_pose) {
   std::fstream file;

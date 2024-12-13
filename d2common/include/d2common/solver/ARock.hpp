@@ -70,6 +70,7 @@ public:
     void reset() override;
     void scanAndCreateDualStates() override;
     virtual void addResidual(const std::shared_ptr<ResidualInfo>& residual_info) override;
+    virtual SolverReport solve(std::function<void()> func_set_properties) { return SolverReport();}; // TODO: rewrite use it
     SolverReport solve() override;
     void resetResiduals();
 };
