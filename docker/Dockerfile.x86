@@ -150,7 +150,7 @@ RUN   wget https://raw.githubusercontent.com/bombela/backward-cpp/master/backwar
 
 #Install Vulkan
 RUN   wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add - && \
-      wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.231-focal.list https://packages.lunarg.com/vulkan/1.3.231/lunarg-vulkan-1.3.231-focal.list && \
+      wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.236-focal.list https://packages.lunarg.com/vulkan/1.3.236/lunarg-vulkan-1.3.236-focal.list && \
       apt update && \
       apt install vulkan-sdk -y
 
